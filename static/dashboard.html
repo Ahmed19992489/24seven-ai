@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>24Seven Intelligence Workspace</title>
+    <link rel="icon" href="data:,">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
+    <style>
+        body { background-color: #0f172a; color: #cbd5e1; font-family: 'Cairo', 'Inter', sans-serif; overflow: hidden; }
+        .sidebar-item { @apply flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 text-slate-400 hover:text-white hover:bg-slate-800 border-r-4 border-transparent; }
+        .sidebar-item.active { @apply bg-slate-800 text-white shadow-md; border-right-color: #6366f1; } 
+        .glass-panel { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        .chat-container { display: flex; flex-direction: column; gap: 1rem; padding-bottom: 20px; }
+        .chat-bubble-user { @apply bg-indigo-600 text-white rounded-t-2xl rounded-br-2xl p-3 text-sm self-end max-w-[85%] shadow-lg relative break-words; }
+        .chat-bubble-admin { @apply bg-slate-700 text-slate-200 rounded-t-2xl rounded-bl-2xl p-3 text-sm self-start max-w-[85%] border border-slate-600 relative break-words; }
+        #toast-notification { visibility: hidden; min-width: 250px; background-color: #10b981; color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 100; left: 50%; bottom: 80px; transform: translateX(-50%); font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.3s, bottom 0.3s; }
+        #toast-notification.show { visibility: visible; opacity: 1; bottom: 100px; }
+        .safe-area-pb { padding-bottom: env(safe-area-inset-bottom); }
+    </style>
+</head>
+<body class="flex h-screen selection:bg-indigo-500 selection:text-white">
+
+    <div id="debug-console" style="position:fixed; top:0; left:0; width:100%; height:150px; background:rgba(0,0,0,0.9); color:#39ff14; overflow:scroll; z-index:9999; font-size:12px; padding:10px; display:none; border-bottom: 2px solid #39ff14; direction: ltr; text-align: left;">
+        <div style="border-bottom:1px solid #555; padding-bottom:5px; margin-bottom:5px; font-weight:bold;">📟 System Logs:</div>
+    </div>
+
+    <script>
+        const debugBox = document.getElementById('debug-console');
+        function showLog(msg, type='log') {
+            debugBox.style.display = 'block';
+            const color = type === 'error' ? '#ff4444' : '#39ff14';
+            debugBox.innerHTML += `<div style="color:${color}; margin-bottom:4px;">> ${msg}</div>`;
+            debugBox.scrollTop = debugBox.scrollHeight;
+        }
+        window.onerror = function(msg, url, line) {
+            showLog(`Global Error: ${msg} (Line: ${line})`, 'error');
+            return false;
+        };
+        const originalConsoleError = console.error;
+        console.error = function(...args) {
+            showLog(args.join(' '), 'error');
+            originalConsoleError.apply(console, args);
+        };
+    </script>
+
+    <div id="toast-notification"><i class="fas fa-check-circle ml-2"></i>جاري التنفيذ...</div>
+
+    <div id="auth-screen" class="fixed inset-0 z-[60] flex items-center justify-center bg-[#0f172a] fade-in">
+        <div class="glass-panel p-10 w-full max-w-md border-t-4 border-indigo-500 shadow-2xl relative text-center">
+            <div class="mb-8">
+                <div class="w-20 h-20 bg-indigo-600 rounded-2xl mx-auto flex items-center justify-center mb-6 shadow-lg shadow-indigo-900/50">
+                    <i class="fas fa-brain text-4xl text-white"></i>
+                </div>
+                <h1 class="text-3xl font-bold text-white tracking-tight mb-2">24Seven<span class="text-indigo-400">.ai</span></h1>
+                <p class="text-slate-400 text-sm">منصة الذكاء الاصطناعي للشركات</p>
+            </div>
+            <div class="space-y-6">
+                <p class="text-slate-300 text-sm mb-4">سجل دخولك لبدء استخراج البيانات</p>
+                <div id="g_id_onload"
+                     data-client_id="625457191585-2g87nj1pq6g7ke79loijr9o1pobdmlu9.apps.googleusercontent.com"
+                     data-callback="handleCredentialResponse"
+                     data-auto_prompt="false">
+                </div>
+                <div class="g_id_signin" data-type="standard" data-size="large" data-theme="filled_blue" data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left" data-width="320"></div>
+                <p class="text-[10px] text-slate-500 mt-6">بياناتك محمية ومشفرة بأعلى معايير الأمان 🔒</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="payment-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden fade-in">
+        <div class="glass-panel p-8 w-full max-w-lg relative bg-slate-900 border border-slate-700 text-right">
+            <button onclick="closePayment()" class="absolute top-4 left-4 text-slate-400 hover:text-white"><i class="fas fa-times text-xl"></i></button>
+            <div class="text-center mb-6">
+                <div class="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-3"><i class="fas fa-receipt text-white"></i></div>
+                <h3 class="text-xl font-bold text-white mb-2">شحن الرصيد (InstaPay)</h3>
+                <p class="text-sm text-slate-400">حول المبلغ ثم ارفع الإيصال.</p>
+            </div>
+            <div class="bg-indigo-900/30 p-4 rounded-lg border border-indigo-500/30 mb-6">
+                <div class="flex justify-between items-center mb-2">
+                    <p class="text-xs text-indigo-300">رقم التحويل (InstaPay,
+                         محفظه كاش)</p>
+                    <p class="text-lg font-mono font-bold text-white tracking-widest select-all">01121748885 01007317927</p>
+                </div>
+                <hr class="border-indigo-500/20 mb-3">
+                <div class="mb-1 text-right">
+                    <label class="block text-xs text-indigo-300 mb-1">المبلغ المحول (ج.م)</label>
+                    <input type="number" id="payment-amount" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-center font-bold outline-none focus:border-green-500" placeholder="مثال: 1000">
+                </div>
+            </div>
+            <div class="space-y-4">
+                <div class="border-2 border-dashed border-slate-600 rounded-xl p-8 text-center hover:bg-slate-800 transition cursor-pointer relative group">
+                    <input type="file" id="payment-proof" class="absolute inset-0 opacity-0 cursor-pointer">
+                    <i class="fas fa-cloud-upload-alt text-4xl text-slate-500 group-hover:text-indigo-400 transition mb-2"></i>
+                    <p class="text-sm text-slate-400" id="file-status">اضغط لرفع الإيصال</p>
+                </div>
+                <button onclick="submitPayment()" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg shadow-lg">تأكيد وإرسال للإدارة</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-layout" class="flex w-full h-full hidden opacity-0 transition-opacity duration-700">
+        <aside class="hidden md:flex w-64 bg-[#1e293b] border-l border-slate-700 flex-col justify-between h-full shrink-0 z-20">
+            <div>
+                <div class="p-6 mb-2 flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold shadow-lg"><i class="fas fa-robot"></i></div>
+                    <span class="text-lg font-bold text-white tracking-tight">Seven AI</span>
+                </div>
+                <div class="px-3 space-y-1">
+                    <p class="px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 mt-4">القائمة الرئيسية</p>
+                    <div onclick="switchTab('search')" id="nav-search" class="sidebar-item active"><i class="fas fa-search w-5"></i><span class="text-sm font-medium">البحث الذكي</span></div>
+                    <div onclick="switchTab('files')" id="nav-files" class="sidebar-item"><i class="fas fa-folder-open w-5"></i><span class="text-sm font-medium">ملفاتي المحفوظة</span></div>
+                    <div onclick="switchTab('support')" id="nav-support" class="sidebar-item"><i class="fas fa-headset w-5"></i><span class="text-sm font-medium">الدعم الفني المباشر</span></div>
+                    <div onclick="switchTab('billing')" id="nav-billing" class="sidebar-item"><i class="fas fa-wallet w-5"></i><span class="text-sm font-medium">المحفظة والشحن</span></div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-slate-700 bg-[#1e293b]">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center text-indigo-400 font-bold border border-slate-600">AH</div>
+                    <div class="flex-1 overflow-hidden text-right">
+                        <p class="text-sm font-bold text-white truncate" id="user-name-display">User</p>
+                        <p class="text-[10px] text-green-400">Premium User</p>
+                    </div>
+                    <button onclick="logout()" class="text-slate-500 hover:text-red-400 transition"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 bg-[#0f172a] h-full overflow-y-auto relative text-right">
+            <header class="sticky top-0 z-30 bg-[#0f172a]/90 backdrop-blur-md border-b border-slate-700 px-8 py-4 flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <div class="bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                        <span class="text-xs text-slate-400">رصيدك: <span class="text-white font-bold" id="header-credits">--</span> توكن</span>
+                    </div>
+                    <button onclick="openPayment()" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow-lg flex items-center gap-2"><i class="fas fa-plus-circle"></i> شحن الرصيد</button>
+                </div>
+                <div><h2 class="text-xl font-bold text-white" id="page-title">🔍 محرك البحث الذكي</h2></div>
+            </header>
+
+            <div class="p-4 md:p-8 max-w-7xl mx-auto pb-24">
+                
+                <div id="tab-search" class="fade-in">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+                        <div class="glass-panel p-4 flex items-center justify-between border-r-4 border-green-500">
+                            <i class="fas fa-envelope-open-text text-green-500/20 text-3xl"></i>
+                            <div><p class="text-slate-400 text-xs font-bold">جودة الإيميلات</p><h3 class="text-xl font-bold text-white mt-1" id="stat-email">0%</h3></div>
+                        </div>
+                        <div class="glass-panel p-4 flex items-center justify-between border-r-4 border-yellow-500">
+                            <i class="fab fa-whatsapp text-yellow-500/20 text-3xl"></i>
+                            <div><p class="text-slate-400 text-xs font-bold">أرقام واتساب</p><h3 class="text-xl font-bold text-white mt-1" id="stat-phone">0%</h3></div>
+                        </div>
+                        <div class="glass-panel p-4 flex items-center justify-between border-r-4 border-blue-500">
+                            <i class="fas fa-user-tie text-blue-500/20 text-3xl"></i>
+                            <div><p class="text-slate-400 text-xs font-bold">صناع القرار</p><h3 class="text-xl font-bold text-white mt-1" id="stat-decision">0%</h3></div>
+                        </div>
+                        <div class="glass-panel p-4 flex items-center justify-between border-r-4 border-indigo-500">
+                            <i class="fas fa-database text-indigo-500/20 text-3xl"></i>
+                            <div><p class="text-slate-400 text-xs font-bold">إجمالي الداتا</p><h3 class="text-xl font-bold text-white mt-1" id="total-leads-stat">0</h3></div>
+                        </div>
+                    </div>
+
+                    <div id="ai-tips-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 hidden fade-in"></div>
+
+                    <div class="glass-panel p-6 mb-8 relative z-40">
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                            <div class="md:col-span-1">
+                                <button onclick="startSearch()" id="search-btn" class="w-full h-[48px] bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow-lg flex justify-center items-center transition transform active:scale-95"><i class="fas fa-bolt text-xl"></i></button>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-bold text-slate-400 mb-2 mr-1">العدد</label>
+                                <input type="number" id="target_limit" value="10" min="1" max="100" class="w-full bg-slate-900 border border-slate-700 rounded-lg py-3 px-4 text-white text-center focus:border-indigo-500 outline-none transition">
+                            </div>
+                            <div class="md:col-span-4">
+                                <label class="block text-xs font-bold text-slate-400 mb-2 mr-1">الموقع الجغرافي</label>
+                                <input type="text" id="location" class="w-full bg-slate-900 border border-slate-700 rounded-lg py-3 pr-4 text-white focus:border-indigo-500 outline-none transition" placeholder="مثال: Cairo">
+                            </div>
+                            <div class="md:col-span-5 relative text-right">
+                                <label class="block text-xs font-bold text-slate-400 mb-2 mr-1">النشاط / الصناعة</label>
+                                <input type="text" id="keyword" oninput="fetchSuggestions(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg py-3 pr-4 text-white text-right focus:border-indigo-500 outline-none transition" placeholder="مثال: Real Estate">
+                                <div id="suggestions-box" class="absolute top-full right-0 w-full bg-slate-800 border border-slate-600 rounded-lg mt-1 hidden shadow-2xl max-h-60 overflow-y-auto z-50"></div>
+                            </div>
+                        </div>
+                        <div id="terminal" class="mt-4 bg-black/60 rounded-lg p-3 font-mono text-[10px] text-green-400 h-24 overflow-y-auto hidden border border-slate-700 text-left" dir="ltr"></div>
+                    </div>
+
+                    <div class="glass-panel overflow-hidden min-h-[400px]">
+                        <div class="p-4 border-b border-slate-700 flex flex-col md:flex-row justify-between items-center gap-4 bg-slate-800/40">
+                            <div class="flex items-center gap-2 w-full md:w-auto">
+                                <div class="relative w-full">
+                                    <input type="text" id="table-search" onkeyup="filterLeads(this.value)" class="bg-slate-700 border border-slate-600 text-white text-xs rounded-lg block w-full p-2 pl-8" placeholder="🔍 فلترة النتائج (اسم، شركة، هاتف)...">
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="exportData()" id="main-export-btn" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded transition flex items-center gap-2"><i class="fas fa-download"></i> تصدير Excel</button>
+                                <button onclick="refreshLeads()" class="text-xs text-slate-400 hover:text-white px-2 transition"><i class="fas fa-sync-alt"></i></button>
+                            </div>
+                            <div class="flex items-center gap-3"><span class="bg-indigo-500/20 text-indigo-300 text-[10px] px-2 py-0.5 rounded border border-indigo-500/30" id="result-count">0 Leads</span><h3 class="font-bold text-white text-sm">النتائج الحية</h3></div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-right border-collapse">
+                                <thead class="bg-slate-800/50 text-[11px] uppercase text-slate-400 font-semibold">
+                                    <tr>
+                                        <th class="p-4 text-center">روابط</th>
+                                        <th class="p-4 text-center">الثقة</th>
+                                        <th class="p-4">صانع القرار</th>
+                                        <th class="p-4">أرقام الهواتف</th>
+                                        <th class="p-4">الإيميل</th>
+                                        <th class="p-4">الشركة والموقع</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="leads-table-body" class="text-sm divide-y divide-slate-800/50 text-slate-300"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-support" class="fade-in hidden">
+                    <div class="glass-panel flex flex-col h-[600px] border border-slate-700 overflow-hidden">
+                        <div class="p-4 bg-slate-800/50 border-b border-slate-700 flex justify-between items-center">
+                            <span class="text-xs text-green-400 animate-pulse"><i class="fas fa-circle mr-1 text-[8px]"></i> مستشار الدعم الفني متاح الآن</span>
+                            <h3 class="text-lg font-bold text-white">مركز المحادثة المباشرة</h3>
+                        </div>
+                        <div class="flex-1 p-6 overflow-y-auto bg-slate-900/30 chat-container" id="client-chat-box"></div>
+                        <div class="p-4 bg-slate-800/50 border-t border-slate-700 flex gap-3 items-center">
+                            <button onclick="sendClientMessage()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-xl shadow-lg transition transform active:scale-95"><i class="fas fa-paper-plane"></i></button>
+                            <input type="text" id="client-chat-input" class="flex-1 bg-slate-900 border border-slate-700 rounded-xl p-4 text-white text-right outline-none focus:border-indigo-500" placeholder="اكتب استفسارك هنا وسيرد عليك المدير فوراً...">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-files" class="fade-in hidden">
+                    <h3 class="text-2xl font-bold text-white mb-6 text-right">📂 ملفاتي المحفوظة</h3>
+                    <div class="grid grid-cols-1 gap-4" id="files-list"></div>
+                </div>
+
+                <div id="tab-billing" class="fade-in hidden">
+                    <h3 class="text-2xl font-bold text-white mb-6 text-right">💳 المحفظة والاشتراكات</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        <div class="glass-panel p-8 text-right">
+                            <h4 class="font-bold text-white mb-4"><i class="fas fa-ticket-alt text-pink-500 ml-2"></i> تفعيل كوبون</h4>
+                            <div class="flex gap-3">
+                                <button onclick="redeemCoupon()" class="bg-pink-600 hover:bg-pink-500 text-white font-bold px-6 rounded-lg transition">تفعيل</button>
+                                <input type="text" id="coupon-code" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg p-3 text-white text-center font-mono uppercase placeholder-slate-600 focus:border-pink-500 outline-none" placeholder="اكتب الكود هنا">
+                            </div>
+                            <p class="text-xs text-slate-500 mt-2">جرب كود: WELCOME2026</p>
+                        </div>
+                        <div class="glass-panel p-8 bg-gradient-to-br from-indigo-900/40 text-right">
+                            <div class="flex justify-between items-start">
+                                <div class="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center shadow-lg"><i class="fas fa-coins text-white text-xl"></i></div>
+                                <div>
+                                    <p class="text-slate-400 text-sm font-bold mb-2">الرصيد الحالي</p>
+                                    <h2 class="text-5xl font-bold text-white mb-2 font-mono" id="billing-balance">--</h2>
+                                    <p class="text-xs text-green-400">توكن صالحة للاستخدام</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass-panel p-6 mt-6 border-t-4 border-indigo-500 text-right">
+                        <h4 class="font-bold text-white mb-4 text-sm"><i class="fas fa-history ml-2"></i> سجل طلبات الشحن</h4>
+                        <table class="w-full text-right text-[11px]">
+                            <thead class="text-slate-500 border-b border-slate-800">
+                                <tr><th class="pb-2">الحالة</th><th class="pb-2">التوكنات</th><th class="pb-2 text-left">المبلغ</th></tr>
+                            </thead>
+                            <tbody id="billing-history-body" class="text-slate-300 divide-y divide-slate-800/30"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <nav class="md:hidden fixed bottom-0 left-0 w-full bg-[#1e293b] border-t border-slate-700 flex justify-around items-center p-2 z-50 shadow-2xl backdrop-blur-md safe-area-pb">
+        <div onclick="switchTab('search')" id="mob-nav-search" class="flex flex-col items-center gap-1 text-indigo-400 cursor-pointer p-2">
+            <i class="fas fa-search text-lg"></i>
+            <span class="text-[9px] font-bold">بحث</span>
+        </div>
+        <div onclick="switchTab('files')" id="mob-nav-files" class="flex flex-col items-center gap-1 text-slate-500 cursor-pointer p-2">
+            <i class="fas fa-folder-open text-lg"></i>
+            <span class="text-[9px] font-bold">ملفاتي</span>
+        </div>
+        <div onclick="switchTab('support')" id="mob-nav-support" class="flex flex-col items-center gap-1 text-slate-500 cursor-pointer p-2">
+            <i class="fas fa-headset text-lg"></i>
+            <span class="text-[9px] font-bold">الدعم</span>
+        </div>
+        <div onclick="switchTab('billing')" id="mob-nav-billing" class="flex flex-col items-center gap-1 text-slate-500 cursor-pointer p-2">
+            <i class="fas fa-wallet text-lg"></i>
+            <span class="text-[9px] font-bold">محفظتي</span>
+        </div>
+        <div onclick="logout()" class="flex flex-col items-center gap-1 text-red-400/80 hover:text-red-500 cursor-pointer p-2 border-r border-slate-700/50 pr-4">
+            <i class="fas fa-sign-out-alt text-lg"></i>
+            <span class="text-[9px] font-bold">خروج</span>
+        </div>
+    </nav>
+
+    <script>
+        const API_URL = ""; 
+        let globalLeads = []; 
+
+        document.addEventListener("DOMContentLoaded", () => {
+            initApp();
+            document.getElementById('payment-proof').addEventListener('change', e => {
+                if(e.target.files[0]) {
+                    document.getElementById('file-status').innerText = "✅ تم اختيار: " + e.target.files[0].name;
+                    document.getElementById('file-status').classList.add('text-green-400');
+                }
+            });
+        });
+
+        async function handleCredentialResponse(response) {
+            try {
+                const res = await fetch(`${API_URL}/auth/google-login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ token: response.credential })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || "فشل الدخول بجوجل");
+                localStorage.setItem("access_token", data.access_token);
+                initApp();
+            } catch (err) {
+                console.error(err);
+                alert("تعذر تسجيل الدخول بواسطة جوجل: " + err.message);
+            }
+        }
+
+        function initApp() {
+            const token = localStorage.getItem("access_token");
+            if (!token) {
+                document.getElementById("auth-screen").classList.remove("hidden");
+                document.getElementById("app-layout").classList.add("hidden");
+                return;
+            }
+            document.getElementById("auth-screen").classList.add("hidden");
+            document.getElementById("app-layout").classList.remove("hidden");
+            setTimeout(() => document.getElementById("app-layout").classList.remove("opacity-0"), 100);
+            
+            updateStats(); 
+            refreshLeads(); 
+            loadFilesUI(); 
+            loadBillingHistory();
+            loadSmartTips(); 
+            
+            // ✅ التحديث التلقائي للبيانات كل 5 ثواني
+            setInterval(() => {
+                refreshLeads();
+                updateStats();
+                loadFilesUI(); 
+            }, 5000); 
+            
+            setInterval(() => {
+                if (!document.getElementById('tab-support').classList.contains('hidden')) {
+                    fetchChatHistory();
+                }
+            }, 5000);
+        }
+
+        function logout() { 
+            localStorage.removeItem("access_token"); 
+            location.reload(); 
+        }
+
+        async function authFetch(url, options = {}) {
+            const token = localStorage.getItem("access_token");
+            if (!token) { logout(); return; }
+            const headers = {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                ...options.headers
+            };
+            try {
+                const res = await fetch(API_URL + url, { ...options, headers });
+                if (res.status === 401) { logout(); return; }
+                return res;
+            } catch (error) {
+                console.error("Network error:", error);
+                throw error;
+            }
+        }
+
+        async function fetchChatHistory() {
+            try {
+                const res = await authFetch(`/chat/history`);
+                if(!res) return;
+                const msgs = await res.json();
+                const box = document.getElementById('client-chat-box');
+                box.innerHTML = msgs.map(m => `
+                    <div class="${m.sender === 'user' ? 'chat-bubble-user' : 'chat-bubble-admin'}">
+                        ${m.message}
+                        <div class="text-[8px] mt-1 opacity-50">${new Date(m.created_at).toLocaleTimeString('ar-EG')}</div>
+                    </div>
+                `).join('');
+                box.scrollTop = box.scrollHeight;
+            } catch(e) {}
+        }
+
+        async function sendClientMessage() {
+            const input = document.getElementById('client-chat-input');
+            const msg = input.value.trim();
+            if(!msg) return;
+            try {
+                const res = await authFetch(`/chat/send`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ message: msg })
+                });
+                if(res && res.ok) { input.value = ''; fetchChatHistory(); }
+            } catch(e) {}
+        }
+
+        async function startSearch() {
+            const btn = document.getElementById('search-btn');
+            const keyword = document.getElementById('keyword').value;
+            const location = document.getElementById('location').value;
+            const limit = document.getElementById('target_limit').value;
+            const term = document.getElementById('terminal');
+
+            if(!keyword || !location) return alert("أكمل البيانات");
+
+            btn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i>`;
+            term.classList.remove('hidden');
+            term.innerHTML += `<p>> بدأ البحث عن: "${keyword}"...</p>`;
+
+            try {
+                // ✅ الكود الصحيح: إرسال البيانات كـ JSON
+                const res = await authFetch(`/search/start-search/`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        keyword: keyword,
+                        location: location,
+                        target_limit: parseInt(limit)
+                    })
+                });
+
+                if(res && res.ok) {
+                    term.innerHTML += `تم بدء البحث , انتظر دقايق سوف تظهر البيانات تلقائيا.</p>`;
+                    loadSmartTips(); 
+                    setTimeout(loadFilesUI, 3000); 
+                } else {
+                    const errData = await res.json();
+                    term.innerHTML += `<p class="text-red-500">> خطأ: ${errData.detail || "حدث خطأ غير متوقع"}</p>`;
+                }
+            } catch (e) { 
+                console.error(e);
+                term.innerHTML += `<p class="text-red-500">> خطأ اتصال بالسيرفر.</p>`; 
+            }
+            
+            setTimeout(() => btn.innerHTML = `<i class="fas fa-bolt text-xl"></i>`, 2000);
+        }
+
+        async function refreshLeads() {
+            try {
+                const res = await authFetch(`/search/my-leads/`);
+                if (!res || !res.ok) return;
+                const result = await res.json();
+                globalLeads = result.data; 
+                renderTable(globalLeads);      
+                calculateRealStats(globalLeads); 
+            } catch (e) { console.error(e); }
+        }
+
+        function calculateRealStats(leads) {
+            const total = leads.length;
+            document.getElementById('result-count').innerText = `${total} Leads`;
+            document.getElementById('total-leads-stat').innerText = total;
+            if(total === 0) {
+                document.getElementById('stat-email').innerText = "0%";
+                document.getElementById('stat-phone').innerText = "0%";
+                document.getElementById('stat-decision').innerText = "0%";
+                return;
+            }
+            const emails = leads.filter(l => l.email_status === 'Valid').length;
+            const phones = leads.filter(l => l.phone && (l.phone.includes("01") || l.phone.includes("+20"))).length;
+            const decisionMakers = leads.filter(l => l.decision_maker_name && l.decision_maker_name !== '').length;
+            document.getElementById('stat-email').innerText = Math.round((emails / total) * 100) + "%";
+            document.getElementById('stat-phone').innerText = Math.round((phones / total) * 100) + "%";
+            document.getElementById('stat-decision').innerText = Math.round((decisionMakers / total) * 100) + "%";
+        }
+
+        function renderTable(data) {
+            if (!data || data.length === 0) {
+                document.getElementById('leads-table-body').innerHTML = '<tr><td colspan="6" class="text-center p-4 text-slate-500">لا توجد بيانات حتى الآن... ابدأ البحث!</td></tr>';
+                return;
+            }
+            const html = data.map(lead => {
+                const phoneHtml = lead.phone ? lead.phone.split('|').map(p => {
+                    p = p.trim();
+                    const cleanPhone = p.replace(/[^\d+]/g, '');
+                    const isMobile = p.startsWith('01') || p.startsWith('+201');
+                    const icon = isMobile ? 'fa-mobile-alt' : 'fa-phone-alt';
+                    const color = isMobile ? 'text-green-400 border-green-500/30' : 'text-yellow-500 border-yellow-500/30';
+                    return `<a href="tel:${cleanPhone}" class="flex items-center gap-1 ${color} text-[10px] bg-slate-800/50 px-2 py-1 rounded border mb-1 hover:bg-slate-700 transition group w-fit">
+                        <i class="fas ${icon} group-hover:animate-pulse"></i> <span dir="ltr" class="font-mono">${p}</span>
+                    </a>`;
+                }).join('') : '-';
+
+                return `
+              <tr class="hover:bg-slate-800/30 transition border-b border-slate-800/50">
+                  <td class="p-4 text-center">
+                    <div class="flex justify-center gap-3">
+                    ${lead.linkedin_url ? `<a href="${lead.linkedin_url}" target="_blank" class="text-blue-400 hover:text-blue-300"><i class="fab fa-linkedin text-lg"></i></a>` : '<span class="text-slate-600 opacity-30"><i class="fab fa-linkedin"></i></span>'}
+                    ${lead.website && lead.website !== 'غير متوفر' ? `<a href="${lead.website}" target="_blank" class="text-emerald-400 hover:text-emerald-300"><i class="fas fa-globe text-lg"></i></a>` : '<span class="text-slate-600 opacity-30"><i class="fas fa-globe"></i></span>'}
+                    </div>
+                </td>
+                <td class="p-4 text-center">
+                      <div class="w-10 bg-slate-700 h-1 rounded-full mx-auto" title="${lead.confidence_score || 0}%">
+                          <div class="bg-green-500 h-full rounded-full" style="width: ${lead.confidence_score || 0}%"></div>
+                      </div>
+                </td>
+                <td class="p-4 text-xs text-right">
+                    <div class="font-bold text-slate-200">${lead.decision_maker_name || '--'}</div>
+                    <div class="text-[10px] text-indigo-400 mt-1">${lead.decision_maker_role || ''}</div>
+                </td>
+                <td class="p-4 text-right">
+                      <div class="flex flex-col items-end">${phoneHtml}</div>
+                </td>
+                <td class="p-4 text-center">
+                    <div class="flex flex-col gap-1 items-center">
+                        ${lead.email && lead.email !== 'غير متوفر' ? `<a href="mailto:${lead.email}" class="text-indigo-300 text-xs select-all hover:text-white hover:underline transition">${lead.email}</a>` : '<span class="text-slate-600">-</span>'}
+                        ${lead.email_status === 'Valid' ? '<span class="text-[9px] bg-green-900/30 text-green-400 px-1.5 py-0.5 rounded border border-green-500/20">Verified</span>' : ''}
+                    </div>
+                </td>
+                <td class="p-4 text-right">
+                    <div class="font-bold text-white text-xs mb-1 truncate max-w-[150px]" title="${lead.company_name}">${lead.company_name}</div>
+                    <a href="https://www.google.com/maps/search/?api=1&query=$${encodeURIComponent(lead.location)}" target="_blank" class="text-[10px] text-blue-400 flex items-center gap-1 justify-end hover:text-blue-300 hover:underline transition cursor-pointer">
+                        ${lead.location} <i class="fas fa-map-marker-alt"></i>
+                    </a>
+                </td>
+              </tr>`;
+            }).join('');
+            document.getElementById('leads-table-body').innerHTML = html;
+        }
+
+        function filterLeads(query) {
+            const lowerQuery = query.toLowerCase();
+            const filtered = globalLeads.filter(lead => 
+                (lead.company_name && lead.company_name.toLowerCase().includes(lowerQuery)) ||
+                (lead.phone && lead.phone.includes(lowerQuery)) ||
+                (lead.email && lead.email.toLowerCase().includes(lowerQuery)) ||
+                (lead.decision_maker_name && lead.decision_maker_name.toLowerCase().includes(lowerQuery))
+            );
+            renderTable(filtered);
+        }
+
+        function loadSavedSearch(k, l) {
+            switchTab('search'); 
+            document.getElementById('keyword').value = k;
+            document.getElementById('location').value = l;
+            
+            const filtered = globalLeads.filter(lead => 
+                (lead.industry && lead.industry.toLowerCase().includes(k.toLowerCase())) &&
+                (lead.location && lead.location.toLowerCase().includes(l.toLowerCase()))
+            );
+            
+            if (filtered.length > 0) {
+                renderTable(filtered);
+                calculateRealStats(filtered);
+                const t = document.getElementById("toast-notification");
+                t.innerText = "👁️ تم عرض البيانات المحفوظة"; t.classList.add("show");
+                setTimeout(() => t.classList.remove("show"), 3000);
+            } else {
+                refreshLeads(); 
+            }
+        }
+
+        async function loadSmartTips() {
+            try {
+                const res = await authFetch(`/ai/smart-tips/`);
+                if (!res || !res.ok) return;
+                const tips = await res.json();
+                const container = document.getElementById('ai-tips-container');
+                if (tips.length > 0) {
+                    container.classList.remove('hidden');
+                    container.innerHTML = tips.map(tip => `
+                        <div class="glass-panel p-4 border-r-4 border-indigo-500 flex gap-4 items-start">
+                            <div class="bg-indigo-900/50 p-3 rounded-lg"><i class="fas ${tip.icon} text-indigo-400 text-xl"></i></div>
+                            <div><h4 class="font-bold text-white text-sm mb-1">${tip.title}</h4><p class="text-xs text-slate-400 leading-relaxed">${tip.text}</p></div>
+                        </div>
+                    `).join('');
+                }
+            } catch (e) {}
+        }
+
+        async function updateStats() {
+            try {
+                const resMe = await authFetch(`/auth/me`);
+                if (resMe && resMe.ok) {
+                    const myData = await resMe.json();
+                    document.getElementById('header-credits').innerText = myData.credits.toLocaleString();
+                    document.getElementById('billing-balance').innerText = myData.credits.toLocaleString();
+                    document.getElementById('user-name-display').innerText = myData.email.split('@')[0]; 
+                }
+                const resStats = await authFetch(`/ai/dashboard-stats/`);
+                if (resStats && resStats.ok) {
+                    const stats = await resStats.json();
+                    if(stats.total > 0) {
+                        document.getElementById('stat-email').innerText = stats.emails_pct + "%";
+                        document.getElementById('total-leads-stat').innerText = stats.total;
+                    }
+                }
+            } catch (e) {}
+        }
+
+        function switchTab(tabName) {
+            ['search', 'files', 'billing', 'support'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                const deskBtn = document.getElementById(`nav-${t}`);
+                if(deskBtn) deskBtn.classList.remove('active');
+                const mobBtn = document.getElementById(`mob-nav-${t}`);
+                if(mobBtn) {
+                    mobBtn.classList.remove('text-indigo-400', 'animate-pulse');
+                    mobBtn.classList.add('text-slate-500');
+                }
+            });
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+            const activeDeskBtn = document.getElementById(`nav-${tabName}`);
+            if(activeDeskBtn) activeDeskBtn.classList.add('active');
+            const activeMobBtn = document.getElementById(`mob-nav-${tabName}`);
+            if(activeMobBtn) {
+                activeMobBtn.classList.remove('text-slate-500');
+                activeMobBtn.classList.add('text-indigo-400', 'animate-pulse');
+            }
+            if(tabName === 'support') fetchChatHistory();
+        }
+
+        async function exportData(k, l) {
+            const keyword = k || document.getElementById('keyword').value || "All";
+            const location = l || document.getElementById('location').value || "All";
+            const token = localStorage.getItem("access_token");
+            if (!token) return alert("يرجى تسجيل الدخول");
+            
+            const t = document.getElementById("toast-notification");
+            t.innerText = "📥 جاري تحضير ملف الإكسيل..."; t.classList.add("show");
+            
+            window.location.href = `${API_URL}/export/download-leads/?keyword=${keyword}&location=${location}&token=${token}&v=${Date.now()}`;
+            
+            setTimeout(() => {
+                t.classList.remove("show");
+                loadFilesUI();
+            }, 3000);
+        }
+
+        function openPayment() { document.getElementById('payment-modal').classList.remove('hidden'); }
+        function closePayment() { document.getElementById('payment-modal').classList.add('hidden'); }
+
+        async function submitPayment() {
+            const fileInput = document.getElementById('payment-proof');
+            const amountInput = document.getElementById('payment-amount');
+            if (!fileInput.files[0] || !amountInput.value) return alert("أكمل البيانات");
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('amount', amountInput.value);
+            try {
+                const res = await fetch(`${API_URL}/payments/submit-request`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem("access_token")}` },
+                    body: formData
+                });
+                if (res.ok) { alert("تم إرسال الطلب بنجاح!"); closePayment(); loadBillingHistory(); }
+            } catch (e) {}
+        }
+
+        async function loadBillingHistory() {
+            try {
+                const res = await authFetch(`/admin/pending-payments`);
+                if(!res) return;
+                const payments = await res.json();
+                document.getElementById('billing-history-body').innerHTML = payments.map(p => `
+                    <tr class="border-b border-slate-800/30"><td class="py-2">قيد المراجعة</td><td>${p.tokens}</td><td>${p.amount}</td></tr>
+                `).join('');
+            } catch (e) {}
+        }
+
+        async function loadFilesUI() {
+            try {
+                const res = await authFetch('/search/history');
+                if (!res || !res.ok) return;
+                const history = await res.json(); 
+                const container = document.getElementById('files-list');
+                if (history.length === 0) {
+                    container.innerHTML = '<div class="text-center text-slate-500 py-10">لا توجد ملفات محفوظة بعد.</div>';
+                    return;
+                }
+                container.innerHTML = history.map(f => `
+                    <div class="glass-panel p-4 flex justify-between items-center border border-slate-700/50 hover:border-indigo-500/50 transition">
+                        <div class="flex gap-3">
+                            <button onclick="exportData('${f.keyword}','${f.location}')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-lg">تصدير Excel</button>
+                            <button onclick="loadSavedSearch('${f.keyword}', '${f.location}')" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-xs">معاينة</button>
+                        </div>
+                        <div class="text-right">
+                            <h4 class="font-bold text-white text-sm">${f.keyword} <span class="text-slate-400 font-normal">في</span> ${f.location}</h4>
+                            <p class="text-[10px] text-slate-500 mt-1">${f.results_count || 0} نتائج</p>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {}
+        }
+
+        // ✅ دالة شحن الكوبون (الجديدة)
+        async function redeemCoupon() {
+            const codeInput = document.getElementById('coupon-code');
+            const code = codeInput.value.trim();
+            if(!code) return alert("من فضلك اكتب الكود أولاً");
+
+            try {
+                const btn = event.target;
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                
+                const res = await authFetch('/payments/redeem-coupon', {
+                    method: 'POST',
+                    body: JSON.stringify({ code: code })
+                });
+                
+                const data = await res.json();
+                
+                if(res.ok) {
+                    document.getElementById('billing-balance').innerText = data.new_balance;
+                    document.getElementById('header-credits').innerText = data.new_balance;
+                    alert(`🎉 ${data.message}`);
+                    codeInput.value = '';
+                } else {
+                    alert(`❌ ${data.detail || "الكود غير صحيح"}`);
+                }
+                btn.innerHTML = originalText;
+            } catch(e) {
+                alert("خطأ في الاتصال بالسيرفر");
+            }
+        }
+
+        async function fetchSuggestions(val) { }
+    </script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+sqlalchemy
+psycopg2-binary
+pandas
+email-validator
+dnspython
+selenium
+undetected-chromedriver
+python-dotenv
+passlib[bcrypt]
+python-multipart
+pyjwt
+openpyxl
+requests
+beautifulsoup4
