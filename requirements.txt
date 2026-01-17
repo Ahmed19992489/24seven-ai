@@ -10,7 +10,12 @@ undetected-chromedriver
 python-dotenv
 passlib[bcrypt]
 python-multipart
-pyjwt
+python-jose[cryptography]
 openpyxl
 requests
 beautifulsoup4
+aiofiles
+setuptools
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
