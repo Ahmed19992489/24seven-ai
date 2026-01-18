@@ -15,148 +15,168 @@
         .chat-bubble-admin { @apply bg-red-600 text-white rounded-2xl rounded-bl-none p-3 text-sm ml-auto mb-4 self-end shadow-md; }
         .chat-bubble-user { @apply bg-slate-800 text-slate-100 rounded-2xl rounded-br-none p-3 text-sm mr-auto mb-4 self-start border border-slate-700; }
         .ledger-row { @apply flex justify-between p-3 border-b border-slate-800 text-[10px] font-mono; }
+        
+        /* --- Login Screen Styles (جديد) --- */
+        #login-screen { position: fixed; inset: 0; z-index: 9999; background: #020617; display: flex; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
+        .login-box { width: 100%; max-width: 400px; padding: 40px; background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; backdrop-filter: blur(10px); text-align: center; }
+        
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
     </style>
 </head>
 <body class="min-h-screen flex text-right">
 
-    <aside class="w-72 bg-slate-950 border-l border-slate-800 p-6 flex flex-col justify-between fixed h-full right-0 z-50 shadow-2xl">
-        <div>
-            <div class="flex items-center gap-3 mb-10">
-                <div class="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center shadow-lg shadow-red-900/40 animate-pulse">
-                    <i class="fas fa-shield-alt text-white text-xl"></i>
-                </div>
-                <h1 class="text-xl font-bold tracking-tighter text-white">GOD MODE <span class="text-red-600 text-xs">v9.3</span></h1>
+    <div id="login-screen">
+        <div class="login-box">
+            <div class="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-red-500/20 animate-pulse">
+                <i class="fas fa-lock text-2xl text-white"></i>
             </div>
-            <nav class="space-y-3">
-                <div onclick="showSection('overview')" class="nav-link active" id="btn-overview"><i class="fas fa-chart-line w-6"></i> نمو الشركة</div>
-                <div onclick="showSection('users')" class="nav-link" id="btn-users"><i class="fas fa-user-shield w-6"></i> ملفات العملاء</div>
-                <div onclick="showSection('payments')" class="nav-link" id="btn-payments"><i class="fas fa-vault w-6"></i> المالية <span id="payment-badge" class="bg-red-600 text-white text-[10px] px-2 py-0.5 rounded-full">0</span></div>
-                <div onclick="showSection('support')" class="nav-link" id="btn-support"><i class="fas fa-comments w-6"></i> مركز القيادة</div>
-                <div onclick="seedData()" class="nav-link text-yellow-500 hover:text-yellow-400 mt-10 border border-yellow-900/30 cursor-pointer"><i class="fas fa-sync-alt w-6"></i> تحديث النظام</div>
-            </nav>
+            <h2 class="text-2xl font-bold text-white mb-2">منطقة الإدارة العليا</h2>
+            <p class="text-slate-400 text-sm mb-8">أدخل كود المرور للوصول للنظام</p>
+            <input type="password" id="admin-pass" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-center text-white mb-4 focus:border-red-500 outline-none transition" placeholder="Passcode">
+            <button onclick="checkAdmin()" class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl transition shadow-lg">دخول النظام</button>
         </div>
-        <div class="p-4 bg-slate-900/50 rounded-xl border border-slate-800 text-center">
-            <span class="text-[10px] text-green-500 font-mono uppercase tracking-widest">Support: 01121748885</span>
-        </div>
-    </aside>
+    </div>
 
-    <main class="flex-1 p-8 mr-72 text-right">
-        <section id="overview" class="section-content animate-in fade-in duration-500">
-            <h2 class="text-3xl font-bold mb-8 uppercase tracking-widest text-white">النظام المالي واستخبارات السوق</h2>
-            
-            <div class="grid grid-cols-3 gap-6 mb-10 text-right">
-                <div class="glass-card p-8 border-r-4 border-green-500 shadow-xl">
-                    <p class="text-slate-500 text-xs font-bold mb-2 uppercase">إجمالي الوارد (Gross)</p>
-                    <h3 id="stat-revenue" class="text-4xl font-bold text-green-500 tracking-tighter">0 EGP</h3>
+    <div id="admin-content" class="flex w-full hidden opacity-0 transition-opacity duration-700">
+        
+        <aside class="w-72 bg-slate-950 border-l border-slate-800 p-6 flex flex-col justify-between fixed h-full right-0 z-50 shadow-2xl">
+            <div>
+                <div class="flex items-center gap-3 mb-10">
+                    <div class="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center shadow-lg shadow-red-900/40">
+                        <i class="fas fa-shield-alt text-white text-xl"></i>
+                    </div>
+                    <h1 class="text-xl font-bold tracking-tighter text-white">GOD MODE <span class="text-red-600 text-xs">v9.3</span></h1>
                 </div>
+                <nav class="space-y-3">
+                    <div onclick="showSection('overview')" class="nav-link active" id="btn-overview"><i class="fas fa-chart-line w-6"></i> نمو الشركة</div>
+                    <div onclick="showSection('users')" class="nav-link" id="btn-users"><i class="fas fa-user-shield w-6"></i> ملفات العملاء</div>
+                    <div onclick="showSection('payments')" class="nav-link" id="btn-payments"><i class="fas fa-vault w-6"></i> المالية <span id="payment-badge" class="bg-red-600 text-white text-[10px] px-2 py-0.5 rounded-full">0</span></div>
+                    <div onclick="showSection('support')" class="nav-link" id="btn-support"><i class="fas fa-comments w-6"></i> مركز القيادة</div>
+                    <div onclick="seedData()" class="nav-link text-yellow-500 hover:text-yellow-400 mt-10 border border-yellow-900/30 cursor-pointer"><i class="fas fa-sync-alt w-6"></i> تحديث النظام</div>
+                </nav>
+            </div>
+            <div class="p-4 bg-slate-900/50 rounded-xl border border-slate-800 text-center">
+                <span class="text-[10px] text-green-500 font-mono uppercase tracking-widest">Support: 01121748885</span>
+            </div>
+        </aside>
+
+        <main class="flex-1 p-8 mr-72 text-right">
+            <section id="overview" class="section-content animate-in fade-in duration-500">
+                <h2 class="text-3xl font-bold mb-8 uppercase tracking-widest text-white">النظام المالي واستخبارات السوق</h2>
                 
-                <div class="glass-card p-8 border-r-4 border-blue-500 shadow-xl">
-                    <p class="text-slate-500 text-xs font-bold mb-2 uppercase">صافي الأرباح (Net Profit)</p>
-                    <h3 id="stat-profit" class="text-4xl font-bold text-blue-500 tracking-tighter">0 EGP</h3>
+                <div class="grid grid-cols-3 gap-6 mb-10 text-right">
+                    <div class="glass-card p-8 border-r-4 border-green-500 shadow-xl">
+                        <p class="text-slate-500 text-xs font-bold mb-2 uppercase">إجمالي الوارد (Gross)</p>
+                        <h3 id="stat-revenue" class="text-4xl font-bold text-green-500 tracking-tighter">0 EGP</h3>
+                    </div>
+                    
+                    <div class="glass-card p-8 border-r-4 border-blue-500 shadow-xl">
+                        <p class="text-slate-500 text-xs font-bold mb-2 uppercase">صافي الأرباح (Net Profit)</p>
+                        <h3 id="stat-profit" class="text-4xl font-bold text-blue-500 tracking-tighter">0 EGP</h3>
+                    </div>
+
+                    <div class="glass-card p-8 border-r-4 border-red-500 shadow-xl">
+                        <p class="text-slate-500 text-xs font-bold mb-2 uppercase tracking-widest">إجمالي المصروفات (Expenses)</p>
+                        <h3 id="stat-expenses" class="text-4xl font-bold text-red-500 tracking-tighter">0 EGP</h3>
+                    </div>
                 </div>
 
-                <div class="glass-card p-8 border-r-4 border-red-500 shadow-xl">
-                    <p class="text-slate-500 text-xs font-bold mb-2 uppercase tracking-widest">إجمالي المصروفات (Expenses)</p>
-                    <h3 id="stat-expenses" class="text-4xl font-bold text-red-500 tracking-tighter">0 EGP</h3>
-                </div>
-            </div>
-
-            <div class="glass-card p-6 mb-10 border border-red-900/30 bg-red-950/10">
-                <h4 class="text-xs font-bold mb-4 text-red-400 uppercase tracking-widest flex items-center gap-2">
-                    <i class="fas fa-file-invoice-dollar ml-1"></i> تسجيل مصروفات التشغيل
-                </h4>
-                <div class="flex gap-4 items-center">
-                    <input type="text" id="expense-label" class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-xs outline-none focus:border-red-500 transition-all text-white" placeholder="بيان المصروف (مثلاً: إعلانات، رواتب)">
-                    <input type="number" id="expense-amount" class="w-40 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-xs outline-none focus:border-red-500 transition-all text-white font-mono" placeholder="القيمة">
-                    <button onclick="addExpense()" class="bg-red-600 hover:bg-red-500 text-white px-6 py-3 rounded-xl text-xs font-bold uppercase shadow-lg active:scale-95 transition-all flex items-center gap-2">
-                        <i class="fas fa-minus-circle"></i> خصم
-                    </button>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-                <div class="glass-card p-6 border border-pink-900/30 bg-pink-950/10">
-                    <h4 class="text-xs font-bold mb-4 text-pink-400 uppercase tracking-widest flex items-center gap-2">
-                        <i class="fas fa-ticket-alt ml-1"></i> مولد الكوبونات (Gift Cards)
+                <div class="glass-card p-6 mb-10 border border-red-900/30 bg-red-950/10">
+                    <h4 class="text-xs font-bold mb-4 text-red-400 uppercase tracking-widest flex items-center gap-2">
+                        <i class="fas fa-file-invoice-dollar ml-1"></i> تسجيل مصروفات التشغيل
                     </h4>
-                    <div class="flex flex-col gap-4">
-                        <div class="flex gap-2">
-                            <input type="number" id="coupon-value" class="w-1/3 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-xs outline-none focus:border-pink-500 text-white font-mono" placeholder="القيمة (توكن)">
-                            <input type="text" id="coupon-custom-code" class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-xs outline-none focus:border-pink-500 text-white font-mono uppercase" placeholder="كود مخصص (اختياري)">
-                        </div>
-                        <button onclick="generateCoupon()" class="bg-pink-600 hover:bg-pink-500 text-white px-6 py-3 rounded-xl text-xs font-bold uppercase shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2">
-                            <i class="fas fa-magic"></i> إنشاء كود فوري
+                    <div class="flex gap-4 items-center">
+                        <input type="text" id="expense-label" class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-xs outline-none focus:border-red-500 transition-all text-white" placeholder="بيان المصروف (مثلاً: إعلانات، رواتب)">
+                        <input type="number" id="expense-amount" class="w-40 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-xs outline-none focus:border-red-500 transition-all text-white font-mono" placeholder="القيمة">
+                        <button onclick="addExpense()" class="bg-red-600 hover:bg-red-500 text-white px-6 py-3 rounded-xl text-xs font-bold uppercase shadow-lg active:scale-95 transition-all flex items-center gap-2">
+                            <i class="fas fa-minus-circle"></i> خصم
                         </button>
                     </div>
                 </div>
-            
-                <div class="glass-card p-6 border-slate-800 overflow-hidden flex flex-col">
-                    <h4 class="text-xs font-bold mb-4 text-slate-400 uppercase tracking-widest flex items-center justify-between">
-                        <span><i class="fas fa-barcode ml-2"></i> الكوبونات النشطة</span>
-                        <button onclick="loadCoupons()" class="text-[9px] bg-slate-800 px-2 py-1 rounded hover:text-white"><i class="fas fa-sync"></i> تحديث</button>
-                    </h4>
-                    <div class="flex-1 overflow-y-auto max-h-40 space-y-2 pr-2" id="coupons-list"></div>
-                </div>
-            </div>
 
-            <div class="grid grid-cols-2 gap-6 mb-10">
-                <div class="glass-card p-6 border-slate-800">
-                    <h4 class="text-xs font-bold mb-4 text-indigo-400 uppercase tracking-widest flex items-center gap-2"><i class="fas fa-search-location ml-2"></i> الكلمات الأكثر بحثاً</h4>
-                    <div id="top-keywords-dashboard" class="space-y-2"></div>
-                </div>
-                <div class="glass-card p-6 border-slate-800">
-                    <h4 class="text-xs font-bold mb-4 text-emerald-400 uppercase tracking-widest flex items-center gap-2"><i class="fas fa-map-marked-alt ml-2"></i> المحافظات الأكثر طلباً</h4>
-                    <div id="top-locations-dashboard" class="space-y-2"></div>
-                </div>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-6">
-                <div class="stat-card text-center"><p class="text-slate-500 text-[10px] font-bold mb-1 uppercase tracking-widest">المستخدمين</p><h3 class="text-2xl font-bold text-white" id="stat-users">0</h3></div>
-                <div class="stat-card text-center"><p class="text-slate-500 text-[10px] font-bold mb-1 uppercase tracking-widest">الداتا</p><h3 class="text-2xl font-bold text-indigo-400" id="stat-leads">0</h3></div>
-            </div>
-        </section>
-
-        <section id="users" class="section-content hidden">
-            <h2 class="text-3xl font-bold mb-8 font-mono">CLIENT DATABASE & LEDGER</h2>
-            <div class="glass-card overflow-hidden">
-                <table class="w-full text-right">
-                    <thead class="bg-slate-950 border-b border-slate-800 text-slate-500 text-xs uppercase font-bold">
-                        <tr><th class="p-5">العميل</th><th class="p-5">UID</th><th class="p-5">الرصيد</th><th class="p-5">الإجراء</th></tr>
-                    </thead>
-                    <tbody id="users-table-body"></tbody>
-                </table>
-            </div>
-        </section>
-
-        <section id="support" class="section-content hidden h-[calc(100vh-120px)]">
-            <div class="grid grid-cols-12 gap-6 h-full">
-                <div class="col-span-4 glass-card overflow-hidden flex flex-col border-red-900/20">
-                    <div class="p-4 border-b border-slate-800 bg-slate-900 font-bold text-sm text-center uppercase tracking-widest text-white">Active Channels</div>
-                    <div class="flex-1 overflow-y-auto" id="admin-chats-list"></div>
-                </div>
-                <div class="col-span-8 glass-card flex flex-col relative overflow-hidden shadow-2xl">
-                    <div class="p-5 border-b border-slate-800 bg-slate-900/50 flex justify-between items-center"><p id="active-chat-user" class="font-bold text-red-500 uppercase tracking-widest">Select Signal...</p></div>
-                    <div class="flex-1 p-8 overflow-y-auto flex flex-col bg-slate-950/20" id="chat-messages-box"></div>
-                    <div class="p-5 bg-slate-950 border-t border-slate-800 flex gap-4">
-                        <input type="text" id="admin-msg-input" class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-6 py-4 outline-none focus:border-red-600 transition-all text-sm" placeholder="أدخل الرد التكتيكي للعميل...">
-                        <button onclick="sendAdminReply()" class="bg-red-600 hover:bg-red-500 w-20 rounded-xl flex items-center justify-center shadow-lg active:scale-95 transition-all"><i class="fas fa-paper-plane text-xl"></i></button>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                    <div class="glass-card p-6 border border-pink-900/30 bg-pink-950/10">
+                        <h4 class="text-xs font-bold mb-4 text-pink-400 uppercase tracking-widest flex items-center gap-2">
+                            <i class="fas fa-ticket-alt ml-1"></i> مولد الكوبونات (Gift Cards)
+                        </h4>
+                        <div class="flex flex-col gap-4">
+                            <div class="flex gap-2">
+                                <input type="number" id="coupon-value" class="w-1/3 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-xs outline-none focus:border-pink-500 text-white font-mono" placeholder="القيمة (توكن)">
+                                <input type="text" id="coupon-custom-code" class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-xs outline-none focus:border-pink-500 text-white font-mono uppercase" placeholder="كود مخصص (اختياري)">
+                            </div>
+                            <button onclick="generateCoupon()" class="bg-pink-600 hover:bg-pink-500 text-white px-6 py-3 rounded-xl text-xs font-bold uppercase shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2">
+                                <i class="fas fa-magic"></i> إنشاء كود فوري
+                            </button>
+                        </div>
+                    </div>
+                
+                    <div class="glass-card p-6 border-slate-800 overflow-hidden flex flex-col">
+                        <h4 class="text-xs font-bold mb-4 text-slate-400 uppercase tracking-widest flex items-center justify-between">
+                            <span><i class="fas fa-barcode ml-2"></i> الكوبونات النشطة</span>
+                            <button onclick="loadCoupons()" class="text-[9px] bg-slate-800 px-2 py-1 rounded hover:text-white"><i class="fas fa-sync"></i> تحديث</button>
+                        </h4>
+                        <div class="flex-1 overflow-y-auto max-h-40 space-y-2 pr-2" id="coupons-list"></div>
                     </div>
                 </div>
-            </div>
-        </section>
 
-        <section id="payments" class="section-content hidden">
-            <h2 class="text-3xl font-bold mb-8 tracking-widest text-yellow-500 uppercase">Pending Transactions</h2>
-            <div class="glass-card p-6">
-                <table class="w-full text-right text-sm">
-                    <thead><tr class="border-b border-slate-800 text-slate-500 text-[10px] uppercase font-bold"><th class="p-4 text-right">العميل</th><th class="p-4 text-right">المبلغ</th><th class="p-4 text-right">إثبات الدفع</th><th class="p-4 text-center">القرار النهائي</th></tr></thead>
-                    <tbody id="payments-table-body"></tbody>
-                </table>
-            </div>
-        </section>
-    </main>
+                <div class="grid grid-cols-2 gap-6 mb-10">
+                    <div class="glass-card p-6 border-slate-800">
+                        <h4 class="text-xs font-bold mb-4 text-indigo-400 uppercase tracking-widest flex items-center gap-2"><i class="fas fa-search-location ml-2"></i> الكلمات الأكثر بحثاً</h4>
+                        <div id="top-keywords-dashboard" class="space-y-2"></div>
+                    </div>
+                    <div class="glass-card p-6 border-slate-800">
+                        <h4 class="text-xs font-bold mb-4 text-emerald-400 uppercase tracking-widest flex items-center gap-2"><i class="fas fa-map-marked-alt ml-2"></i> المحافظات الأكثر طلباً</h4>
+                        <div id="top-locations-dashboard" class="space-y-2"></div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="stat-card text-center"><p class="text-slate-500 text-[10px] font-bold mb-1 uppercase tracking-widest">المستخدمين</p><h3 class="text-2xl font-bold text-white" id="stat-users">0</h3></div>
+                    <div class="stat-card text-center"><p class="text-slate-500 text-[10px] font-bold mb-1 uppercase tracking-widest">الداتا</p><h3 class="text-2xl font-bold text-indigo-400" id="stat-leads">0</h3></div>
+                </div>
+            </section>
+
+            <section id="users" class="section-content hidden">
+                <h2 class="text-3xl font-bold mb-8 font-mono">CLIENT DATABASE & LEDGER</h2>
+                <div class="glass-card overflow-hidden">
+                    <table class="w-full text-right">
+                        <thead class="bg-slate-950 border-b border-slate-800 text-slate-500 text-xs uppercase font-bold">
+                            <tr><th class="p-5">العميل</th><th class="p-5">UID</th><th class="p-5">الرصيد</th><th class="p-5">الإجراء</th></tr>
+                        </thead>
+                        <tbody id="users-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="support" class="section-content hidden h-[calc(100vh-120px)]">
+                <div class="grid grid-cols-12 gap-6 h-full">
+                    <div class="col-span-4 glass-card overflow-hidden flex flex-col border-red-900/20">
+                        <div class="p-4 border-b border-slate-800 bg-slate-900 font-bold text-sm text-center uppercase tracking-widest text-white">Active Channels</div>
+                        <div class="flex-1 overflow-y-auto" id="admin-chats-list"></div>
+                    </div>
+                    <div class="col-span-8 glass-card flex flex-col relative overflow-hidden shadow-2xl">
+                        <div class="p-5 border-b border-slate-800 bg-slate-900/50 flex justify-between items-center"><p id="active-chat-user" class="font-bold text-red-500 uppercase tracking-widest">Select Signal...</p></div>
+                        <div class="flex-1 p-8 overflow-y-auto flex flex-col bg-slate-950/20" id="chat-messages-box"></div>
+                        <div class="p-5 bg-slate-950 border-t border-slate-800 flex gap-4">
+                            <input type="text" id="admin-msg-input" class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-6 py-4 outline-none focus:border-red-600 transition-all text-sm" placeholder="أدخل الرد التكتيكي للعميل...">
+                            <button onclick="sendAdminReply()" class="bg-red-600 hover:bg-red-500 w-20 rounded-xl flex items-center justify-center shadow-lg active:scale-95 transition-all"><i class="fas fa-paper-plane text-xl"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="payments" class="section-content hidden">
+                <h2 class="text-3xl font-bold mb-8 tracking-widest text-yellow-500 uppercase">Pending Transactions</h2>
+                <div class="glass-card p-6">
+                    <table class="w-full text-right text-sm">
+                        <thead><tr class="border-b border-slate-800 text-slate-500 text-[10px] uppercase font-bold"><th class="p-4 text-right">العميل</th><th class="p-4 text-right">المبلغ</th><th class="p-4 text-right">إثبات الدفع</th><th class="p-4 text-center">القرار النهائي</th></tr></thead>
+                        <tbody id="payments-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
 
     <div id="user-modal" class="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md hidden items-center justify-center p-10">
         <div class="glass-card w-full max-w-7xl h-[95vh] overflow-hidden flex flex-col border-red-600/30 relative shadow-2xl text-right">
@@ -221,6 +241,41 @@
         const API_URL = "";
         let currentChatUserId = null;
 
+        // --- 1. Login Logic (جديد) ---
+        function checkAdmin() {
+            const pass = document.getElementById('admin-pass').value;
+            // يمكنك تغيير "admin123" إلى أي كود آخر تريده
+            if(pass === "admin123") {
+                const loginScreen = document.getElementById('login-screen');
+                const adminContent = document.getElementById('admin-content');
+                
+                loginScreen.style.opacity = '0';
+                setTimeout(() => {
+                    loginScreen.style.display = 'none';
+                    adminContent.classList.remove('hidden');
+                    setTimeout(() => adminContent.classList.remove('opacity-0'), 100);
+                    
+                    // تشغيل الدوال بعد الدخول
+                    initDashboard(); 
+                }, 500);
+            } else {
+                alert("⛔ Access Denied: Invalid Passcode");
+            }
+        }
+
+        // --- 2. Dashboard Initialization ---
+        function initDashboard() {
+            loadStats(); 
+            loadUsers(); 
+            loadPayments(); 
+            loadAdminChats(); 
+            loadCoupons();
+            // تحديث دوري
+            setInterval(loadStats, 10000); 
+            setInterval(() => { if(currentChatUserId) selectActiveChat(currentChatUserId, document.getElementById('active-chat-user').innerText); }, 5000);
+        }
+
+        // --- 3. Original Functions (بدون حذف) ---
         async function seedData() {
             if(!confirm("هل تريد استعادة البيانات التجريبية للنظام؟")) return;
             try {
@@ -316,14 +371,12 @@
                 document.getElementById('user-modal').classList.remove('hidden');
                 document.getElementById('user-modal').classList.add('flex');
                 
-                // تعبئة البيانات الأساسية
                 document.getElementById('modal-user-name').innerText = data.full_name;
                 document.getElementById('modal-user-job').innerText = data.job_title;
                 document.getElementById('modal-user-phone').innerText = data.phone;
                 document.getElementById('modal-user-company').innerText = data.company_name;
                 document.getElementById('modal-initials').innerText = (data.full_name[0] || 'U').toUpperCase();
 
-                // تعبئة سجل البحث
                 document.getElementById('modal-search-history').innerHTML = data.searches.map(s => `
                     <div class="ledger-row bg-slate-950 rounded-xl p-4 mb-2 border border-slate-800">
                         <span class="text-indigo-300 font-bold tracking-tighter text-right">🔍 ${s.keyword} <span class="text-slate-600 mx-2">@</span> ${s.location}</span>
@@ -331,7 +384,6 @@
                     </div>
                 `).join('') || '<p class="text-center opacity-30 mt-10">No Data</p>';
 
-                // تعبئة السجل المالي
                 document.getElementById('modal-financial-history').innerHTML = data.financials.map(f => `
                     <div class="ledger-row border-slate-800 items-center">
                         <span class="text-green-500 font-bold tracking-tighter">${f.amount} EGP</span>
@@ -339,7 +391,6 @@
                     </div>
                 `).join('') || '<p class="text-center opacity-30 mt-10">No Data</p>';
 
-                // 🔥 تعبئة جدول النتائج المستخرجة (QA Table)
                 const leadsBody = document.getElementById('modal-leads-body');
                 if (data.leads_preview && data.leads_preview.length > 0) {
                     leadsBody.innerHTML = data.leads_preview.map(l => `
@@ -359,7 +410,6 @@
                     leadsBody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-slate-500">لا توجد بيانات مستخرجة لهذا العميل بعد.</td></tr>';
                 }
 
-                // زر الإيميل
                 document.getElementById('send-marketing-btn').onclick = () => {
                     const content = document.getElementById('marketing-email-msg').value;
                     window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${data.email}&su=تحديث 24Seven&body=${encodeURIComponent(content)}`, '_blank');
@@ -434,7 +484,6 @@
             loadPayments(); loadStats(); 
         }
 
-        // --- دوال الكوبونات ---
         async function generateCoupon() {
             const value = document.getElementById('coupon-value').value;
             const code = document.getElementById('coupon-custom-code').value;
@@ -486,18 +535,13 @@
         }
 
         function closeUserModal() { document.getElementById('user-modal').classList.add('hidden'); }
+        
         function showSection(id) {
             document.querySelectorAll('.section-content').forEach(s => s.classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
             document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
             document.getElementById('btn-' + id)?.classList.add('active');
         }
-
-        document.addEventListener("DOMContentLoaded", () => {
-            loadStats(); loadUsers(); loadPayments(); loadAdminChats(); loadCoupons();
-            setInterval(loadStats, 10000); 
-            setInterval(() => { if(currentChatUserId) selectActiveChat(currentChatUserId, document.getElementById('active-chat-user').innerText); }, 5000);
-        });
     </script>
 </body>
 </html>
