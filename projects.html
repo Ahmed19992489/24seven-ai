@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>مشاريعنا | 24Seven Studio</title>
-    <meta name="description" content="Case Studies: Enterprise ERPs, AI Bots, and Smart Automation Systems by 24Seven AI.">
+    <meta name="description" content="Case Studies: Enterprise ERPs, AI Bots, CRM Systems, and Smart Automation by 24Seven AI.">
     
     <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/96/chatbot.png">
     <link rel="shortcut icon" type="image/png" href="https://img.icons8.com/fluency/96/chatbot.png">
@@ -44,6 +44,9 @@
             backdrop-filter: blur(16px); 
             border-radius: 20px; 
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
         .glass-card:hover { 
             transform: translateY(-5px); 
@@ -82,6 +85,11 @@
         
         select option { background-color: #171717; color: white; padding: 10px; }
         .hidden-lang { display: none !important; }
+        
+        /* Custom layout for project card */
+        .card-image { height: 200px; position: relative; }
+        .card-image img { width: 100%; height: 100%; object-fit: cover; transition: 0.7s; }
+        .glass-card:hover .card-image img { transform: scale(1.1); }
     </style>
 </head>
 <body class="selection:bg-indigo-600 selection:text-white">
@@ -148,220 +156,361 @@
             <span class="lang-en hidden-lang">Our <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Portfolio</span></span>
         </h1>
         <p class="text-slate-400 max-w-3xl mx-auto text-lg leading-relaxed">
-            <span class="lang-ar">مشاريع حقيقية تم تنفيذها بأحدث التقنيات. من أنظمة حجز التأشيرات المعقدة إلى منصات إدارة الشركات.</span>
-            <span class="lang-en hidden-lang">Real-world projects built with cutting-edge tech. From complex Visa Automation systems to Enterprise CRM platforms.</span>
+            <span class="lang-ar">دراسات حالة لمشاريع حقيقية قمنا ببنائها من الصفر. من أنظمة حجز التأشيرات المعقدة إلى منصات CRM المتكاملة.</span>
+            <span class="lang-en hidden-lang">Real-world projects built with cutting-edge tech. From complex Visa Automation systems to full Monday.com CRM implementations.</span>
         </p>
     </header>
 
     <section class="pb-24 px-6">
         <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
 
-            <div class="glass-card overflow-hidden group hover:border-red-500/50 transition duration-500">
-                <div class="h-48 bg-slate-800 relative overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=1000&auto=format&fit=crop" class="w-full h-full object-cover opacity-70 group-hover:scale-110 transition duration-700">
+            <div class="glass-card group hover:border-pink-500/50">
+                <div class="card-image">
+                    <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1000&auto=format&fit=crop">
+                    <div class="absolute top-4 right-4 bg-pink-600 text-white text-xs font-bold px-3 py-1 rounded-full">CRM</div>
+                </div>
+                <div class="p-6 flex flex-col flex-grow">
+                    <h3 class="text-xl font-bold text-white mb-3">
+                        <span class="lang-ar">Monday.com Sales OS</span>
+                        <span class="lang-en hidden-lang">Monday.com Sales OS</span>
+                    </h3>
+                    
+                    <div class="mb-3">
+                        <strong class="text-pink-400 text-xs block mb-1"><span class="lang-ar">المشكلة:</span><span class="lang-en hidden-lang">Problem:</span></strong>
+                        <p class="text-slate-400 text-xs">
+                            <span class="lang-ar">تشتت العملاء بين رسائل الواتساب وملفات الإكسيل، مما يؤدي لضياع المتابعات.</span>
+                            <span class="lang-en hidden-lang">Leads scattered between WhatsApp & Excel, causing lost follow-ups.</span>
+                        </p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <strong class="text-green-400 text-xs block mb-1"><span class="lang-ar">الحل:</span><span class="lang-en hidden-lang">Solution:</span></strong>
+                        <p class="text-slate-300 text-xs">
+                            <span class="lang-ar">نظام مركزي على Monday.com يربط التسويق بالمبيعات، مع أتمتة نقل العملاء بين المراحل.</span>
+                            <span class="lang-en hidden-lang">Centralized Monday.com OS linking Marketing to Sales with automated pipeline moves.</span>
+                        </p>
+                    </div>
+
+                    <div class="mt-auto pt-4 border-t border-white/10">
+                        <button onclick="openMsgModal('Monday CRM')" class="w-full py-2 bg-white/5 hover:bg-pink-600 hover:text-white rounded-lg text-pink-400 text-sm font-bold transition">
+                            <span class="lang-ar">طلب ديمو CRM</span><span class="lang-en hidden-lang">Request CRM Demo</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card group hover:border-red-500/50">
+                <div class="card-image">
+                    <img src="https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=1000&auto=format&fit=crop">
                     <div class="absolute top-4 right-4 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full">Automation</div>
                 </div>
-                <div class="p-6">
-                    <h3 class="text-xl font-bold text-white mb-2">
+                <div class="p-6 flex flex-col flex-grow">
+                    <h3 class="text-xl font-bold text-white mb-3">
                         <span class="lang-ar">VFS Global Visa Hunter</span>
                         <span class="lang-en hidden-lang">VFS Global Visa Hunter</span>
                     </h3>
-                    <p class="text-slate-400 text-xs mb-4 h-10 overflow-hidden">
-                        <span class="lang-ar">نظام ذكي لحجز التأشيرات تلقائياً بمجرد توفر المواعيد.</span>
-                        <span class="lang-en hidden-lang">Intelligent system to auto-book visas instantly when slots open.</span>
-                    </p>
-                    <div class="space-y-2 text-sm text-slate-300 border-t border-white/10 pt-4 mb-6">
-                        <p><i class="fas fa-bolt text-red-500 ml-2"></i> <span class="lang-ar">محاولات مستمرة كل دقيقة</span><span class="lang-en hidden-lang">Retries every minute 24/7</span></p>
-                        <p><i class="fas fa-shield-alt text-red-500 ml-2"></i> <span class="lang-ar">تخطي الحماية (CAPTCHA Bypass)</span><span class="lang-en hidden-lang">Bypasses Security & CAPTCHA</span></p>
-                        <p><i class="fas fa-globe text-red-500 ml-2"></i> <span class="lang-ar">تبديل تلقائي بين الدول</span><span class="lang-en hidden-lang">Auto-switch countries/visas</span></p>
+                    
+                    <div class="mb-3">
+                        <strong class="text-red-400 text-xs block mb-1"><span class="lang-ar">المشكلة:</span><span class="lang-en hidden-lang">Problem:</span></strong>
+                        <p class="text-slate-400 text-xs">
+                            <span class="lang-ar">استحالة حجز المواعيد يدوياً بسبب نفادها في ثوانٍ.</span>
+                            <span class="lang-en hidden-lang">Impossible to book slots manually due to high demand.</span>
+                        </p>
                     </div>
-                    <button onclick="openMsgModal('VFS Visa Bot')" class="w-full py-2 bg-white/5 hover:bg-red-600 hover:text-white rounded-lg text-red-400 text-sm font-bold transition">
-                        <span class="lang-ar">تفاصيل البوت</span><span class="lang-en hidden-lang">View Details</span>
-                    </button>
+                    
+                    <div class="mb-4">
+                        <strong class="text-green-400 text-xs block mb-1"><span class="lang-ar">الحل:</span><span class="lang-en hidden-lang">Solution:</span></strong>
+                        <p class="text-slate-300 text-xs">
+                            <span class="lang-ar">بوت قناص يعمل 24/7، يتخطى الكابتشا ويحجز الموعد في 3 ثوانٍ.</span>
+                            <span class="lang-en hidden-lang">24/7 Sniper Bot that bypasses Captcha and books in 3 seconds.</span>
+                        </p>
+                    </div>
+
+                    <div class="mt-auto pt-4 border-t border-white/10">
+                        <button onclick="openMsgModal('VFS Visa Bot')" class="w-full py-2 bg-white/5 hover:bg-red-600 hover:text-white rounded-lg text-red-400 text-sm font-bold transition">
+                            <span class="lang-ar">تفاصيل البوت</span><span class="lang-en hidden-lang">Bot Details</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <div class="glass-card overflow-hidden group hover:border-green-500/50 transition duration-500">
-                <div class="h-48 bg-slate-800 relative overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1000&auto=format&fit=crop" class="w-full h-full object-cover opacity-70 group-hover:scale-110 transition duration-700">
-                    <div class="absolute top-4 right-4 bg-green-600 text-white text-xs font-bold px-3 py-1 rounded-full">CRM System</div>
-                </div>
-                <div class="p-6">
-                    <h3 class="text-xl font-bold text-white mb-2">
-                        <span class="lang-ar">Monday.com Custom CRM</span>
-                        <span class="lang-en hidden-lang">Monday.com Custom CRM</span>
-                    </h3>
-                    <p class="text-slate-400 text-xs mb-4 h-10 overflow-hidden">
-                        <span class="lang-ar">تصميم نظام إدارة علاقات عملاء متكامل على منصة Monday.</span>
-                        <span class="lang-en hidden-lang">Full CRM architecture design and implementation on Monday.com.</span>
-                    </p>
-                    <div class="space-y-2 text-sm text-slate-300 border-t border-white/10 pt-4 mb-6">
-                        <p><i class="fas fa-chart-line text-green-500 ml-2"></i> <span class="lang-ar">لوحات متابعة المبيعات (Dashboards)</span><span class="lang-en hidden-lang">Live Sales Dashboards</span></p>
-                        <p><i class="fas fa-cogs text-green-500 ml-2"></i> <span class="lang-ar">أتمتة المهام (Workflow Automation)</span><span class="lang-en hidden-lang">Workflow Automation</span></p>
-                        <p><i class="fab fa-whatsapp text-green-500 ml-2"></i> <span class="lang-ar">ربط مباشر مع واتساب</span><span class="lang-en hidden-lang">WhatsApp Integration</span></p>
-                    </div>
-                    <button onclick="openMsgModal('Monday CRM')" class="w-full py-2 bg-white/5 hover:bg-green-600 hover:text-white rounded-lg text-green-400 text-sm font-bold transition">
-                        <span class="lang-ar">طلب تصميم CRM</span><span class="lang-en hidden-lang">Request CRM</span>
-                    </button>
-                </div>
-            </div>
-
-            <div class="glass-card overflow-hidden group hover:border-purple-500/50 transition duration-500">
-                <div class="h-48 bg-slate-800 relative overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?q=80&w=1000&auto=format&fit=crop" class="w-full h-full object-cover opacity-70 group-hover:scale-105 transition duration-700">
+            <div class="glass-card group hover:border-purple-500/50">
+                <div class="card-image">
+                    <img src="https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?q=80&w=1000&auto=format&fit=crop">
                     <div class="absolute top-4 right-4 bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full">SaaS</div>
                 </div>
-                <div class="p-6">
-                    <h3 class="text-xl font-bold text-white mb-2">Omni-Channel Limo ERP</h3>
-                    <p class="text-slate-400 text-xs mb-4 h-10 overflow-hidden">
-                        <span class="lang-ar">منصة موحدة لإدارة شركات الليموزين وربط السائقين.</span>
-                        <span class="lang-en hidden-lang">Unified platform for managing limousine fleets and drivers.</span>
-                    </p>
-                    <div class="space-y-2 text-sm text-slate-300 border-t border-white/10 pt-4 mb-6">
-                        <p><i class="fas fa-database text-purple-500 ml-2"></i> <span class="lang-ar">قاعدة بيانات مركزية (Supabase)</span><span class="lang-en hidden-lang">Central Database (Supabase)</span></p>
-                        <p><i class="fas fa-comments text-purple-500 ml-2"></i> <span class="lang-ar">توحيد رسائل واتساب وفيسبوك</span><span class="lang-en hidden-lang">Unified WhatsApp/FB Inbox</span></p>
-                    </div>
-                    <button onclick="openMsgModal('Limo ERP')" class="w-full py-2 bg-white/5 hover:bg-purple-600 hover:text-white rounded-lg text-purple-400 text-sm font-bold transition">
-                        <span class="lang-ar">عرض التفاصيل</span><span class="lang-en hidden-lang">View Details</span>
-                    </button>
-                </div>
-            </div>
-
-            <div class="glass-card overflow-hidden group hover:border-blue-500/50 transition duration-500">
-                <div class="h-48 bg-slate-800 relative overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1593642632823-8f78536788c6?q=80&w=1000&auto=format&fit=crop" class="w-full h-full object-cover opacity-70 group-hover:scale-110 transition duration-700">
-                    <div class="absolute top-4 right-4 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full">Telegram Bot</div>
-                </div>
-                <div class="p-6">
-                    <h3 class="text-xl font-bold text-white mb-2">Fleet Commander Bot</h3>
-                    <p class="text-slate-400 text-xs mb-4 h-10 overflow-hidden">
-                        <span class="lang-ar">نظام ERP كامل يعمل داخل تطبيق تيليجرام للسائقين.</span>
-                        <span class="lang-en hidden-lang">Full ERP system running entirely inside Telegram for drivers.</span>
-                    </p>
-                    <div class="space-y-2 text-sm text-slate-300 border-t border-white/10 pt-4 mb-6">
-                        <p><i class="fas fa-calculator text-blue-500 ml-2"></i> <span class="lang-ar">حساب الرواتب والعمولات لحظياً</span><span class="lang-en hidden-lang">Instant Payroll Calculation</span></p>
-                        <p><i class="fas fa-gas-pump text-blue-500 ml-2"></i> <span class="lang-ar">متابعة المصاريف والصيانة</span><span class="lang-en hidden-lang">Expense & Maintenance Tracking</span></p>
-                    </div>
-                    <button onclick="openMsgModal('Fleet Bot')" class="w-full py-2 bg-white/5 hover:bg-blue-600 hover:text-white rounded-lg text-blue-400 text-sm font-bold transition">
-                        <span class="lang-ar">طلب ديمو</span><span class="lang-en hidden-lang">Request Demo</span>
-                    </button>
-                </div>
-            </div>
-
-            <div class="glass-card overflow-hidden group hover:border-yellow-500/50 transition duration-500">
-                <div class="h-48 bg-slate-800 relative overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1000&auto=format&fit=crop" class="w-full h-full object-cover opacity-70 group-hover:scale-110 transition duration-700">
-                    <div class="absolute top-4 right-4 bg-yellow-500 text-black text-xs font-bold px-3 py-1 rounded-full">Data Mining</div>
-                </div>
-                <div class="p-6">
-                    <h3 class="text-xl font-bold text-white mb-2">Sales Data Engine</h3>
-                    <p class="text-slate-400 text-xs mb-4 h-10 overflow-hidden">
-                        <span class="lang-ar">محرك بحث ذكي لاستخراج بيانات العملاء من الخرائط ولينكدإن.</span>
-                        <span class="lang-en hidden-lang">Smart scraping engine for leads from Maps & LinkedIn.</span>
-                    </p>
-                    <div class="space-y-2 text-sm text-slate-300 border-t border-white/10 pt-4 mb-6">
-                        <p><i class="fas fa-filter text-yellow-500 ml-2"></i> <span class="lang-ar">فلترة دقيقة (Targeting)</span><span class="lang-en hidden-lang">Precision Targeting</span></p>
-                        <p><i class="fas fa-envelope text-yellow-500 ml-2"></i> <span class="lang-ar">التحقق من صحة الإيميلات</span><span class="lang-en hidden-lang">Email Verification</span></p>
-                    </div>
-                    <button onclick="openMsgModal('Sales Intelligence')" class="w-full py-2 bg-white/5 hover:bg-yellow-500 hover:text-black rounded-lg text-yellow-500 text-sm font-bold transition">
-                        <span class="lang-ar">تجربة النظام</span><span class="lang-en hidden-lang">Try System</span>
-                    </button>
-                </div>
-            </div>
-
-            <div class="glass-card overflow-hidden group hover:border-indigo-500/50 transition duration-500">
-                <div class="h-48 bg-slate-800 relative overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?q=80&w=1000&auto=format&fit=crop" class="w-full h-full object-cover opacity-70 group-hover:scale-110 transition duration-700">
-                    <div class="absolute top-4 right-4 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full">Web App</div>
-                </div>
-                <div class="p-6">
-                    <h3 class="text-xl font-bold text-white mb-2">
-                        <span class="lang-ar">منصة عقارات مصر</span>
-                        <span class="lang-en hidden-lang">Real Estate Platform</span>
+                <div class="p-6 flex flex-col flex-grow">
+                    <h3 class="text-xl font-bold text-white mb-3">
+                        <span class="lang-ar">24Seven Fleet ERP</span>
+                        <span class="lang-en hidden-lang">24Seven Fleet ERP</span>
                     </h3>
-                    <p class="text-slate-400 text-xs mb-4 h-10 overflow-hidden">
-                        <span class="lang-ar">بوابة عقارية شاملة للبيع والإيجار مع جولة افتراضية 360.</span>
-                        <span class="lang-en hidden-lang">Comprehensive real estate portal with 360 virtual tours.</span>
-                    </p>
-                    <div class="space-y-2 text-sm text-slate-300 border-t border-white/10 pt-4 mb-6">
-                        <p><i class="fas fa-map-marked-alt text-indigo-500 ml-2"></i> <span class="lang-ar">بحث بالخريطة التفاعلية</span><span class="lang-en hidden-lang">Interactive Map Search</span></p>
-                        <p><i class="fas fa-vr-cardboard text-indigo-500 ml-2"></i> <span class="lang-ar">دعم الواقع الافتراضي</span><span class="lang-en hidden-lang">Virtual Reality Support</span></p>
+                    
+                    <div class="mb-3">
+                        <strong class="text-purple-400 text-xs block mb-1"><span class="lang-ar">المشكلة:</span><span class="lang-en hidden-lang">Problem:</span></strong>
+                        <p class="text-slate-400 text-xs">
+                            <span class="lang-ar">فوضى في حسابات السائقين، الصيانة، والإيرادات اليومية.</span>
+                            <span class="lang-en hidden-lang">Chaos in driver accounts, maintenance tracking, and daily revenue.</span>
+                        </p>
                     </div>
-                    <button onclick="openMsgModal('Real Estate App')" class="w-full py-2 bg-white/5 hover:bg-indigo-600 hover:text-white rounded-lg text-indigo-400 text-sm font-bold transition">
-                        <span class="lang-ar">طلب مماثل</span><span class="lang-en hidden-lang">Request Similar</span>
-                    </button>
+                    
+                    <div class="mb-4">
+                        <strong class="text-green-400 text-xs block mb-1"><span class="lang-ar">الحل:</span><span class="lang-en hidden-lang">Solution:</span></strong>
+                        <p class="text-slate-300 text-xs">
+                            <span class="lang-ar">نظام ERP كامل على تيليجرام يدير الرواتب والصيانة تلقائياً.</span>
+                            <span class="lang-en hidden-lang">Full Telegram ERP managing payroll and maintenance automatically.</span>
+                        </p>
+                    </div>
+
+                    <div class="mt-auto pt-4 border-t border-white/10">
+                        <button onclick="openMsgModal('Limo ERP')" class="w-full py-2 bg-white/5 hover:bg-purple-600 hover:text-white rounded-lg text-purple-400 text-sm font-bold transition">
+                            <span class="lang-ar">عرض النظام</span><span class="lang-en hidden-lang">View System</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <div class="glass-card overflow-hidden group hover:border-pink-500/50 transition duration-500">
-                <div class="h-48 bg-slate-800 relative overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1556742049-0cfed4f7a07d?q=80&w=1000&auto=format&fit=crop" class="w-full h-full object-cover opacity-70 group-hover:scale-110 transition duration-700">
-                    <div class="absolute top-4 right-4 bg-pink-600 text-white text-xs font-bold px-3 py-1 rounded-full">E-Commerce</div>
+            <div class="glass-card group hover:border-yellow-500/50">
+                <div class="card-image">
+                    <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1000&auto=format&fit=crop">
+                    <div class="absolute top-4 right-4 bg-yellow-500 text-black text-xs font-bold px-3 py-1 rounded-full">Big Data</div>
                 </div>
-                <div class="p-6">
-                    <h3 class="text-xl font-bold text-white mb-2">
-                        <span class="lang-ar">Fashion Store App</span>
-                        <span class="lang-en hidden-lang">Fashion Store App</span>
+                <div class="p-6 flex flex-col flex-grow">
+                    <h3 class="text-xl font-bold text-white mb-3">
+                        <span class="lang-ar">B2B Sales Engine</span>
+                        <span class="lang-en hidden-lang">B2B Sales Engine</span>
                     </h3>
-                    <p class="text-slate-400 text-xs mb-4 h-10 overflow-hidden">
-                        <span class="lang-ar">تطبيق متجر إلكتروني متكامل (Android/iOS) لبراند ملابس.</span>
-                        <span class="lang-en hidden-lang">Full mobile e-commerce app for a fashion brand.</span>
-                    </p>
-                    <div class="space-y-2 text-sm text-slate-300 border-t border-white/10 pt-4 mb-6">
-                        <p><i class="fas fa-credit-card text-pink-500 ml-2"></i> <span class="lang-ar">دفع إلكتروني (فيزا/فوري)</span><span class="lang-en hidden-lang">Payment Gateway Integration</span></p>
-                        <p><i class="fas fa-truck text-pink-500 ml-2"></i> <span class="lang-ar">تتبع الشحنات</span><span class="lang-en hidden-lang">Order Tracking</span></p>
+                    
+                    <div class="mb-3">
+                        <strong class="text-yellow-400 text-xs block mb-1"><span class="lang-ar">المشكلة:</span><span class="lang-en hidden-lang">Problem:</span></strong>
+                        <p class="text-slate-400 text-xs">
+                            <span class="lang-ar">صعوبة الوصول لبيانات صناع القرار (CEOs) في الشركات المستهدفة.</span>
+                            <span class="lang-en hidden-lang">Difficulty reaching decision-makers (CEOs) in target companies.</span>
+                        </p>
                     </div>
-                    <button onclick="openMsgModal('E-Commerce App')" class="w-full py-2 bg-white/5 hover:bg-pink-600 hover:text-white rounded-lg text-pink-400 text-sm font-bold transition">
-                        <span class="lang-ar">طلب تطبيق</span><span class="lang-en hidden-lang">Request App</span>
-                    </button>
+                    
+                    <div class="mb-4">
+                        <strong class="text-green-400 text-xs block mb-1"><span class="lang-ar">الحل:</span><span class="lang-en hidden-lang">Solution:</span></strong>
+                        <p class="text-slate-300 text-xs">
+                            <span class="lang-ar">خط إنتاج بيانات (Data Pipeline) يستخرج الإيميلات ويتحقق منها ويرسل العروض.</span>
+                            <span class="lang-en hidden-lang">Automated pipeline that scrapes, verifies emails, and sends offers.</span>
+                        </p>
+                    </div>
+
+                    <div class="mt-auto pt-4 border-t border-white/10">
+                        <button onclick="openMsgModal('Sales Intelligence')" class="w-full py-2 bg-white/5 hover:bg-yellow-500 hover:text-black rounded-lg text-yellow-500 text-sm font-bold transition">
+                            <span class="lang-ar">تجربة البيانات</span><span class="lang-en hidden-lang">Try Data</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <div class="glass-card overflow-hidden group hover:border-cyan-500/50 transition duration-500">
-                <div class="h-48 bg-slate-800 relative overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?q=80&w=1000&auto=format&fit=crop" class="w-full h-full object-cover opacity-70 group-hover:scale-110 transition duration-700">
-                    <div class="absolute top-4 right-4 bg-cyan-600 text-white text-xs font-bold px-3 py-1 rounded-full">Medical</div>
+            <div class="glass-card group hover:border-gray-500/50">
+                <div class="card-image">
+                    <img src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=1000&auto=format&fit=crop">
+                    <div class="absolute top-4 right-4 bg-gray-600 text-white text-xs font-bold px-3 py-1 rounded-full">Sniper</div>
                 </div>
-                <div class="p-6">
-                    <h3 class="text-xl font-bold text-white mb-2">
-                        <span class="lang-ar">Smart Clinic System</span>
-                        <span class="lang-en hidden-lang">Smart Clinic System</span>
+                <div class="p-6 flex flex-col flex-grow">
+                    <h3 class="text-xl font-bold text-white mb-3">
+                        <span class="lang-ar">E-Commerce Inventory Sniper</span>
+                        <span class="lang-en hidden-lang">E-Commerce Inventory Sniper</span>
                     </h3>
-                    <p class="text-slate-400 text-xs mb-4 h-10 overflow-hidden">
-                        <span class="lang-ar">نظام إدارة عيادات ومراكز طبية مع حجز أونلاين.</span>
-                        <span class="lang-en hidden-lang">Clinic management system with online booking.</span>
-                    </p>
-                    <div class="space-y-2 text-sm text-slate-300 border-t border-white/10 pt-4 mb-6">
-                        <p><i class="fas fa-file-medical text-cyan-500 ml-2"></i> <span class="lang-ar">ملفات مرضى إلكترونية</span><span class="lang-en hidden-lang">Electronic Health Records</span></p>
-                        <p><i class="fas fa-calendar-check text-cyan-500 ml-2"></i> <span class="lang-ar">تنظيم المواعيد</span><span class="lang-en hidden-lang">Appointment Scheduling</span></p>
+                    
+                    <div class="mb-3">
+                        <strong class="text-gray-400 text-xs block mb-1"><span class="lang-ar">المشكلة:</span><span class="lang-en hidden-lang">Problem:</span></strong>
+                        <p class="text-slate-400 text-xs">
+                            <span class="lang-ar">صعوبة معرفة المقاسات المتاحة للمنتجات المخفضة (Sale) يدوياً.</span>
+                            <span class="lang-en hidden-lang">Hard to check available sizes for sale items manually.</span>
+                        </p>
                     </div>
-                    <button onclick="openMsgModal('Medical System')" class="w-full py-2 bg-white/5 hover:bg-cyan-600 hover:text-white rounded-lg text-cyan-400 text-sm font-bold transition">
-                        <span class="lang-ar">تفاصيل النظام</span><span class="lang-en hidden-lang">View System</span>
-                    </button>
+                    
+                    <div class="mb-4">
+                        <strong class="text-green-400 text-xs block mb-1"><span class="lang-ar">الحل:</span><span class="lang-en hidden-lang">Solution:</span></strong>
+                        <p class="text-slate-300 text-xs">
+                            <span class="lang-ar">بوت يحلل آلاف المنتجات ويخرج شيت إكسيل بحالة المخزون لكل مقاس.</span>
+                            <span class="lang-en hidden-lang">Bot analyzing thousands of products, outputting a stock matrix excel.</span>
+                        </p>
+                    </div>
+
+                    <div class="mt-auto pt-4 border-t border-white/10">
+                        <button onclick="openMsgModal('FootLocker Bot')" class="w-full py-2 bg-white/5 hover:bg-gray-600 hover:text-white rounded-lg text-gray-400 text-sm font-bold transition">
+                            <span class="lang-ar">طلب أداة</span><span class="lang-en hidden-lang">Request Tool</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <div class="glass-card overflow-hidden group hover:border-orange-500/50 transition duration-500">
-                <div class="h-48 bg-slate-800 relative overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=1000&auto=format&fit=crop" class="w-full h-full object-cover opacity-70 group-hover:scale-110 transition duration-700">
-                    <div class="absolute top-4 right-4 bg-orange-600 text-white text-xs font-bold px-3 py-1 rounded-full">Corporate</div>
+            <div class="glass-card group hover:border-blue-500/50">
+                <div class="card-image">
+                    <img src="https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=1000&auto=format&fit=crop">
+                    <div class="absolute top-4 right-4 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full">AI Marketing</div>
                 </div>
-                <div class="p-6">
-                    <h3 class="text-xl font-bold text-white mb-2">
-                        <span class="lang-ar">HR & Payroll Pro</span>
-                        <span class="lang-en hidden-lang">HR & Payroll Pro</span>
+                <div class="p-6 flex flex-col flex-grow">
+                    <h3 class="text-xl font-bold text-white mb-3">
+                        <span class="lang-ar">AI Marketing Orchestrator</span>
+                        <span class="lang-en hidden-lang">AI Marketing Orchestrator</span>
                     </h3>
-                    <p class="text-slate-400 text-xs mb-4 h-10 overflow-hidden">
-                        <span class="lang-ar">نظام شؤون موظفين ورواتب للشركات المتوسطة.</span>
-                        <span class="lang-en hidden-lang">HR and Payroll system for medium-sized enterprises.</span>
-                    </p>
-                    <div class="space-y-2 text-sm text-slate-300 border-t border-white/10 pt-4 mb-6">
-                        <p><i class="fas fa-fingerprint text-orange-500 ml-2"></i> <span class="lang-ar">ربط بأجهزة البصمة</span><span class="lang-en hidden-lang">Biometric Integration</span></p>
-                        <p><i class="fas fa-money-check-alt text-orange-500 ml-2"></i> <span class="lang-ar">كشوف مرتبات آلية</span><span class="lang-en hidden-lang">Automated Payroll</span></p>
+                    
+                    <div class="mb-3">
+                        <strong class="text-blue-400 text-xs block mb-1"><span class="lang-ar">المشكلة:</span><span class="lang-en hidden-lang">Problem:</span></strong>
+                        <p class="text-slate-400 text-xs">
+                            <span class="lang-ar">إدارة السوشيال ميديا (محتوى، تصميم، ردود) تستهلك وقتاً وموارد ضخمة.</span>
+                            <span class="lang-en hidden-lang">Social media management (content, design, replies) consumes massive time.</span>
+                        </p>
                     </div>
-                    <button onclick="openMsgModal('HR System')" class="w-full py-2 bg-white/5 hover:bg-orange-600 hover:text-white rounded-lg text-orange-400 text-sm font-bold transition">
-                        <span class="lang-ar">طلب ديمو</span><span class="lang-en hidden-lang">Request Demo</span>
-                    </button>
+                    
+                    <div class="mb-4">
+                        <strong class="text-green-400 text-xs block mb-1"><span class="lang-ar">الحل:</span><span class="lang-en hidden-lang">Solution:</span></strong>
+                        <p class="text-slate-300 text-xs">
+                            <span class="lang-ar">فريق روبوتات كامل: يكتب المحتوى، يصمم الصور، ينشر، ويرد على العملاء.</span>
+                            <span class="lang-en hidden-lang">Full bot team: Writes content, designs images, publishes, and replies.</span>
+                        </p>
+                    </div>
+
+                    <div class="mt-auto pt-4 border-t border-white/10">
+                        <button onclick="openMsgModal('AI Marketing')" class="w-full py-2 bg-white/5 hover:bg-blue-600 hover:text-white rounded-lg text-blue-400 text-sm font-bold transition">
+                            <span class="lang-ar">أتمتة تسويقك</span><span class="lang-en hidden-lang">Automate Marketing</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card group hover:border-cyan-500/50">
+                <div class="card-image">
+                    <img src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=1000&auto=format&fit=crop">
+                    <div class="absolute top-4 right-4 bg-cyan-600 text-white text-xs font-bold px-3 py-1 rounded-full">Platform</div>
+                </div>
+                <div class="p-6 flex flex-col flex-grow">
+                    <h3 class="text-xl font-bold text-white mb-3">
+                        <span class="lang-ar">Smart Mobility Platform</span>
+                        <span class="lang-en hidden-lang">Smart Mobility Platform</span>
+                    </h3>
+                    
+                    <div class="mb-3">
+                        <strong class="text-cyan-400 text-xs block mb-1"><span class="lang-ar">المشكلة:</span><span class="lang-en hidden-lang">Problem:</span></strong>
+                        <p class="text-slate-400 text-xs">
+                            <span class="lang-ar">انعدام الربط بين السائقين، العملاء، والإدارة (Uber-like needs).</span>
+                            <span class="lang-en hidden-lang">Lack of connection between drivers, clients, and admin (Uber-like needs).</span>
+                        </p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <strong class="text-green-400 text-xs block mb-1"><span class="lang-ar">الحل:</span><span class="lang-en hidden-lang">Solution:</span></strong>
+                        <p class="text-slate-300 text-xs">
+                            <span class="lang-ar">منصة مركزية (Dashboard + Driver App + Client Chat) تدير العملية لحظياً.</span>
+                            <span class="lang-en hidden-lang">Central platform (Dashboard + App + Chat) managing ops in real-time.</span>
+                        </p>
+                    </div>
+
+                    <div class="mt-auto pt-4 border-t border-white/10">
+                        <button onclick="openMsgModal('Mobility Platform')" class="w-full py-2 bg-white/5 hover:bg-cyan-600 hover:text-white rounded-lg text-cyan-400 text-sm font-bold transition">
+                            <span class="lang-ar">تفاصيل المنصة</span><span class="lang-en hidden-lang">Platform Details</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card group hover:border-green-500/50">
+                <div class="card-image">
+                    <img src="https://images.unsplash.com/photo-1531403009284-440f080d1e12?q=80&w=1000&auto=format&fit=crop">
+                    <div class="absolute top-4 right-4 bg-green-600 text-white text-xs font-bold px-3 py-1 rounded-full">Sales Bot</div>
+                </div>
+                <div class="p-6 flex flex-col flex-grow">
+                    <h3 class="text-xl font-bold text-white mb-3">
+                        <span class="lang-ar">Intelligent Sales Bot</span>
+                        <span class="lang-en hidden-lang">Intelligent Sales Bot</span>
+                    </h3>
+                    
+                    <div class="mb-3">
+                        <strong class="text-green-400 text-xs block mb-1"><span class="lang-ar">المشكلة:</span><span class="lang-en hidden-lang">Problem:</span></strong>
+                        <p class="text-slate-400 text-xs">
+                            <span class="lang-ar">ضياع العملاء بسبب التأخر في الرد أو عدم القدرة على الشرح المقنع.</span>
+                            <span class="lang-en hidden-lang">Losing leads due to slow replies or poor explanation.</span>
+                        </p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <strong class="text-green-400 text-xs block mb-1"><span class="lang-ar">الحل:</span><span class="lang-en hidden-lang">Solution:</span></strong>
+                        <p class="text-slate-300 text-xs">
+                            <span class="lang-ar">بوت مبيعات يقود العميل في رحلة (شرح -> اقناع -> دفع) ويغلق الصفقة.</span>
+                            <span class="lang-en hidden-lang">Sales bot leading the customer journey (Explain -> Persuade -> Close).</span>
+                        </p>
+                    </div>
+
+                    <div class="mt-auto pt-4 border-t border-white/10">
+                        <button onclick="openMsgModal('Sales Bot')" class="w-full py-2 bg-white/5 hover:bg-green-600 hover:text-white rounded-lg text-green-400 text-sm font-bold transition">
+                            <span class="lang-ar">طلب بوت</span><span class="lang-en hidden-lang">Request Bot</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card group hover:border-orange-500/50">
+                <div class="card-image">
+                    <img src="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=1000&auto=format&fit=crop">
+                    <div class="absolute top-4 right-4 bg-orange-600 text-white text-xs font-bold px-3 py-1 rounded-full">Desktop App</div>
+                </div>
+                <div class="p-6 flex flex-col flex-grow">
+                    <h3 class="text-xl font-bold text-white mb-3">
+                        <span class="lang-ar">VFS Audio Sniper</span>
+                        <span class="lang-en hidden-lang">VFS Audio Sniper</span>
+                    </h3>
+                    
+                    <div class="mb-3">
+                        <strong class="text-orange-400 text-xs block mb-1"><span class="lang-ar">المشكلة:</span><span class="lang-en hidden-lang">Problem:</span></strong>
+                        <p class="text-slate-400 text-xs">
+                            <span class="lang-ar">الموظف لا يستطيع مراقبة الشاشة طوال اليوم لانتظار الموعد.</span>
+                            <span class="lang-en hidden-lang">Employee cannot stare at the screen all day waiting for slots.</span>
+                        </p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <strong class="text-green-400 text-xs block mb-1"><span class="lang-ar">الحل:</span><span class="lang-en hidden-lang">Solution:</span></strong>
+                        <p class="text-slate-300 text-xs">
+                            <span class="lang-ar">تطبيق سطح مكتب يراقب في الخلفية ويطلق "إنذار صوتي" عند وجود موعد.</span>
+                            <span class="lang-en hidden-lang">Desktop app running in background triggering "Audio Alarm" when slot found.</span>
+                        </p>
+                    </div>
+
+                    <div class="mt-auto pt-4 border-t border-white/10">
+                        <button onclick="openMsgModal('Audio Sniper')" class="w-full py-2 bg-white/5 hover:bg-orange-600 hover:text-white rounded-lg text-orange-400 text-sm font-bold transition">
+                            <span class="lang-ar">طلب نسخة</span><span class="lang-en hidden-lang">Request Copy</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card group hover:border-teal-500/50">
+                <div class="card-image">
+                    <img src="https://images.unsplash.com/photo-1558494949-efdeb6bf80d1?q=80&w=1000&auto=format&fit=crop">
+                    <div class="absolute top-4 right-4 bg-teal-600 text-white text-xs font-bold px-3 py-1 rounded-full">Infrastructure</div>
+                </div>
+                <div class="p-6 flex flex-col flex-grow">
+                    <h3 class="text-xl font-bold text-white mb-3">
+                        <span class="lang-ar">Cloud Efficiency System</span>
+                        <span class="lang-en hidden-lang">Cloud Efficiency System</span>
+                    </h3>
+                    
+                    <div class="mb-3">
+                        <strong class="text-teal-400 text-xs block mb-1"><span class="lang-ar">المشكلة:</span><span class="lang-en hidden-lang">Problem:</span></strong>
+                        <p class="text-slate-400 text-xs">
+                            <span class="lang-ar">تشغيل البوتات يستهلك الرام ويؤدي لانهيار السيرفرات السحابية.</span>
+                            <span class="lang-en hidden-lang">Bots consume RAM causing cloud servers to crash.</span>
+                        </p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <strong class="text-green-400 text-xs block mb-1"><span class="lang-ar">الحل:</span><span class="lang-en hidden-lang">Solution:</span></strong>
+                        <p class="text-slate-300 text-xs">
+                            <span class="lang-ar">نظام إدارة موارد ذكي ينظف الكاش ويقلل استهلاك الذاكرة بنسبة 70%.</span>
+                            <span class="lang-en hidden-lang">Smart resource manager cleaning cache and reducing RAM usage by 70%.</span>
+                        </p>
+                    </div>
+
+                    <div class="mt-auto pt-4 border-t border-white/10">
+                        <button onclick="openMsgModal('Cloud Sys')" class="w-full py-2 bg-white/5 hover:bg-teal-600 hover:text-white rounded-lg text-teal-400 text-sm font-bold transition">
+                            <span class="lang-ar">استشارة تقنية</span><span class="lang-en hidden-lang">Tech Consult</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -391,15 +540,24 @@
     <div class="floating-container">
         <a href="https://wa.me/201121748885" target="_blank" class="float-btn bg-[#25d366] hover:bg-[#1ebc57]">
             <i class="fab fa-whatsapp"></i>
-            <span class="tooltip">واتساب</span>
+            <span class="tooltip">
+                <span class="lang-ar">واتساب</span>
+                <span class="lang-en hidden-lang">WhatsApp</span>
+            </span>
         </a>
         <a href="tel:+201121748885" class="float-btn bg-indigo-600 hover:bg-indigo-500">
             <i class="fas fa-phone-alt text-lg"></i>
-            <span class="tooltip">اتصال</span>
+            <span class="tooltip">
+                <span class="lang-ar">اتصال</span>
+                <span class="lang-en hidden-lang">Call</span>
+            </span>
         </a>
         <a href="mailto:info@24sevenAi.com" class="float-btn bg-pink-600 hover:bg-pink-500">
             <i class="fas fa-envelope text-lg"></i>
-            <span class="tooltip">إيميل</span>
+            <span class="tooltip">
+                <span class="lang-ar">إيميل</span>
+                <span class="lang-en hidden-lang">Email</span>
+            </span>
         </a>
     </div>
 
