@@ -3,50 +3,64 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models, schemas
 from app.api.auth import get_current_user
-from pydantic import BaseModel  # <-- 1. إضافة استيراد Pydantic
+from pydantic import BaseModel
+import time
 
-# استدعاء ملفات المحرك الحقيقي من المسار الصحيح (app.engines)
+# استدعاء ملفات المحرك الحقيقي
+# تأكد أن هذه الملفات موجودة في مجلد app/engines/
 from app.engines.gmaps_collector import GmapsEngine
 from app.engines.data_enricher import DataEnricher
 from app.engines.verifier_pro import EmailVerifier
 
-import time
-
 router = APIRouter()
 
-# --- دالة المحرك الشاملة (تنفذ في الخلفية) ---
+# --- 1. تعريف شكل البيانات المتوقعة (Schema) ---
+# هذا الكلاس هو "المترجم" الذي سيفهم البيانات القادمة من الداشبورد
+class SearchRequest(BaseModel):
+    keyword: str
+    location: str
+    target_limit: int = 5
+
+# --- 2. دالة المحرك الشاملة (تنفذ في الخلفية) ---
 def run_full_scraping_task(keyword: str, location: str, user_id: int, db: Session, limit: int):
-    print(f"🚀 بدء محرك البحث الشامل لـ: {keyword} في {location}")
+    print(f"🚀 [Task Started] البحث عن: {keyword} في {location} (الحد الأقصى: {limit})")
     
     gmaps = GmapsEngine()
     enricher = DataEnricher()
     verifier = EmailVerifier()
     
     try:
-        # 1. سحب البيانات الأساسية من خرائط جوجل
+        # أ) سحب البيانات الأساسية من خرائط جوجل
+        # ملاحظة: تأكد أن الدالة gmaps.scrape تقبل المعاملات وتعمل بوضع Headless على السيرفر
         raw_results = gmaps.scrape(keyword, location, max_leads=limit)
         
         if not raw_results:
-            print("⚠️ لم يتم العثور على نتائج في خرائط جوجل.")
+            print(f"⚠️ [Warning] لم يتم العثور على نتائج في خرائط جوجل لـ: {keyword}")
             return
 
-        # بدء جلسة البحث العميق عن الإيميلات وصناع القرار
+        print(f"✅ تم العثور على {len(raw_results)} شركة. بدء الإثراء والتحقق...")
+
+        # ب) بدء جلسة البحث العميق (الإثراء)
         enricher.start_session()
         
         leads_saved = 0
         for item in raw_results:
-            # 2. البحث العميق عن الإيميل وصانع القرار لكل شركة
+            # التحقق من وجود الشركة مسبقاً لتجنب التكرار (اختياري)
+            # existing_lead = db.query(models.Lead).filter(models.Lead.company_name == item['company_name'], models.Lead.user_id == user_id).first()
+            # if existing_lead: continue
+
+            # ج) البحث العميق عن الإيميل وصانع القرار
             extra_data = enricher.find_emails_and_people(item['company_name'], item['website'])
             
-            # 3. التحقق من صحة الإيميل تقنياً
+            # د) التحقق من صحة الإيميل تقنياً
             email_status, confidence = verifier.verify(extra_data['email'])
             
-            # 4. حفظ البيانات الحقيقية في قاعدة البيانات
+            # هـ) حفظ البيانات في قاعدة البيانات
             new_lead = models.Lead(
                 user_id=user_id,
                 company_name=item['company_name'],
                 industry=keyword,
-                location=item['location'],
+                location=item['location'] or location, # استخدام الموقع المدخل كاحتياطي
                 phone=item['phone'],
                 website=item['website'],
                 email=extra_data['email'],
@@ -59,11 +73,11 @@ def run_full_scraping_task(keyword: str, location: str, user_id: int, db: Sessio
             db.add(new_lead)
             db.commit()
             leads_saved += 1
-            print(f"✅ [SAVED] تم استخراج وحفظ: {item['company_name']}")
+            print(f"💾 [Saved] {item['company_name']} ({email_status})")
 
         enricher.stop_session()
         
-        # 5. تسجيل العملية في سجل تاريخ البحث
+        # و) تسجيل العملية في سجل التاريخ
         history = models.SearchHistory(
             user_id=user_id,
             keyword=keyword,
@@ -72,41 +86,34 @@ def run_full_scraping_task(keyword: str, location: str, user_id: int, db: Sessio
         )
         db.add(history)
         db.commit()
+        print(f"🏁 [Task Finished] تمت العملية بنجاح. تم حفظ {leads_saved} عميل.")
 
     except Exception as e:
-        print(f"❌ خطأ فني في المحرك الرئيسي: {e}")
+        print(f"❌ [Critical Error] خطأ في المحرك الرئيسي: {e}")
         db.rollback()
     finally:
-        # ضمان إغلاق جلسة المتصفح في كل الأحوال
         try:
             enricher.stop_session()
         except:
             pass
 
-# --- 2. تعريف شكل البيانات المتوقعة (Schema) ---
-class SearchRequest(BaseModel):
-    keyword: str
-    location: str
-    target_limit: int = 5
-
-# --- نقطة الاتصال لبدء البحث ---
+# --- 3. نقطة الاتصال لبدء البحث (Endpoint) ---
 @router.post("/start-search/")
 def start_search(
-    request: SearchRequest,  # <-- 3. استقبال البيانات كـ JSON Body
-    background_tasks: BackgroundTasks = BackgroundTasks(),
+    request: SearchRequest,  # استقبال البيانات كـ JSON Body
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    # 1. التأكد من وجود رصيد كافٍ (نستخدم request.target_limit)
+    # أ) التحقق من الرصيد
     if current_user.credits < request.target_limit:
-        raise HTTPException(status_code=400, detail="عذراً، رصيدك غير كافٍ لإتمام عملية البحث المطلوبة.")
+        raise HTTPException(status_code=400, detail="عذراً، رصيدك الحالي لا يكفي لهذه العملية.")
 
-    # 2. تفعيل خصم الرصيد فوراً من حساب المستخدم
+    # ب) خصم الرصيد فوراً
     current_user.credits -= request.target_limit
-    db.commit() # حفظ الخصم فوراً لضمان عدم التلاعب
-    print(f"💰 تم خصم {request.target_limit} توكن من المستخدم {current_user.email}")
-
-    # 3. إطلاق مهمة السحب والتحقق في الخلفية (نستخدم بيانات request)
+    db.commit()
+    
+    # ج) إرسال المهمة للخلفية (Background Task)
     background_tasks.add_task(
         run_full_scraping_task, 
         request.keyword, 
@@ -118,16 +125,16 @@ def start_search(
     
     return {
         "status": "success", 
-        "message": f"بدأ البحث بنجاح، تم خصم {request.target_limit} توكن من رصيدك. ستظهر النتائج تدريجياً في الجدول."
+        "message": f"تم بدء البحث عن '{request.keyword}'. تم خصم {request.target_limit} نقطة. النتائج ستظهر تلقائياً عند اكتمالها."
     }
 
-# --- جلب بيانات المستخدم الحالية ---
+# --- 4. جلب النتائج (للعرض في الجدول) ---
 @router.get("/my-leads/")
 def get_my_leads(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    leads = db.query(models.Lead).filter(models.Lead.user_id == current_user.id).order_by(models.Lead.id.desc()).all()
+    leads = db.query(models.Lead).filter(models.Lead.user_id == current_user.id).order_by(models.Lead.id.desc()).limit(100).all()
     return {"data": leads}
 
-# --- جلب سجل عمليات البحث ---
+# --- 5. جلب سجل البحث (للقائمة الجانبية) ---
 @router.get("/history")
 def get_history(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    return db.query(models.SearchHistory).filter(models.SearchHistory.user_id == current_user.id).all()
+    return db.query(models.SearchHistory).filter(models.SearchHistory.user_id == current_user.id).order_by(models.SearchHistory.id.desc()).all()
