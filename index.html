@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>24Seven AI | بوابتك للتحول الرقمي</title>
-    <meta name="description" content="24Seven AI - We turn business chaos into automated success. Enterprise ERPs, AI Bots, and Data Intelligence solutions.">
+    <title>24Seven AI | الحلول الرقمية الشاملة</title>
+    <meta name="description" content="24Seven AI - Enterprise ERPs, AI Bots, Web Design & Data Intelligence solutions.">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -88,6 +88,14 @@
             border: 1px solid rgba(255,255,255,0.1);
         }
 
+        .section-title {
+            position: relative; display: inline-block; padding-bottom: 10px; margin-bottom: 2rem;
+        }
+        .section-title::after {
+            content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 60px; height: 4px; background: var(--primary); border-radius: 2px;
+        }
+
         /* Testimonial Image */
         .testimonial-img {
             width: 50px; height: 50px; border-radius: 50%; object-fit: cover;
@@ -106,19 +114,30 @@
     <aside id="sidebar">
         <div class="flex justify-between items-center mb-10">
             <h2 class="text-2xl font-bold text-white flex items-center gap-2">
-                <i class="fas fa-brain text-indigo-500"></i>
+                <i class="fas fa-bars text-indigo-500"></i>
                 <span class="lang-ar">القائمة</span><span class="lang-en hidden-lang">Menu</span>
             </h2>
             <button onclick="toggleSidebar()" class="text-slate-400 hover:text-white bg-white/5 p-2 rounded-lg transition hover:bg-red-500/20 hover:text-red-400">
                 <i class="fas fa-times text-xl"></i>
             </button>
         </div>
-        <ul class="space-y-6 flex-1">
+        <ul class="space-y-4 flex-1">
             <li><a href="#" class="flex items-center gap-3 text-white text-lg border-r-4 border-indigo-500 pr-4 bg-white/5 py-2 rounded-l-lg"><i class="fas fa-home w-6 text-indigo-400"></i> <span class="lang-ar">الرئيسية</span><span class="lang-en hidden-lang">Home</span></a></li>
-            <li><a href="/dashboard" class="flex items-center gap-3 text-slate-300 hover:text-indigo-400 text-lg transition"><i class="fas fa-rocket w-6"></i> <span class="lang-ar">الأداة الذكية</span><span class="lang-en hidden-lang">SaaS Tool</span></a></li>
+            
+            <li>
+                <button onclick="openMsgModal('Request Access'); toggleSidebar();" class="flex items-center gap-3 text-slate-300 hover:text-indigo-400 text-lg transition w-full text-right ltr:text-left">
+                    <i class="fas fa-rocket w-6 text-purple-500"></i> <span class="lang-ar">الأداة الذكية (طلب دخول)</span><span class="lang-en hidden-lang">SaaS App (Request)</span>
+                </button>
+            </li>
+
+            <li><a href="#web-design" onclick="toggleSidebar()" class="flex items-center gap-3 text-slate-300 hover:text-indigo-400 text-lg transition"><i class="fas fa-paint-brush w-6 text-pink-500"></i> <span class="lang-ar">تصميم المواقع</span><span class="lang-en hidden-lang">Web Design</span></a></li>
+            
+            <li><a href="#solutions" onclick="toggleSidebar()" class="flex items-center gap-3 text-slate-300 hover:text-indigo-400 text-lg transition"><i class="fas fa-brain w-6 text-blue-500"></i> <span class="lang-ar">حلول الذكاء الاصطناعي</span><span class="lang-en hidden-lang">AI Solutions</span></a></li>
+            
             <li><a href="projects.html" class="flex items-center gap-3 text-slate-300 hover:text-indigo-400 text-lg transition"><i class="fas fa-layer-group w-6"></i> <span class="lang-ar">سابقة الأعمال</span><span class="lang-en hidden-lang">Portfolio</span></a></li>
+            
             <li><a href="#about" onclick="toggleSidebar()" class="flex items-center gap-3 text-slate-300 hover:text-indigo-400 text-lg transition"><i class="fas fa-info-circle w-6"></i> <span class="lang-ar">عن الشركة</span><span class="lang-en hidden-lang">About Us</span></a></li>
-            <li><a href="#solutions" onclick="toggleSidebar()" class="flex items-center gap-3 text-slate-300 hover:text-indigo-400 text-lg transition"><i class="fas fa-lightbulb w-6"></i> <span class="lang-ar">حلولنا</span><span class="lang-en hidden-lang">Solutions</span></a></li>
+            
             <li><button onclick="openMsgModal(); toggleSidebar();" class="flex items-center gap-3 text-slate-300 hover:text-indigo-400 text-lg transition w-full text-right ltr:text-left"><i class="fas fa-envelope w-6"></i> <span class="font-mono">Contact Us</span></button></li>
         </ul>
         <div class="pt-6 border-t border-white/10 text-center">
@@ -135,9 +154,10 @@
             <span class="text-xl font-bold tracking-tight text-white">24Seven<span class="text-indigo-400">.ai</span></span>
         </div>
         <div class="flex items-center gap-3">
-            <a href="/dashboard" class="hidden md:flex items-center gap-2 px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white border border-indigo-500/50 rounded-lg transition text-sm font-bold">
-                <i class="fas fa-sign-in-alt"></i> <span class="lang-ar">دخول الأداة</span><span class="lang-en hidden-lang">Login App</span>
-            </a>
+            <button onclick="openMsgModal('Request Access')" class="hidden md:flex items-center gap-2 px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white border border-indigo-500/50 rounded-lg transition text-sm font-bold">
+                <i class="fas fa-lock"></i> <span class="lang-ar">طلب وصول للأداة</span><span class="lang-en hidden-lang">Request Access</span>
+            </button>
+            
             <button onclick="toggleLang()" class="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-slate-300 hover:text-white transition text-sm font-bold">
                 <i class="fas fa-globe"></i> <span id="lang-label-nav">English</span>
             </button>
@@ -166,35 +186,106 @@
             </h1>
             
             <p class="text-xl text-slate-400 mb-12 max-w-3xl mx-auto leading-relaxed">
-                <span class="lang-ar">في 24Seven AI، نحن لا نقدم حلولاً تقليدية، بل <strong>نبني منظومة رقمية متكاملة تمنحك السيطرة المطلقة على أعمالك</strong>. ننتقل بمؤسستك من "التشغيل اليدوي" إلى "الذكاء المؤسسي"، لضمان النمو المستدام وتعظيم العائد على الاستثمار.</span>
-                <span class="lang-en hidden-lang">At 24Seven AI, we don't offer traditional solutions; we <strong>build a complete digital ecosystem that gives you total control over your business</strong>. We transition your organization from "Manual Ops" to "Corporate Intelligence," ensuring sustainable growth and maximized ROI.</span>
+                <span class="lang-ar">في 24Seven AI، نحن لا نقدم حلولاً تقليدية. نحن نقدم <strong>تصميم مواقع احترافي</strong> يعكس هويتك، و <strong>أنظمة ذكاء اصطناعي</strong> تدير أعمالك آلياً.</span>
+                <span class="lang-en hidden-lang">At 24Seven AI, we offer distinct value: <strong>Professional Web Design</strong> that reflects your identity, and <strong>AI Systems</strong> that automate your business.</span>
             </p>
 
             <div class="flex flex-col md:flex-row gap-5 justify-center">
-                <a href="https://wa.me/201121748885" target="_blank" class="btn btn-primary px-8 py-4 rounded-xl text-lg flex items-center justify-center gap-3 bg-[#25d366] hover:bg-[#1ebc57] text-white shadow-lg shadow-green-900/20 transition transform hover:scale-105">
-                    <i class="fab fa-whatsapp text-2xl"></i> 
-                    <span class="lang-ar">استشارة فورية (WhatsApp)</span>
-                    <span class="lang-en hidden-lang">Instant Consultation</span>
+                <a href="#web-design" class="btn btn-primary px-8 py-4 rounded-xl text-lg flex items-center justify-center gap-3 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white shadow-lg transition transform hover:scale-105">
+                    <i class="fas fa-paint-brush text-2xl"></i> 
+                    <span class="lang-ar">تصميم المواقع</span>
+                    <span class="lang-en hidden-lang">Web Design Services</span>
                 </a>
-                <a href="projects.html" class="btn btn-outline px-8 py-4 rounded-xl text-lg flex items-center justify-center gap-3 border border-white/20 hover:bg-white/10 text-white transition">
-                    <i class="fas fa-cubes"></i> 
-                    <span class="lang-ar">استكشف حلولنا</span>
-                    <span class="lang-en hidden-lang">Explore Solutions</span>
+                <a href="#solutions" class="btn btn-outline px-8 py-4 rounded-xl text-lg flex items-center justify-center gap-3 border border-white/20 hover:bg-white/10 text-white transition">
+                    <i class="fas fa-brain"></i> 
+                    <span class="lang-ar">حلول الذكاء الاصطناعي</span>
+                    <span class="lang-en hidden-lang">AI Solutions</span>
                 </a>
             </div>
         </div>
     </header>
 
+    <section id="web-design" class="py-24 px-6 bg-[#0f0f0f] border-t border-white/5 relative">
+        <div class="absolute top-0 right-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
+        <div class="max-w-7xl mx-auto relative z-10">
+            <div class="text-center mb-16">
+                <span class="text-pink-500 font-bold tracking-widest uppercase text-sm">Creative Studio</span>
+                <h2 class="text-3xl md:text-5xl font-bold mt-2 mb-4 text-white section-title">
+                    <span class="lang-ar">تصميم وتطوير المواقع</span>
+                    <span class="lang-en hidden-lang">Web Design & Development</span>
+                </h2>
+                <p class="text-slate-400 text-lg max-w-2xl mx-auto">
+                    <span class="lang-ar">نحول أفكارك إلى تجارب رقمية مذهلة. مواقع سريعة، متجاوبة، ومصممة لتبيع.</span>
+                    <span class="lang-en hidden-lang">Turning ideas into stunning digital experiences. Fast, responsive, and built to convert.</span>
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="glass-card p-8 hover:bg-white/5 transition group border-t-4 border-pink-500">
+                    <div class="w-16 h-16 bg-pink-500/10 rounded-2xl flex items-center justify-center text-pink-500 text-3xl mb-6 group-hover:scale-110 transition">
+                        <i class="fas fa-store"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-3"><span class="lang-ar">متاجر إلكترونية</span><span class="lang-en hidden-lang">E-Commerce</span></h3>
+                    <p class="text-slate-400 mb-6 text-sm">
+                        <span class="lang-ar">متاجر متكاملة، بوابات دفع، ولوحة تحكم سهلة لإدارة منتجاتك ومبيعاتك.</span>
+                        <span class="lang-en hidden-lang">Full stores, payment gateways, and easy dashboards to manage products.</span>
+                    </p>
+                    <ul class="text-slate-500 text-sm space-y-2 mb-6">
+                        <li><i class="fas fa-check text-pink-500 mx-2"></i> Payment Integration</li>
+                        <li><i class="fas fa-check text-pink-500 mx-2"></i> Inventory System</li>
+                    </ul>
+                </div>
+
+                <div class="glass-card p-8 hover:bg-white/5 transition group border-t-4 border-purple-500 transform md:-translate-y-4">
+                    <div class="w-16 h-16 bg-purple-500/10 rounded-2xl flex items-center justify-center text-purple-500 text-3xl mb-6 group-hover:scale-110 transition">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-3"><span class="lang-ar">مواقع الشركات</span><span class="lang-en hidden-lang">Corporate Sites</span></h3>
+                    <p class="text-slate-400 mb-6 text-sm">
+                        <span class="lang-ar">واجهة احترافية تعكس هوية شركتك وتبني الثقة مع عملائك من النظرة الأولى.</span>
+                        <span class="lang-en hidden-lang">Professional interface reflecting your brand identity and building trust.</span>
+                    </p>
+                    <ul class="text-slate-500 text-sm space-y-2 mb-6">
+                        <li><i class="fas fa-check text-purple-500 mx-2"></i> SEO Optimized</li>
+                        <li><i class="fas fa-check text-purple-500 mx-2"></i> Multi-language</li>
+                    </ul>
+                </div>
+
+                <div class="glass-card p-8 hover:bg-white/5 transition group border-t-4 border-blue-500">
+                    <div class="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500 text-3xl mb-6 group-hover:scale-110 transition">
+                        <i class="fas fa-laptop-code"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-3"><span class="lang-ar">صفحات الهبوط</span><span class="lang-en hidden-lang">Landing Pages</span></h3>
+                    <p class="text-slate-400 mb-6 text-sm">
+                        <span class="lang-ar">صفحات مصممة خصيصاً للحملات الإعلانية لتحويل الزوار إلى عملاء فعليين.</span>
+                        <span class="lang-en hidden-lang">High-converting pages designed specifically for ad campaigns.</span>
+                    </p>
+                    <ul class="text-slate-500 text-sm space-y-2 mb-6">
+                        <li><i class="fas fa-check text-blue-500 mx-2"></i> High Conversion</li>
+                        <li><i class="fas fa-check text-blue-500 mx-2"></i> Fast Loading</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="text-center mt-12">
+                <button onclick="openMsgModal('Web Design Service')" class="px-8 py-3 border border-pink-500 text-pink-400 hover:bg-pink-600 hover:text-white rounded-lg transition font-bold">
+                    <span class="lang-ar">ابدأ مشروعك الآن</span><span class="lang-en hidden-lang">Start Your Project</span>
+                </button>
+            </div>
+        </div>
+    </section>
+
     <section id="solutions" class="py-24 px-6 bg-black/20 border-t border-white/5">
         <div class="max-w-7xl mx-auto">
             <div class="text-center mb-16">
-                <h2 class="text-3xl md:text-5xl font-bold mb-4">
-                    <span class="lang-ar">لماذا تختارنا؟</span>
-                    <span class="lang-en hidden-lang">Why Choose Us?</span>
+                <span class="text-indigo-500 font-bold tracking-widest uppercase text-sm">Intelligence Core</span>
+                <h2 class="text-3xl md:text-5xl font-bold mt-2 mb-4 text-white section-title">
+                    <span class="lang-ar">حلول الذكاء الاصطناعي</span>
+                    <span class="lang-en hidden-lang">AI Solutions</span>
                 </h2>
                 <p class="text-slate-400 text-lg">
-                    <span class="lang-ar">لأننا نفهم "لغة البزنس" ونحولها لواقع تقني</span>
-                    <span class="lang-en hidden-lang">Because we speak "Business" and translate it into Tech</span>
+                    <span class="lang-ar">أنظمة أتمتة متقدمة تمنحك السيطرة الكاملة على البيانات والعمليات.</span>
+                    <span class="lang-en hidden-lang">Advanced automation systems giving you full control over data and ops.</span>
                 </p>
             </div>
 
@@ -202,25 +293,25 @@
                 <div class="glass-card p-6 group hover:bg-white/5 transition duration-500">
                     <div class="feature-icon text-red-400 group-hover:scale-110 transition"><i class="fas fa-bug"></i></div>
                     <h3 class="text-xl font-bold mb-2 text-white"><span class="lang-ar">المشكلة</span><span class="lang-en hidden-lang">Problem</span></h3>
-                    <p class="text-slate-400 text-sm"><span class="lang-ar">ندرس مشكله البزنس تفصيلا لكى نقدم حلول ممكنه تؤدى الى النمو الكامل للبزنس.</span><span class="lang-en hidden-lang">Data leaks and losing customers to competitors.</span></p>
+                    <p class="text-slate-400 text-sm"><span class="lang-ar">ندرس مشكلة البزنس تفصيلياً لتقديم حلول جذرية.</span><span class="lang-en hidden-lang">Deep analysis of business problems.</span></p>
                 </div>
 
                 <div class="glass-card p-6 group hover:bg-white/5 transition duration-500 border-green-500/30">
                     <div class="feature-icon text-green-400 group-hover:scale-110 transition"><i class="fas fa-check-circle"></i></div>
                     <h3 class="text-xl font-bold mb-2 text-white"><span class="lang-ar">الحل</span><span class="lang-en hidden-lang">Solution</span></h3>
-                    <p class="text-slate-400 text-sm"><span class="lang-ar">نقموم بتحليل المشكله لتقديم حلول لها باسهل شكل ممكن يعود على المستخدم بالسهوله في الاستخخدام.</span><span class="lang-en hidden-lang">Centralized automation systems for total control.</span></p>
+                    <p class="text-slate-400 text-sm"><span class="lang-ar">أنظمة مركزية (Centralized Systems) للتحكم الكامل.</span><span class="lang-en hidden-lang">Centralized automation systems.</span></p>
                 </div>
 
                 <div class="glass-card p-6 group hover:bg-white/5 transition duration-500">
                     <div class="feature-icon text-blue-400 group-hover:scale-110 transition"><i class="fas fa-chart-line"></i></div>
                     <h3 class="text-xl font-bold mb-2 text-white"><span class="lang-ar">النمو</span><span class="lang-en hidden-lang">Growth</span></h3>
-                    <p class="text-slate-400 text-sm"><span class="lang-ar">نقوم بدراسه شامله لكل فرع البزنس لكى يحقق اعلى عائد ممكن .</span><span class="lang-en hidden-lang">Sales Intelligence tools to double your revenue.</span></p>
+                    <p class="text-slate-400 text-sm"><span class="lang-ar">أدوات ذكاء المبيعات (Sales Intelligence) لمضاعفة الأرباح.</span><span class="lang-en hidden-lang">Sales Intelligence tools.</span></p>
                 </div>
 
                 <div class="glass-card p-6 group hover:bg-white/5 transition duration-500">
                     <div class="feature-icon text-purple-400 group-hover:scale-110 transition"><i class="fas fa-shield-alt"></i></div>
                     <h3 class="text-xl font-bold mb-2 text-white"><span class="lang-ar">الأمان</span><span class="lang-en hidden-lang">Security</span></h3>
-                    <p class="text-slate-400 text-sm"><span class="lang-ar">حماية بياناتك وأنظمتك بأحدث بروتوكولات الأمان.</span><span class="lang-en hidden-lang">Protecting your data with latest security protocols.</span></p>
+                    <p class="text-slate-400 text-sm"><span class="lang-ar">حماية بياناتك وأنظمتك بأحدث البروتوكولات.</span><span class="lang-en hidden-lang">Top-tier data security.</span></p>
                 </div>
             </div>
         </div>
@@ -229,7 +320,7 @@
     <section class="py-24 px-6 relative">
         <div class="max-w-7xl mx-auto">
             <div class="text-center mb-16">
-                <h2 class="text-3xl md:text-5xl font-bold mb-4 text-white">
+                <h2 class="text-3xl md:text-5xl font-bold mb-4 text-white section-title">
                     <span class="lang-ar">ماذا يقول عملاؤنا؟</span>
                     <span class="lang-en hidden-lang">What Our Clients Say</span>
                 </h2>
@@ -237,7 +328,7 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div class="glass-card p-8 border-white/5 relative">
                     <i class="fas fa-quote-right text-4xl text-white/10 absolute top-6 right-6"></i>
-                    <p class="text-slate-300 mb-6 leading-relaxed">"نظام الـ ERP الذي صممته 24Seven AI غير طريقة إدارتنا للشركة تماماً. وفرنا 40% من التكاليف التشغيلية في أول 3 شهور."</p>
+                    <p class="text-slate-300 mb-6 leading-relaxed">"نظام الـ ERP الذي صممته 24Seven AI غير طريقة إدارتنا للشركة تماماً. وفرنا 40% من التكاليف التشغيلية."</p>
                     <div class="flex items-center gap-4">
                         <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Client" class="testimonial-img">
                         <div>
@@ -248,12 +339,12 @@
                 </div>
                 <div class="glass-card p-8 border-white/5 relative">
                     <i class="fas fa-quote-right text-4xl text-white/10 absolute top-6 right-6"></i>
-                    <p class="text-slate-300 mb-6 leading-relaxed">"بوت المبيعات مذهل! يعمل 24 ساعة ويرد على العملاء بذكاء. نسبة إغلاق الصفقات زادت بشكل ملحوظ."</p>
+                    <p class="text-slate-300 mb-6 leading-relaxed">"تصميم الموقع الجديد كان نقطة تحول. المبيعات زادت بنسبة 200% بفضل تجربة المستخدم السلسة."</p>
                     <div class="flex items-center gap-4">
                         <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Client" class="testimonial-img">
                         <div>
                             <h4 class="text-white font-bold text-sm">سارة محمود</h4>
-                            <p class="text-indigo-400 text-xs">Marketing Manager</p>
+                            <p class="text-pink-400 text-xs">E-commerce Manager</p>
                         </div>
                     </div>
                 </div>
@@ -357,7 +448,7 @@
                     <span class="lang-ar">روابط</span><span class="lang-en hidden-lang">Links</span>
                 </h4>
                 <ul class="space-y-3 text-slate-400">
-                    <li><button onclick="openMsgModal()" class="hover:text-indigo-400 transition"><span class="lang-ar">طلب استشارة</span><span class="lang-en hidden-lang">Request Consultation</span></button></li>
+                    <li><button onclick="openMsgModal('Consultation')" class="hover:text-indigo-400 transition"><span class="lang-ar">طلب استشارة</span><span class="lang-en hidden-lang">Request Consultation</span></button></li>
                     <li><a href="projects.html" class="hover:text-indigo-400 transition"><span class="lang-ar">المشاريع</span><span class="lang-en hidden-lang">Projects</span></a></li>
                     <li><a href="https://wa.me/201121748885" class="hover:text-green-400 transition"><i class="fab fa-whatsapp"></i> WhatsApp</a></li>
                 </ul>
@@ -373,17 +464,17 @@
             <button onclick="closeAllModals()" class="absolute top-4 right-4 text-slate-400 hover:text-white bg-white/5 p-2 rounded-lg"><i class="fas fa-times text-xl"></i></button>
             <div class="text-center mb-8">
                 <h3 class="text-2xl font-bold mb-2 text-white">
-                    <span class="lang-ar">ابدأ رحلة التحول الرقمي</span>
-                    <span class="lang-en hidden-lang">Start Digital Transformation</span>
+                    <span class="lang-ar">تواصل معنا</span>
+                    <span class="lang-en hidden-lang">Contact Us</span>
                 </h3>
                 <p class="text-sm text-slate-400">
-                    <span class="lang-ar">املأ النموذج أدناه وسيقوم فريقنا الهندسي بتحليل طلبك والرد خلال 24 ساعة.</span>
-                    <span class="lang-en hidden-lang">Fill the form below. Our engineering team will analyze your request and reply within 24 hours.</span>
+                    <span class="lang-ar">سواء كنت تريد الوصول للأداة، أو تصميم موقع، أو استشارة تقنية.</span>
+                    <span class="lang-en hidden-lang">Whether for App access, web design, or tech consultation.</span>
                 </p>
             </div>
             
             <form action="https://formspree.io/f/xzddpdga" method="POST" class="space-y-6">
-                <input type="hidden" name="_subject" value="Inquiry Source: Footer/Home Contact">
+                <input type="hidden" name="_subject" id="formSubject" value="Inquiry Source: Footer/Home Contact">
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -402,18 +493,13 @@
                         <input type="tel" name="phone" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-indigo-500 text-white transition outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs text-slate-400 mb-1"><span class="lang-ar">نوع المشروع *</span><span class="lang-en hidden-lang">Project Type *</span></label>
-                        <select name="project_type" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-indigo-500 text-white transition outline-none appearance-none">
-                            <option value="" disabled selected>Select project type</option>
-                            <option value="Web Application">Web Application</option>
-                            <option value="Mobile App">Mobile App</option>
-                            <option value="E-commerce Platform">E-commerce Platform</option>
-                            <option value="Custom Software">Custom Software</option>
-                            <option value="API Development">API Development</option>
-                            <option value="Database Design">Database Design</option>
-                            <option value="System Integration">System Integration</option>
-                            <option value="Automation Bot">Automation Bot</option>
-                            <option value="Other">Other</option>
+                        <label class="block text-xs text-slate-400 mb-1"><span class="lang-ar">نوع الطلب *</span><span class="lang-en hidden-lang">Request Type *</span></label>
+                        <select name="project_type" id="projectTypeSelect" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-indigo-500 text-white transition outline-none appearance-none">
+                            <option value="" disabled selected>اختر نوع الطلب</option>
+                            <option value="SaaS App Access">طلب وصول للأداة (App Access)</option>
+                            <option value="Web Design Project">مشروع تصميم موقع (Web Design)</option>
+                            <option value="Custom Software">برمجة خاصة (Custom Software)</option>
+                            <option value="Consultation">استشارة عامة (Consultation)</option>
                         </select>
                     </div>
                 </div>
@@ -422,17 +508,16 @@
                     <label class="block text-xs text-slate-400 mb-1"><span class="lang-ar">ميزانية المشروع (اختياري)</span><span class="lang-en hidden-lang">Budget Range (Optional)</span></label>
                     <select name="budget" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-indigo-500 text-white transition outline-none appearance-none">
                         <option value="" disabled selected>Select budget range</option>
+                        <option value="App Access Subscription">اشتراك في الأداة</option>
                         <option value="$5,000 - $10,000">$5,000 - $10,000</option>
                         <option value="$10,000 - $25,000">$10,000 - $25,000</option>
-                        <option value="$25,000 - $50,000">$25,000 - $50,000</option>
-                        <option value="$50,000 - $100,000">$50,000 - $100,000</option>
-                        <option value="$100,000+">$100,000+</option>
+                        <option value="$25,000+">$25,000+</option>
                     </select>
                 </div>
 
                 <div>
-                    <label class="block text-xs text-slate-400 mb-1"><span class="lang-ar">تفاصيل المشكلة / الفكرة *</span><span class="lang-en hidden-lang">Project Details / Problem *</span></label>
-                    <textarea name="message" rows="4" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-indigo-500 text-white transition outline-none" placeholder="اشرح لنا التحدي الذي تواجهه..."></textarea>
+                    <label class="block text-xs text-slate-400 mb-1"><span class="lang-ar">التفاصيل *</span><span class="lang-en hidden-lang">Details *</span></label>
+                    <textarea name="message" id="formMessage" rows="4" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-indigo-500 text-white transition outline-none" placeholder="اكتب تفاصيل طلبك هنا..."></textarea>
                 </div>
 
                 <button type="submit" class="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-xl transition shadow-lg transform hover:scale-[1.01]">
@@ -450,9 +535,25 @@
             document.getElementById('sidebar').classList.remove('active'); 
         }
         
-        function openMsgModal() { 
+        function openMsgModal(type = '') { 
             closeAllModals();
             setTimeout(() => {
+                const modal = document.getElementById('msgModal');
+                const overlay = document.getElementById('overlay');
+                const select = document.getElementById('projectTypeSelect');
+                const msg = document.getElementById('formMessage');
+                const subject = document.getElementById('formSubject');
+
+                if (type === 'Request Access') {
+                    select.value = 'SaaS App Access';
+                    subject.value = 'New App Access Request';
+                    msg.placeholder = 'أرغب في تجربة الأداة للعمل في مجال...';
+                } else if (type === 'Web Design Service') {
+                    select.value = 'Web Design Project';
+                    subject.value = 'New Web Design Inquiry';
+                    msg.placeholder = 'أريد تصميم موقع لشركتي التي تعمل في مجال...';
+                }
+
                 document.getElementById('overlay').classList.add('active'); 
                 document.getElementById('msgModal').classList.add('active'); 
             }, 100);

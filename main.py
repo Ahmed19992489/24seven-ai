@@ -21,7 +21,7 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="24Seven Sales Intelligence Platform",
     description="Professional SaaS Platform.",
-    version="2.1.0"
+    version="2.2.0"
 )
 
 # --- 2. إعدادات CORS (السماح بالاتصال) ---
@@ -80,7 +80,15 @@ async def read_projects_page():
         return FileResponse(file_path)
     return HTMLResponse("<h1>Error: projects.html not found!</h1>")
 
-# 3. صفحة الأداة (Dashboard) - يدخل لها العميل من زر تسجيل الدخول
+# 3. (جديد) صفحة عروض تصميم المواقع (Web Design Offers)
+@app.get("/web-design")
+async def read_web_design_page():
+    file_path = BASE_DIR / "web_design.html"
+    if file_path.exists():
+        return FileResponse(file_path)
+    return HTMLResponse("<h1>Error: web_design.html not found!</h1>")
+
+# 4. صفحة الأداة (Dashboard) - يدخل لها العميل من زر تسجيل الدخول
 @app.get("/dashboard")
 async def read_app_dashboard():
     file_path = BASE_DIR / "dashboard.html"
@@ -88,7 +96,7 @@ async def read_app_dashboard():
         return FileResponse(file_path)
     return HTMLResponse("<h1>Error: dashboard.html not found!</h1>")
 
-# 4. لوحة تحكم الأدمن
+# 5. لوحة تحكم الأدمن
 @app.get("/admin-panel")
 async def read_admin_panel():
     file_path = BASE_DIR / "admin.html"
