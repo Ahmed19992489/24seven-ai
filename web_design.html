@@ -6,12 +6,21 @@
     <title>باقات تصميم المواقع | 24Seven Studio</title>
     <meta name="description" content="عروض تصميم المواقع للشركات والنشاطات التجارية. باقات تبدأ من 995ج مع دومين وإيميل رسمي.">
     
+    <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/96/chatbot.png">
+    <link rel="shortcut icon" type="image/png" href="https://img.icons8.com/fluency/96/chatbot.png">
+
+    <meta property="og:title" content="24Seven AI - Web Design Packages">
+    <meta property="og:description" content="عروض تصميم المواقع للشركات والنشاطات التجارية. باقات تبدأ من 995ج.">
+    <meta property="og:image" content="https://images.unsplash.com/photo-1485827404703-89b55fcc595e?q=80&w=1200&auto=format&fit=crop">
+    <meta property="og:url" content="https://24seven-ai.com/web-design">
+    <meta property="og:type" content="website">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Outfit:wght@700&display=swap" rel="stylesheet">
     
     <style>
-        /* Unified Theme Colors from Index */
+        /* Unified Theme Colors */
         :root {
             --bg-dark: #050505;
             --card-bg: #121212;
@@ -72,12 +81,16 @@
         /* Modal Transitions */
         .modal { opacity: 0; visibility: hidden; transition: all 0.3s ease-in-out; }
         .modal.active { opacity: 1; visibility: visible; }
+
+        /* Translation Helper Class */
+        .hidden-lang { display: none !important; }
     </style>
 </head>
 <body class="selection:bg-indigo-600 selection:text-white">
 
     <div class="relative bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-900 text-white text-center py-3 text-xs md:text-sm font-bold tracking-wide z-[60] shadow-lg border-b border-white/10">
-        <span>🔥 خصم خاص للشركات الناشئة: استضافة ودومين مجاني مع باقة "المحترف" لفترة محدودة!</span>
+        <span class="lang-ar">🔥 خصم خاص للشركات الناشئة: استضافة ودومين مجاني مع باقة "المحترف" لفترة محدودة!</span>
+        <span class="lang-en hidden-lang">🔥 Special Offer for Startups: Free Hosting & Domain with "Pro Plan" for a limited time!</span>
     </div>
 
     <nav class="fixed top-0 w-full z-50 transition-all duration-300 py-6" id="navbar">
@@ -90,32 +103,44 @@
                 <span class="text-lg font-bold tracking-tight text-white group-hover:text-indigo-300 transition">24Seven <span class="text-indigo-500">Studio</span></span>
             </a>
 
-            <button onclick="toggleSidebar()" class="flex items-center gap-3 backdrop-blur-md bg-black/30 hover:bg-indigo-600/80 border border-white/10 hover:border-indigo-500 px-5 py-2.5 rounded-full transition-all duration-300 group">
-                <span class="text-sm font-bold text-white hidden md:block">القائمة</span>
-                <div class="space-y-1">
-                    <span class="block w-6 h-0.5 bg-white group-hover:w-4 transition-all duration-300 ml-auto"></span>
-                    <span class="block w-4 h-0.5 bg-white group-hover:w-6 transition-all duration-300 ml-auto"></span>
-                    <span class="block w-6 h-0.5 bg-white group-hover:w-4 transition-all duration-300 ml-auto"></span>
-                </div>
-            </button>
+            <div class="flex items-center gap-3">
+                <button onclick="toggleLang()" class="flex items-center gap-2 px-3 py-2 bg-black/30 hover:bg-black/50 border border-white/10 hover:border-indigo-500 rounded-full text-slate-300 hover:text-white transition text-xs font-bold backdrop-blur-md">
+                    <i class="fas fa-globe"></i> <span id="lang-label-nav">English</span>
+                </button>
+
+                <button onclick="toggleSidebar()" class="flex items-center gap-3 backdrop-blur-md bg-black/30 hover:bg-indigo-600/80 border border-white/10 hover:border-indigo-500 px-5 py-2.5 rounded-full transition-all duration-300 group">
+                    <span class="text-sm font-bold text-white hidden md:block">
+                        <span class="lang-ar">القائمة</span>
+                        <span class="lang-en hidden-lang">Menu</span>
+                    </span>
+                    <div class="space-y-1">
+                        <span class="block w-6 h-0.5 bg-white group-hover:w-4 transition-all duration-300 ml-auto"></span>
+                        <span class="block w-4 h-0.5 bg-white group-hover:w-6 transition-all duration-300 ml-auto"></span>
+                        <span class="block w-6 h-0.5 bg-white group-hover:w-4 transition-all duration-300 ml-auto"></span>
+                    </div>
+                </button>
+            </div>
 
         </div>
     </nav>
 
     <aside id="sidebar" class="fixed top-0 right-[-400px] w-[300px] md:w-[400px] h-full bg-[#0a0a0a]/95 backdrop-blur-xl border-l border-white/10 z-[100] p-8 flex flex-col shadow-2xl">
         <div class="flex justify-between items-center mb-12">
-            <h2 class="text-2xl font-bold text-white">تصفح الموقع</h2>
+            <h2 class="text-2xl font-bold text-white">
+                <span class="lang-ar">تصفح الموقع</span>
+                <span class="lang-en hidden-lang">Navigate</span>
+            </h2>
             <button onclick="toggleSidebar()" class="text-slate-400 hover:text-white bg-white/5 p-2 rounded-full transition hover:rotate-90">
                 <i class="fas fa-times text-xl"></i>
             </button>
         </div>
         
         <ul class="space-y-6 flex-1 text-lg">
-            <li><a href="/" class="text-slate-300 hover:text-white hover:translate-x-[-10px] transition block border-b border-white/5 pb-4"><i class="fas fa-home ml-3 text-indigo-500"></i> الرئيسية</a></li>
-            <li><a href="/web-design" class="text-white font-bold translate-x-[-10px] block border-b border-indigo-500 pb-4"><i class="fas fa-paint-brush ml-3 text-purple-500"></i> تصميم المواقع</a></li>
-            <li><a href="projects.html" class="text-slate-300 hover:text-white hover:translate-x-[-10px] transition block border-b border-white/5 pb-4"><i class="fas fa-layer-group ml-3 text-pink-500"></i> سابقة الأعمال</a></li>
-            <li><a href="/#founder" class="text-slate-300 hover:text-white hover:translate-x-[-10px] transition block border-b border-white/5 pb-4"><i class="fas fa-user-tie ml-3 text-blue-500"></i> المؤسس</a></li>
-            <li><button onclick="openRequestModal('General Inquiry'); toggleSidebar();" class="text-slate-300 hover:text-white hover:translate-x-[-10px] transition w-full text-right"><i class="fas fa-envelope ml-3 text-green-500"></i> تواصل معنا</button></li>
+            <li><a href="/" class="text-slate-300 hover:text-white hover:translate-x-[-10px] transition block border-b border-white/5 pb-4 flex items-center gap-3"><i class="fas fa-home ml-3 text-indigo-500"></i> <span class="lang-ar">الرئيسية</span><span class="lang-en hidden-lang">Home</span></a></li>
+            <li><a href="/web-design" class="text-white font-bold translate-x-[-10px] block border-b border-indigo-500 pb-4 flex items-center gap-3"><i class="fas fa-paint-brush ml-3 text-purple-500"></i> <span class="lang-ar">تصميم المواقع</span><span class="lang-en hidden-lang">Web Design</span></a></li>
+            <li><a href="projects.html" class="text-slate-300 hover:text-white hover:translate-x-[-10px] transition block border-b border-white/5 pb-4 flex items-center gap-3"><i class="fas fa-layer-group ml-3 text-pink-500"></i> <span class="lang-ar">سابقة الأعمال</span><span class="lang-en hidden-lang">Portfolio</span></a></li>
+            <li><a href="/#founder" class="text-slate-300 hover:text-white hover:translate-x-[-10px] transition block border-b border-white/5 pb-4 flex items-center gap-3"><i class="fas fa-user-tie ml-3 text-blue-500"></i> <span class="lang-ar">المؤسس</span><span class="lang-en hidden-lang">Founder</span></a></li>
+            <li><button onclick="openRequestModal('General Inquiry'); toggleSidebar();" class="text-slate-300 hover:text-white hover:translate-x-[-10px] transition w-full text-right flex items-center gap-3"><i class="fas fa-envelope ml-3 text-green-500"></i> <span class="lang-ar">تواصل معنا</span><span class="lang-en hidden-lang">Contact Us</span></button></li>
         </ul>
 
         <div class="pt-8 border-t border-white/10 text-center">
@@ -130,39 +155,56 @@
         <div class="absolute bottom-0 right-0 w-[600px] h-[400px] bg-purple-600/5 rounded-full blur-[100px] -z-10"></div>
         
         <span class="px-5 py-2 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-bold mb-8 inline-flex items-center gap-2 backdrop-blur-sm">
-            <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span> عروض محدودة الوقت
+            <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span> 
+            <span class="lang-ar">عروض محدودة الوقت</span>
+            <span class="lang-en hidden-lang">Limited Time Offers</span>
         </span>
 
         <h1 class="text-4xl md:text-7xl font-black mb-8 leading-tight">
-            ابدأ رحلتك الرقمية <br>
-            <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">بتصميم عالمي</span>
+            <span class="lang-ar">ابدأ رحلتك الرقمية <br> <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">بتصميم عالمي</span></span>
+            <span class="lang-en hidden-lang">Start Your Digital Journey <br> <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">With World-Class Design</span></span>
         </h1>
         
         <p class="text-slate-400 max-w-2xl mx-auto text-lg mb-12 leading-relaxed">
-            امتلك موقعاً احترافياً يعكس هوية شركتك ويبني الثقة مع عملائك. باقات شاملة الدومين، الاستضافة السريعة، والإيميلات الرسمية بأفضل الأسعار في السوق.
+            <span class="lang-ar">امتلك موقعاً احترافياً يعكس هوية شركتك ويبني الثقة مع عملائك. باقات شاملة الدومين، الاستضافة السريعة، والإيميلات الرسمية بأفضل الأسعار في السوق.</span>
+            <span class="lang-en hidden-lang">Own a professional website that reflects your brand identity and builds trust. Packages include Domain, Fast Hosting, and Official Emails at the best market rates.</span>
         </p>
 
         <div class="flex flex-wrap justify-center gap-4 mb-12" id="countdown">
             <div class="timer-box">
                 <span class="text-3xl font-bold text-white font-num" id="days">00</span>
-                <span class="text-xs text-slate-500 block uppercase mt-1">يوم</span>
+                <span class="text-xs text-slate-500 block uppercase mt-1">
+                    <span class="lang-ar">يوم</span>
+                    <span class="lang-en hidden-lang">Day</span>
+                </span>
             </div>
             <div class="timer-box">
                 <span class="text-3xl font-bold text-white font-num" id="hours">00</span>
-                <span class="text-xs text-slate-500 block uppercase mt-1">ساعة</span>
+                <span class="text-xs text-slate-500 block uppercase mt-1">
+                    <span class="lang-ar">ساعة</span>
+                    <span class="lang-en hidden-lang">Hr</span>
+                </span>
             </div>
             <div class="timer-box">
                 <span class="text-3xl font-bold text-white font-num" id="minutes">00</span>
-                <span class="text-xs text-slate-500 block uppercase mt-1">دقيقة</span>
+                <span class="text-xs text-slate-500 block uppercase mt-1">
+                    <span class="lang-ar">دقيقة</span>
+                    <span class="lang-en hidden-lang">Min</span>
+                </span>
             </div>
             <div class="timer-box border-indigo-500/50">
                 <span class="text-3xl font-bold text-indigo-400 font-num" id="seconds">00</span>
-                <span class="text-xs text-indigo-400 block uppercase mt-1">ثانية</span>
+                <span class="text-xs text-indigo-400 block uppercase mt-1">
+                    <span class="lang-ar">ثانية</span>
+                    <span class="lang-en hidden-lang">Sec</span>
+                </span>
             </div>
         </div>
 
         <a href="#pricing" class="px-10 py-4 bg-white text-black font-bold rounded-full hover:bg-slate-200 transition shadow-lg shadow-white/10 flex items-center gap-3 transform hover:scale-105 duration-300 group">
-            اختار باقتك الآن <i class="fas fa-arrow-down group-hover:translate-y-1 transition"></i>
+            <span class="lang-ar">اختار باقتك الآن</span>
+            <span class="lang-en hidden-lang">Choose Your Plan</span>
+            <i class="fas fa-arrow-down group-hover:translate-y-1 transition"></i>
         </a>
     </header>
 
@@ -171,90 +213,191 @@
             
             <div class="glass-card p-6 flex flex-col relative border-t-4 border-gray-600">
                 <div class="text-center mb-6">
-                    <h3 class="text-xl font-bold text-gray-300">البداية (Starter)</h3>
-                    <p class="text-xs text-gray-500 mt-1">للأفراد وتجربة الأفكار</p>
+                    <h3 class="text-xl font-bold text-gray-300">
+                        <span class="lang-ar">البداية (Starter)</span>
+                        <span class="lang-en hidden-lang">Starter Plan</span>
+                    </h3>
+                    <p class="text-xs text-gray-500 mt-1">
+                        <span class="lang-ar">للأفراد وتجربة الأفكار</span>
+                        <span class="lang-en hidden-lang">For individuals & ideas</span>
+                    </p>
                     <div class="mt-4">
                         <span class="price-tag font-num">2500 EGP</span>
-                        <div class="price-new font-num">995 <span class="text-sm font-medium text-gray-400 font-sans">ج.م</span></div>
+                        <div class="price-new font-num">995 <span class="text-sm font-medium text-gray-400 font-sans">EGP</span></div>
                     </div>
                 </div>
                 <ul class="feature-list flex-1 text-sm">
-                    <li><i class="fas fa-check"></i> صفحة هبوط واحدة (Landing Page)</li>
-                    <li><i class="fas fa-globe"></i> دومين (.icu / .online)</li>
-                    <li><i class="fas fa-server"></i> استضافة سريعة (1 سنة)</li>
-                    <li><i class="fas fa-mobile-alt"></i> متجاوب مع الموبايل</li>
-                    <li><i class="fas fa-times disabled"></i> <span class="disabled">إيميلات رسمية</span></li>
-                    <li><i class="fas fa-times disabled"></i> <span class="disabled">لوحة تحكم</span></li>
+                    <li><i class="fas fa-check"></i> 
+                        <span class="lang-ar">صفحة هبوط واحدة (Landing Page)</span>
+                        <span class="lang-en hidden-lang">Single Landing Page</span>
+                    </li>
+                    <li><i class="fas fa-globe"></i> 
+                        <span class="lang-ar">دومين (.icu / .online)</span>
+                        <span class="lang-en hidden-lang">Domain (.icu / .online)</span>
+                    </li>
+                    <li><i class="fas fa-server"></i> 
+                        <span class="lang-ar">استضافة سريعة (1 سنة)</span>
+                        <span class="lang-en hidden-lang">Fast Hosting (1 Year)</span>
+                    </li>
+                    <li><i class="fas fa-mobile-alt"></i> 
+                        <span class="lang-ar">متجاوب مع الموبايل</span>
+                        <span class="lang-en hidden-lang">Mobile Responsive</span>
+                    </li>
+                    <li><i class="fas fa-times disabled"></i> <span class="disabled">
+                        <span class="lang-ar">إيميلات رسمية</span>
+                        <span class="lang-en hidden-lang">Official Emails</span>
+                    </span></li>
+                    <li><i class="fas fa-times disabled"></i> <span class="disabled">
+                        <span class="lang-ar">لوحة تحكم</span>
+                        <span class="lang-en hidden-lang">Control Panel</span>
+                    </span></li>
                 </ul>
                 <button onclick="openRequestModal('Starter Plan - 995')" class="w-full py-3 mt-6 rounded-xl border border-gray-600 hover:bg-gray-800 transition font-bold text-gray-300">
-                    اختار الباقة
+                    <span class="lang-ar">اختار الباقة</span>
+                    <span class="lang-en hidden-lang">Select Plan</span>
                 </button>
             </div>
 
             <div class="glass-card p-6 flex flex-col relative border-t-4 border-indigo-500 transform lg:-translate-y-6 shadow-2xl shadow-indigo-900/30 bg-gradient-to-b from-indigo-900/10 to-transparent">
                 <div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-bold px-4 py-1 rounded-full shadow-lg">
-                    الأكثر طلباً 🔥
+                    <span class="lang-ar">الأكثر طلباً 🔥</span>
+                    <span class="lang-en hidden-lang">Best Seller 🔥</span>
                 </div>
                 <div class="text-center mb-6">
-                    <h3 class="text-xl font-bold text-indigo-400">المحترف (Pro)</h3>
-                    <p class="text-xs text-gray-400 mt-1">للشركات الناشئة والمكاتب</p>
+                    <h3 class="text-xl font-bold text-indigo-400">
+                        <span class="lang-ar">المحترف (Pro)</span>
+                        <span class="lang-en hidden-lang">Pro Plan</span>
+                    </h3>
+                    <p class="text-xs text-gray-400 mt-1">
+                        <span class="lang-ar">للشركات الناشئة والمكاتب</span>
+                        <span class="lang-en hidden-lang">For Startups & Offices</span>
+                    </p>
                     <div class="mt-4">
                         <span class="price-tag font-num">7500 EGP</span>
-                        <div class="price-new text-indigo-400 font-num">3800 <span class="text-sm font-medium text-gray-400 font-sans">ج.م</span></div>
+                        <div class="price-new text-indigo-400 font-num">3800 <span class="text-sm font-medium text-gray-400 font-sans">EGP</span></div>
                     </div>
                 </div>
                 <ul class="feature-list flex-1 text-sm">
-                    <li><i class="fas fa-check"></i> موقع كامل (حتى 5 صفحات)</li>
-                    <li><i class="fas fa-globe"></i> <strong>دومين .COM أو .NET</strong></li>
-                    <li><i class="fas fa-envelope"></i> <strong>3 إيميلات رسمية (Zoho)</strong></li>
-                    <li><i class="fas fa-certificate"></i> شهادة أمان SSL مجانية</li>
-                    <li><i class="fas fa-link"></i> ربط بالسوشيال ميديا</li>
-                    <li><i class="fab fa-whatsapp"></i> زر واتساب عائم</li>
+                    <li><i class="fas fa-check"></i> 
+                        <span class="lang-ar">موقع كامل (حتى 5 صفحات)</span>
+                        <span class="lang-en hidden-lang">Full Website (Up to 5 Pages)</span>
+                    </li>
+                    <li><i class="fas fa-globe"></i> <strong>
+                        <span class="lang-ar">دومين .COM أو .NET</span>
+                        <span class="lang-en hidden-lang">.COM or .NET Domain</span>
+                    </strong></li>
+                    <li><i class="fas fa-envelope"></i> <strong>
+                        <span class="lang-ar">3 إيميلات رسمية</span>
+                        <span class="lang-en hidden-lang">3 Official Emails</span>
+                    </strong></li>
+                    <li><i class="fas fa-certificate"></i> 
+                        <span class="lang-ar">شهادة أمان SSL مجانية</span>
+                        <span class="lang-en hidden-lang">Free SSL Certificate</span>
+                    </li>
+                    <li><i class="fas fa-link"></i> 
+                        <span class="lang-ar">ربط بالسوشيال ميديا</span>
+                        <span class="lang-en hidden-lang">Social Media Integration</span>
+                    </li>
+                    <li><i class="fab fa-whatsapp"></i> 
+                        <span class="lang-ar">زر واتساب عائم</span>
+                        <span class="lang-en hidden-lang">WhatsApp Button</span>
+                    </li>
                 </ul>
                 <button onclick="openRequestModal('Pro Plan - 3800')" class="w-full py-3 mt-6 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 transition font-bold text-white shadow-lg transform hover:scale-[1.02]">
-                    اطلب الآن
+                    <span class="lang-ar">اطلب الآن</span>
+                    <span class="lang-en hidden-lang">Order Now</span>
                 </button>
             </div>
 
             <div class="glass-card p-6 flex flex-col relative border-t-4 border-blue-500">
                 <div class="text-center mb-6">
-                    <h3 class="text-xl font-bold text-blue-400">الشركات (Business)</h3>
-                    <p class="text-xs text-gray-400 mt-1">للمصانع والمؤسسات الرسمية</p>
+                    <h3 class="text-xl font-bold text-blue-400">
+                        <span class="lang-ar">الشركات (Business)</span>
+                        <span class="lang-en hidden-lang">Business Plan</span>
+                    </h3>
+                    <p class="text-xs text-gray-400 mt-1">
+                        <span class="lang-ar">للمصانع والمؤسسات الرسمية</span>
+                        <span class="lang-en hidden-lang">For Factories & Corporates</span>
+                    </p>
                     <div class="mt-4">
                         <span class="price-tag font-num">12000 EGP</span>
-                        <div class="price-new text-blue-500 font-num">7500 <span class="text-sm font-medium text-gray-400 font-sans">ج.م</span></div>
+                        <div class="price-new text-blue-500 font-num">7500 <span class="text-sm font-medium text-gray-400 font-sans">EGP</span></div>
                     </div>
                 </div>
                 <ul class="feature-list flex-1 text-sm">
-                    <li><i class="fas fa-check"></i> موقع ديناميك (حتى 10 صفحات)</li>
-                    <li><i class="fas fa-globe"></i> <strong>دومين مصري .COM.EG</strong></li>
-                    <li><i class="fas fa-envelope"></i> <strong>5 إيميلات رسمية (Zoho)</strong></li>
-                    <li><i class="fas fa-language"></i> <strong>عربي + إنجليزي</strong></li>
-                    <li><i class="fas fa-search"></i> تحسين محركات البحث (SEO)</li>
-                    <li><i class="fas fa-map-marker-alt"></i> خريطة جوجل (Business Profile)</li>
+                    <li><i class="fas fa-check"></i> 
+                        <span class="lang-ar">موقع ديناميك (حتى 10 صفحات)</span>
+                        <span class="lang-en hidden-lang">Dynamic Site (Up to 10 Pages)</span>
+                    </li>
+                    <li><i class="fas fa-globe"></i> <strong>
+                        <span class="lang-ar">دومين مصري .COM.EG</span>
+                        <span class="lang-en hidden-lang">.COM.EG Local Domain</span>
+                    </strong></li>
+                    <li><i class="fas fa-envelope"></i> <strong>
+                        <span class="lang-ar">5 إيميلات رسمية</span>
+                        <span class="lang-en hidden-lang">5 Official Emails</span>
+                    </strong></li>
+                    <li><i class="fas fa-language"></i> <strong>
+                        <span class="lang-ar">عربي + إنجليزي</span>
+                        <span class="lang-en hidden-lang">Arabic + English</span>
+                    </strong></li>
+                    <li><i class="fas fa-search"></i> 
+                        <span class="lang-ar">تحسين محركات البحث (SEO)</span>
+                        <span class="lang-en hidden-lang">Basic SEO Setup</span>
+                    </li>
+                    <li><i class="fas fa-map-marker-alt"></i> 
+                        <span class="lang-ar">خريطة جوجل (Business Profile)</span>
+                        <span class="lang-en hidden-lang">Google Business Profile</span>
+                    </li>
                 </ul>
                 <button onclick="openRequestModal('Business Plan - 7500')" class="w-full py-3 mt-6 rounded-xl border border-blue-500 text-blue-400 hover:bg-blue-600 hover:text-white transition font-bold">
-                    احجز باقة الشركات
+                    <span class="lang-ar">احجز باقة الشركات</span>
+                    <span class="lang-en hidden-lang">Book Business Plan</span>
                 </button>
             </div>
 
             <div class="glass-card p-6 flex flex-col relative border-t-4 border-purple-500">
                 <div class="text-center mb-6">
-                    <h3 class="text-xl font-bold text-purple-400">النخبة (Elite)</h3>
-                    <p class="text-xs text-gray-400 mt-1">متاجر إلكترونية وأنظمة خاصة</p>
+                    <h3 class="text-xl font-bold text-purple-400">
+                        <span class="lang-ar">النخبة (Elite)</span>
+                        <span class="lang-en hidden-lang">Elite Plan</span>
+                    </h3>
+                    <p class="text-xs text-gray-400 mt-1">
+                        <span class="lang-ar">متاجر إلكترونية وأنظمة خاصة</span>
+                        <span class="lang-en hidden-lang">E-commerce & Custom Systems</span>
+                    </p>
                     <div class="mt-4">
-                        <div class="text-3xl font-bold text-purple-500 py-4 font-num">سعر مخصص</div>
+                        <div class="text-3xl font-bold text-purple-500 py-4 font-num">
+                            <span class="lang-ar">سعر مخصص</span>
+                            <span class="lang-en hidden-lang">Custom Quote</span>
+                        </div>
                     </div>
                 </div>
                 <ul class="feature-list flex-1 text-sm">
-                    <li><i class="fas fa-check"></i> متجر إلكتروني كامل (E-commerce)</li>
-                    <li><i class="fas fa-database"></i> لوحات تحكم خاصة (Dashboards)</li>
-                    <li><i class="fas fa-credit-card"></i> بوابات دفع (Visa/Fawry)</li>
-                    <li><i class="fas fa-rocket"></i> سيرفرات خاصة (VPS)</li>
-                    <li><i class="fas fa-code"></i> برمجة خاصة (Python/Node)</li>
+                    <li><i class="fas fa-check"></i> 
+                        <span class="lang-ar">متجر إلكتروني كامل (E-commerce)</span>
+                        <span class="lang-en hidden-lang">Full E-commerce Store</span>
+                    </li>
+                    <li><i class="fas fa-database"></i> 
+                        <span class="lang-ar">لوحات تحكم خاصة (Dashboards)</span>
+                        <span class="lang-en hidden-lang">Custom Dashboards</span>
+                    </li>
+                    <li><i class="fas fa-credit-card"></i> 
+                        <span class="lang-ar">بوابات دفع (Visa/Fawry)</span>
+                        <span class="lang-en hidden-lang">Payment Gateways (Visa/Fawry)</span>
+                    </li>
+                    <li><i class="fas fa-rocket"></i> 
+                        <span class="lang-ar">سيرفرات خاصة (VPS)</span>
+                        <span class="lang-en hidden-lang">Private Servers (VPS)</span>
+                    </li>
+                    <li><i class="fas fa-code"></i> 
+                        <span class="lang-ar">برمجة خاصة (Python/Node)</span>
+                        <span class="lang-en hidden-lang">Custom Coding (Python/Node)</span>
+                    </li>
                 </ul>
                 <button onclick="openRequestModal('Elite Custom Plan')" class="w-full py-3 mt-6 rounded-xl border border-purple-500 text-purple-400 hover:bg-purple-600 hover:text-white transition font-bold">
-                    طلب عرض سعر
+                    <span class="lang-ar">طلب عرض سعر</span>
+                    <span class="lang-en hidden-lang">Request Quote</span>
                 </button>
             </div>
 
@@ -263,7 +406,10 @@
 
     <section class="py-16 bg-white/5 border-y border-white/5">
         <div class="max-w-6xl mx-auto px-6 text-center">
-            <h3 class="text-2xl font-bold text-white mb-6">نطاقات (Domains) مميزة متاحة ضمن الباقات</h3>
+            <h3 class="text-2xl font-bold text-white mb-6">
+                <span class="lang-ar">نطاقات (Domains) مميزة متاحة ضمن الباقات</span>
+                <span class="lang-en hidden-lang">Premium Domains Included in Packages</span>
+            </h3>
             <div class="flex flex-wrap justify-center gap-4 dir-ltr">
                 <span class="px-5 py-3 rounded-xl bg-black/40 border border-indigo-500/30 text-indigo-400 font-mono text-lg hover:border-indigo-500 transition cursor-default">.com</span>
                 <span class="px-5 py-3 rounded-xl bg-black/40 border border-blue-500/30 text-blue-400 font-mono text-lg hover:border-blue-500 transition cursor-default">.net</span>
@@ -281,10 +427,12 @@
                 <i class="fas fa-crown text-white text-4xl"></i>
             </div>
             <h2 class="text-3xl md:text-5xl font-bold text-white mb-6">
-                هل تبحث عن <span class="text-indigo-400">شراكة استراتيجية؟</span>
+                <span class="lang-ar">هل تبحث عن <span class="text-indigo-400">شراكة استراتيجية؟</span></span>
+                <span class="lang-en hidden-lang">Looking for a <span class="text-indigo-400">Strategic Partnership?</span></span>
             </h2>
             <p class="text-slate-300 text-xl mb-12 max-w-3xl mx-auto leading-relaxed">
-                للشركات الكبرى والمشاريع التي تتطلب حلولاً معقدة (Custom Enterprise Solutions)، خصصنا قناة تواصل مباشرة مع الإدارة العليا وفريق مهندسي النظم.
+                <span class="lang-ar">للشركات الكبرى والمشاريع التي تتطلب حلولاً معقدة (Custom Enterprise Solutions)، خصصنا قناة تواصل مباشرة مع الإدارة العليا وفريق مهندسي النظم.</span>
+                <span class="lang-en hidden-lang">For large enterprises and complex projects (Custom Enterprise Solutions), we have a direct line to our senior architects and management.</span>
             </p>
             <div class="flex flex-col md:flex-row justify-center gap-6">
                 <a href="mailto:info@24sevenAi.com" class="group flex items-center justify-center gap-4 px-8 py-5 bg-white/5 border border-white/10 rounded-2xl text-white hover:bg-white/10 hover:border-indigo-500 transition duration-300">
@@ -292,7 +440,10 @@
                         <i class="fas fa-envelope text-xl"></i>
                     </div>
                     <div class="text-right">
-                        <span class="block text-xs text-slate-400">البريد الرسمي</span>
+                        <span class="block text-xs text-slate-400">
+                            <span class="lang-ar">البريد الرسمي</span>
+                            <span class="lang-en hidden-lang">Official Email</span>
+                        </span>
                         <span class="font-bold font-sans text-lg">info@24sevenAi.com</span>
                     </div>
                 </a>
@@ -301,8 +452,14 @@
                         <i class="fab fa-whatsapp text-2xl"></i>
                     </div>
                     <div class="text-right">
-                        <span class="block text-xs opacity-80">تواصل مباشر</span>
-                        <span class="font-bold text-lg">مدير المشروعات</span>
+                        <span class="block text-xs opacity-80">
+                            <span class="lang-ar">تواصل مباشر</span>
+                            <span class="lang-en hidden-lang">Direct Contact</span>
+                        </span>
+                        <span class="font-bold text-lg">
+                            <span class="lang-ar">مدير المشروعات</span>
+                            <span class="lang-en hidden-lang">Project Manager</span>
+                        </span>
                     </div>
                 </a>
             </div>
@@ -316,19 +473,31 @@
     <div class="floating-container">
         <a href="https://wa.me/201121748885" target="_blank" class="float-btn whatsapp" data-tooltip="واتساب">
             <i class="fab fa-whatsapp"></i>
-            <span class="tooltip">واتساب</span>
+            <span class="tooltip">
+                <span class="lang-ar">واتساب</span>
+                <span class="lang-en hidden-lang">WhatsApp</span>
+            </span>
         </a>
         <a href="https://www.facebook.com/profile.php?id=61586223017819" target="_blank" class="float-btn facebook" data-tooltip="فيسبوك">
             <i class="fab fa-facebook-f"></i>
-            <span class="tooltip">فيسبوك</span>
+            <span class="tooltip">
+                <span class="lang-ar">فيسبوك</span>
+                <span class="lang-en hidden-lang">Facebook</span>
+            </span>
         </a>
         <a href="tel:+201121748885" class="float-btn phone" data-tooltip="اتصال">
             <i class="fas fa-phone-alt text-lg"></i>
-            <span class="tooltip">اتصال</span>
+            <span class="tooltip">
+                <span class="lang-ar">اتصال</span>
+                <span class="lang-en hidden-lang">Call</span>
+            </span>
         </a>
         <a href="mailto:info@24sevenAi.com" class="float-btn email" data-tooltip="إيميل">
             <i class="fas fa-envelope text-lg"></i>
-            <span class="tooltip">إيميل</span>
+            <span class="tooltip">
+                <span class="lang-ar">إيميل</span>
+                <span class="lang-en hidden-lang">Email</span>
+            </span>
         </a>
     </div>
 
@@ -338,47 +507,92 @@
             <button onclick="closeRequestModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition"><i class="fas fa-times text-xl"></i></button>
             
             <div class="text-center mb-8">
-                <h3 class="text-2xl font-bold text-white mb-2">تأكيد حجز العرض</h3>
-                <p class="text-slate-400 text-sm">أنت على بعد خطوة من بدء مشروعك. املأ البيانات وسنتواصل معك فوراً.</p>
+                <h3 class="text-2xl font-bold text-white mb-2">
+                    <span class="lang-ar">تأكيد حجز العرض</span>
+                    <span class="lang-en hidden-lang">Confirm Booking</span>
+                </h3>
+                <p class="text-slate-400 text-sm">
+                    <span class="lang-ar">أنت على بعد خطوة من بدء مشروعك. املأ البيانات وسنتواصل معك فوراً.</span>
+                    <span class="lang-en hidden-lang">You're one step away. Fill in your details and we'll contact you instantly.</span>
+                </p>
             </div>
             
             <form action="https://formspree.io/f/xzddpdga" method="POST" class="space-y-5">
                 <input type="hidden" name="_subject" value="New Web Design Order (Limited Offer)">
                 
                 <div>
-                    <label class="block text-xs text-slate-400 mb-2">الباقة المختارة</label>
+                    <label class="block text-xs text-slate-400 mb-2">
+                        <span class="lang-ar">الباقة المختارة</span>
+                        <span class="lang-en hidden-lang">Selected Plan</span>
+                    </label>
                     <input type="text" name="selected_plan" id="modalPlanInput" readonly class="w-full bg-indigo-500/10 border border-indigo-500/50 rounded-xl px-4 py-3 text-white font-bold font-num text-center">
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs text-slate-400 mb-1">الاسم</label>
+                        <label class="block text-xs text-slate-400 mb-1">
+                            <span class="lang-ar">الاسم</span>
+                            <span class="lang-en hidden-lang">Name</span>
+                        </label>
                         <input type="text" name="name" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-indigo-500 outline-none transition">
                     </div>
                     <div>
-                        <label class="block text-xs text-slate-400 mb-1">رقم الهاتف</label>
+                        <label class="block text-xs text-slate-400 mb-1">
+                            <span class="lang-ar">رقم الهاتف</span>
+                            <span class="lang-en hidden-lang">Phone</span>
+                        </label>
                         <input type="tel" name="phone" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-indigo-500 outline-none transition font-num">
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs text-slate-400 mb-1">البريد الإلكتروني</label>
+                    <label class="block text-xs text-slate-400 mb-1">
+                        <span class="lang-ar">البريد الإلكتروني</span>
+                        <span class="lang-en hidden-lang">Email</span>
+                    </label>
                     <input type="email" name="email" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-indigo-500 outline-none transition">
                 </div>
                 
                 <div>
-                    <label class="block text-xs text-slate-400 mb-1">تفاصيل إضافية (اختياري)</label>
+                    <label class="block text-xs text-slate-400 mb-1">
+                        <span class="lang-ar">تفاصيل إضافية (اختياري)</span>
+                        <span class="lang-en hidden-lang">Additional Details (Optional)</span>
+                    </label>
                     <textarea name="details" rows="3" placeholder="مثل: نشاط الشركة، الدومين المقترح..." class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-indigo-500 outline-none transition"></textarea>
                 </div>
 
                 <button type="submit" class="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-xl shadow-lg transition transform hover:scale-[1.01]">
-                    🚀 تأكيد الطلب وحجز العرض
+                    <span class="lang-ar">🚀 تأكيد الطلب وحجز العرض</span>
+                    <span class="lang-en hidden-lang">🚀 Confirm Order & Book Deal</span>
                 </button>
             </form>
         </div>
     </div>
 
     <script>
+        // --- Language Toggle Logic ---
+        function toggleLang() {
+            const html = document.documentElement;
+            const currentLang = html.getAttribute('lang');
+            const newLang = currentLang === 'ar' ? 'en' : 'ar';
+            const langLabelNav = document.getElementById('lang-label-nav');
+            
+            html.setAttribute('lang', newLang);
+            html.setAttribute('dir', newLang === 'ar' ? 'rtl' : 'ltr');
+            if(langLabelNav) langLabelNav.innerText = newLang === 'ar' ? 'English' : 'العربية';
+            
+            const arElements = document.querySelectorAll('.lang-ar');
+            const enElements = document.querySelectorAll('.lang-en');
+            
+            if (newLang === 'en') {
+                arElements.forEach(el => el.classList.add('hidden-lang'));
+                enElements.forEach(el => el.classList.remove('hidden-lang'));
+            } else {
+                arElements.forEach(el => el.classList.remove('hidden-lang'));
+                enElements.forEach(el => el.classList.add('hidden-lang'));
+            }
+        }
+
         // --- Sidebar Logic ---
         function toggleSidebar() { 
             const sidebar = document.getElementById('sidebar'); 
