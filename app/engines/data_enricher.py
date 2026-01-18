@@ -1,10 +1,9 @@
 import time
 import re
 import os
-import platform
+from urllib.parse import unquote
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
@@ -15,10 +14,8 @@ class DataEnricher:
         self.driver = None
 
     def _setup_driver(self):
-        """
-        إعدادات المتصفح المتوافقة مع سيرفر Render
-        """
         chrome_options = Options()
+        # إعدادات التخفي الأساسية
         chrome_options.add_argument("--headless=new") 
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
@@ -27,10 +24,11 @@ class DataEnricher:
         chrome_options.add_argument("--disable-notifications")
         chrome_options.add_argument("--blink-settings=imagesEnabled=false")
         
-        # إضافة User-Agent ليبدو كمتصفح حقيقي (يقلل الحظر من جوجل)
+        # خداع المواقع بأننا مستخدم عادي
+        chrome_options.add_argument("--disable-blink-features=AutomationControlled")
         chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
-        # --- مسارات Render ---
+        # مسارات Render
         chrome_bin = os.environ.get("CHROME_BIN")
         if chrome_bin:
             chrome_options.binary_location = chrome_bin
@@ -63,44 +61,41 @@ class DataEnricher:
                 pass
             self.driver = None
 
-    def _google_search_fallback(self, company_name):
+    def _search_engine_fallback(self, company_name):
         """
-        Flow 2 (محدث): بحث ذكي ومتعدد المحاولات في جوجل
+        Flow 2 (DuckDuckGo): استخدام محرك بحث بديل لتجنب حظر جوجل
         """
-        print(f"🌍 [Flow 2] Searching Google for: {company_name}...")
+        print(f"🦆 [Flow 2] Searching DuckDuckGo for: {company_name}...")
         try:
-            # إضافة كلمة Egypt أو الموقع لزيادة الدقة
+            # نستخدم النسخة HTML لأنها أخف وأسرع ولا تطلب جافاسكريبت معقد
             query = f"{company_name} Egypt official website facebook"
-            self.driver.get("https://www.google.com/search?q=" + query)
+            self.driver.get(f"https://html.duckduckgo.com/html/?q={query}")
             
-            # انتظار ذكي لظهور أي نتيجة (عناوين h3)
-            wait = WebDriverWait(self.driver, 10)
-            try:
-                wait.until(EC.presence_of_element_located((By.TAG_NAME, "h3")))
-            except:
-                print("⚠️ Google page loaded but no H3 tags found (Possible CAPTCHA).")
-                return None
+            # انتظار بسيط
+            time.sleep(2)
 
-            # استراتيجية 1: البحث عن الروابط التي تحتوي على عناوين (الأدق)
-            # XPath: هات لي كل رابط (a) بداخله عنوان (h3)
-            results = self.driver.find_elements(By.XPATH, "//a[h3]")
+            # سحب النتائج (Links with class 'result__a')
+            results = self.driver.find_elements(By.CLASS_NAME, "result__a")
             
-            if not results:
-                # استراتيجية 2 (احتياطية): البحث عن الروابط داخل كلاسات جوجل الشهيرة
-                results = self.driver.find_elements(By.CSS_SELECTOR, "div.g a")
-
             for res in results[:4]: # فحص أول 4 نتائج
                 try:
                     url = res.get_attribute("href")
-                    # استبعاد روابط جوجل ويوتيوب والخرائط
-                    if url and "google" not in url and "youtube" not in url and "maps" not in url:
-                        print(f"🔗 Found URL via Google: {url}")
+                    # استبعاد روابط الإعلانات ومحركات البحث
+                    if url and "duckduckgo" not in url and "google" not in url:
+                        # فك تشفير الرابط إذا كان مشفراً من DuckDuckGo
+                        if "uddg=" in url:
+                            try:
+                                url = unquote(url.split("uddg=")[1].split("&")[0])
+                            except:
+                                pass
+                        
+                        print(f"🔗 Found URL via DDG: {url}")
                         return url
                 except:
                     continue
                     
         except Exception as e:
-            print(f"⚠️ Google Search Error: {e}")
+            print(f"⚠️ Search Engine Error: {e}")
             
         return None
 
@@ -120,14 +115,19 @@ class DataEnricher:
                 self.start_session()
 
             # ---------------------------------------------------------
-            # Flow 1 & 2 Logic
+            # Flow 1: فحص الرابط القادم من الخرائط
             # ---------------------------------------------------------
             target_website = website
 
-            # تنظيف الرابط إذا كان "غير متوفر" أو فارغ
-            if not target_website or "غير" in target_website:
-                # تفعيل Flow 2: البحث في جوجل
-                target_website = self._google_search_fallback(company_name)
+            # تنظيف الرابط
+            if not target_website or "غير" in target_website or target_website == "http://googleusercontent.com":
+                target_website = None
+
+            # ---------------------------------------------------------
+            # Flow 2: إذا لم يوجد رابط، ابحث في DuckDuckGo
+            # ---------------------------------------------------------
+            if not target_website:
+                target_website = self._search_engine_fallback(company_name)
             
             if not target_website:
                 print(f"❌ Flow 2 Failed: Could not find website for {company_name}")
@@ -141,37 +141,34 @@ class DataEnricher:
             
             try:
                 self.driver.get(target_website)
-                # انتظار بسيط لتحميل الجافاسكريبت
-                time.sleep(2)
+                time.sleep(3) # انتظار تحميل الصفحة
             except:
-                print(f"⚠️ Timeout/Error accessing {target_website}")
-                # حتى لو فشل التحميل الكامل، نحاول قراءة ما تم تحميله
+                print(f"⚠️ Timeout accessing {target_website}")
                 pass
 
             # 1. البحث عن إيميلات في الصفحة الرئيسية
             page_source = self.driver.page_source
-            # Regex قوي للإيميلات
+            
+            # Regex محدث يلتقط الإيميلات بدقة
             emails = re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', page_source)
             
-            # تنظيف النتائج (استبعاد ملفات الصور التي قد تشبه الإيميلات خطأً)
-            valid_emails = [e for e in emails if not e.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.svg', '.css', '.js'))]
-            # إزالة التكرار
-            valid_emails = list(set(valid_emails))
+            # فلترة النتائج (استبعاد الصور والملفات)
+            bad_extensions = ('.png', '.jpg', '.jpeg', '.gif', '.svg', '.css', '.js', '.woff', '.mp4')
+            valid_emails = [e for e in emails if not e.lower().endswith(bad_extensions)]
+            valid_emails = list(set(valid_emails)) # إزالة التكرار
 
             if valid_emails:
-                # خوارزمية اختيار أفضل إيميل
-                keywords = ['info', 'contact', 'sales', 'hello', 'support', 'admin']
+                # ترتيب حسب الأهمية
+                priority_list = ['info', 'contact', 'sales', 'support', 'hello', 'admin']
                 preferred = None
                 
-                # هل يوجد إيميل يحتوي على كلمة مفتاحية؟
-                for k in keywords:
+                for p in priority_list:
                     for e in valid_emails:
-                        if k in e:
+                        if p in e:
                             preferred = e
                             break
                     if preferred: break
                 
-                # إذا لم نجد، نأخذ الأول
                 if not preferred:
                     preferred = valid_emails[0]
 
@@ -181,27 +178,26 @@ class DataEnricher:
             # 2. محاولة ذكية: البحث عن صفحة "Contact Us" إذا لم نجد إيميل
             if data['email'] == "غير متوفر":
                 try:
-                    # البحث عن أي رابط يحتوي على كلمة Contact أو اتصل بنا
-                    # XPath case-insensitive translate trick
-                    contact_links = self.driver.find_elements(By.XPATH, "//a[contains(@href, 'contact') or contains(text(), 'Contact') or contains(text(), 'اتصل')]")
+                    # البحث عن أي رابط يحتوي على Contact أو اتصل بنا
+                    xpath_query = "//a[contains(@href, 'contact') or contains(@href, 'Contact') or contains(text(), 'Contact') or contains(text(), 'اتصل')]"
+                    contact_links = self.driver.find_elements(By.XPATH, xpath_query)
                     
                     if contact_links:
-                        # نأخذ أول رابط صالح
                         contact_url = contact_links[0].get_attribute("href")
-                        if contact_url and contact_url != target_website:
+                        if contact_url and contact_url != self.driver.current_url:
                             print(f"➡️ Moving to Contact Page: {contact_url}")
                             self.driver.get(contact_url)
                             time.sleep(2)
                             
                             src = self.driver.page_source
                             new_emails = re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', src)
-                            valid_new = [e for e in new_emails if not e.lower().endswith(('.png', '.jpg'))]
+                            valid_new = [e for e in new_emails if not e.lower().endswith(bad_extensions)]
                             
                             if valid_new:
                                 data['email'] = valid_new[0]
                                 print(f"✅ Email Found in Contact Page: {valid_new[0]}")
-                except Exception as ex:
-                    print(f"⚠️ Contact page scan error: {ex}")
+                except:
+                    pass
 
         except Exception as e:
             print(f"⚠️ Enrichment Error for {company_name}: {e}")
