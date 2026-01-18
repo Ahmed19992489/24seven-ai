@@ -3,71 +3,173 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>عروض تصميم المواقع | 24Seven Studio</title>
-    <meta name="description" content="عروض حصرية لتصميم المواقع. باقات تبدأ من 995ج. دومينات وإيميلات رسمية مجانية لفترة محدودة.">
+    <title>باقات تصميم المواقع | 24Seven Studio</title>
+    <meta name="description" content="عروض تصميم المواقع للشركات والنشاطات التجارية. باقات تبدأ من 995ج مع دومين وإيميل رسمي.">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Outfit:wght@700&display=swap" rel="stylesheet">
     
     <style>
-        :root { --bg-dark: #050505; --card-bg: #121212; --primary: #db2777; --accent: #8b5cf6; }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-dark); color: #f3f4f6; overflow-x: hidden; scroll-behavior: smooth; }
+        /* Color Palette: Professional Indigo/Purple Theme */
+        :root { 
+            --bg-dark: #050505; 
+            --card-bg: #121212; 
+            --primary: #6366f1; /* Indigo-500 */
+            --accent: #a855f7;  /* Purple-500 */
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+        }
+
+        body { 
+            font-family: 'Cairo', sans-serif; 
+            background-color: var(--bg-dark); 
+            color: var(--text-main); 
+            overflow-x: hidden; 
+            scroll-behavior: smooth;
+        }
         
         .font-num { font-family: 'Outfit', sans-serif; }
 
         /* Glassmorphism Cards */
         .glass-card {
-            background: rgba(20, 20, 20, 0.7); border: 1px solid rgba(255,255,255,0.08);
-            backdrop-filter: blur(16px); border-radius: 20px; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(20, 20, 20, 0.7); 
+            border: 1px solid rgba(255,255,255,0.08);
+            backdrop-filter: blur(16px); 
+            border-radius: 20px; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .glass-card:hover { transform: translateY(-10px); border-color: var(--primary); box-shadow: 0 15px 50px rgba(219, 39, 119, 0.15); }
+        .glass-card:hover { 
+            transform: translateY(-10px); 
+            border-color: var(--primary); 
+            box-shadow: 0 15px 50px rgba(99, 102, 241, 0.15); 
+        }
         
-        .price-tag { text-decoration: line-through; color: #6b7280; font-size: 1rem; }
-        .price-new { color: #fff; font-weight: 900; font-size: 2.8rem; letter-spacing: -1px; }
+        /* Pricing Typography */
+        .price-tag { 
+            text-decoration: line-through; 
+            color: #6b7280; 
+            font-size: 1rem; 
+        }
+        .price-new { 
+            color: #fff; 
+            font-weight: 900; 
+            font-size: 2.8rem; 
+            letter-spacing: -1px; 
+        }
         
-        /* Countdown Box */
+        /* Feature List Styling */
+        .feature-list li { 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+            margin-bottom: 14px; 
+            font-size: 0.95rem; 
+            color: #d1d5db; 
+        }
+        .feature-list i { color: var(--primary); }
+        .feature-list i.disabled { color: #374151; }
+        .feature-list span.disabled { color: #4b5563; text-decoration: line-through; }
+
+        /* Countdown Box Styling */
         .timer-box {
             background: linear-gradient(145deg, #1a1a1a, #0a0a0a);
-            border: 1px solid rgba(255,255,255,0.1);
-            padding: 10px 15px; border-radius: 10px; min-width: 70px; text-align: center;
+            border: 1px solid rgba(99, 102, 241, 0.3); 
+            padding: 10px 15px; 
+            border-radius: 10px; 
+            min-width: 70px; 
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
 
-        /* Floating Buttons (الزر العائم) */
-        .floating-container { position: fixed; bottom: 30px; left: 30px; z-index: 100; display: flex; flex-direction: column; gap: 15px; }
+        /* Floating Action Buttons */
+        .floating-container { 
+            position: fixed; 
+            bottom: 30px; 
+            left: 30px; 
+            z-index: 100; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px; 
+        }
         .float-btn {
-            width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); transition: 0.3s; position: relative;
+            width: 55px; 
+            height: 55px; 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            color: white; 
+            font-size: 24px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); 
+            transition: all 0.3s ease; 
+            position: relative;
+            background-color: #1f2937; /* Default dark background */
+            border: 1px solid rgba(255,255,255,0.1);
         }
         .float-btn:hover { transform: scale(1.1); }
+        
+        /* Specific Colors for Floating Buttons */
+        .float-btn.whatsapp { background-color: #25d366; border: none; }
+        .float-btn.whatsapp:hover { background-color: #1ebc57; }
+        
+        .float-btn.facebook { background-color: #1877F2; border: none; }
+        .float-btn.facebook:hover { background-color: #145dbf; }
+        
+        .float-btn.phone { background-color: var(--primary); border: none; }
+        .float-btn.phone:hover { background-color: #4f46e5; }
+        
+        .float-btn.email { background-color: #db2777; border: none; } /* Pink for email distinction */
+        .float-btn.email:hover { background-color: #be185d; }
+
         /* Tooltip style */
         .float-btn .tooltip {
-            position: absolute; left: 70px; background: rgba(0,0,0,0.8); padding: 5px 10px; 
-            border-radius: 5px; font-size: 12px; white-space: nowrap; opacity: 0; pointer-events: none; transition: 0.2s;
+            position: absolute; 
+            left: 70px; 
+            background: rgba(0,0,0,0.9); 
+            padding: 6px 12px; 
+            border-radius: 6px; 
+            font-size: 13px; 
+            white-space: nowrap; 
+            opacity: 0; 
+            pointer-events: none; 
+            transition: all 0.2s ease;
+            color: white;
+            font-weight: 600;
         }
         .float-btn:hover .tooltip { opacity: 1; left: 65px; }
 
         /* Animations */
-        @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); } 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); } }
-        .pulse-urgent { animation: pulse-red 2s infinite; }
+        @keyframes pulse-indigo { 
+            0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); } 
+            70% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); } 
+            100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); } 
+        }
+        .pulse-urgent { animation: pulse-indigo 2s infinite; }
+        
+        /* Modal Transitions */
+        .modal { opacity: 0; visibility: hidden; transition: all 0.3s ease-in-out; }
+        .modal.active { opacity: 1; visibility: visible; }
+        .modal .transform { transform: scale(0.95); transition: all 0.3s ease-in-out; }
+        .modal.active .transform { transform: scale(1); }
     </style>
 </head>
-<body class="selection:bg-pink-600 selection:text-white">
+<body class="selection:bg-indigo-600 selection:text-white">
 
-    <div class="bg-gradient-to-r from-pink-700 via-purple-700 to-pink-700 text-white text-center py-3 text-xs md:text-sm font-bold tracking-wide relative z-[60] shadow-lg">
-        <span>🔥 خصم يصل إلى 60% + دومين مجاني لأول 10 عملاء فقط! العرض ينتهي قريباً.</span>
+    <div class="bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-900 text-white text-center py-3 text-xs md:text-sm font-bold tracking-wide relative z-[60] shadow-lg border-b border-white/10">
+        <span>🔥 عرض الشركات الناشئة: استضافة ودومين مجاني مع باقة "المحترف" لفترة محدودة!</span>
     </div>
 
     <nav class="fixed top-12 w-full z-50 transition-all duration-300" id="navbar">
         <div class="max-w-7xl mx-auto px-6">
-            <div class="backdrop-blur-md bg-black/60 border border-white/10 rounded-2xl py-3 px-6 flex justify-between items-center shadow-2xl">
-                <a href="/" class="flex items-center gap-2">
-                    <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-pink-600 to-purple-600 flex items-center justify-center text-white text-lg">
-                        <i class="fas fa-layer-group"></i>
+            <div class="backdrop-blur-md bg-black/70 border border-white/10 rounded-2xl py-3 px-6 flex justify-between items-center shadow-2xl">
+                <a href="/" class="flex items-center gap-2 group">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-lg shadow-lg group-hover:shadow-indigo-500/50 transition">
+                        <i class="fas fa-paint-brush"></i>
                     </div>
-                    <span class="text-lg font-bold text-white">24Seven <span class="text-pink-500">Studio</span></span>
+                    <span class="text-xl font-bold tracking-tight text-white group-hover:text-indigo-300 transition">24Seven <span class="text-indigo-500">Studio</span></span>
                 </a>
-                <a href="/" class="text-sm text-slate-300 hover:text-white transition flex items-center gap-2">
+                <a href="/" class="text-sm text-slate-300 hover:text-white transition flex items-center gap-2 bg-white/5 px-4 py-2 rounded-lg border border-white/5 hover:bg-white/10">
                     <span class="hidden md:inline">العودة للرئيسية</span> <i class="fas fa-arrow-left"></i>
                 </a>
             </div>
@@ -75,104 +177,53 @@
     </nav>
 
     <header class="pt-48 pb-20 px-6 text-center relative overflow-hidden min-h-[90vh] flex flex-col justify-center items-center">
-        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-pink-600/20 rounded-full blur-[120px] -z-10 animate-pulse"></div>
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] -z-10 animate-pulse"></div>
+        <div class="absolute bottom-0 right-0 w-[600px] h-[400px] bg-purple-600/5 rounded-full blur-[100px] -z-10"></div>
         
-        <span class="px-4 py-1.5 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold mb-6 inline-flex items-center gap-2 pulse-urgent">
-            <span class="w-2 h-2 rounded-full bg-red-500"></span> الفرصة تنتهي قريباً
+        <span class="px-5 py-2 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-bold mb-8 inline-flex items-center gap-2 pulse-urgent backdrop-blur-sm">
+            <span class="w-2 h-2 rounded-full bg-indigo-500"></span> عروض محدودة الوقت
         </span>
 
-        <h1 class="text-4xl md:text-7xl font-black mb-6 leading-tight">
-            لا تدع منافسيك <br>
-            <span class="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500">يسبقونك بخطوة!</span>
+        <h1 class="text-4xl md:text-7xl font-black mb-8 leading-tight">
+            ابدأ رحلتك الرقمية <br>
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">بتصميم عالمي</span>
         </h1>
         
-        <p class="text-slate-400 max-w-2xl mx-auto text-lg mb-10 leading-relaxed">
-            امتلك موقعاً احترافياً اليوم وابدأ في جلب العملاء من الإنترنت. باقات شاملة الدومين والاستضافة والإيميلات الرسمية.
+        <p class="text-slate-400 max-w-2xl mx-auto text-lg mb-12 leading-relaxed">
+            امتلك موقعاً احترافياً يعكس هوية شركتك ويبني الثقة مع عملائك. باقات شاملة الدومين، الاستضافة السريعة، والإيميلات الرسمية بأفضل الأسعار في السوق.
         </p>
 
         <div class="flex flex-wrap justify-center gap-4 mb-12" id="countdown">
             <div class="timer-box">
                 <span class="text-3xl font-bold text-white font-num" id="days">00</span>
-                <span class="text-xs text-slate-500 block uppercase">يوم</span>
+                <span class="text-xs text-slate-500 block uppercase mt-1">يوم</span>
             </div>
             <div class="timer-box">
                 <span class="text-3xl font-bold text-white font-num" id="hours">00</span>
-                <span class="text-xs text-slate-500 block uppercase">ساعة</span>
+                <span class="text-xs text-slate-500 block uppercase mt-1">ساعة</span>
             </div>
             <div class="timer-box">
                 <span class="text-3xl font-bold text-white font-num" id="minutes">00</span>
-                <span class="text-xs text-slate-500 block uppercase">دقيقة</span>
+                <span class="text-xs text-slate-500 block uppercase mt-1">دقيقة</span>
             </div>
-            <div class="timer-box border-pink-500/50">
-                <span class="text-3xl font-bold text-pink-500 font-num" id="seconds">00</span>
-                <span class="text-xs text-pink-500 block uppercase">ثانية</span>
+            <div class="timer-box border-indigo-500/50">
+                <span class="text-3xl font-bold text-indigo-400 font-num" id="seconds">00</span>
+                <span class="text-xs text-indigo-400 block uppercase mt-1">ثانية</span>
             </div>
         </div>
 
-        <a href="#pricing" class="px-10 py-4 bg-white text-black font-bold rounded-full hover:bg-slate-200 transition shadow-lg shadow-white/10 flex items-center gap-2 transform hover:scale-105 duration-300">
-            اقتنص العرض الآن <i class="fas fa-arrow-down"></i>
+        <a href="#pricing" class="px-10 py-4 bg-white text-black font-bold rounded-full hover:bg-slate-200 transition shadow-lg shadow-white/10 flex items-center gap-3 transform hover:scale-105 duration-300 group">
+            اختار باقتك الآن <i class="fas fa-arrow-down group-hover:translate-y-1 transition"></i>
         </a>
     </header>
 
-    <section class="py-24 bg-[#0a0a0a]">
-        <div class="max-w-7xl mx-auto px-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-                <div>
-                    <h2 class="text-3xl font-bold text-white mb-6">لماذا يخسر نشاطك التجاري يومياً؟</h2>
-                    <div class="space-y-6">
-                        <div class="flex gap-4">
-                            <div class="w-12 h-12 bg-red-500/10 rounded-lg flex items-center justify-center text-red-500 text-xl flex-shrink-0"><i class="fas fa-eye-slash"></i></div>
-                            <div>
-                                <h4 class="text-white font-bold mb-1">أنت غير مرئي</h4>
-                                <p class="text-slate-400 text-sm">93% من العملاء يبحثون على جوجل قبل الشراء. إذا لم يكن لديك موقع، فأنت غير موجود بالنسبة لهم.</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-4">
-                            <div class="w-12 h-12 bg-red-500/10 rounded-lg flex items-center justify-center text-red-500 text-xl flex-shrink-0"><i class="fas fa-store-slash"></i></div>
-                            <div>
-                                <h4 class="text-white font-bold mb-1">مغلق للإصلاحات!</h4>
-                                <p class="text-slate-400 text-sm">محلك الفعلي يغلق ليلاً، لكن موقعك الإلكتروني يعمل 24 ساعة ويبيع منتجاتك وأنت نائم.</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-4">
-                            <div class="w-12 h-12 bg-red-500/10 rounded-lg flex items-center justify-center text-red-500 text-xl flex-shrink-0"><i class="fas fa-user-shield"></i></div>
-                            <div>
-                                <h4 class="text-white font-bold mb-1">ضعف الثقة</h4>
-                                <p class="text-slate-400 text-sm">العملاء يثقون في الشركات التي تملك إيميلات رسمية (info@company.com) أكثر بـ 9 مرات من Gmail.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="glass-card p-8 border-pink-500/30">
-                    <h3 class="text-2xl font-bold text-white mb-6">الحل مع <span class="text-pink-500">24Seven Studio</span></h3>
-                    <ul class="space-y-4">
-                        <li class="flex items-center gap-3 text-slate-300"><i class="fas fa-check-circle text-green-500"></i> <span>تصميم عالمي يعكس قوة علامتك التجارية.</span></li>
-                        <li class="flex items-center gap-3 text-slate-300"><i class="fas fa-check-circle text-green-500"></i> <span>سيرفرات فائقة السرعة لضمان تصفح سلس.</span></li>
-                        <li class="flex items-center gap-3 text-slate-300"><i class="fas fa-check-circle text-green-500"></i> <span>إيميلات رسمية تعطي انطباع الشركات الكبرى.</span></li>
-                        <li class="flex items-center gap-3 text-slate-300"><i class="fas fa-check-circle text-green-500"></i> <span>دعم فني مصري 100% يفهم احتياجاتك.</span></li>
-                    </ul>
-                    <div class="mt-8 pt-6 border-t border-white/10 text-center">
-                        <p class="text-white font-bold text-lg mb-2">لماذا تدفع مبالغ طائلة؟</p>
-                        <p class="text-slate-400 text-sm">نقدم لك نفس الجودة العالمية بأسعار تناسب السوق المصري.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
     <section id="pricing" class="pb-24 px-4 max-w-7xl mx-auto relative z-10">
-        <div class="text-center mb-16">
-            <h2 class="text-3xl md:text-5xl font-bold text-white mb-4">اختر الباقة المناسبة لنموك</h2>
-            <p class="text-slate-400">شفافية تامة في الأسعار. لا مصاريف خفية.</p>
-        </div>
-
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             
-            <div class="glass-card p-6 flex flex-col relative border-t-4 border-gray-500">
+            <div class="glass-card p-6 flex flex-col relative border-t-4 border-gray-600">
                 <div class="text-center mb-6">
                     <h3 class="text-xl font-bold text-gray-300">البداية (Starter)</h3>
-                    <p class="text-xs text-gray-500 mt-1">صفحة تعريفية للأفراد</p>
+                    <p class="text-xs text-gray-500 mt-1">للأفراد وتجربة الأفكار</p>
                     <div class="mt-4">
                         <span class="price-tag font-num">2500 EGP</span>
                         <div class="price-new font-num">995 <span class="text-sm font-medium text-gray-400 font-sans">ج.م</span></div>
@@ -180,45 +231,46 @@
                 </div>
                 <ul class="feature-list flex-1 text-sm">
                     <li><i class="fas fa-check"></i> صفحة هبوط واحدة (Landing Page)</li>
-                    <li><i class="fas fa-globe"></i> دومين مجاني (.icu / .online)</li>
+                    <li><i class="fas fa-globe"></i> دومين (.icu / .online)</li>
                     <li><i class="fas fa-server"></i> استضافة سريعة (1 سنة)</li>
                     <li><i class="fas fa-mobile-alt"></i> متجاوب مع الموبايل</li>
                     <li><i class="fas fa-times disabled"></i> <span class="disabled">إيميلات رسمية</span></li>
+                    <li><i class="fas fa-times disabled"></i> <span class="disabled">لوحة تحكم</span></li>
                 </ul>
                 <button onclick="openRequestModal('Starter Plan - 995')" class="w-full py-3 mt-6 rounded-xl border border-gray-600 hover:bg-gray-800 transition font-bold text-gray-300">
                     اختار الباقة
                 </button>
             </div>
 
-            <div class="glass-card p-6 flex flex-col relative border-t-4 border-pink-500 transform lg:-translate-y-6 shadow-2xl shadow-pink-900/30 bg-gradient-to-b from-pink-900/10 to-transparent">
-                <div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-pink-600 to-purple-600 text-white text-xs font-bold px-4 py-1 rounded-full shadow-lg">
+            <div class="glass-card p-6 flex flex-col relative border-t-4 border-indigo-500 transform lg:-translate-y-6 shadow-2xl shadow-indigo-900/30 bg-gradient-to-b from-indigo-900/10 to-transparent">
+                <div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-bold px-4 py-1 rounded-full shadow-lg">
                     الأكثر طلباً 🔥
                 </div>
                 <div class="text-center mb-6">
-                    <h3 class="text-xl font-bold text-pink-400">المحترف (Pro)</h3>
+                    <h3 class="text-xl font-bold text-indigo-400">المحترف (Pro)</h3>
                     <p class="text-xs text-gray-400 mt-1">للشركات الناشئة والمكاتب</p>
                     <div class="mt-4">
                         <span class="price-tag font-num">7500 EGP</span>
-                        <div class="price-new text-pink-500 font-num">3800 <span class="text-sm font-medium text-gray-400 font-sans">ج.م</span></div>
+                        <div class="price-new text-indigo-400 font-num">3800 <span class="text-sm font-medium text-gray-400 font-sans">ج.م</span></div>
                     </div>
                 </div>
                 <ul class="feature-list flex-1 text-sm">
                     <li><i class="fas fa-check"></i> موقع كامل (حتى 5 صفحات)</li>
                     <li><i class="fas fa-globe"></i> <strong>دومين .COM أو .NET</strong></li>
-                    <li><i class="fas fa-envelope"></i> <strong>3 إيميلات رسمية </strong></li>
+                    <li><i class="fas fa-envelope"></i> <strong>3 إيميلات رسمية (Zoho)</strong></li>
                     <li><i class="fas fa-certificate"></i> شهادة أمان SSL مجانية</li>
+                    <li><i class="fas fa-link"></i> ربط بالسوشيال ميديا</li>
                     <li><i class="fab fa-whatsapp"></i> زر واتساب عائم</li>
-                    <li><i class="fas fa-times disabled"></i> <span class="disabled">دومين مصري (.eg)</span></li>
                 </ul>
-                <button onclick="openRequestModal('Pro Plan - 3800')" class="w-full py-3 mt-6 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 transition font-bold text-white shadow-lg transform hover:scale-[1.02]">
-                    اطلب الآن ووفر 50%
+                <button onclick="openRequestModal('Pro Plan - 3800')" class="w-full py-3 mt-6 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 transition font-bold text-white shadow-lg transform hover:scale-[1.02]">
+                    اطلب الآن
                 </button>
             </div>
 
             <div class="glass-card p-6 flex flex-col relative border-t-4 border-blue-500">
                 <div class="text-center mb-6">
                     <h3 class="text-xl font-bold text-blue-400">الشركات (Business)</h3>
-                    <p class="text-xs text-gray-400 mt-1">للشركات الرسمية والمصانع</p>
+                    <p class="text-xs text-gray-400 mt-1">للمصانع والمؤسسات الرسمية</p>
                     <div class="mt-4">
                         <span class="price-tag font-num">12000 EGP</span>
                         <div class="price-new text-blue-500 font-num">7500 <span class="text-sm font-medium text-gray-400 font-sans">ج.م</span></div>
@@ -227,7 +279,7 @@
                 <ul class="feature-list flex-1 text-sm">
                     <li><i class="fas fa-check"></i> موقع ديناميك (حتى 10 صفحات)</li>
                     <li><i class="fas fa-globe"></i> <strong>دومين مصري .COM.EG</strong></li>
-                    <li><i class="fas fa-envelope"></i> <strong>5 إيميلات رسمية </strong></li>
+                    <li><i class="fas fa-envelope"></i> <strong>5 إيميلات رسمية (Zoho)</strong></li>
                     <li><i class="fas fa-language"></i> <strong>عربي + إنجليزي</strong></li>
                     <li><i class="fas fa-search"></i> تحسين محركات البحث (SEO)</li>
                     <li><i class="fas fa-map-marker-alt"></i> خريطة جوجل (Business Profile)</li>
@@ -237,12 +289,12 @@
                 </button>
             </div>
 
-            <div class="glass-card p-6 flex flex-col relative border-t-4 border-amber-500">
+            <div class="glass-card p-6 flex flex-col relative border-t-4 border-purple-500">
                 <div class="text-center mb-6">
-                    <h3 class="text-xl font-bold text-amber-400">النخبة (Elite)</h3>
+                    <h3 class="text-xl font-bold text-purple-400">النخبة (Elite)</h3>
                     <p class="text-xs text-gray-400 mt-1">متاجر إلكترونية وأنظمة خاصة</p>
                     <div class="mt-4">
-                        <div class="text-3xl font-bold text-amber-500 py-4 font-num">سعر مخصص</div>
+                        <div class="text-3xl font-bold text-purple-500 py-4 font-num">سعر مخصص</div>
                     </div>
                 </div>
                 <ul class="feature-list flex-1 text-sm">
@@ -252,7 +304,7 @@
                     <li><i class="fas fa-rocket"></i> سيرفرات خاصة (VPS)</li>
                     <li><i class="fas fa-code"></i> برمجة خاصة (Python/Node)</li>
                 </ul>
-                <button onclick="openRequestModal('Elite Custom Plan')" class="w-full py-3 mt-6 rounded-xl border border-amber-500 text-amber-400 hover:bg-amber-600 hover:text-white transition font-bold">
+                <button onclick="openRequestModal('Elite Custom Plan')" class="w-full py-3 mt-6 rounded-xl border border-purple-500 text-purple-400 hover:bg-purple-600 hover:text-white transition font-bold">
                     طلب عرض سعر
                 </button>
             </div>
@@ -260,118 +312,117 @@
         </div>
     </section>
 
-    <section class="py-24 px-6 bg-white/5 border-y border-white/5">
-        <div class="max-w-7xl mx-auto">
-            <div class="text-center mb-16">
-                <h2 class="text-3xl md:text-5xl font-bold text-white mb-4">عملاؤنا يتحدثون عنا</h2>
-                <p class="text-slate-400">قصص نجاح حقيقية لشركات مصرية وثقت بنا</p>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div class="glass-card p-8 border-white/5 relative">
-                    <div class="flex items-center gap-4 mb-4">
-                        <img src="https://randomuser.me/api/portraits/men/42.jpg" alt="Mohamed Ahmed" class="w-12 h-12 rounded-full border-2 border-pink-500">
-                        <div>
-                            <h4 class="text-white font-bold text-sm">أ. محمد أحمد</h4>
-                            <p class="text-pink-400 text-xs">صاحب شركة طيبة للاستيراد</p>
-                        </div>
-                    </div>
-                    <p class="text-slate-300 text-sm leading-relaxed">"بصراحة شغل احترافي جداً. الموقع فرق معايا في شكل الشركة قدام الموردين الأجانب، والإيميلات الرسمية عطتنا ثقة كبيرة. شكراً بشمهندس أحمد."</p>
-                    <div class="text-yellow-400 mt-4 text-xs"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
-                </div>
-
-                <div class="glass-card p-8 border-white/5 relative">
-                    <div class="flex items-center gap-4 mb-4">
-                        <img src="https://randomuser.me/api/portraits/women/65.jpg" alt="Noha Salem" class="w-12 h-12 rounded-full border-2 border-pink-500">
-                        <div>
-                            <h4 class="text-white font-bold text-sm">د. نهى سالم</h4>
-                            <p class="text-pink-400 text-xs">مديرة مركز الشفاء الطبي</p>
-                        </div>
-                    </div>
-                    <p class="text-slate-300 text-sm leading-relaxed">"التعامل قمة في الاحترام والسرعة. الموقع شغال تمام والحجوزات زادت عن طريق الصفحة. أرشحهم لأي حد محتاج شغل نظيف وسعر معقول."</p>
-                    <div class="text-yellow-400 mt-4 text-xs"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
-                </div>
-
-                <div class="glass-card p-8 border-white/5 relative">
-                    <div class="flex items-center gap-4 mb-4">
-                        <img src="https://randomuser.me/api/portraits/men/22.jpg" alt="Eng. Mahmoud" class="w-12 h-12 rounded-full border-2 border-pink-500">
-                        <div>
-                            <h4 class="text-white font-bold text-sm">م. محمود حسن</h4>
-                            <p class="text-pink-400 text-xs">CEO, Smart Home Egypt</p>
-                        </div>
-                    </div>
-                    <p class="text-slate-300 text-sm leading-relaxed">"أفضل سعر في السوق مقابل القيمة. الدومين والإيميلات شغالين 10/10 والدعم الفني بيردوا في وقتها. بالتوفيق ليكم."</p>
-                    <div class="text-yellow-400 mt-4 text-xs"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
-                </div>
+    <section class="py-16 bg-white/5 border-y border-white/5">
+        <div class="max-w-6xl mx-auto px-6 text-center">
+            <h3 class="text-2xl font-bold text-white mb-6">نطاقات (Domains) مميزة متاحة ضمن الباقات</h3>
+            <div class="flex flex-wrap justify-center gap-4 dir-ltr">
+                <span class="px-5 py-3 rounded-xl bg-black/40 border border-indigo-500/30 text-indigo-400 font-mono text-lg hover:border-indigo-500 transition cursor-default">.com</span>
+                <span class="px-5 py-3 rounded-xl bg-black/40 border border-blue-500/30 text-blue-400 font-mono text-lg hover:border-blue-500 transition cursor-default">.net</span>
+                <span class="px-5 py-3 rounded-xl bg-black/40 border border-green-500/30 text-green-400 font-mono text-lg hover:border-green-500 transition cursor-default">.com.eg</span>
+                <span class="px-5 py-3 rounded-xl bg-black/40 border border-purple-500/30 text-purple-400 font-mono text-lg hover:border-purple-500 transition cursor-default">.ai.icu</span>
+                <span class="px-5 py-3 rounded-xl bg-black/40 border border-white/10 text-slate-300 font-mono text-lg hover:border-white/30 transition cursor-default">.online</span>
             </div>
         </div>
     </section>
 
-    <section class="py-20 px-6">
-        <div class="max-w-4xl mx-auto glass-card p-10 text-center border-t border-indigo-500/30">
-            <div class="w-16 h-16 bg-indigo-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                <i class="fas fa-crown text-indigo-400 text-2xl"></i>
+    <section class="py-24 px-6 relative">
+        <div class="absolute inset-0 bg-gradient-to-b from-transparent to-indigo-900/10 pointer-events-none"></div>
+        <div class="max-w-5xl mx-auto glass-card p-12 text-center border-t border-indigo-500/30 relative z-10">
+            <div class="w-24 h-24 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-8 shadow-lg shadow-indigo-500/20 animate-pulse">
+                <i class="fas fa-crown text-white text-4xl"></i>
             </div>
-            <h2 class="text-3xl font-bold text-white mb-4">خدمة عملاء الشركات (VIP)</h2>
-            <p class="text-slate-400 mb-8 max-w-lg mx-auto">
-                هل تمثل مؤسسة كبيرة؟ هل تحتاج لنظام دفع إلكتروني أو ربط برمجي معقد؟<br>
-                فريقنا الهندسي جاهز للاجتماع بك ومناقشة تفاصيل مشروعك.
+            <h2 class="text-3xl md:text-5xl font-bold text-white mb-6">
+                هل تبحث عن <span class="text-indigo-400">شراكة استراتيجية؟</span>
+            </h2>
+            <p class="text-slate-300 text-xl mb-12 max-w-3xl mx-auto leading-relaxed">
+                للشركات الكبرى والمشاريع التي تتطلب حلولاً معقدة (Custom Enterprise Solutions)، خصصنا قناة تواصل مباشرة مع الإدارة العليا وفريق مهندسي النظم.
             </p>
             <div class="flex flex-col md:flex-row justify-center gap-6">
-                <a href="mailto:info@24sevenAi.com" class="flex items-center justify-center gap-3 px-6 py-3 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 transition">
-                    <i class="fas fa-envelope text-indigo-400"></i> info@24sevenAi.com
+                <a href="mailto:info@24sevenAi.com" class="group flex items-center justify-center gap-4 px-8 py-5 bg-white/5 border border-white/10 rounded-2xl text-white hover:bg-white/10 hover:border-indigo-500 transition duration-300">
+                    <div class="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center group-hover:bg-indigo-500 transition">
+                        <i class="fas fa-envelope text-xl"></i>
+                    </div>
+                    <div class="text-right">
+                        <span class="block text-xs text-slate-400">البريد الرسمي</span>
+                        <span class="font-bold font-sans text-lg">info@24sevenAi.com</span>
+                    </div>
                 </a>
-                <a href="https://wa.me/201121748885" class="flex items-center justify-center gap-3 px-6 py-3 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 hover:bg-green-500/20 transition">
-                    <i class="fab fa-whatsapp text-xl"></i> تواصل مباشر مع الإدارة
+                <a href="https://wa.me/201121748885" target="_blank" class="group flex items-center justify-center gap-4 px-8 py-5 bg-[#25d366]/10 border border-[#25d366]/20 rounded-2xl text-[#25d366] hover:bg-[#25d366]/20 transition duration-300">
+                    <div class="w-12 h-12 rounded-full bg-[#25d366]/20 flex items-center justify-center group-hover:bg-[#25d366] group-hover:text-white transition">
+                        <i class="fab fa-whatsapp text-2xl"></i>
+                    </div>
+                    <div class="text-right">
+                        <span class="block text-xs opacity-80">تواصل مباشر</span>
+                        <span class="font-bold text-lg">مدير المشروعات</span>
+                    </div>
                 </a>
             </div>
         </div>
     </section>
 
-    <footer class="text-center py-8 text-slate-600 text-sm border-t border-white/5">
+    <footer class="text-center py-10 text-slate-600 text-sm border-t border-white/5 bg-[#020202]">
         <p>© 2026 24Seven Studio. All rights reserved.</p>
     </footer>
 
     <div class="floating-container">
-        <a href="https://wa.me/201121748885" target="_blank" class="float-btn bg-[#25d366] hover:bg-[#1ebc57]">
+        <a href="https://wa.me/201121748885" target="_blank" class="float-btn whatsapp" data-tooltip="واتساب">
             <i class="fab fa-whatsapp"></i>
             <span class="tooltip">واتساب</span>
         </a>
-        <a href="tel:+201121748885" class="float-btn bg-blue-600 hover:bg-blue-500">
+        <a href="https://www.facebook.com/profile.php?id=61586223017819" target="_blank" class="float-btn facebook" data-tooltip="فيسبوك">
+            <i class="fab fa-facebook-f"></i>
+            <span class="tooltip">فيسبوك</span>
+        </a>
+        <a href="tel:+201121748885" class="float-btn phone" data-tooltip="اتصال">
             <i class="fas fa-phone-alt text-lg"></i>
             <span class="tooltip">اتصال</span>
         </a>
-        <a href="mailto:info@24sevenAi.com" class="float-btn bg-red-600 hover:bg-red-500">
+        <a href="mailto:info@24sevenAi.com" class="float-btn email" data-tooltip="إيميل">
             <i class="fas fa-envelope text-lg"></i>
             <span class="tooltip">إيميل</span>
         </a>
     </div>
 
-    <div id="requestModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 opacity-0 invisible transition duration-300">
-        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeRequestModal()"></div>
-        <div class="glass-card w-full max-w-lg p-8 relative transform scale-95 transition duration-300 bg-[#121212]">
-            <button onclick="closeRequestModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fas fa-times text-xl"></i></button>
+    <div id="requestModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 opacity-0 invisible transition duration-300 modal">
+        <div class="absolute inset-0 bg-black/90 backdrop-blur-md" onclick="closeRequestModal()"></div>
+        <div class="glass-card w-full max-w-lg p-8 relative transform scale-95 transition duration-300 bg-[#121212] border border-indigo-500/30 shadow-2xl">
+            <button onclick="closeRequestModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition"><i class="fas fa-times text-xl"></i></button>
             
-            <h3 class="text-2xl font-bold text-white mb-2">تأكيد حجز العرض</h3>
-            <p class="text-slate-400 mb-6 text-sm">أنت على بعد خطوة من بدء مشروعك. املأ البيانات وسنتواصل معك فوراً.</p>
+            <div class="text-center mb-8">
+                <h3 class="text-2xl font-bold text-white mb-2">تأكيد حجز العرض</h3>
+                <p class="text-slate-400 text-sm">أنت على بعد خطوة من بدء مشروعك. املأ البيانات وسنتواصل معك فوراً.</p>
+            </div>
             
-            <form action="https://formspree.io/f/xzddpdga" method="POST" class="space-y-4">
+            <form action="https://formspree.io/f/xzddpdga" method="POST" class="space-y-5">
                 <input type="hidden" name="_subject" value="New Web Design Order (Limited Offer)">
                 
                 <div>
-                    <label class="block text-xs text-slate-400 mb-1">الباقة المختارة</label>
-                    <input type="text" name="selected_plan" id="modalPlanInput" readonly class="w-full bg-white/5 border border-pink-500/50 rounded-lg px-4 py-3 text-white font-bold font-num">
+                    <label class="block text-xs text-slate-400 mb-2">الباقة المختارة</label>
+                    <input type="text" name="selected_plan" id="modalPlanInput" readonly class="w-full bg-indigo-500/10 border border-indigo-500/50 rounded-xl px-4 py-3 text-white font-bold font-num text-center">
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
-                    <input type="text" name="name" required placeholder="الاسم" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-pink-500 outline-none transition">
-                    <input type="tel" name="phone" required placeholder="رقم الهاتف" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-pink-500 outline-none transition font-num">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">الاسم</label>
+                        <input type="text" name="name" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-indigo-500 outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">رقم الهاتف</label>
+                        <input type="tel" name="phone" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-indigo-500 outline-none transition font-num">
+                    </div>
                 </div>
 
-                <input type="email" name="email" required placeholder="البريد الإلكتروني" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-pink-500 outline-none transition">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">البريد الإلكتروني</label>
+                    <input type="email" name="email" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-indigo-500 outline-none transition">
+                </div>
                 
-                <textarea name="details" rows="3" placeholder="تفاصيل إضافية (نشاط الشركة، الدومين المقترح...)" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-pink-500 outline-none transition"></textarea>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">تفاصيل إضافية (اختياري)</label>
+                    <textarea name="details" rows="3" placeholder="مثل: نشاط الشركة، الدومين المقترح..." class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-indigo-500 outline-none transition"></textarea>
+                </div>
 
-                <button type="submit" class="w-full py-3 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white font-bold rounded-lg shadow-lg transition transform hover:scale-[1.01]">
+                <button type="submit" class="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-xl shadow-lg transition transform hover:scale-[1.01]">
                     🚀 تأكيد الطلب وحجز العرض
                 </button>
             </form>
@@ -386,19 +437,16 @@
         function openRequestModal(planName) {
             planInput.value = planName;
             modal.classList.remove('opacity-0', 'invisible');
-            modal.querySelector('.glass-card').classList.remove('scale-95');
-            modal.querySelector('.glass-card').classList.add('scale-100');
+            modal.classList.add('active');
         }
 
         function closeRequestModal() {
             modal.classList.add('opacity-0', 'invisible');
-            modal.querySelector('.glass-card').classList.add('scale-95');
-            modal.querySelector('.glass-card').classList.remove('scale-100');
+            modal.classList.remove('active');
         }
 
-        // Countdown Timer Logic (3 Days Loop)
+        // Countdown Timer Logic (Auto Reset every 3 days)
         function startTimer() {
-            // Set end date to 3 days from now (simulated urgency)
             let endDate = new Date();
             endDate.setDate(endDate.getDate() + 3); 
             
@@ -416,10 +464,7 @@
                 document.getElementById("minutes").innerText = minutes < 10 ? "0" + minutes : minutes;
                 document.getElementById("seconds").innerText = seconds < 10 ? "0" + seconds : seconds;
 
-                if (distance < 0) {
-                    clearInterval(timer);
-                    // Reset timer logic here if needed
-                }
+                if (distance < 0) { clearInterval(timer); }
             }, 1000);
         }
         

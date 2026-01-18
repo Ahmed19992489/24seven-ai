@@ -25,21 +25,15 @@
         /* Floating Buttons */
         .floating-container { position: fixed; bottom: 30px; left: 30px; z-index: 100; display: flex; flex-direction: column; gap: 15px; }
         .float-btn {
-            width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); transition: 0.3s; position: relative;
+            width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 22px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); transition: 0.3s; position: relative;
         }
         .float-btn:hover { transform: scale(1.1); }
         .float-btn .tooltip {
-            position: absolute; left: 70px; background: rgba(0,0,0,0.8); padding: 5px 10px; 
+            position: absolute; left: 60px; background: rgba(0,0,0,0.8); padding: 5px 10px; 
             border-radius: 5px; font-size: 12px; white-space: nowrap; opacity: 0; pointer-events: none; transition: 0.2s;
         }
-        .float-btn:hover .tooltip { opacity: 1; left: 65px; }
-
-        /* Timer Box */
-        .timer-box {
-            background: linear-gradient(145deg, #1a1a1a, #0a0a0a); border: 1px solid rgba(99, 102, 241, 0.3);
-            padding: 8px 12px; border-radius: 8px; min-width: 60px; text-align: center;
-        }
+        .float-btn:hover .tooltip { opacity: 1; left: 55px; }
 
         /* Section Title */
         .section-title { position: relative; display: inline-block; padding-bottom: 10px; margin-bottom: 2rem; }
@@ -62,21 +56,22 @@
         <div class="max-w-7xl mx-auto px-6">
             <div class="backdrop-blur-md bg-black/70 border border-white/10 rounded-2xl py-3 px-6 flex justify-between items-center shadow-2xl">
                 <a href="/" class="flex items-center gap-2">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-xl">
-                        <i class="fas fa-code-branch"></i>
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-xl shadow-lg">
+                        <i class="fas fa-brain"></i>
                     </div>
                     <span class="text-xl font-bold tracking-tight text-white">24Seven <span class="text-indigo-500">AI</span></span>
                 </a>
                 
-                <div class="hidden md:flex items-center gap-6 text-sm font-medium text-slate-300">
+                <div class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
                     <a href="#services" class="hover:text-white transition">خدماتنا</a>
                     <a href="/web-design" class="hover:text-pink-400 transition flex items-center gap-2"><i class="fas fa-paint-brush"></i> تصميم المواقع</a>
-                    <a href="projects.html" class="hover:text-white transition">أعمالنا</a>
+                    <a href="projects.html" class="hover:text-white transition">سابقة الأعمال</a>
+                    <button onclick="openMsgModal('Consultation')" class="hover:text-indigo-400 transition">تواصل معنا</button>
                 </div>
 
                 <div class="flex items-center gap-3">
                     <button onclick="openMsgModal('Request Access')" class="hidden md:flex items-center gap-2 px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white border border-indigo-500/50 rounded-lg transition text-sm font-bold">
-                        <i class="fas fa-lock"></i> <span class="lang-ar">دخول الأداة</span>
+                        <i class="fas fa-lock"></i> <span class="lang-ar">Intelligence Workspace</span>
                     </button>
                     <button onclick="toggleSidebar()" class="p-2 text-white text-2xl hover:text-indigo-400 transition md:hidden"><i class="fas fa-bars"></i></button>
                 </div>
@@ -137,7 +132,7 @@
                     <span class="text-red-500 font-bold tracking-widest text-sm uppercase">الواقع الصادم</span>
                     <h2 class="text-3xl md:text-5xl font-bold text-white mt-2 mb-6">لماذا تتوقف الشركات عن النمو؟</h2>
                     <p class="text-slate-400 mb-8 leading-relaxed">
-                        في السوق المصري اليوم، الاعتماد على الطرق التقليدية (دفاتر، إكسيل، واتساب عشوائي) هو وصفة للكارثة. الشركات التي لا تملك "عقلاً رقمياً" تفقد 40% من عملائها لصالح المنافسين الأذكى تقنياً.
+                        في السوق المصري اليوم، الاعتماد على الطرق التقليدية (دفاتر، إكسيل، واتساب عشوائي) هو وصفة للكارثة. الشركات التي لا تملك "عقلاً رقمياً" تفقد 40% من عملائها.
                     </p>
                     <ul class="space-y-4">
                         <li class="flex items-start gap-4">
@@ -242,37 +237,35 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div class="glass-card p-8 border-white/5 relative">
                     <div class="flex items-center gap-4 mb-4">
-                        <img src="https://randomuser.me/api/portraits/men/33.jpg" alt="Hassan Mostafa" class="w-12 h-12 rounded-full border-2 border-indigo-500">
+                        <img src="https://randomuser.me/api/portraits/men/33.jpg" alt="Hassan" class="w-12 h-12 rounded-full border-2 border-indigo-500">
                         <div>
                             <h4 class="text-white font-bold text-sm">أ. حسن مصطفى</h4>
                             <p class="text-indigo-400 text-xs">مدير شركة "بيوت" للتطوير العقاري</p>
                         </div>
                     </div>
-                    <p class="text-slate-300 text-sm leading-relaxed">"كنت بعاني من ضياع داتا العملاء بين السيلز. 24Seven عملولي سيستم CRM مخصص جمعلي كل حاجة في مكان واحد. بجد نقلة نوعية للشغل."</p>
+                    <p class="text-slate-300 text-sm leading-relaxed">"كنت بعاني من ضياع داتا العملاء بين السيلز. 24Seven عملولي سيستم CRM مخصص جمعلي كل حاجة في مكان واحد."</p>
                     <div class="text-yellow-400 mt-4 text-xs flex gap-1"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
                 </div>
-
                 <div class="glass-card p-8 border-white/5 relative">
                     <div class="flex items-center gap-4 mb-4">
-                        <img src="https://randomuser.me/api/portraits/women/55.jpg" alt="Mona El-Gendy" class="w-12 h-12 rounded-full border-2 border-pink-500">
+                        <img src="https://randomuser.me/api/portraits/women/55.jpg" alt="Mona" class="w-12 h-12 rounded-full border-2 border-pink-500">
                         <div>
                             <h4 class="text-white font-bold text-sm">أ. منى الجندي</h4>
                             <p class="text-pink-400 text-xs">صاحبة براند ملابس (Online Store)</p>
                         </div>
                     </div>
-                    <p class="text-slate-300 text-sm leading-relaxed">"المتجر اللي صمموه ليا تحفة فنياً وسريع جداً. والأهم إنهم ربطوه بشركات الشحن أوتوماتيك. وفروا عليا مجهود جبار."</p>
+                    <p class="text-slate-300 text-sm leading-relaxed">"المتجر اللي صمموه ليا تحفة فنياً وسريع جداً. والأهم إنهم ربطوه بشركات الشحن أوتوماتيك."</p>
                     <div class="text-yellow-400 mt-4 text-xs flex gap-1"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
                 </div>
-
                 <div class="glass-card p-8 border-white/5 relative">
                     <div class="flex items-center gap-4 mb-4">
-                        <img src="https://randomuser.me/api/portraits/men/81.jpg" alt="Eng. Sameh" class="w-12 h-12 rounded-full border-2 border-blue-500">
+                        <img src="https://randomuser.me/api/portraits/men/81.jpg" alt="Sameh" class="w-12 h-12 rounded-full border-2 border-blue-500">
                         <div>
                             <h4 class="text-white font-bold text-sm">م. سامح علي</h4>
                             <p class="text-blue-400 text-xs">شركة الأندلس للاستيراد</p>
                         </div>
                     </div>
-                    <p class="text-slate-300 text-sm leading-relaxed">"الإيميلات الرسمية بتدي ثقة للموردين بره مصر. التعامل معاهم محترم جداً والدعم الفني مش بيسيبك غير لما المشكلة تتحل."</p>
+                    <p class="text-slate-300 text-sm leading-relaxed">"الإيميلات الرسمية بتدي ثقة للموردين بره مصر. التعامل معاهم محترم جداً والدعم الفني ممتاز."</p>
                     <div class="text-yellow-400 mt-4 text-xs flex gap-1"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
                 </div>
             </div>
@@ -309,6 +302,41 @@
         </div>
     </section>
 
+    <section class="py-20 px-6 relative">
+        <div class="absolute inset-0 bg-gradient-to-b from-transparent to-indigo-900/10 pointer-events-none"></div>
+        <div class="max-w-5xl mx-auto glass-card p-12 text-center border-t border-indigo-500/30 relative z-10">
+            <div class="w-20 h-20 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-8 shadow-lg shadow-indigo-500/20 animate-pulse">
+                <i class="fas fa-crown text-white text-3xl"></i>
+            </div>
+            <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">
+                هل تبحث عن <span class="text-indigo-400">شراكة استراتيجية؟</span>
+            </h2>
+            <p class="text-slate-300 text-lg mb-10 max-w-2xl mx-auto leading-relaxed">
+                للشركات الكبرى والمشاريع التي تتطلب حلولاً معقدة (Custom Enterprise Solutions)، خصصنا قناة تواصل مباشرة مع الإدارة العليا وفريق مهندسي النظم.
+            </p>
+            <div class="flex flex-col md:flex-row justify-center gap-6">
+                <a href="mailto:info@24sevenAi.com" class="group flex items-center justify-center gap-4 px-8 py-4 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 hover:border-indigo-500 transition duration-300">
+                    <div class="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center group-hover:bg-indigo-500 transition">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <div class="text-right">
+                        <span class="block text-xs text-slate-400">البريد الرسمي</span>
+                        <span class="font-bold font-sans">info@24sevenAi.com</span>
+                    </div>
+                </a>
+                <a href="https://wa.me/201121748885" target="_blank" class="group flex items-center justify-center gap-4 px-8 py-4 bg-[#25d366]/10 border border-[#25d366]/20 rounded-xl text-[#25d366] hover:bg-[#25d366]/20 transition duration-300">
+                    <div class="w-10 h-10 rounded-full bg-[#25d366]/20 flex items-center justify-center group-hover:bg-[#25d366] group-hover:text-white transition">
+                        <i class="fab fa-whatsapp text-xl"></i>
+                    </div>
+                    <div class="text-right">
+                        <span class="block text-xs opacity-80">تواصل مباشر</span>
+                        <span class="font-bold">مدير المشروعات</span>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+
     <footer class="bg-[#020202] border-t border-white/5 pt-16 pb-8">
         <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-12">
             <div class="md:col-span-2">
@@ -319,7 +347,6 @@
                     المؤسسة الرائدة في تقديم الحلول الرقمية المتكاملة. نجمع بين قوة البرمجة، ذكاء الأتمتة، وجمال التصميم لنصنع مستقبلك الرقمي.
                 </p>
             </div>
-            
             <div>
                 <h4 class="text-white font-bold mb-6">خدماتنا</h4>
                 <ul class="space-y-3 text-slate-400 text-sm">
@@ -329,7 +356,6 @@
                     <li><button onclick="openMsgModal('AI Bot')" class="hover:text-blue-400 transition">بوتات الذكاء الاصطناعي</button></li>
                 </ul>
             </div>
-
             <div>
                 <h4 class="text-white font-bold mb-6">تواصل معنا</h4>
                 <ul class="space-y-4 text-slate-400 text-sm">
@@ -349,6 +375,10 @@
             <i class="fab fa-whatsapp"></i>
             <span class="tooltip">واتساب</span>
         </a>
+        <a href="https://www.facebook.com/profile.php?id=61586223017819" target="_blank" class="float-btn bg-[#1877F2] hover:bg-[#145dbf]">
+            <i class="fab fa-facebook-f"></i>
+            <span class="tooltip">فيسبوك</span>
+        </a>
         <a href="tel:+201121748885" class="float-btn bg-indigo-600 hover:bg-indigo-500">
             <i class="fas fa-phone-alt text-lg"></i>
             <span class="tooltip">اتصال</span>
@@ -359,21 +389,16 @@
         </a>
     </div>
 
-    <div id="msgModal" class="modal fixed inset-0 z-[3000] flex items-center justify-center p-4">
+    <div id="msgModal" class="modal fixed inset-0 z-[3000] flex items-center justify-center p-4 hidden">
         <div class="glass-card w-full max-w-2xl p-8 relative transform transition-all scale-100 bg-[#121212] border border-white/10 shadow-2xl max-h-[90vh] overflow-y-auto">
             <button onclick="closeAllModals()" class="absolute top-4 right-4 text-slate-400 hover:text-white bg-white/5 p-2 rounded-lg"><i class="fas fa-times text-xl"></i></button>
             <div class="text-center mb-8">
-                <h3 class="text-2xl font-bold mb-2 text-white">
-                    <span class="lang-ar">ابدأ مشروعك الآن</span>
-                </h3>
-                <p class="text-sm text-slate-400">
-                    <span class="lang-ar">املأ النموذج وسيتواصل معك فريقنا الهندسي خلال 24 ساعة.</span>
-                </p>
+                <h3 class="text-2xl font-bold mb-2 text-white"><span class="lang-ar">ابدأ مشروعك الآن</span></h3>
+                <p class="text-sm text-slate-400"><span class="lang-ar">املأ النموذج وسيتواصل معك فريقنا الهندسي خلال 24 ساعة.</span></p>
             </div>
             
             <form action="https://formspree.io/f/xzddpdga" method="POST" class="space-y-6">
                 <input type="hidden" name="_subject" id="formSubject" value="New Inquiry from Homepage">
-
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="block text-xs text-slate-400 mb-1">الاسم بالكامل</label>
@@ -384,7 +409,6 @@
                         <input type="email" name="email" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-indigo-500 text-white transition outline-none">
                     </div>
                 </div>
-
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="block text-xs text-slate-400 mb-1">رقم الهاتف</label>
@@ -394,7 +418,7 @@
                         <label class="block text-xs text-slate-400 mb-1">نوع الخدمة المطلوبة</label>
                         <select name="project_type" id="projectTypeSelect" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-indigo-500 text-white transition outline-none appearance-none">
                             <option value="" disabled selected>اختر الخدمة...</option>
-                            <option value="SaaS App Access">دخول الأداة (App Access)</option>
+                            <option value="Intelligence Workspace Access">دخول Intelligence Workspace</option>
                             <option value="Web Design">تصميم موقع / متجر</option>
                             <option value="Custom Software">نظام برمجي خاص (ERP/CRM)</option>
                             <option value="Mobile App">تطبيق موبايل</option>
@@ -403,15 +427,11 @@
                         </select>
                     </div>
                 </div>
-
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">تفاصيل المشروع</label>
                     <textarea name="message" id="formMessage" rows="4" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-indigo-500 text-white transition outline-none" placeholder="اشرح لنا فكرتك باختصار..."></textarea>
                 </div>
-
-                <button type="submit" class="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-xl transition shadow-lg transform hover:scale-[1.01]">
-                    إرسال الطلب
-                </button>
+                <button type="submit" class="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-xl transition shadow-lg transform hover:scale-[1.01]">إرسال الطلب</button>
             </form>
         </div>
     </div>
@@ -424,7 +444,7 @@
         <ul class="space-y-6 flex-1">
             <li><a href="#" class="text-lg text-white hover:text-indigo-400 transition flex items-center gap-3"><i class="fas fa-home w-6"></i> الرئيسية</a></li>
             <li><a href="/web-design" class="text-lg text-slate-300 hover:text-pink-400 transition flex items-center gap-3"><i class="fas fa-paint-brush w-6"></i> تصميم المواقع</a></li>
-            <li><button onclick="openMsgModal('SaaS App Access')" class="text-lg text-slate-300 hover:text-indigo-400 transition flex items-center gap-3 w-full text-right"><i class="fas fa-rocket w-6"></i> الأداة الذكية</button></li>
+            <li><button onclick="openMsgModal('Intelligence Workspace Access')" class="text-lg text-slate-300 hover:text-indigo-400 transition flex items-center gap-3 w-full text-right"><i class="fas fa-rocket w-6"></i> Intelligence Workspace</button></li>
             <li><a href="projects.html" class="text-lg text-slate-300 hover:text-white transition flex items-center gap-3"><i class="fas fa-layer-group w-6"></i> سابقة الأعمال</a></li>
             <li><button onclick="openMsgModal('Contact')" class="text-lg text-slate-300 hover:text-white transition flex items-center gap-3 w-full text-right"><i class="fas fa-envelope w-6"></i> تواصل معنا</button></li>
         </ul>
@@ -432,9 +452,7 @@
     <div id="overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/80 z-[1500] hidden opacity-0 transition-opacity duration-300"></div>
 
     <script>
-        // --- Logic Scripts ---
-        
-        // Sidebar Toggle
+        // Toggle Sidebar
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('overlay');
@@ -449,7 +467,7 @@
             }
         }
 
-        // Modal Logic
+        // Modal Logic (Fix Auto-Popup)
         function closeAllModals() {
             document.getElementById('msgModal').classList.add('hidden'); 
         }
@@ -458,12 +476,11 @@
             const modal = document.getElementById('msgModal');
             const select = document.getElementById('projectTypeSelect');
             const subject = document.getElementById('formSubject');
-            const msg = document.getElementById('formMessage');
 
             modal.classList.remove('hidden');
             
             if(type) {
-                if(type === 'Request Access') select.value = 'SaaS App Access';
+                if(type === 'Request Access') select.value = 'Intelligence Workspace Access';
                 else if(type === 'Web Design Service') select.value = 'Web Design';
                 else if(type === 'Custom Software') select.value = 'Custom Software';
                 else if(type === 'Mobile App') select.value = 'Mobile App';
@@ -473,26 +490,19 @@
             }
         }
 
-        // Countdown Timer Logic (Restart every 24 hours for urgency)
+        // Timer Logic
         function startTimer() {
-            // Set timer for 5 hours from now to simulate daily urgency
             let countDownDate = new Date().getTime() + (5 * 60 * 60 * 1000); 
-
             let x = setInterval(function() {
                 let now = new Date().getTime();
                 let distance = countDownDate - now;
-
                 let hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                 let minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
                 let seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
                 document.getElementById("hours").innerHTML = hours < 10 ? "0" + hours : hours;
                 document.getElementById("minutes").innerHTML = minutes < 10 ? "0" + minutes : minutes;
                 document.getElementById("seconds").innerHTML = seconds < 10 ? "0" + seconds : seconds;
-
-                if (distance < 0) {
-                    countDownDate = new Date().getTime() + (24 * 60 * 60 * 1000); // Reset
-                }
+                if (distance < 0) { countDownDate = new Date().getTime() + (24 * 60 * 60 * 1000); }
             }, 1000);
         }
         startTimer();
