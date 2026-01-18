@@ -1,11 +1,13 @@
 fastapi
 uvicorn
+jinja2
 sqlalchemy
 psycopg2-binary
 pandas
 email-validator
 dnspython
 selenium
+webdriver-manager
 undetected-chromedriver
 python-dotenv
 passlib[bcrypt]
