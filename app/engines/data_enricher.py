@@ -19,10 +19,12 @@ class DataEnricher:
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--window-size=1920,1080")
         chrome_options.add_argument("--disable-notifications")
-        chrome_options.add_argument("--blink-settings=imagesEnabled=false")
         
-        # User-Agent ليبدو كمتصفح حقيقي
-        chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        # ⚠️ إزالة منع الصور لأنه أحياناً يكشف البوت لمحركات البحث
+        # chrome_options.add_argument("--blink-settings=imagesEnabled=false")
+        
+        # استخدام User-Agent حديث جداً
+        chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36")
 
         # مسارات Render
         chrome_bin = os.environ.get("CHROME_BIN")
@@ -57,19 +59,25 @@ class DataEnricher:
                 pass
             self.driver = None
 
+    # --- محرك 1: DuckDuckGo (نسخة HTML الخفيفة) ---
     def _search_ddg(self, query):
-        """ محاولة البحث عبر DuckDuckGo """
         print("🦆 Trying DuckDuckGo...")
         try:
             self.driver.get(f"https://html.duckduckgo.com/html/?q={query}")
             time.sleep(2)
-            # استخدام XPath عام للبحث عن أي رابط نتيجة
-            results = self.driver.find_elements(By.XPATH, "//div[contains(@class, 'result')]//a[@class='result__a']")
             
+            # استخدام XPath عام يلتقط الروابط حتى لو تغير الكلاس
+            # يبحث عن أي رابط داخل عنصر يبدو كنتيجة
+            results = self.driver.find_elements(By.XPATH, "//div[contains(@class, 'result')]//a[contains(@class, 'result__a')]")
+            
+            if not results:
+                # محاولة احتياطية: البحث عن أي رابط كبير
+                results = self.driver.find_elements(By.XPATH, "//div[@id='links']//a")
+
             for res in results[:3]:
                 url = res.get_attribute("href")
                 if url and "duckduckgo" not in url:
-                    if "uddg=" in url: # فك تشفير روابط DDG
+                    if "uddg=" in url:
                         try: url = unquote(url.split("uddg=")[1].split("&")[0])
                         except: pass
                     print(f"🔗 Found via DDG: {url}")
@@ -78,15 +86,19 @@ class DataEnricher:
             print(f"⚠️ DDG Error: {e}")
         return None
 
+    # --- محرك 2: Bing (البديل القوي) ---
     def _search_bing(self, query):
-        """ محاولة البحث عبر Bing (الخطة البديلة) """
         print("🔎 Trying Bing...")
         try:
             self.driver.get(f"https://www.bing.com/search?q={query}")
             time.sleep(2)
-            # Bing عادة يضع النتائج داخل h2 > a
-            results = self.driver.find_elements(By.CSS_SELECTOR, "li.b_algo h2 a")
             
+            # البحث عن العناوين h2 التي تحتوي على روابط
+            results = self.driver.find_elements(By.XPATH, "//li[@class='b_algo']//h2/a")
+            
+            if not results:
+                results = self.driver.find_elements(By.XPATH, "//h2/a") # بحث أوسع
+
             for res in results[:3]:
                 url = res.get_attribute("href")
                 if url and "microsoft" not in url and "bing" not in url:
@@ -96,18 +108,42 @@ class DataEnricher:
             print(f"⚠️ Bing Error: {e}")
         return None
 
+    # --- محرك 3: Yahoo (المنقذ الأخير) ---
+    def _search_yahoo(self, query):
+        print("🟣 Trying Yahoo...")
+        try:
+            self.driver.get(f"https://search.yahoo.com/search?p={query}")
+            time.sleep(2)
+            
+            # ياهو يضع النتائج عادة في div.algo أو h3.title
+            results = self.driver.find_elements(By.XPATH, "//div[contains(@class, 'algo')]//h3/a")
+            
+            for res in results[:3]:
+                url = res.get_attribute("href")
+                if url and "yahoo" not in url:
+                    print(f"🔗 Found via Yahoo: {url}")
+                    return url
+        except Exception as e:
+            print(f"⚠️ Yahoo Error: {e}")
+        return None
+
     def _smart_search_fallback(self, company_name):
         """
-        Flow 2: استراتيجية البحث المتعدد
+        Flow 2: استراتيجية الثلاث طبقات
         """
-        query = f"{company_name} Egypt official website facebook"
+        # وسعنا البحث ليشمل لينكد إن وفيسبوك لزيادة فرص العثور على رابط
+        query = f"{company_name} Egypt official website facebook linkedin"
         
-        # 1. المحاولة الأولى: DuckDuckGo
+        # 1. المحاولة الأولى
         url = self._search_ddg(query)
         if url: return url
         
-        # 2. المحاولة الثانية: Bing
+        # 2. المحاولة الثانية
         url = self._search_bing(query)
+        if url: return url
+
+        # 3. المحاولة الثالثة (الجديدة)
+        url = self._search_yahoo(query)
         if url: return url
         
         return None
@@ -130,7 +166,6 @@ class DataEnricher:
             target_website = website
 
             if not target_website or "غير" in target_website or "google" in target_website:
-                # تفعيل البحث الذكي (Flow 2)
                 target_website = self._smart_search_fallback(company_name)
             
             if not target_website:
@@ -141,7 +176,7 @@ class DataEnricher:
             # Flow 3: زيارة الرابط
             # ---------------------------------------------------------
             print(f"🕵️ Deep Scan: Visiting {target_website}")
-            self.driver.set_page_load_timeout(25)
+            self.driver.set_page_load_timeout(30) # زيادة المهلة
             
             try:
                 self.driver.get(target_website)
@@ -154,11 +189,11 @@ class DataEnricher:
             
             # استخراج الإيميلات
             emails = re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', page_source)
-            bad_ext = ('.png', '.jpg', '.jpeg', '.gif', '.svg', '.css', '.js', '.webp')
+            bad_ext = ('.png', '.jpg', '.jpeg', '.gif', '.svg', '.css', '.js', '.webp', '.mp4', '.mp3')
             valid_emails = list(set([e for e in emails if not e.lower().endswith(bad_ext)]))
 
             if valid_emails:
-                priority = ['info', 'contact', 'sales', 'hello', 'admin', 'support']
+                priority = ['info', 'contact', 'sales', 'hello', 'admin', 'support', 'manager']
                 preferred = None
                 for p in priority:
                     for e in valid_emails:
@@ -173,7 +208,10 @@ class DataEnricher:
             # محاولة صفحة Contact Us
             if data['email'] == "غير متوفر":
                 try:
-                    contact_links = self.driver.find_elements(By.XPATH, "//a[contains(@href, 'contact') or contains(@href, 'Contact') or contains(text(), 'Contact') or contains(text(), 'اتصل')]")
+                    # بحث موسع عن روابط الاتصال
+                    xpath = "//a[contains(@href, 'contact') or contains(@href, 'Contact') or contains(text(), 'Contact') or contains(text(), 'اتصل') or contains(text(), 'تواصل')]"
+                    contact_links = self.driver.find_elements(By.XPATH, xpath)
+                    
                     if contact_links:
                         c_url = contact_links[0].get_attribute("href")
                         if c_url and c_url != self.driver.current_url:
