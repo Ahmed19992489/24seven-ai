@@ -6,13 +6,13 @@ from sqlalchemy.orm import Session
 from app import models
 from app.database import engine, get_db
 import os
-from pathlib import Path  # مكتبة التعامل مع المسارات بذكاء
+from pathlib import Path
 
 # --- 1. تحديد المسار الرئيسي للمشروع بدقة (Absolute Path) ---
-# هذا السطر هو الحل السحري لمشاكل "File Not Found"
+# هذا السطر يضمن أن السيرفر يرى الملفات أينما كان مكانه
 BASE_DIR = Path(__file__).resolve().parent
 
-# --- استيراد الروابط ---
+# --- استيراد الروابط (APIs) ---
 from app.api import search, export, auth, suggestions, admin, payments, chat
 
 # إنشاء جداول قاعدة البيانات
@@ -24,7 +24,7 @@ app = FastAPI(
     version="2.1.0"
 )
 
-# --- 2. إعدادات CORS ---
+# --- 2. إعدادات CORS (السماح بالاتصال) ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -41,7 +41,7 @@ async def add_security_headers(request: Request, call_next):
     return response
 
 # --- 4. إعداد الملفات الثابتة (Static Files) ---
-# نستخدم BASE_DIR لضمان العثور على مجلد static أينما كان السيرفر
+# هذا السطر مهم جداً لكي تظهر الصور وملفات الـ CSS
 static_path = BASE_DIR / "static"
 upload_path = static_path / "uploads"
 
@@ -49,10 +49,9 @@ upload_path = static_path / "uploads"
 os.makedirs(upload_path, exist_ok=True)
 
 # ربط المسار (Mount)
-# نستخدم str(static_path) لتحويل المسار الذكي إلى نص يفهمه FastAPI
 app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 
-# --- 5. المسارات (Routes) ---
+# --- 5. المسارات الخلفية (Backend Routes) ---
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(search.router, prefix="/search", tags=["Search Engine"])
 app.include_router(export.router, prefix="/export", tags=["Data Export"])
@@ -61,50 +60,43 @@ app.include_router(admin.router, prefix="/admin", tags=["Admin Dashboard"])
 app.include_router(payments.router, prefix="/payments", tags=["Payments"])
 app.include_router(chat.router, prefix="/chat", tags=["Customer Support Chat"])
 
-# --- 6. الواجهة الرئيسية (مع كاشف الأخطاء) ---
+# ==========================================
+#  نظام التوجيه والواجهات (Frontend Routing)
+# ==========================================
+
+# 1. الصفحة الرئيسية (تفتح موقع الشركة التعريفي)
 @app.get("/")
-async def read_root():
-    # نستخدم المسار الكامل للملف
-    file_path = BASE_DIR / "dashboard.html"
-    
-    # المحاولة الأولى: هل الملف موجود؟ افتحه فوراً
+async def read_company_site():
+    file_path = BASE_DIR / "index.html"
     if file_path.exists():
         return FileResponse(file_path)
-    
-    # المحاولة الثانية (Debug): إذا لم يجد الملف، اعرض لي ماذا يوجد في المجلد!
-    # هذا سيساعدنا لنعرف هل الاسم مكتوب بحرف كبير أو بامتداد مختلف
-    try:
-        files_in_dir = [f.name for f in BASE_DIR.iterdir() if f.is_file()]
-        files_list_html = "</li><li>".join(files_in_dir)
-        
-        error_message = f"""
-        <html>
-            <body style="font-family: sans-serif; text-align: center; padding: 50px;">
-                <h1 style="color: red;">Error: dashboard.html not found!</h1>
-                <p><strong>Server is looking in:</strong><br> {BASE_DIR}</p>
-                <hr>
-                <h3>Files actually found in this directory:</h3>
-                <ul style="text-align: left; display: inline-block;">
-                    <li>{files_list_html}</li>
-                </ul>
-                <p><em>Please check if 'dashboard.html' is in the list above exactly as written.</em></p>
-            </body>
-        </html>
-        """
-        return HTMLResponse(error_message)
-    except Exception as e:
-        return HTMLResponse(f"<h1>Critical Error</h1><p>{str(e)}</p>")
+    return HTMLResponse("<h1>Error: index.html not found! Please upload the website file.</h1>")
 
+# 2. صفحة المشاريع (Portfolio)
+@app.get("/projects.html")
+async def read_projects_page():
+    file_path = BASE_DIR / "projects.html"
+    if file_path.exists():
+        return FileResponse(file_path)
+    return HTMLResponse("<h1>Error: projects.html not found!</h1>")
+
+# 3. صفحة الأداة (Dashboard) - يدخل لها العميل من زر تسجيل الدخول
+@app.get("/dashboard")
+async def read_app_dashboard():
+    file_path = BASE_DIR / "dashboard.html"
+    if file_path.exists():
+        return FileResponse(file_path)
+    return HTMLResponse("<h1>Error: dashboard.html not found!</h1>")
+
+# 4. لوحة تحكم الأدمن
 @app.get("/admin-panel")
 async def read_admin_panel():
     file_path = BASE_DIR / "admin.html"
-    
     if file_path.exists():
         return FileResponse(file_path)
-        
-    return HTMLResponse(f"<h1>Error: admin.html not found!</h1><p>Looking in: {file_path}</p>")
+    return HTMLResponse("<h1>Error: admin.html not found!</h1>")
 
-# --- 7. Setup ---
+# --- Setup Admin (لإنشاء حساب الأدمن الأول مرة واحدة) ---
 @app.post("/setup-admin/", tags=["Admin & Setup"])
 def create_founder_account(db: Session = Depends(get_db)):
     existing_user = db.query(models.User).filter(models.User.email == "admin@24seven.com").first()
