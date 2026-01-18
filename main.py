@@ -21,7 +21,7 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="24Seven Sales Intelligence Platform",
     description="Professional SaaS Platform.",
-    version="2.2.0"
+    version="2.3.0"
 )
 
 # --- 2. إعدادات CORS (السماح بالاتصال) ---
@@ -64,7 +64,7 @@ app.include_router(chat.router, prefix="/chat", tags=["Customer Support Chat"])
 #  نظام التوجيه والواجهات (Frontend Routing)
 # ==========================================
 
-# 1. الصفحة الرئيسية (تفتح موقع الشركة التعريفي)
+# 1. الصفحة الرئيسية
 @app.get("/")
 async def read_company_site():
     file_path = BASE_DIR / "index.html"
@@ -72,7 +72,7 @@ async def read_company_site():
         return FileResponse(file_path)
     return HTMLResponse("<h1>Error: index.html not found! Please upload the website file.</h1>")
 
-# 2. صفحة المشاريع (Portfolio)
+# 2. صفحة المشاريع
 @app.get("/projects.html")
 async def read_projects_page():
     file_path = BASE_DIR / "projects.html"
@@ -80,7 +80,7 @@ async def read_projects_page():
         return FileResponse(file_path)
     return HTMLResponse("<h1>Error: projects.html not found!</h1>")
 
-# 3. (جديد) صفحة عروض تصميم المواقع (Web Design Offers)
+# 3. صفحة العروض
 @app.get("/web-design")
 async def read_web_design_page():
     file_path = BASE_DIR / "web_design.html"
@@ -88,21 +88,43 @@ async def read_web_design_page():
         return FileResponse(file_path)
     return HTMLResponse("<h1>Error: web_design.html not found!</h1>")
 
-# 4. صفحة الأداة (Dashboard) - يدخل لها العميل من زر تسجيل الدخول
+# 4. صفحة الأداة (Dashboard) - مع فحص المسار
 @app.get("/dashboard")
 async def read_app_dashboard():
     file_path = BASE_DIR / "dashboard.html"
+    
+    # طباعة للتصحيح في اللوج
+    print(f"🔍 Searching for Dashboard at: {file_path}")
+    
     if file_path.exists():
         return FileResponse(file_path)
-    return HTMLResponse("<h1>Error: dashboard.html not found!</h1>")
+    
+    return HTMLResponse(f"""
+        <div style='text-align:center; padding:20px'>
+            <h1>⚠️ Error: dashboard.html not found!</h1>
+            <p>Server looked at: {file_path}</p>
+            <p>Files in current dir: {os.listdir(BASE_DIR)}</p>
+        </div>
+    """, status_code=404)
 
-# 5. لوحة تحكم الأدمن
+# 5. لوحة تحكم الأدمن - مع فحص المسار
 @app.get("/admin-panel")
 async def read_admin_panel():
     file_path = BASE_DIR / "admin.html"
+    
+    # طباعة للتصحيح في اللوج
+    print(f"🔍 Searching for Admin Panel at: {file_path}")
+    
     if file_path.exists():
         return FileResponse(file_path)
-    return HTMLResponse("<h1>Error: admin.html not found!</h1>")
+    
+    return HTMLResponse(f"""
+        <div style='text-align:center; padding:20px'>
+            <h1>⚠️ Error: admin.html not found!</h1>
+            <p>Server looked at: {file_path}</p>
+            <p>Files in current dir: {os.listdir(BASE_DIR)}</p>
+        </div>
+    """, status_code=404)
 
 # --- Setup Admin (لإنشاء حساب الأدمن الأول مرة واحدة) ---
 @app.post("/setup-admin/", tags=["Admin & Setup"])
