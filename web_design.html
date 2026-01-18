@@ -11,14 +11,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Outfit:wght@700&display=swap" rel="stylesheet">
     
     <style>
-        /* Color Palette: Professional Indigo/Purple Theme */
-        :root { 
-            --bg-dark: #050505; 
-            --card-bg: #121212; 
-            --primary: #6366f1; /* Indigo-500 */
-            --accent: #a855f7;  /* Purple-500 */
+        /* Unified Theme Colors from Index */
+        :root {
+            --bg-dark: #050505;
+            --card-bg: #121212;
+            --primary: #6366f1; /* Indigo */
+            --accent: #a855f7;  /* Purple */
             --text-main: #f3f4f6;
-            --text-muted: #9ca3af;
         }
 
         body { 
@@ -28,160 +27,110 @@
             overflow-x: hidden; 
             scroll-behavior: smooth;
         }
-        
+
         .font-num { font-family: 'Outfit', sans-serif; }
 
-        /* Glassmorphism Cards */
+        /* Glassmorphism */
         .glass-card {
-            background: rgba(20, 20, 20, 0.7); 
-            border: 1px solid rgba(255,255,255,0.08);
-            backdrop-filter: blur(16px); 
-            border-radius: 20px; 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(20, 20, 20, 0.7); border: 1px solid rgba(255,255,255,0.08);
+            backdrop-filter: blur(16px); border-radius: 20px; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .glass-card:hover { 
-            transform: translateY(-10px); 
-            border-color: var(--primary); 
-            box-shadow: 0 15px 50px rgba(99, 102, 241, 0.15); 
-        }
+        .glass-card:hover { transform: translateY(-10px); border-color: var(--primary); box-shadow: 0 15px 50px rgba(99, 102, 241, 0.15); }
         
-        /* Pricing Typography */
-        .price-tag { 
-            text-decoration: line-through; 
-            color: #6b7280; 
-            font-size: 1rem; 
-        }
-        .price-new { 
-            color: #fff; 
-            font-weight: 900; 
-            font-size: 2.8rem; 
-            letter-spacing: -1px; 
-        }
+        .price-tag { text-decoration: line-through; color: #6b7280; font-size: 1rem; }
+        .price-new { color: #fff; font-weight: 900; font-size: 2.8rem; letter-spacing: -1px; }
         
         /* Feature List Styling */
-        .feature-list li { 
-            display: flex; 
-            align-items: center; 
-            gap: 10px; 
-            margin-bottom: 14px; 
-            font-size: 0.95rem; 
-            color: #d1d5db; 
-        }
+        .feature-list li { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; font-size: 0.95rem; color: #d1d5db; }
         .feature-list i { color: var(--primary); }
         .feature-list i.disabled { color: #374151; }
         .feature-list span.disabled { color: #4b5563; text-decoration: line-through; }
 
-        /* Countdown Box Styling */
+        /* Countdown Box */
         .timer-box {
             background: linear-gradient(145deg, #1a1a1a, #0a0a0a);
-            border: 1px solid rgba(99, 102, 241, 0.3); 
-            padding: 10px 15px; 
-            border-radius: 10px; 
-            min-width: 70px; 
-            text-align: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            border: 1px solid rgba(99, 102, 241, 0.3); padding: 10px 15px; border-radius: 10px; min-width: 70px; text-align: center;
         }
 
-        /* Floating Action Buttons */
-        .floating-container { 
-            position: fixed; 
-            bottom: 30px; 
-            left: 30px; 
-            z-index: 100; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 15px; 
-        }
+        /* Floating Buttons */
+        .floating-container { position: fixed; bottom: 30px; left: 30px; z-index: 90; display: flex; flex-direction: column; gap: 15px; }
         .float-btn {
-            width: 55px; 
-            height: 55px; 
-            border-radius: 50%; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
-            color: white; 
-            font-size: 24px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5); 
-            transition: all 0.3s ease; 
-            position: relative;
-            background-color: #1f2937; /* Default dark background */
-            border: 1px solid rgba(255,255,255,0.1);
+            width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 22px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); transition: 0.3s; position: relative;
         }
         .float-btn:hover { transform: scale(1.1); }
-        
-        /* Specific Colors for Floating Buttons */
-        .float-btn.whatsapp { background-color: #25d366; border: none; }
-        .float-btn.whatsapp:hover { background-color: #1ebc57; }
-        
-        .float-btn.facebook { background-color: #1877F2; border: none; }
-        .float-btn.facebook:hover { background-color: #145dbf; }
-        
-        .float-btn.phone { background-color: var(--primary); border: none; }
-        .float-btn.phone:hover { background-color: #4f46e5; }
-        
-        .float-btn.email { background-color: #db2777; border: none; } /* Pink for email distinction */
-        .float-btn.email:hover { background-color: #be185d; }
-
-        /* Tooltip style */
         .float-btn .tooltip {
-            position: absolute; 
-            left: 70px; 
-            background: rgba(0,0,0,0.9); 
-            padding: 6px 12px; 
-            border-radius: 6px; 
-            font-size: 13px; 
-            white-space: nowrap; 
-            opacity: 0; 
-            pointer-events: none; 
-            transition: all 0.2s ease;
-            color: white;
-            font-weight: 600;
+            position: absolute; left: 60px; background: rgba(0,0,0,0.8); padding: 5px 10px; 
+            border-radius: 5px; font-size: 12px; white-space: nowrap; opacity: 0; pointer-events: none; transition: 0.2s;
         }
-        .float-btn:hover .tooltip { opacity: 1; left: 65px; }
+        .float-btn:hover .tooltip { opacity: 1; left: 55px; }
 
-        /* Animations */
-        @keyframes pulse-indigo { 
-            0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); } 
-            70% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); } 
-            100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); } 
-        }
-        .pulse-urgent { animation: pulse-indigo 2s infinite; }
-        
+        /* Sidebar Transition */
+        #sidebar { transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        #sidebar.active { right: 0 !important; }
+
         /* Modal Transitions */
         .modal { opacity: 0; visibility: hidden; transition: all 0.3s ease-in-out; }
         .modal.active { opacity: 1; visibility: visible; }
-        .modal .transform { transform: scale(0.95); transition: all 0.3s ease-in-out; }
-        .modal.active .transform { transform: scale(1); }
     </style>
 </head>
 <body class="selection:bg-indigo-600 selection:text-white">
 
-    <div class="bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-900 text-white text-center py-3 text-xs md:text-sm font-bold tracking-wide relative z-[60] shadow-lg border-b border-white/10">
-        <span>🔥 عرض الشركات الناشئة: استضافة ودومين مجاني مع باقة "المحترف" لفترة محدودة!</span>
+    <div class="relative bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-900 text-white text-center py-3 text-xs md:text-sm font-bold tracking-wide z-[60] shadow-lg border-b border-white/10">
+        <span>🔥 خصم خاص للشركات الناشئة: استضافة ودومين مجاني مع باقة "المحترف" لفترة محدودة!</span>
     </div>
 
-    <nav class="fixed top-12 w-full z-50 transition-all duration-300" id="navbar">
-        <div class="max-w-7xl mx-auto px-6">
-            <div class="backdrop-blur-md bg-black/70 border border-white/10 rounded-2xl py-3 px-6 flex justify-between items-center shadow-2xl">
-                <a href="/" class="flex items-center gap-2 group">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-lg shadow-lg group-hover:shadow-indigo-500/50 transition">
-                        <i class="fas fa-paint-brush"></i>
-                    </div>
-                    <span class="text-xl font-bold tracking-tight text-white group-hover:text-indigo-300 transition">24Seven <span class="text-indigo-500">Studio</span></span>
-                </a>
-                <a href="/" class="text-sm text-slate-300 hover:text-white transition flex items-center gap-2 bg-white/5 px-4 py-2 rounded-lg border border-white/5 hover:bg-white/10">
-                    <span class="hidden md:inline">العودة للرئيسية</span> <i class="fas fa-arrow-left"></i>
-                </a>
-            </div>
+    <nav class="fixed top-0 w-full z-50 transition-all duration-300 py-6" id="navbar">
+        <div class="max-w-7xl mx-auto px-6 flex justify-between items-center">
+            
+            <a href="/" class="flex items-center gap-2 group backdrop-blur-md bg-black/30 px-4 py-2 rounded-full border border-white/10">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-sm shadow-lg group-hover:shadow-indigo-500/50 transition">
+                    <i class="fas fa-paint-brush"></i>
+                </div>
+                <span class="text-lg font-bold tracking-tight text-white group-hover:text-indigo-300 transition">24Seven <span class="text-indigo-500">Studio</span></span>
+            </a>
+
+            <button onclick="toggleSidebar()" class="flex items-center gap-3 backdrop-blur-md bg-black/30 hover:bg-indigo-600/80 border border-white/10 hover:border-indigo-500 px-5 py-2.5 rounded-full transition-all duration-300 group">
+                <span class="text-sm font-bold text-white hidden md:block">القائمة</span>
+                <div class="space-y-1">
+                    <span class="block w-6 h-0.5 bg-white group-hover:w-4 transition-all duration-300 ml-auto"></span>
+                    <span class="block w-4 h-0.5 bg-white group-hover:w-6 transition-all duration-300 ml-auto"></span>
+                    <span class="block w-6 h-0.5 bg-white group-hover:w-4 transition-all duration-300 ml-auto"></span>
+                </div>
+            </button>
+
         </div>
     </nav>
+
+    <aside id="sidebar" class="fixed top-0 right-[-400px] w-[300px] md:w-[400px] h-full bg-[#0a0a0a]/95 backdrop-blur-xl border-l border-white/10 z-[100] p-8 flex flex-col shadow-2xl">
+        <div class="flex justify-between items-center mb-12">
+            <h2 class="text-2xl font-bold text-white">تصفح الموقع</h2>
+            <button onclick="toggleSidebar()" class="text-slate-400 hover:text-white bg-white/5 p-2 rounded-full transition hover:rotate-90">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        
+        <ul class="space-y-6 flex-1 text-lg">
+            <li><a href="/" class="text-slate-300 hover:text-white hover:translate-x-[-10px] transition block border-b border-white/5 pb-4"><i class="fas fa-home ml-3 text-indigo-500"></i> الرئيسية</a></li>
+            <li><a href="/web-design" class="text-white font-bold translate-x-[-10px] block border-b border-indigo-500 pb-4"><i class="fas fa-paint-brush ml-3 text-purple-500"></i> تصميم المواقع</a></li>
+            <li><a href="projects.html" class="text-slate-300 hover:text-white hover:translate-x-[-10px] transition block border-b border-white/5 pb-4"><i class="fas fa-layer-group ml-3 text-pink-500"></i> سابقة الأعمال</a></li>
+            <li><a href="/#founder" class="text-slate-300 hover:text-white hover:translate-x-[-10px] transition block border-b border-white/5 pb-4"><i class="fas fa-user-tie ml-3 text-blue-500"></i> المؤسس</a></li>
+            <li><button onclick="openRequestModal('General Inquiry'); toggleSidebar();" class="text-slate-300 hover:text-white hover:translate-x-[-10px] transition w-full text-right"><i class="fas fa-envelope ml-3 text-green-500"></i> تواصل معنا</button></li>
+        </ul>
+
+        <div class="pt-8 border-t border-white/10 text-center">
+            <p class="text-xs text-slate-500 font-mono">Alexandria, Egypt</p>
+            <p class="text-sm text-indigo-400 font-num mt-1">+20 112 174 8885</p>
+        </div>
+    </aside>
+    <div id="overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/80 z-[90] hidden opacity-0 transition-opacity duration-300"></div>
 
     <header class="pt-48 pb-20 px-6 text-center relative overflow-hidden min-h-[90vh] flex flex-col justify-center items-center">
         <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] -z-10 animate-pulse"></div>
         <div class="absolute bottom-0 right-0 w-[600px] h-[400px] bg-purple-600/5 rounded-full blur-[100px] -z-10"></div>
         
-        <span class="px-5 py-2 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-bold mb-8 inline-flex items-center gap-2 pulse-urgent backdrop-blur-sm">
-            <span class="w-2 h-2 rounded-full bg-indigo-500"></span> عروض محدودة الوقت
+        <span class="px-5 py-2 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-bold mb-8 inline-flex items-center gap-2 backdrop-blur-sm">
+            <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span> عروض محدودة الوقت
         </span>
 
         <h1 class="text-4xl md:text-7xl font-black mb-8 leading-tight">
@@ -430,7 +379,20 @@
     </div>
 
     <script>
-        // Modal Logic
+        // --- Sidebar Logic ---
+        function toggleSidebar() { 
+            const sidebar = document.getElementById('sidebar'); 
+            const overlay = document.getElementById('overlay'); 
+            if (sidebar.style.right === '0px') { 
+                sidebar.style.right = '-400px'; 
+                overlay.classList.remove('active'); 
+            } else { 
+                sidebar.style.right = '0px'; 
+                overlay.classList.add('active'); 
+            } 
+        }
+
+        // --- Modal Logic ---
         const modal = document.getElementById('requestModal');
         const planInput = document.getElementById('modalPlanInput');
 
@@ -444,8 +406,15 @@
             modal.classList.add('opacity-0', 'invisible');
             modal.classList.remove('active');
         }
+        
+        function closeAllModals() {
+            closeRequestModal();
+            const sidebar = document.getElementById('sidebar');
+            sidebar.style.right = '-400px';
+            document.getElementById('overlay').classList.remove('active');
+        }
 
-        // Countdown Timer Logic (Auto Reset every 3 days)
+        // --- Countdown Timer Logic ---
         function startTimer() {
             let endDate = new Date();
             endDate.setDate(endDate.getDate() + 3); 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مشاريعنا | 24Seven AI</title>
+    <title>مشاريعنا | 24Seven Studio</title>
     <meta name="description" content="Case Studies: Enterprise ERPs, AI Bots, and Smart Automation Systems by 24Seven AI.">
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -11,11 +11,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Outfit:wght@300;400;700&display=swap" rel="stylesheet">
     
     <style>
+        /* تعريف الألوان الموحدة مع الصفحة الرئيسية */
         :root {
-            --bg-dark: #0a0a0a;
+            --bg-dark: #050505;
             --card-bg: #121212;
-            --primary: #6366f1;
-            --accent: #8b5cf6;
+            --primary: #6366f1; /* Indigo */
+            --accent: #a855f7;  /* Purple */
             --text-main: #f3f4f6;
             --text-muted: #9ca3af;
         }
@@ -28,61 +29,118 @@
             scroll-behavior: smooth;
         }
 
-        html[lang="en"] body { font-family: 'Outfit', sans-serif; }
+        /* خط الأرقام */
+        .font-num { font-family: 'Outfit', sans-serif; }
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: var(--bg-dark); }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
-
-        /* Animations */
-        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
-        .animate-float { animation: float 6s ease-in-out infinite; }
+        /* تأثير الزجاج (Glassmorphism) */
+        .glass-card {
+            background: rgba(20, 20, 20, 0.7); 
+            border: 1px solid rgba(255,255,255,0.08);
+            backdrop-filter: blur(16px); 
+            border-radius: 20px; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card:hover { 
+            transform: translateY(-5px); 
+            border-color: var(--primary); 
+            box-shadow: 0 10px 40px rgba(99, 102, 241, 0.2); 
+        }
         
-        @keyframes pulse-glow { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
-        .glow-effect { animation: pulse-glow 3s infinite; }
+        .project-tag {
+            font-size: 0.7rem; 
+            font-weight: 700; 
+            padding: 4px 10px; 
+            border-radius: 99px; 
+            text-transform: uppercase; 
+            letter-spacing: 0.05em;
+        }
 
-        /* Sidebar & Overlay Fix */
-        #sidebar {
-            position: fixed; top: 0; right: -320px; width: 300px; height: 100%;
-            background: rgba(18, 18, 18, 0.98); backdrop-filter: blur(20px);
+        /* Sidebar Styling & Transition */
+        #sidebar { 
+            position: fixed; 
+            top: 0; 
+            right: -400px; /* مخفي في البداية */
+            width: 300px; 
+            height: 100%;
+            background: rgba(18, 18, 18, 0.98); 
+            backdrop-filter: blur(20px);
             border-left: 1px solid rgba(255,255,255,0.05);
             transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 2000; padding: 2rem; display: flex; flex-direction: column;
+            z-index: 2000; 
+            padding: 2rem; 
+            display: flex; 
+            flex-direction: column;
             box-shadow: -10px 0 30px rgba(0,0,0,0.8);
         }
-        #sidebar.active { right: 0; }
+        /* كلاس لتفعيل القائمة */
+        #sidebar.active { right: 0 !important; }
         
+        /* Overlay Styling */
         .overlay { 
-            position: fixed; inset: 0; background: rgba(0,0,0,0.8); 
-            z-index: 1500; opacity: 0; visibility: hidden; transition: 0.3s;
+            position: fixed; 
+            inset: 0; 
+            background: rgba(0,0,0,0.8); 
+            z-index: 1500; 
+            opacity: 0; 
+            visibility: hidden; 
+            transition: 0.3s;
             pointer-events: none;
         }
         .overlay.active { 
-            opacity: 1; visibility: visible; pointer-events: auto; 
+            opacity: 1; 
+            visibility: visible; 
+            pointer-events: auto; 
         }
 
-        /* Modal Transitions */
-        .modal {
-            opacity: 0; visibility: hidden; pointer-events: none; transition: 0.3s ease;
+        /* Modal Styling */
+        .modal { 
+            opacity: 0; 
+            visibility: hidden; 
+            transition: all 0.3s ease-in-out; 
             z-index: 3000;
         }
-        .modal.active {
-            opacity: 1; visibility: visible; pointer-events: auto;
+        .modal.active { 
+            opacity: 1; 
+            visibility: visible; 
         }
-
-        /* Utility Classes */
-        .glass-card {
-            background: var(--card-bg); border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 20px; transition: all 0.3s ease;
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
-        }
-        .glass-card:hover { transform: translateY(-5px); border-color: var(--primary); box-shadow: 0 10px 40px rgba(99, 102, 241, 0.2); }
         
-        .project-tag {
-            font-size: 0.7rem; font-weight: 700; padding: 4px 10px; border-radius: 99px; text-transform: uppercase; letter-spacing: 0.05em;
+        /* Floating Buttons Styling */
+        .floating-container { 
+            position: fixed; 
+            bottom: 30px; 
+            left: 30px; 
+            z-index: 90; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px; 
         }
+        .float-btn {
+            width: 50px; 
+            height: 50px; 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            color: white; 
+            font-size: 22px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); 
+            transition: 0.3s; 
+            position: relative;
+        }
+        .float-btn:hover { transform: scale(1.1); }
+        .float-btn .tooltip {
+            position: absolute; 
+            left: 60px; 
+            background: rgba(0,0,0,0.8); 
+            padding: 5px 10px; 
+            border-radius: 5px; 
+            font-size: 12px; 
+            white-space: nowrap; 
+            opacity: 0; 
+            pointer-events: none; 
+            transition: 0.2s;
+        }
+        .float-btn:hover .tooltip { opacity: 1; left: 55px; }
 
         /* Custom Select Styling */
         select option {
@@ -94,52 +152,65 @@
         .hidden-lang { display: none !important; }
     </style>
 </head>
-<body class="selection:bg-indigo-500 selection:text-white">
+<body class="selection:bg-indigo-600 selection:text-white">
 
     <div id="overlay" class="overlay" onclick="closeAllModals()"></div>
 
-    <aside id="sidebar">
-        <div class="flex justify-between items-center mb-10">
-            <h2 class="text-2xl font-bold text-white flex items-center gap-2">
-                <i class="fas fa-brain text-indigo-500"></i>
-                <span class="lang-ar">القائمة</span><span class="lang-en hidden-lang">Menu</span>
-            </h2>
-            <button onclick="toggleSidebar()" class="text-slate-400 hover:text-white bg-white/5 p-2 rounded-lg transition hover:bg-red-500/20 hover:text-red-400">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-        </div>
-        <ul class="space-y-6 flex-1">
-            <li><a href="/" class="flex items-center gap-3 text-slate-300 hover:text-indigo-400 text-lg transition"><i class="fas fa-home w-6"></i> <span class="lang-ar">الرئيسية</span><span class="lang-en hidden-lang">Home</span></a></li>
+    <nav class="fixed top-0 w-full z-50 transition-all duration-300 py-6" id="navbar">
+        <div class="max-w-7xl mx-auto px-6 flex justify-between items-center">
             
-            <li><a href="#" class="flex items-center gap-3 text-white text-lg border-r-4 border-indigo-500 pr-4 bg-white/5 py-2 rounded-l-lg"><i class="fas fa-layer-group w-6 text-indigo-400"></i> <span class="lang-ar">سابقة الأعمال</span><span class="lang-en hidden-lang">Portfolio</span></a></li>
-            
-            <li><a href="/#about" class="flex items-center gap-3 text-slate-300 hover:text-indigo-400 text-lg transition"><i class="fas fa-info-circle w-6"></i> <span class="lang-ar">عن الشركة</span><span class="lang-en hidden-lang">About Us</span></a></li>
-            <li><a href="/#founder" class="flex items-center gap-3 text-slate-300 hover:text-indigo-400 text-lg transition"><i class="fas fa-user-tie w-6"></i> <span class="lang-ar">المؤسس</span><span class="lang-en hidden-lang">Founder</span></a></li>
-            
-            <li><button onclick="openMsgModal('General Inquiry'); toggleSidebar();" class="flex items-center gap-3 text-slate-300 hover:text-indigo-400 text-lg transition w-full text-right ltr:text-left"><i class="fas fa-envelope w-6"></i> <span class="font-mono">Contact Us</span></button></li>
-        </ul>
-        <div class="pt-6 border-t border-white/10 text-center">
-            <p class="text-xs text-slate-500 mb-2">Alexandria, Egypt</p>
-            <p class="text-xs text-slate-500 font-mono">+20 112 174 8885</p>
-        </div>
-    </aside>
+            <a href="/" class="flex items-center gap-2 group backdrop-blur-md bg-black/30 px-4 py-2 rounded-full border border-white/10">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-sm shadow-lg group-hover:shadow-indigo-500/50 transition">
+                    <i class="fas fa-layer-group"></i>
+                </div>
+                <span class="text-lg font-bold tracking-tight text-white group-hover:text-indigo-300 transition">24Seven <span class="text-indigo-500">Studio</span></span>
+            </a>
 
-    <nav class="fixed top-0 w-full z-50 backdrop-blur-md border-b border-white/5 py-4 px-6 flex justify-between items-center bg-black/60">
-        <a href="/" class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-xl shadow-lg glow-effect">
-                <i class="fas fa-brain"></i>
+            <div class="flex items-center gap-3">
+                 <button onclick="toggleLang()" class="flex items-center gap-2 px-3 py-2 bg-black/30 hover:bg-black/50 border border-white/10 hover:border-indigo-500 rounded-full text-slate-300 hover:text-white transition text-xs font-bold backdrop-blur-md">
+                    <i class="fas fa-globe"></i> <span id="lang-label-nav">English</span>
+                </button>
+
+                <button onclick="toggleSidebar()" class="flex items-center gap-3 backdrop-blur-md bg-black/30 hover:bg-indigo-600/80 border border-white/10 hover:border-indigo-500 px-5 py-2.5 rounded-full transition-all duration-300 group">
+                    <span class="text-sm font-bold text-white hidden md:block"><span class="lang-ar">القائمة</span><span class="lang-en hidden-lang">Menu</span></span>
+                    <div class="space-y-1">
+                        <span class="block w-6 h-0.5 bg-white group-hover:w-4 transition-all duration-300 ml-auto"></span>
+                        <span class="block w-4 h-0.5 bg-white group-hover:w-6 transition-all duration-300 ml-auto"></span>
+                        <span class="block w-6 h-0.5 bg-white group-hover:w-4 transition-all duration-300 ml-auto"></span>
+                    </div>
+                </button>
             </div>
-            <span class="text-xl font-bold tracking-tight text-white">24Seven<span class="text-indigo-400">.ai</span></span>
-        </a>
-        <div class="flex items-center gap-3">
-            <button onclick="toggleLang()" class="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-slate-300 hover:text-white transition text-sm font-bold">
-                <i class="fas fa-globe"></i> <span id="lang-label-nav">English</span>
-            </button>
-            <button onclick="toggleSidebar()" class="p-2 text-white text-2xl hover:text-indigo-400 transition"><i class="fas fa-bars"></i></button>
+
         </div>
     </nav>
 
-    <header class="pt-36 pb-16 px-6 text-center relative overflow-hidden">
+    <aside id="sidebar">
+        <div class="flex justify-between items-center mb-12">
+            <h2 class="text-2xl font-bold text-white"><span class="lang-ar">تصفح الموقع</span><span class="lang-en hidden-lang">Navigate</span></h2>
+            <button onclick="toggleSidebar()" class="text-slate-400 hover:text-white bg-white/5 p-2 rounded-full transition hover:rotate-90">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        
+        <ul class="space-y-6 flex-1 text-lg">
+            <li><a href="/" class="text-slate-300 hover:text-white hover:translate-x-[-10px] transition block border-b border-white/5 pb-4 flex items-center gap-3"><i class="fas fa-home ml-3 text-indigo-500"></i> <span class="lang-ar">الرئيسية</span><span class="lang-en hidden-lang">Home</span></a></li>
+            
+            <li><a href="/web-design" class="text-slate-300 hover:text-white hover:translate-x-[-10px] transition block border-b border-white/5 pb-4 flex items-center gap-3"><i class="fas fa-paint-brush ml-3 text-purple-500"></i> <span class="lang-ar">تصميم المواقع</span><span class="lang-en hidden-lang">Web Design</span></a></li>
+            
+            <li><a href="#" class="text-white font-bold translate-x-[-10px] block border-b border-indigo-500 pb-4 flex items-center gap-3"><i class="fas fa-layer-group ml-3 text-pink-500"></i> <span class="lang-ar">سابقة الأعمال</span><span class="lang-en hidden-lang">Portfolio</span></a></li>
+            
+            <li><a href="/#founder" class="text-slate-300 hover:text-white hover:translate-x-[-10px] transition block border-b border-white/5 pb-4 flex items-center gap-3"><i class="fas fa-user-tie ml-3 text-blue-500"></i> <span class="lang-ar">المؤسس</span><span class="lang-en hidden-lang">Founder</span></a></li>
+            
+            <li><button onclick="openMsgModal('General Inquiry'); toggleSidebar();" class="text-slate-300 hover:text-white hover:translate-x-[-10px] transition w-full text-right flex items-center gap-3"><i class="fas fa-envelope ml-3 text-green-500"></i> <span class="lang-ar">تواصل معنا</span><span class="lang-en hidden-lang">Contact Us</span></button></li>
+        </ul>
+
+        <div class="pt-8 border-t border-white/10 text-center">
+            <p class="text-xs text-slate-500 font-mono">Alexandria, Egypt</p>
+            <p class="text-sm text-indigo-400 font-num mt-1">+20 112 174 8885</p>
+        </div>
+    </aside>
+
+    <header class="pt-40 pb-16 px-6 text-center relative overflow-hidden">
         <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-gradient-to-b from-indigo-900/10 to-transparent -z-10"></div>
         <span class="px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-bold mb-6 inline-block">
             PORTFOLIO & CASE STUDIES
@@ -175,7 +246,7 @@
                             <span class="px-2 py-1 bg-white/5 rounded">Node.js</span>
                             <span class="px-2 py-1 bg-white/5 rounded">Supabase</span>
                         </div>
-                        <button onclick="openMsgModal('Omni-Channel ERP')" class="text-indigo-400 hover:text-white font-bold text-sm transition"><span class="lang-ar">طلب ديمو</span><span class="lang-en hidden-lang">Request Demo</span> <i class="fas fa-arrow-left rtl:rotate-0 ltr:rotate-180"></i></button>
+                        <button onclick="openMsgModal('Omni-Channel ERP')" class="text-indigo-400 hover:text-white font-bold text-sm transition flex items-center gap-2"><span class="lang-ar">طلب ديمو</span><span class="lang-en hidden-lang">Request Demo</span> <i class="fas fa-arrow-left rtl:rotate-0 ltr:rotate-180"></i></button>
                     </div>
                 </div>
             </div>
@@ -198,35 +269,12 @@
                             <span class="px-2 py-1 bg-white/5 rounded">Python</span>
                             <span class="px-2 py-1 bg-white/5 rounded">Selenium</span>
                         </div>
-                        <button onclick="openMsgModal('Sales Intelligence')" class="text-indigo-400 hover:text-white font-bold text-sm transition"><span class="lang-ar">طلب هذا النظام</span><span class="lang-en hidden-lang">Request System</span> <i class="fas fa-arrow-left rtl:rotate-0 ltr:rotate-180"></i></button>
+                        <button onclick="openMsgModal('Sales Intelligence')" class="text-indigo-400 hover:text-white font-bold text-sm transition flex items-center gap-2"><span class="lang-ar">طلب النظام</span><span class="lang-en hidden-lang">Request System</span> <i class="fas fa-arrow-left rtl:rotate-0 ltr:rotate-180"></i></button>
                     </div>
                 </div>
             </div>
 
             <div class="glass-card p-0 overflow-hidden group flex flex-col md:flex-row">
-                <div class="md:w-2/5 bg-slate-800 relative min-h-[300px]">
-                    <img src="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=2070&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition duration-700">
-                    <div class="absolute bottom-0 left-0 p-6 bg-gradient-to-t from-black/90 to-transparent w-full">
-                        <span class="project-tag bg-red-600 text-white">Advanced Automation</span>
-                    </div>
-                </div>
-                <div class="p-8 md:w-3/5 flex flex-col justify-center">
-                    <h3 class="text-2xl font-bold mb-4 text-white">FireWall Breaker (Cloudflare Bypass)</h3>
-                    <div class="space-y-4 text-sm text-slate-300">
-                        <p><strong class="text-white"><span class="lang-ar">المشكلة:</span><span class="lang-en hidden-lang">Problem:</span></strong> <span class="lang-ar">توقف البوتات بسبب حماية Cloudflare.</span><span class="lang-en hidden-lang">Bots blocked by Cloudflare protection.</span></p>
-                        <p><strong class="text-white"><span class="lang-ar">الحل:</span><span class="lang-en hidden-lang">Solution:</span></strong> <span class="lang-ar">محاكاة السلوك البشري لتخطي الكابتشا بذكاء.</span><span class="lang-en hidden-lang">Human behavior simulation to bypass captcha.</span></p>
-                    </div>
-                    <div class="mt-6 pt-6 border-t border-white/10 flex items-center justify-between">
-                        <div class="flex gap-2 text-xs text-slate-400">
-                            <span class="px-2 py-1 bg-white/5 rounded">Python</span>
-                            <span class="px-2 py-1 bg-white/5 rounded">Anti-Detect</span>
-                        </div>
-                        <button onclick="openMsgModal('Cloudflare Bypass')" class="text-indigo-400 hover:text-white font-bold text-sm transition"><span class="lang-ar">طلب السكربت</span><span class="lang-en hidden-lang">Request Script</span> <i class="fas fa-arrow-left rtl:rotate-0 ltr:rotate-180"></i></button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="glass-card p-0 overflow-hidden group flex flex-col md:flex-row-reverse">
                 <div class="md:w-2/5 bg-slate-800 relative min-h-[300px]">
                     <img src="https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&q=80&w=800" class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition duration-700">
                     <div class="absolute bottom-0 left-0 p-6 bg-gradient-to-t from-black/90 to-transparent w-full">
@@ -244,99 +292,7 @@
                             <span class="px-2 py-1 bg-white/5 rounded">Telegram API</span>
                             <span class="px-2 py-1 bg-white/5 rounded">GAS</span>
                         </div>
-                        <button onclick="openMsgModal('Fleet Commander')" class="text-indigo-400 hover:text-white font-bold text-sm transition"><span class="lang-ar">طلب النظام</span><span class="lang-en hidden-lang">Request System</span> <i class="fas fa-arrow-left rtl:rotate-0 ltr:rotate-180"></i></button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="glass-card p-0 overflow-hidden group flex flex-col md:flex-row">
-                <div class="md:w-2/5 bg-slate-800 relative min-h-[300px]">
-                    <img src="https://images.unsplash.com/photo-1556906781-9a412961c28c?auto=format&fit=crop&q=80&w=800" class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition duration-700">
-                    <div class="absolute bottom-0 left-0 p-6 bg-gradient-to-t from-black/90 to-transparent w-full">
-                        <span class="project-tag bg-red-500 text-white">Inventory Intelligence</span>
-                    </div>
-                </div>
-                <div class="p-8 md:w-3/5 flex flex-col justify-center">
-                    <h3 class="text-2xl font-bold mb-4 text-white">E-commerce Inventory Sniper</h3>
-                    <div class="space-y-4 text-sm text-slate-300">
-                        <p><strong class="text-white"><span class="lang-ar">المشكلة:</span><span class="lang-en hidden-lang">Problem:</span></strong> <span class="lang-ar">عدم معرفة المخزون المتوفر لدى المنافسين بدقة.</span><span class="lang-en hidden-lang">Unknown competitor inventory levels.</span></p>
-                        <p><strong class="text-white"><span class="lang-ar">الحل:</span><span class="lang-en hidden-lang">Solution:</span></strong> <span class="lang-ar">بوت يسحب خريطة المخزون لكل مقاس من المواقع العالمية.</span><span class="lang-en hidden-lang">Bot scraping granular stock maps from global sites.</span></p>
-                    </div>
-                    <div class="mt-6 pt-6 border-t border-white/10 flex items-center justify-between">
-                        <div class="flex gap-2 text-xs text-slate-400">
-                            <span class="px-2 py-1 bg-white/5 rounded">Python</span>
-                            <span class="px-2 py-1 bg-white/5 rounded">Scraping</span>
-                        </div>
-                        <button onclick="openMsgModal('Inventory Sniper')" class="text-indigo-400 hover:text-white font-bold text-sm transition"><span class="lang-ar">طلب الأداة</span><span class="lang-en hidden-lang">Request Tool</span> <i class="fas fa-arrow-left rtl:rotate-0 ltr:rotate-180"></i></button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="glass-card p-0 overflow-hidden group flex flex-col md:flex-row-reverse">
-                <div class="md:w-2/5 bg-slate-800 relative min-h-[300px]">
-                    <img src="https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&q=80&w=800" class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition duration-700">
-                    <div class="absolute bottom-0 left-0 p-6 bg-gradient-to-t from-black/90 to-transparent w-full">
-                        <span class="project-tag bg-green-600 text-white">Social Listening</span>
-                    </div>
-                </div>
-                <div class="p-8 md:w-3/5 flex flex-col justify-center">
-                    <h3 class="text-2xl font-bold mb-4 text-white">Social Community Hunters</h3>
-                    <div class="space-y-4 text-sm text-slate-300">
-                        <p><strong class="text-white"><span class="lang-ar">المشكلة:</span><span class="lang-en hidden-lang">Problem:</span></strong> <span class="lang-ar">ضياع فرص البيع وسط ضوضاء الجروبات.</span><span class="lang-en hidden-lang">Missing sales leads in noisy groups.</span></p>
-                        <p><strong class="text-white"><span class="lang-ar">الحل:</span><span class="lang-en hidden-lang">Solution:</span></strong> <span class="lang-ar">رادارات تراقب الكلمات المفتاحية وترسل تنبيهات فورية.</span><span class="lang-en hidden-lang">Real-time radars alerting on specific keywords.</span></p>
-                    </div>
-                    <div class="mt-6 pt-6 border-t border-white/10 flex items-center justify-between">
-                        <div class="flex gap-2 text-xs text-slate-400">
-                            <span class="px-2 py-1 bg-white/5 rounded">Puppeteer</span>
-                            <span class="px-2 py-1 bg-white/5 rounded">Socket.io</span>
-                        </div>
-                        <button onclick="openMsgModal('Social Hunter')" class="text-indigo-400 hover:text-white font-bold text-sm transition"><span class="lang-ar">طلب البوت</span><span class="lang-en hidden-lang">Request Bot</span> <i class="fas fa-arrow-left rtl:rotate-0 ltr:rotate-180"></i></button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="glass-card p-0 overflow-hidden group flex flex-col md:flex-row">
-                <div class="md:w-2/5 bg-slate-800 relative min-h-[300px]">
-                    <img src="https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&q=80&w=800" class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition duration-700">
-                    <div class="absolute bottom-0 left-0 p-6 bg-gradient-to-t from-black/90 to-transparent w-full">
-                        <span class="project-tag bg-teal-500 text-white">Sales Automation</span>
-                    </div>
-                </div>
-                <div class="p-8 md:w-3/5 flex flex-col justify-center">
-                    <h3 class="text-2xl font-bold mb-4 text-white">Interactive Sales Agent</h3>
-                    <div class="space-y-4 text-sm text-slate-300">
-                        <p><strong class="text-white"><span class="lang-ar">المشكلة:</span><span class="lang-en hidden-lang">Problem:</span></strong> <span class="lang-ar">إضاعة الوقت في الإجابة على الأسئلة المتكررة.</span><span class="lang-en hidden-lang">Wasting time on repetitive FAQs.</span></p>
-                        <p><strong class="text-white"><span class="lang-ar">الحل:</span><span class="lang-en hidden-lang">Solution:</span></strong> <span class="lang-ar">بوت ذكي يشرح المنتج، يحسب التوفير، ويغلق الصفقة.</span><span class="lang-en hidden-lang">Smart bot explaining products & closing deals.</span></p>
-                    </div>
-                    <div class="mt-6 pt-6 border-t border-white/10 flex items-center justify-between">
-                        <div class="flex gap-2 text-xs text-slate-400">
-                            <span class="px-2 py-1 bg-white/5 rounded">Funnel</span>
-                            <span class="px-2 py-1 bg-white/5 rounded">ROI Calc</span>
-                        </div>
-                        <button onclick="openMsgModal('Sales Agent Bot')" class="text-indigo-400 hover:text-white font-bold text-sm transition"><span class="lang-ar">طلب البوت</span><span class="lang-en hidden-lang">Request Bot</span> <i class="fas fa-arrow-left rtl:rotate-0 ltr:rotate-180"></i></button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="glass-card p-0 overflow-hidden group flex flex-col md:flex-row-reverse">
-                <div class="md:w-2/5 bg-slate-800 relative min-h-[300px]">
-                    <img src="https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition duration-700">
-                    <div class="absolute bottom-0 left-0 p-6 bg-gradient-to-t from-black/90 to-transparent w-full">
-                        <span class="project-tag bg-orange-600 text-white">IoT Security</span>
-                    </div>
-                </div>
-                <div class="p-8 md:w-3/5 flex flex-col justify-center">
-                    <h3 class="text-2xl font-bold mb-4 text-white">Viber Cloud Security</h3>
-                    <div class="space-y-4 text-sm text-slate-300">
-                        <p><strong class="text-white"><span class="lang-ar">المشكلة:</span><span class="lang-en hidden-lang">Problem:</span></strong> <span class="lang-ar">التحكم اليدوي في بوابات الأمن وغياب الرقابة.</span><span class="lang-en hidden-lang">Manual gate control & lack of monitoring.</span></p>
-                        <p><strong class="text-white"><span class="lang-ar">الحل:</span><span class="lang-en hidden-lang">Solution:</span></strong> <span class="lang-ar">نظام IoT يربط البوابات بالسحابة للتحكم والتسجيل اللحظي.</span><span class="lang-en hidden-lang">IoT system linking gates to cloud for remote control.</span></p>
-                    </div>
-                    <div class="mt-6 pt-6 border-t border-white/10 flex items-center justify-between">
-                        <div class="flex gap-2 text-xs text-slate-400">
-                            <span class="px-2 py-1 bg-white/5 rounded">IoT</span>
-                            <span class="px-2 py-1 bg-white/5 rounded">Cloud</span>
-                        </div>
-                        <button onclick="openMsgModal('IoT Security')" class="text-indigo-400 hover:text-white font-bold text-sm transition"><span class="lang-ar">طلب النظام</span><span class="lang-en hidden-lang">Request System</span> <i class="fas fa-arrow-left rtl:rotate-0 ltr:rotate-180"></i></button>
+                        <button onclick="openMsgModal('Fleet Commander')" class="text-indigo-400 hover:text-white font-bold text-sm transition flex items-center gap-2"><span class="lang-ar">طلب البوت</span><span class="lang-en hidden-lang">Request Bot</span> <i class="fas fa-arrow-left rtl:rotate-0 ltr:rotate-180"></i></button>
                     </div>
                 </div>
             </div>
@@ -364,8 +320,23 @@
         <p>© 2026 24Seven AI. All rights reserved.</p>
     </footer>
 
+    <div class="floating-container">
+        <a href="https://wa.me/201121748885" target="_blank" class="float-btn bg-[#25d366] hover:bg-[#1ebc57]">
+            <i class="fab fa-whatsapp"></i>
+            <span class="tooltip">واتساب</span>
+        </a>
+        <a href="tel:+201121748885" class="float-btn bg-indigo-600 hover:bg-indigo-500">
+            <i class="fas fa-phone-alt text-lg"></i>
+            <span class="tooltip">اتصال</span>
+        </a>
+        <a href="mailto:info@24sevenAi.com" class="float-btn bg-pink-600 hover:bg-pink-500">
+            <i class="fas fa-envelope text-lg"></i>
+            <span class="tooltip">إيميل</span>
+        </a>
+    </div>
+
     <div id="msgModal" class="modal fixed inset-0 z-[3000] flex items-center justify-center p-4">
-        <div class="glass-card w-full max-w-2xl p-8 relative transform transition-all scale-100 bg-[#121212] border border-white/10 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div class="glass-card w-full max-w-2xl p-8 relative transform scale-95 transition-all bg-[#121212] border border-white/10 shadow-2xl">
             <button onclick="closeAllModals()" class="absolute top-4 right-4 text-slate-400 hover:text-white bg-white/5 p-2 rounded-lg"><i class="fas fa-times text-xl"></i></button>
             <div class="text-center mb-8">
                 <h3 class="text-2xl font-bold mb-2 text-white">
@@ -373,7 +344,7 @@
                     <span class="lang-en hidden-lang">Book a Consultation</span>
                 </h3>
                 <p class="text-sm text-slate-400">
-                    <span class="lang-ar">املأ النموذج أدناه لبدء مناقشة مشروعك.</span>
+                    <span class="lang-ar">املأ النموذج أدناه وسنتواصل معك.</span>
                     <span class="lang-en hidden-lang">Fill in the form below to start discussing your project.</span>
                 </p>
             </div>
@@ -458,21 +429,39 @@
     </div>
 
     <script>
+        // --- 1. Sidebar Logic (للقائمة الجانبية) ---
+        function toggleSidebar() { 
+            const sidebar = document.getElementById('sidebar'); 
+            const overlay = document.getElementById('overlay'); 
+            // المنطق القديم كان يستخدم right: -320px، تم تحديثه ليتناسب مع التصميم الجديد
+            if (sidebar.classList.contains('active')) { 
+                sidebar.classList.remove('active'); 
+                overlay.classList.remove('active'); 
+            } else { 
+                sidebar.classList.add('active'); 
+                overlay.classList.add('active'); 
+            } 
+        }
+
+        // --- 2. Modal Logic (للنوافذ المنبثقة) ---
         function closeAllModals() { 
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('active')); 
-            document.getElementById('overlay').classList.remove('active'); 
-            document.getElementById('sidebar').classList.remove('active'); 
+            const overlay = document.getElementById('overlay');
+            const sidebar = document.getElementById('sidebar');
+            overlay.classList.remove('active');
+            sidebar.classList.remove('active');
         }
         
         function openMsgModal(projectName = '') { 
-            closeAllModals();
+            closeAllModals(); // أغلق أي نافذة مفتوحة أولاً
+            
             setTimeout(() => {
                 const modal = document.getElementById('msgModal');
                 const overlay = document.getElementById('overlay');
                 const msgInput = document.getElementById('formMessage');
                 const subjectInput = document.getElementById('formSubject');
 
-                // Auto-fill content based on click
+                // التعبئة التلقائية للبيانات (Auto-fill)
                 if (projectName && projectName !== 'General Inquiry') {
                     subjectInput.value = `Project Inquiry: ${projectName} (Source: Projects Page)`;
                     msgInput.value = `مرحباً، أنا مهتم بمشروع "${projectName}" وأود معرفة التفاصيل والسعر.\n\nHello, I am interested in "${projectName}" project...`;
@@ -486,18 +475,7 @@
             }, 100);
         }
         
-        function toggleSidebar() { 
-            const sidebar = document.getElementById('sidebar'); 
-            const overlay = document.getElementById('overlay'); 
-            if (sidebar.classList.contains('active')) { 
-                sidebar.classList.remove('active'); 
-                overlay.classList.remove('active'); 
-            } else { 
-                sidebar.classList.add('active'); 
-                overlay.classList.add('active'); 
-            } 
-        }
-        
+        // --- 3. Language Toggle Logic (للتبديل بين اللغات) ---
         function toggleLang() {
             const html = document.documentElement;
             const currentLang = html.getAttribute('lang');
