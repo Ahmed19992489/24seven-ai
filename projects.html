@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مشاريعنا | 24Seven AI</title>
+    <meta name="description" content="Case Studies: Enterprise ERPs, AI Bots, and Smart Automation Systems by 24Seven AI.">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Outfit:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-dark: #0a0a0a;
+            --card-bg: #121212;
+            --primary: #6366f1;
+            --accent: #8b5cf6;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+        }
+
+        body { 
+            font-family: 'Cairo', sans-serif; 
+            background-color: var(--bg-dark); 
+            color: var(--text-main); 
+            overflow-x: hidden; 
+            scroll-behavior: smooth;
+        }
+
+        html[lang="en"] body { font-family: 'Outfit', sans-serif; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+        /* Animations */
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
+        .animate-float { animation: float 6s ease-in-out infinite; }
+        
+        @keyframes pulse-glow { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+        .glow-effect { animation: pulse-glow 3s infinite; }
+
+        /* Sidebar & Overlay Fix */
+        #sidebar {
+            position: fixed; top: 0; right: -320px; width: 300px; height: 100%;
+            background: rgba(18, 18, 18, 0.98); backdrop-filter: blur(20px);
+            border-left: 1px solid rgba(255,255,255,0.05);
+            transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 2000; padding: 2rem; display: flex; flex-direction: column;
+            box-shadow: -10px 0 30px rgba(0,0,0,0.8);
+        }
+        #sidebar.active { right: 0; }
+        
+        .overlay { 
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8); 
+            z-index: 1500; opacity: 0; visibility: hidden; transition: 0.3s;
+            pointer-events: none;
+        }
+        .overlay.active { 
+            opacity: 1; visibility: visible; pointer-events: auto; 
+        }
+
+        /* Modal Transitions */
+        .modal {
+            opacity: 0; visibility: hidden; pointer-events: none; transition: 0.3s ease;
+            z-index: 3000;
+        }
+        .modal.active {
+            opacity: 1; visibility: visible; pointer-events: auto;
+        }
+
+        /* Utility Classes */
+        .glass-card {
+            background: var(--card-bg); border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 20px; transition: all 0.3s ease;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+        .glass-card:hover { transform: translateY(-5px); border-color: var(--primary); box-shadow: 0 10px 40px rgba(99, 102, 241, 0.2); }
+        
+        .project-tag {
+            font-size: 0.7rem; font-weight: 700; padding: 4px 10px; border-radius: 99px; text-transform: uppercase; letter-spacing: 0.05em;
+        }
+
+        /* Custom Select Styling */
+        select option {
+            background-color: #171717;
+            color: white;
+            padding: 10px;
+        }
+
+        .hidden-lang { display: none !important; }
+    </style>
+</head>
+<body class="selection:bg-indigo-500 selection:text-white">
+
+    <div id="overlay" class="overlay" onclick="closeAllModals()"></div>
+
+    <aside id="sidebar">
+        <div class="flex justify-between items-center mb-10">
+            <h2 class="text-2xl font-bold text-white flex items-center gap-2">
+                <i class="fas fa-brain text-indigo-500"></i>
+                <span class="lang-ar">القائمة</span><span class="lang-en hidden-lang">Menu</span>
+            </h2>
+            <button onclick="toggleSidebar()" class="text-slate-400 hover:text-white bg-white/5 p-2 rounded-lg transition hover:bg-red-500/20 hover:text-red-400">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <ul class="space-y-6 flex-1">
+            <li><a href="/" class="flex items-center gap-3 text-slate-300 hover:text-indigo-400 text-lg transition"><i class="fas fa-home w-6"></i> <span class="lang-ar">الرئيسية</span><span class="lang-en hidden-lang">Home</span></a></li>
+            
+            <li><a href="#" class="flex items-center gap-3 text-white text-lg border-r-4 border-indigo-500 pr-4 bg-white/5 py-2 rounded-l-lg"><i class="fas fa-layer-group w-6 text-indigo-400"></i> <span class="lang-ar">سابقة الأعمال</span><span class="lang-en hidden-lang">Portfolio</span></a></li>
+            
+            <li><a href="/#about" class="flex items-center gap-3 text-slate-300 hover:text-indigo-400 text-lg transition"><i class="fas fa-info-circle w-6"></i> <span class="lang-ar">عن الشركة</span><span class="lang-en hidden-lang">About Us</span></a></li>
+            <li><a href="/#founder" class="flex items-center gap-3 text-slate-300 hover:text-indigo-400 text-lg transition"><i class="fas fa-user-tie w-6"></i> <span class="lang-ar">المؤسس</span><span class="lang-en hidden-lang">Founder</span></a></li>
+            
+            <li><button onclick="openMsgModal('General Inquiry'); toggleSidebar();" class="flex items-center gap-3 text-slate-300 hover:text-indigo-400 text-lg transition w-full text-right ltr:text-left"><i class="fas fa-envelope w-6"></i> <span class="font-mono">Contact Us</span></button></li>
+        </ul>
+        <div class="pt-6 border-t border-white/10 text-center">
+            <p class="text-xs text-slate-500 mb-2">Alexandria, Egypt</p>
+            <p class="text-xs text-slate-500 font-mono">+20 112 174 8885</p>
+        </div>
+    </aside>
+
+    <nav class="fixed top-0 w-full z-50 backdrop-blur-md border-b border-white/5 py-4 px-6 flex justify-between items-center bg-black/60">
+        <a href="/" class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-xl shadow-lg glow-effect">
+                <i class="fas fa-brain"></i>
+            </div>
+            <span class="text-xl font-bold tracking-tight text-white">24Seven<span class="text-indigo-400">.ai</span></span>
+        </a>
+        <div class="flex items-center gap-3">
+            <button onclick="toggleLang()" class="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-slate-300 hover:text-white transition text-sm font-bold">
+                <i class="fas fa-globe"></i> <span id="lang-label-nav">English</span>
+            </button>
+            <button onclick="toggleSidebar()" class="p-2 text-white text-2xl hover:text-indigo-400 transition"><i class="fas fa-bars"></i></button>
+        </div>
+    </nav>
+
+    <header class="pt-36 pb-16 px-6 text-center relative overflow-hidden">
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-gradient-to-b from-indigo-900/10 to-transparent -z-10"></div>
+        <span class="px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-bold mb-6 inline-block">
+            PORTFOLIO & CASE STUDIES
+        </span>
+        <h1 class="text-4xl md:text-6xl font-black mb-6">
+            <span class="lang-ar">سابقة <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">الأعمال</span></span>
+            <span class="lang-en hidden-lang">Our <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Portfolio</span></span>
+        </h1>
+        <p class="text-slate-400 max-w-3xl mx-auto text-lg leading-relaxed">
+            <span class="lang-ar">دراسات حالة لمشاريع حقيقية قمنا ببنائها من الصفر. من أتمتة المبيعات إلى أنظمة إدارة الأساطيل المعقدة.</span>
+            <span class="lang-en hidden-lang">Real-world case studies built from scratch. From sales automation to complex fleet management systems.</span>
+        </p>
+    </header>
+
+    <section class="pb-24 px-6">
+        <div class="max-w-7xl mx-auto grid grid-cols-1 gap-12">
+
+            <div class="glass-card p-0 overflow-hidden group flex flex-col md:flex-row">
+                <div class="md:w-2/5 bg-slate-800 relative min-h-[300px]">
+                    <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=2426&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition duration-700">
+                    <div class="absolute bottom-0 left-0 p-6 bg-gradient-to-t from-black/90 to-transparent w-full">
+                        <span class="project-tag bg-purple-500 text-white">Enterprise System</span>
+                    </div>
+                </div>
+                <div class="p-8 md:w-3/5 flex flex-col justify-center">
+                    <h3 class="text-2xl font-bold mb-4 text-white">Omni-Channel Limo ERP</h3>
+                    <div class="space-y-4 text-sm text-slate-300">
+                        <p><strong class="text-white"><span class="lang-ar">المشكلة:</span><span class="lang-en hidden-lang">Problem:</span></strong> <span class="lang-ar">تشتت الحجوزات بين القنوات وضياع الرحلات.</span><span class="lang-en hidden-lang">Scattered bookings and lost trips across channels.</span></p>
+                        <p><strong class="text-white"><span class="lang-ar">الحل:</span><span class="lang-en hidden-lang">Solution:</span></strong> <span class="lang-ar">نظام مركزي يربط واتساب/ماسنجر بلوحة تحكم واحدة.</span><span class="lang-en hidden-lang">Centralized dashboard unifying WhatsApp/Messenger.</span></p>
+                    </div>
+                    <div class="mt-6 pt-6 border-t border-white/10 flex items-center justify-between">
+                        <div class="flex gap-2 text-xs text-slate-400">
+                            <span class="px-2 py-1 bg-white/5 rounded">Node.js</span>
+                            <span class="px-2 py-1 bg-white/5 rounded">Supabase</span>
+                        </div>
+                        <button onclick="openMsgModal('Omni-Channel ERP')" class="text-indigo-400 hover:text-white font-bold text-sm transition"><span class="lang-ar">طلب ديمو</span><span class="lang-en hidden-lang">Request Demo</span> <i class="fas fa-arrow-left rtl:rotate-0 ltr:rotate-180"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card p-0 overflow-hidden group flex flex-col md:flex-row-reverse">
+                <div class="md:w-2/5 bg-slate-800 relative min-h-[300px]">
+                    <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=800" class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition duration-700">
+                    <div class="absolute bottom-0 left-0 p-6 bg-gradient-to-t from-black/90 to-transparent w-full">
+                        <span class="project-tag bg-blue-500 text-white">Data Intelligence</span>
+                    </div>
+                </div>
+                <div class="p-8 md:w-3/5 flex flex-col justify-center">
+                    <h3 class="text-2xl font-bold mb-4 text-white">Sales Intelligence Ecosystem</h3>
+                    <div class="space-y-4 text-sm text-slate-300">
+                        <p><strong class="text-white"><span class="lang-ar">المشكلة:</span><span class="lang-en hidden-lang">Problem:</span></strong> <span class="lang-ar">صعوبة الوصول لصناع القرار يدوياً.</span><span class="lang-en hidden-lang">Hard to reach decision makers manually.</span></p>
+                        <p><strong class="text-white"><span class="lang-ar">الحل:</span><span class="lang-en hidden-lang">Solution:</span></strong> <span class="lang-ar">خط إنتاج بيانات (Google Maps + LinkedIn) آلي.</span><span class="lang-en hidden-lang">Automated data pipeline (Google Maps + LinkedIn).</span></p>
+                    </div>
+                    <div class="mt-6 pt-6 border-t border-white/10 flex items-center justify-between">
+                        <div class="flex gap-2 text-xs text-slate-400">
+                            <span class="px-2 py-1 bg-white/5 rounded">Python</span>
+                            <span class="px-2 py-1 bg-white/5 rounded">Selenium</span>
+                        </div>
+                        <button onclick="openMsgModal('Sales Intelligence')" class="text-indigo-400 hover:text-white font-bold text-sm transition"><span class="lang-ar">طلب هذا النظام</span><span class="lang-en hidden-lang">Request System</span> <i class="fas fa-arrow-left rtl:rotate-0 ltr:rotate-180"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card p-0 overflow-hidden group flex flex-col md:flex-row">
+                <div class="md:w-2/5 bg-slate-800 relative min-h-[300px]">
+                    <img src="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=2070&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition duration-700">
+                    <div class="absolute bottom-0 left-0 p-6 bg-gradient-to-t from-black/90 to-transparent w-full">
+                        <span class="project-tag bg-red-600 text-white">Advanced Automation</span>
+                    </div>
+                </div>
+                <div class="p-8 md:w-3/5 flex flex-col justify-center">
+                    <h3 class="text-2xl font-bold mb-4 text-white">FireWall Breaker (Cloudflare Bypass)</h3>
+                    <div class="space-y-4 text-sm text-slate-300">
+                        <p><strong class="text-white"><span class="lang-ar">المشكلة:</span><span class="lang-en hidden-lang">Problem:</span></strong> <span class="lang-ar">توقف البوتات بسبب حماية Cloudflare.</span><span class="lang-en hidden-lang">Bots blocked by Cloudflare protection.</span></p>
+                        <p><strong class="text-white"><span class="lang-ar">الحل:</span><span class="lang-en hidden-lang">Solution:</span></strong> <span class="lang-ar">محاكاة السلوك البشري لتخطي الكابتشا بذكاء.</span><span class="lang-en hidden-lang">Human behavior simulation to bypass captcha.</span></p>
+                    </div>
+                    <div class="mt-6 pt-6 border-t border-white/10 flex items-center justify-between">
+                        <div class="flex gap-2 text-xs text-slate-400">
+                            <span class="px-2 py-1 bg-white/5 rounded">Python</span>
+                            <span class="px-2 py-1 bg-white/5 rounded">Anti-Detect</span>
+                        </div>
+                        <button onclick="openMsgModal('Cloudflare Bypass')" class="text-indigo-400 hover:text-white font-bold text-sm transition"><span class="lang-ar">طلب السكربت</span><span class="lang-en hidden-lang">Request Script</span> <i class="fas fa-arrow-left rtl:rotate-0 ltr:rotate-180"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card p-0 overflow-hidden group flex flex-col md:flex-row-reverse">
+                <div class="md:w-2/5 bg-slate-800 relative min-h-[300px]">
+                    <img src="https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&q=80&w=800" class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition duration-700">
+                    <div class="absolute bottom-0 left-0 p-6 bg-gradient-to-t from-black/90 to-transparent w-full">
+                        <span class="project-tag bg-yellow-500 text-black font-bold">Bot ERP</span>
+                    </div>
+                </div>
+                <div class="p-8 md:w-3/5 flex flex-col justify-center">
+                    <h3 class="text-2xl font-bold mb-4 text-white">Fleet Commander (Telegram ERP)</h3>
+                    <div class="space-y-4 text-sm text-slate-300">
+                        <p><strong class="text-white"><span class="lang-ar">المشكلة:</span><span class="lang-en hidden-lang">Problem:</span></strong> <span class="lang-ar">أخطاء محاسبية في إدارة السائقين.</span><span class="lang-en hidden-lang">Accounting errors in driver management.</span></p>
+                        <p><strong class="text-white"><span class="lang-ar">الحل:</span><span class="lang-en hidden-lang">Solution:</span></strong> <span class="lang-ar">نظام ERP كامل داخل تيليجرام يحسب الرواتب لحظياً.</span><span class="lang-en hidden-lang">Full ERP inside Telegram calculating payroll instantly.</span></p>
+                    </div>
+                    <div class="mt-6 pt-6 border-t border-white/10 flex items-center justify-between">
+                        <div class="flex gap-2 text-xs text-slate-400">
+                            <span class="px-2 py-1 bg-white/5 rounded">Telegram API</span>
+                            <span class="px-2 py-1 bg-white/5 rounded">GAS</span>
+                        </div>
+                        <button onclick="openMsgModal('Fleet Commander')" class="text-indigo-400 hover:text-white font-bold text-sm transition"><span class="lang-ar">طلب النظام</span><span class="lang-en hidden-lang">Request System</span> <i class="fas fa-arrow-left rtl:rotate-0 ltr:rotate-180"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card p-0 overflow-hidden group flex flex-col md:flex-row">
+                <div class="md:w-2/5 bg-slate-800 relative min-h-[300px]">
+                    <img src="https://images.unsplash.com/photo-1556906781-9a412961c28c?auto=format&fit=crop&q=80&w=800" class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition duration-700">
+                    <div class="absolute bottom-0 left-0 p-6 bg-gradient-to-t from-black/90 to-transparent w-full">
+                        <span class="project-tag bg-red-500 text-white">Inventory Intelligence</span>
+                    </div>
+                </div>
+                <div class="p-8 md:w-3/5 flex flex-col justify-center">
+                    <h3 class="text-2xl font-bold mb-4 text-white">E-commerce Inventory Sniper</h3>
+                    <div class="space-y-4 text-sm text-slate-300">
+                        <p><strong class="text-white"><span class="lang-ar">المشكلة:</span><span class="lang-en hidden-lang">Problem:</span></strong> <span class="lang-ar">عدم معرفة المخزون المتوفر لدى المنافسين بدقة.</span><span class="lang-en hidden-lang">Unknown competitor inventory levels.</span></p>
+                        <p><strong class="text-white"><span class="lang-ar">الحل:</span><span class="lang-en hidden-lang">Solution:</span></strong> <span class="lang-ar">بوت يسحب خريطة المخزون لكل مقاس من المواقع العالمية.</span><span class="lang-en hidden-lang">Bot scraping granular stock maps from global sites.</span></p>
+                    </div>
+                    <div class="mt-6 pt-6 border-t border-white/10 flex items-center justify-between">
+                        <div class="flex gap-2 text-xs text-slate-400">
+                            <span class="px-2 py-1 bg-white/5 rounded">Python</span>
+                            <span class="px-2 py-1 bg-white/5 rounded">Scraping</span>
+                        </div>
+                        <button onclick="openMsgModal('Inventory Sniper')" class="text-indigo-400 hover:text-white font-bold text-sm transition"><span class="lang-ar">طلب الأداة</span><span class="lang-en hidden-lang">Request Tool</span> <i class="fas fa-arrow-left rtl:rotate-0 ltr:rotate-180"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card p-0 overflow-hidden group flex flex-col md:flex-row-reverse">
+                <div class="md:w-2/5 bg-slate-800 relative min-h-[300px]">
+                    <img src="https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&q=80&w=800" class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition duration-700">
+                    <div class="absolute bottom-0 left-0 p-6 bg-gradient-to-t from-black/90 to-transparent w-full">
+                        <span class="project-tag bg-green-600 text-white">Social Listening</span>
+                    </div>
+                </div>
+                <div class="p-8 md:w-3/5 flex flex-col justify-center">
+                    <h3 class="text-2xl font-bold mb-4 text-white">Social Community Hunters</h3>
+                    <div class="space-y-4 text-sm text-slate-300">
+                        <p><strong class="text-white"><span class="lang-ar">المشكلة:</span><span class="lang-en hidden-lang">Problem:</span></strong> <span class="lang-ar">ضياع فرص البيع وسط ضوضاء الجروبات.</span><span class="lang-en hidden-lang">Missing sales leads in noisy groups.</span></p>
+                        <p><strong class="text-white"><span class="lang-ar">الحل:</span><span class="lang-en hidden-lang">Solution:</span></strong> <span class="lang-ar">رادارات تراقب الكلمات المفتاحية وترسل تنبيهات فورية.</span><span class="lang-en hidden-lang">Real-time radars alerting on specific keywords.</span></p>
+                    </div>
+                    <div class="mt-6 pt-6 border-t border-white/10 flex items-center justify-between">
+                        <div class="flex gap-2 text-xs text-slate-400">
+                            <span class="px-2 py-1 bg-white/5 rounded">Puppeteer</span>
+                            <span class="px-2 py-1 bg-white/5 rounded">Socket.io</span>
+                        </div>
+                        <button onclick="openMsgModal('Social Hunter')" class="text-indigo-400 hover:text-white font-bold text-sm transition"><span class="lang-ar">طلب البوت</span><span class="lang-en hidden-lang">Request Bot</span> <i class="fas fa-arrow-left rtl:rotate-0 ltr:rotate-180"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card p-0 overflow-hidden group flex flex-col md:flex-row">
+                <div class="md:w-2/5 bg-slate-800 relative min-h-[300px]">
+                    <img src="https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&q=80&w=800" class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition duration-700">
+                    <div class="absolute bottom-0 left-0 p-6 bg-gradient-to-t from-black/90 to-transparent w-full">
+                        <span class="project-tag bg-teal-500 text-white">Sales Automation</span>
+                    </div>
+                </div>
+                <div class="p-8 md:w-3/5 flex flex-col justify-center">
+                    <h3 class="text-2xl font-bold mb-4 text-white">Interactive Sales Agent</h3>
+                    <div class="space-y-4 text-sm text-slate-300">
+                        <p><strong class="text-white"><span class="lang-ar">المشكلة:</span><span class="lang-en hidden-lang">Problem:</span></strong> <span class="lang-ar">إضاعة الوقت في الإجابة على الأسئلة المتكررة.</span><span class="lang-en hidden-lang">Wasting time on repetitive FAQs.</span></p>
+                        <p><strong class="text-white"><span class="lang-ar">الحل:</span><span class="lang-en hidden-lang">Solution:</span></strong> <span class="lang-ar">بوت ذكي يشرح المنتج، يحسب التوفير، ويغلق الصفقة.</span><span class="lang-en hidden-lang">Smart bot explaining products & closing deals.</span></p>
+                    </div>
+                    <div class="mt-6 pt-6 border-t border-white/10 flex items-center justify-between">
+                        <div class="flex gap-2 text-xs text-slate-400">
+                            <span class="px-2 py-1 bg-white/5 rounded">Funnel</span>
+                            <span class="px-2 py-1 bg-white/5 rounded">ROI Calc</span>
+                        </div>
+                        <button onclick="openMsgModal('Sales Agent Bot')" class="text-indigo-400 hover:text-white font-bold text-sm transition"><span class="lang-ar">طلب البوت</span><span class="lang-en hidden-lang">Request Bot</span> <i class="fas fa-arrow-left rtl:rotate-0 ltr:rotate-180"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card p-0 overflow-hidden group flex flex-col md:flex-row-reverse">
+                <div class="md:w-2/5 bg-slate-800 relative min-h-[300px]">
+                    <img src="https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition duration-700">
+                    <div class="absolute bottom-0 left-0 p-6 bg-gradient-to-t from-black/90 to-transparent w-full">
+                        <span class="project-tag bg-orange-600 text-white">IoT Security</span>
+                    </div>
+                </div>
+                <div class="p-8 md:w-3/5 flex flex-col justify-center">
+                    <h3 class="text-2xl font-bold mb-4 text-white">Viber Cloud Security</h3>
+                    <div class="space-y-4 text-sm text-slate-300">
+                        <p><strong class="text-white"><span class="lang-ar">المشكلة:</span><span class="lang-en hidden-lang">Problem:</span></strong> <span class="lang-ar">التحكم اليدوي في بوابات الأمن وغياب الرقابة.</span><span class="lang-en hidden-lang">Manual gate control & lack of monitoring.</span></p>
+                        <p><strong class="text-white"><span class="lang-ar">الحل:</span><span class="lang-en hidden-lang">Solution:</span></strong> <span class="lang-ar">نظام IoT يربط البوابات بالسحابة للتحكم والتسجيل اللحظي.</span><span class="lang-en hidden-lang">IoT system linking gates to cloud for remote control.</span></p>
+                    </div>
+                    <div class="mt-6 pt-6 border-t border-white/10 flex items-center justify-between">
+                        <div class="flex gap-2 text-xs text-slate-400">
+                            <span class="px-2 py-1 bg-white/5 rounded">IoT</span>
+                            <span class="px-2 py-1 bg-white/5 rounded">Cloud</span>
+                        </div>
+                        <button onclick="openMsgModal('IoT Security')" class="text-indigo-400 hover:text-white font-bold text-sm transition"><span class="lang-ar">طلب النظام</span><span class="lang-en hidden-lang">Request System</span> <i class="fas fa-arrow-left rtl:rotate-0 ltr:rotate-180"></i></button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="max-w-3xl mx-auto text-center mt-20 p-10 glass-card border border-indigo-500/30">
+            <h2 class="text-3xl font-bold mb-4 text-white">
+                <span class="lang-ar">هل لديك فكرة مشروع؟</span>
+                <span class="lang-en hidden-lang">Have a Project Idea?</span>
+            </h2>
+            <p class="text-slate-400 mb-8">
+                <span class="lang-ar">دعنا نحول فكرتك إلى واقع تقني ملموس.</span>
+                <span class="lang-en hidden-lang">Let's turn your idea into reality.</span>
+            </p>
+            <button onclick="openMsgModal('General Inquiry')" class="inline-flex items-center gap-3 px-8 py-4 bg-white text-indigo-900 rounded-xl font-bold text-lg hover:bg-slate-200 transition shadow-lg">
+                <i class="fas fa-comment-dots"></i> 
+                <span class="lang-ar">ابدأ الآن</span>
+                <span class="lang-en hidden-lang">Start Now</span>
+            </button>
+        </div>
+    </section>
+
+    <footer class="bg-black border-t border-white/10 py-8 text-center text-slate-500 text-sm">
+        <p>© 2026 24Seven AI. All rights reserved.</p>
+    </footer>
+
+    <div id="msgModal" class="modal fixed inset-0 z-[3000] flex items-center justify-center p-4">
+        <div class="glass-card w-full max-w-2xl p-8 relative transform transition-all scale-100 bg-[#121212] border border-white/10 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <button onclick="closeAllModals()" class="absolute top-4 right-4 text-slate-400 hover:text-white bg-white/5 p-2 rounded-lg"><i class="fas fa-times text-xl"></i></button>
+            <div class="text-center mb-8">
+                <h3 class="text-2xl font-bold mb-2 text-white">
+                    <span class="lang-ar">طلب استشارة تقنية</span>
+                    <span class="lang-en hidden-lang">Book a Consultation</span>
+                </h3>
+                <p class="text-sm text-slate-400">
+                    <span class="lang-ar">املأ النموذج أدناه لبدء مناقشة مشروعك.</span>
+                    <span class="lang-en hidden-lang">Fill in the form below to start discussing your project.</span>
+                </p>
+            </div>
+            
+            <form action="https://formspree.io/f/xzddpdga" method="POST" class="space-y-6">
+                <input type="hidden" name="_subject" id="formSubject" value="Inquiry Source: Projects Page">
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">
+                            <span class="lang-ar">الاسم بالكامل *</span>
+                            <span class="lang-en hidden-lang">Full Name *</span>
+                        </label>
+                        <input type="text" name="name" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-indigo-500 text-white transition outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">
+                            <span class="lang-ar">البريد الإلكتروني *</span>
+                            <span class="lang-en hidden-lang">Email Address *</span>
+                        </label>
+                        <input type="email" name="email" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-indigo-500 text-white transition outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">
+                            <span class="lang-ar">اسم الشركة</span>
+                            <span class="lang-en hidden-lang">Company Name</span>
+                        </label>
+                        <input type="text" name="company" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-indigo-500 text-white transition outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">
+                            <span class="lang-ar">نوع المشروع *</span>
+                            <span class="lang-en hidden-lang">Project Type *</span>
+                        </label>
+                        <select name="project_type" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-indigo-500 text-white transition outline-none appearance-none">
+                            <option value="" disabled selected>Select project type</option>
+                            <option value="Web Application">Web Application</option>
+                            <option value="Mobile App">Mobile App</option>
+                            <option value="E-commerce Platform">E-commerce Platform</option>
+                            <option value="Custom Software">Custom Software</option>
+                            <option value="API Development">API Development</option>
+                            <option value="Database Design">Database Design</option>
+                            <option value="System Integration">System Integration</option>
+                            <option value="Automation Bot">Automation Bot</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">
+                        <span class="lang-ar">ميزانية المشروع (اختياري)</span>
+                        <span class="lang-en hidden-lang">Budget Range (Optional)</span>
+                    </label>
+                    <select name="budget" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-indigo-500 text-white transition outline-none appearance-none">
+                        <option value="" disabled selected>Select budget range</option>
+                        <option value="$5,000 - $10,000">$5,000 - $10,000</option>
+                        <option value="$10,000 - $25,000">$10,000 - $25,000</option>
+                        <option value="$25,000 - $50,000">$25,000 - $50,000</option>
+                        <option value="$50,000 - $100,000">$50,000 - $100,000</option>
+                        <option value="$100,000+">$100,000+</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">
+                        <span class="lang-ar">تفاصيل المشروع *</span>
+                        <span class="lang-en hidden-lang">Project Details *</span>
+                    </label>
+                    <textarea name="message" id="formMessage" rows="4" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-indigo-500 text-white transition outline-none" placeholder="Let's Discuss..."></textarea>
+                </div>
+
+                <button type="submit" class="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-xl transition shadow-lg">
+                    <span class="lang-ar">إرسال الطلب</span>
+                    <span class="lang-en hidden-lang">Submit Request</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function closeAllModals() { 
+            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active')); 
+            document.getElementById('overlay').classList.remove('active'); 
+            document.getElementById('sidebar').classList.remove('active'); 
+        }
+        
+        function openMsgModal(projectName = '') { 
+            closeAllModals();
+            setTimeout(() => {
+                const modal = document.getElementById('msgModal');
+                const overlay = document.getElementById('overlay');
+                const msgInput = document.getElementById('formMessage');
+                const subjectInput = document.getElementById('formSubject');
+
+                // Auto-fill content based on click
+                if (projectName && projectName !== 'General Inquiry') {
+                    subjectInput.value = `Project Inquiry: ${projectName} (Source: Projects Page)`;
+                    msgInput.value = `مرحباً، أنا مهتم بمشروع "${projectName}" وأود معرفة التفاصيل والسعر.\n\nHello, I am interested in "${projectName}" project...`;
+                } else {
+                    subjectInput.value = `General Inquiry (Source: Projects Page)`;
+                    msgInput.value = "";
+                }
+
+                overlay.classList.add('active'); 
+                modal.classList.add('active'); 
+            }, 100);
+        }
+        
+        function toggleSidebar() { 
+            const sidebar = document.getElementById('sidebar'); 
+            const overlay = document.getElementById('overlay'); 
+            if (sidebar.classList.contains('active')) { 
+                sidebar.classList.remove('active'); 
+                overlay.classList.remove('active'); 
+            } else { 
+                sidebar.classList.add('active'); 
+                overlay.classList.add('active'); 
+            } 
+        }
+        
+        function toggleLang() {
+            const html = document.documentElement;
+            const currentLang = html.getAttribute('lang');
+            const newLang = currentLang === 'ar' ? 'en' : 'ar';
+            const langLabelNav = document.getElementById('lang-label-nav');
+            
+            html.setAttribute('lang', newLang);
+            html.setAttribute('dir', newLang === 'ar' ? 'rtl' : 'ltr');
+            if(langLabelNav) langLabelNav.innerText = newLang === 'ar' ? 'English' : 'العربية';
+            
+            const arElements = document.querySelectorAll('.lang-ar');
+            const enElements = document.querySelectorAll('.lang-en');
+            
+            if (newLang === 'en') {
+                arElements.forEach(el => el.classList.add('hidden-lang'));
+                enElements.forEach(el => el.classList.remove('hidden-lang'));
+            } else {
+                arElements.forEach(el => el.classList.remove('hidden-lang'));
+                enElements.forEach(el => el.classList.add('hidden-lang'));
+            }
+        }
+    </script>
+</body>
+</html>

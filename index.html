@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>24Seven AI | بوابتك للتحول الرقمي</title>
+    <meta name="description" content="24Seven AI - We turn business chaos into automated success. Enterprise ERPs, AI Bots, and Data Intelligence solutions.">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Outfit:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-dark: #0a0a0a;
+            --card-bg: #121212;
+            --primary: #6366f1;
+            --accent: #8b5cf6;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+        }
+
+        body { 
+            font-family: 'Cairo', sans-serif; 
+            background-color: var(--bg-dark); 
+            color: var(--text-main); 
+            overflow-x: hidden; 
+            scroll-behavior: smooth;
+        }
+
+        html[lang="en"] body { font-family: 'Outfit', sans-serif; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+        /* Animations */
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-15px); } 100% { transform: translateY(0px); } }
+        .animate-float { animation: float 6s ease-in-out infinite; }
+        
+        @keyframes pulse-glow { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+        .glow-effect { animation: pulse-glow 3s infinite; }
+
+        /* Sidebar & Overlay */
+        #sidebar {
+            position: fixed; top: 0; right: -320px; width: 300px; height: 100%;
+            background: rgba(18, 18, 18, 0.98); backdrop-filter: blur(20px);
+            border-left: 1px solid rgba(255,255,255,0.05);
+            transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 2000; padding: 2rem; display: flex; flex-direction: column;
+            box-shadow: -10px 0 30px rgba(0,0,0,0.8);
+        }
+        #sidebar.active { right: 0; }
+        
+        .overlay { 
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8); 
+            z-index: 1500; opacity: 0; visibility: hidden; transition: 0.3s;
+            pointer-events: none;
+        }
+        .overlay.active { 
+            opacity: 1; visibility: visible; pointer-events: auto; 
+        }
+
+        /* Modal Transitions */
+        .modal {
+            opacity: 0; visibility: hidden; pointer-events: none; transition: 0.3s ease;
+            z-index: 3000;
+        }
+        .modal.active {
+            opacity: 1; visibility: visible; pointer-events: auto;
+        }
+
+        /* Utility Classes */
+        .glass-card {
+            background: var(--card-bg); border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 20px; transition: all 0.3s ease;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+        .glass-card:hover { transform: translateY(-5px); border-color: var(--primary); box-shadow: 0 10px 40px rgba(99, 102, 241, 0.2); }
+        
+        .feature-icon {
+            width: 60px; height: 60px; border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* Testimonial Image */
+        .testimonial-img {
+            width: 50px; height: 50px; border-radius: 50%; object-fit: cover;
+            border: 2px solid var(--primary);
+        }
+
+        /* Custom Select Styling */
+        select option { background-color: #171717; color: white; padding: 10px; }
+        .hidden-lang { display: none !important; }
+    </style>
+</head>
+<body class="selection:bg-indigo-500 selection:text-white">
+
+    <div id="overlay" class="overlay" onclick="closeAllModals()"></div>
+
+    <aside id="sidebar">
+        <div class="flex justify-between items-center mb-10">
+            <h2 class="text-2xl font-bold text-white flex items-center gap-2">
+                <i class="fas fa-brain text-indigo-500"></i>
+                <span class="lang-ar">القائمة</span><span class="lang-en hidden-lang">Menu</span>
+            </h2>
+            <button onclick="toggleSidebar()" class="text-slate-400 hover:text-white bg-white/5 p-2 rounded-lg transition hover:bg-red-500/20 hover:text-red-400">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <ul class="space-y-6 flex-1">
+            <li><a href="#" class="flex items-center gap-3 text-white text-lg border-r-4 border-indigo-500 pr-4 bg-white/5 py-2 rounded-l-lg"><i class="fas fa-home w-6 text-indigo-400"></i> <span class="lang-ar">الرئيسية</span><span class="lang-en hidden-lang">Home</span></a></li>
+            <li><a href="/dashboard" class="flex items-center gap-3 text-slate-300 hover:text-indigo-400 text-lg transition"><i class="fas fa-rocket w-6"></i> <span class="lang-ar">الأداة الذكية</span><span class="lang-en hidden-lang">SaaS Tool</span></a></li>
+            <li><a href="projects.html" class="flex items-center gap-3 text-slate-300 hover:text-indigo-400 text-lg transition"><i class="fas fa-layer-group w-6"></i> <span class="lang-ar">سابقة الأعمال</span><span class="lang-en hidden-lang">Portfolio</span></a></li>
+            <li><a href="#about" onclick="toggleSidebar()" class="flex items-center gap-3 text-slate-300 hover:text-indigo-400 text-lg transition"><i class="fas fa-info-circle w-6"></i> <span class="lang-ar">عن الشركة</span><span class="lang-en hidden-lang">About Us</span></a></li>
+            <li><a href="#solutions" onclick="toggleSidebar()" class="flex items-center gap-3 text-slate-300 hover:text-indigo-400 text-lg transition"><i class="fas fa-lightbulb w-6"></i> <span class="lang-ar">حلولنا</span><span class="lang-en hidden-lang">Solutions</span></a></li>
+            <li><button onclick="openMsgModal(); toggleSidebar();" class="flex items-center gap-3 text-slate-300 hover:text-indigo-400 text-lg transition w-full text-right ltr:text-left"><i class="fas fa-envelope w-6"></i> <span class="font-mono">Contact Us</span></button></li>
+        </ul>
+        <div class="pt-6 border-t border-white/10 text-center">
+            <p class="text-xs text-slate-500 mb-2">Alexandria, Egypt</p>
+            <p class="text-xs text-slate-500 font-mono">+20 112 174 8885</p>
+        </div>
+    </aside>
+
+    <nav class="fixed top-0 w-full z-50 backdrop-blur-md border-b border-white/5 py-4 px-6 flex justify-between items-center bg-black/60">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-xl shadow-lg glow-effect">
+                <i class="fas fa-brain"></i>
+            </div>
+            <span class="text-xl font-bold tracking-tight text-white">24Seven<span class="text-indigo-400">.ai</span></span>
+        </div>
+        <div class="flex items-center gap-3">
+            <a href="/dashboard" class="hidden md:flex items-center gap-2 px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white border border-indigo-500/50 rounded-lg transition text-sm font-bold">
+                <i class="fas fa-sign-in-alt"></i> <span class="lang-ar">دخول الأداة</span><span class="lang-en hidden-lang">Login App</span>
+            </a>
+            <button onclick="toggleLang()" class="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-slate-300 hover:text-white transition text-sm font-bold">
+                <i class="fas fa-globe"></i> <span id="lang-label-nav">English</span>
+            </button>
+            <button onclick="toggleSidebar()" class="p-2 text-white text-2xl hover:text-indigo-400 transition"><i class="fas fa-bars"></i></button>
+        </div>
+    </nav>
+
+    <header class="min-h-screen flex flex-col justify-center items-center text-center px-6 pt-20 relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 z-0"></div>
+        <div class="absolute top-1/4 left-1/3 w-96 h-96 bg-indigo-600/20 rounded-full blur-[120px] -z-10 animate-float"></div>
+        <div class="absolute bottom-1/4 right-1/3 w-80 h-80 bg-purple-600/20 rounded-full blur-[120px] -z-10 animate-float" style="animation-delay: 2s;"></div>
+
+        <div class="max-w-5xl mx-auto z-10">
+            <span class="px-5 py-2 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-sm font-bold mb-8 inline-flex items-center gap-2 animate-pulse">
+                <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                <span class="lang-ar">نحن نصنع المستقبل</span>
+                <span class="lang-en hidden-lang">We Engineer the Future</span>
+            </span>
+            
+            <h1 class="text-5xl md:text-7xl font-black mb-8 leading-tight">
+                <span class="lang-ar block mb-2">نحول <span class="text-red-500">الأزمات</span> إلى</span>
+                <span class="lang-ar text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">حلول ذكية ومتكاملة</span>
+                
+                <span class="lang-en hidden-lang block mb-2">Turning <span class="text-red-500">Crises</span> into</span>
+                <span class="lang-en hidden-lang text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Intelligent Solutions</span>
+            </h1>
+            
+            <p class="text-xl text-slate-400 mb-12 max-w-3xl mx-auto leading-relaxed">
+                <span class="lang-ar">في 24Seven AI، نحن لا نقدم حلولاً تقليدية، بل <strong>نبني منظومة رقمية متكاملة تمنحك السيطرة المطلقة على أعمالك</strong>. ننتقل بمؤسستك من "التشغيل اليدوي" إلى "الذكاء المؤسسي"، لضمان النمو المستدام وتعظيم العائد على الاستثمار.</span>
+                <span class="lang-en hidden-lang">At 24Seven AI, we don't offer traditional solutions; we <strong>build a complete digital ecosystem that gives you total control over your business</strong>. We transition your organization from "Manual Ops" to "Corporate Intelligence," ensuring sustainable growth and maximized ROI.</span>
+            </p>
+
+            <div class="flex flex-col md:flex-row gap-5 justify-center">
+                <a href="https://wa.me/201121748885" target="_blank" class="btn btn-primary px-8 py-4 rounded-xl text-lg flex items-center justify-center gap-3 bg-[#25d366] hover:bg-[#1ebc57] text-white shadow-lg shadow-green-900/20 transition transform hover:scale-105">
+                    <i class="fab fa-whatsapp text-2xl"></i> 
+                    <span class="lang-ar">استشارة فورية (WhatsApp)</span>
+                    <span class="lang-en hidden-lang">Instant Consultation</span>
+                </a>
+                <a href="projects.html" class="btn btn-outline px-8 py-4 rounded-xl text-lg flex items-center justify-center gap-3 border border-white/20 hover:bg-white/10 text-white transition">
+                    <i class="fas fa-cubes"></i> 
+                    <span class="lang-ar">استكشف حلولنا</span>
+                    <span class="lang-en hidden-lang">Explore Solutions</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <section id="solutions" class="py-24 px-6 bg-black/20 border-t border-white/5">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-5xl font-bold mb-4">
+                    <span class="lang-ar">لماذا تختارنا؟</span>
+                    <span class="lang-en hidden-lang">Why Choose Us?</span>
+                </h2>
+                <p class="text-slate-400 text-lg">
+                    <span class="lang-ar">لأننا نفهم "لغة البزنس" ونحولها لواقع تقني</span>
+                    <span class="lang-en hidden-lang">Because we speak "Business" and translate it into Tech</span>
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="glass-card p-6 group hover:bg-white/5 transition duration-500">
+                    <div class="feature-icon text-red-400 group-hover:scale-110 transition"><i class="fas fa-bug"></i></div>
+                    <h3 class="text-xl font-bold mb-2 text-white"><span class="lang-ar">المشكلة</span><span class="lang-en hidden-lang">Problem</span></h3>
+                    <p class="text-slate-400 text-sm"><span class="lang-ar">ندرس مشكله البزنس تفصيلا لكى نقدم حلول ممكنه تؤدى الى النمو الكامل للبزنس.</span><span class="lang-en hidden-lang">Data leaks and losing customers to competitors.</span></p>
+                </div>
+
+                <div class="glass-card p-6 group hover:bg-white/5 transition duration-500 border-green-500/30">
+                    <div class="feature-icon text-green-400 group-hover:scale-110 transition"><i class="fas fa-check-circle"></i></div>
+                    <h3 class="text-xl font-bold mb-2 text-white"><span class="lang-ar">الحل</span><span class="lang-en hidden-lang">Solution</span></h3>
+                    <p class="text-slate-400 text-sm"><span class="lang-ar">نقموم بتحليل المشكله لتقديم حلول لها باسهل شكل ممكن يعود على المستخدم بالسهوله في الاستخخدام.</span><span class="lang-en hidden-lang">Centralized automation systems for total control.</span></p>
+                </div>
+
+                <div class="glass-card p-6 group hover:bg-white/5 transition duration-500">
+                    <div class="feature-icon text-blue-400 group-hover:scale-110 transition"><i class="fas fa-chart-line"></i></div>
+                    <h3 class="text-xl font-bold mb-2 text-white"><span class="lang-ar">النمو</span><span class="lang-en hidden-lang">Growth</span></h3>
+                    <p class="text-slate-400 text-sm"><span class="lang-ar">نقوم بدراسه شامله لكل فرع البزنس لكى يحقق اعلى عائد ممكن .</span><span class="lang-en hidden-lang">Sales Intelligence tools to double your revenue.</span></p>
+                </div>
+
+                <div class="glass-card p-6 group hover:bg-white/5 transition duration-500">
+                    <div class="feature-icon text-purple-400 group-hover:scale-110 transition"><i class="fas fa-shield-alt"></i></div>
+                    <h3 class="text-xl font-bold mb-2 text-white"><span class="lang-ar">الأمان</span><span class="lang-en hidden-lang">Security</span></h3>
+                    <p class="text-slate-400 text-sm"><span class="lang-ar">حماية بياناتك وأنظمتك بأحدث بروتوكولات الأمان.</span><span class="lang-en hidden-lang">Protecting your data with latest security protocols.</span></p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-24 px-6 relative">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-5xl font-bold mb-4 text-white">
+                    <span class="lang-ar">ماذا يقول عملاؤنا؟</span>
+                    <span class="lang-en hidden-lang">What Our Clients Say</span>
+                </h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="glass-card p-8 border-white/5 relative">
+                    <i class="fas fa-quote-right text-4xl text-white/10 absolute top-6 right-6"></i>
+                    <p class="text-slate-300 mb-6 leading-relaxed">"نظام الـ ERP الذي صممته 24Seven AI غير طريقة إدارتنا للشركة تماماً. وفرنا 40% من التكاليف التشغيلية في أول 3 شهور."</p>
+                    <div class="flex items-center gap-4">
+                        <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Client" class="testimonial-img">
+                        <div>
+                            <h4 class="text-white font-bold text-sm">أحمد سعيد</h4>
+                            <p class="text-indigo-400 text-xs">CEO, Logistics Co.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="glass-card p-8 border-white/5 relative">
+                    <i class="fas fa-quote-right text-4xl text-white/10 absolute top-6 right-6"></i>
+                    <p class="text-slate-300 mb-6 leading-relaxed">"بوت المبيعات مذهل! يعمل 24 ساعة ويرد على العملاء بذكاء. نسبة إغلاق الصفقات زادت بشكل ملحوظ."</p>
+                    <div class="flex items-center gap-4">
+                        <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Client" class="testimonial-img">
+                        <div>
+                            <h4 class="text-white font-bold text-sm">سارة محمود</h4>
+                            <p class="text-indigo-400 text-xs">Marketing Manager</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="glass-card p-8 border-white/5 relative">
+                    <i class="fas fa-quote-right text-4xl text-white/10 absolute top-6 right-6"></i>
+                    <p class="text-slate-300 mb-6 leading-relaxed">"فريق محترف جداً. فهموا مشكلتنا التقنية وحلوها بنظام مخصص (Custom Solution) بدلاً من الحلول الجاهزة."</p>
+                    <div class="flex items-center gap-4">
+                        <img src="https://randomuser.me/api/portraits/men/85.jpg" alt="Client" class="testimonial-img">
+                        <div>
+                            <h4 class="text-white font-bold text-sm">محمد علي</h4>
+                            <p class="text-indigo-400 text-xs">Founder, Tech Startup</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="founder" class="py-24 px-6 relative border-t border-white/5">
+        <div class="max-w-6xl mx-auto">
+            <div class="glass-card p-10 md:p-16 flex flex-col md:flex-row items-center gap-12 border-indigo-500/20">
+                <div class="md:w-1/3 text-center">
+                    <div class="w-48 h-48 rounded-full border-4 border-indigo-500/30 p-2 mx-auto mb-6 relative">
+                        <div class="w-full h-full rounded-full bg-slate-800 overflow-hidden relative">
+                            <img src="/static/profile.jpg" alt="Ahmad Hashem" class="w-full h-full object-cover opacity-80 hover:opacity-100 transition duration-500 hover:scale-110">
+                        </div>
+                        <div class="absolute bottom-2 right-2 bg-indigo-600 text-white w-10 h-10 rounded-full flex items-center justify-center border-2 border-black">
+                            <i class="fas fa-code"></i>
+                        </div>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white">Eng. Ahmad Hashem</h3>
+                    <p class="text-indigo-400 font-medium mt-1">Systems Architect & Founder</p>
+                </div>
+                <div class="md:w-2/3">
+                    <h2 class="text-3xl font-bold mb-6 text-white">
+                        <span class="lang-ar">العقل المدبر وراء الأنظمة</span>
+                        <span class="lang-en hidden-lang">The Mind Behind The Systems</span>
+                    </h2>
+                    <p class="text-slate-300 text-lg leading-relaxed mb-6">
+                        <span class="lang-ar">
+                            بخبرة عميقة في هندسة النظم وأتمتة العمليات، أسس المهندس أحمد هاشم 24Seven AI لتكون الذراع التقني للشركات الطموحة. <br><br>
+                            فلسفتنا بسيطة: "إذا كان يمكن تكراره، يمكن أتمتته". نحن لا نبيع برمجيات جاهزة، نحن نبني بنية تحتية رقمية مفصلة خصيصاً لحل أزماتك.
+                        </span>
+
+                        <span class="lang-en hidden-lang">
+                            With deep expertise in Systems Architecture and Process Automation, Eng. Ahmad Hashem founded 24Seven AI to be the technical arm for ambitious enterprises. <br><br>
+                            Our philosophy is simple: "If it can be repeated, it can be automated." We don't sell off-the-shelf software; we build custom digital infrastructure tailored to solve your crises.
+                        </span>
+                    </p>
+                    <div class="flex gap-4">
+                        <a href="projects.html" class="text-indigo-400 hover:text-white font-bold border-b border-indigo-500 pb-1 transition">
+                            <span class="lang-ar">شاهد سابقة الأعمال</span><span class="lang-en hidden-lang">View Our Work</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-[#050505] border-t border-white/5 pt-16 pb-8">
+        <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-12">
+            <div>
+                <div class="flex items-center gap-2 mb-6">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white"><i class="fas fa-brain"></i></div>
+                    <span class="text-2xl font-bold text-white">24Seven<span class="text-indigo-400">.ai</span></span>
+                </div>
+                <p class="text-slate-400 text-sm leading-relaxed mb-6">
+                    <span class="lang-ar">نحول التحديات المعقدة إلى حلول برمجية ذكية. شريكك التقني للنمو والاستقرار.</span>
+                    <span class="lang-en hidden-lang">Turning complex challenges into smart software solutions. Your technical partner for growth and stability.</span>
+                </p>
+            </div>
+            
+            <div>
+                <h4 class="text-white font-bold mb-6 text-lg border-b border-white/10 pb-2 inline-block">
+                    <span class="lang-ar">تواصل معنا</span><span class="lang-en hidden-lang">Contact Info</span>
+                </h4>
+                <ul class="space-y-4 text-slate-400">
+                    <li class="flex items-start gap-3">
+                        <i class="fas fa-map-marker-alt text-indigo-500 mt-1"></i>
+                        <div>
+                            <span class="block text-white font-medium"><span class="lang-ar">العنوان:</span><span class="lang-en hidden-lang">Address:</span></span>
+                            <span class="text-sm">
+                                <span class="lang-ar">الإسكندرية، دوران السيوف، عمارات أبراج الإسكندرية.</span>
+                                <span class="lang-en hidden-lang">Alexandria, Al-Soyouf, Alexandria Towers.</span>
+                            </span>
+                        </div>
+                    </li>
+                    <li class="flex items-center gap-3">
+                        <i class="fas fa-phone-alt text-indigo-500"></i>
+                        <a href="https://wa.me/201121748885" target="_blank" class="font-mono text-white dir-ltr hover:text-green-400 transition">+20 112 174 8885</a>
+                    </li>
+                    <li class="flex items-center gap-3">
+                        <i class="fas fa-envelope text-indigo-500"></i>
+                        <button onclick="openMsgModal()" class="font-mono hover:text-white transition">info@24sevenAi.com</button>
+                    </li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="text-white font-bold mb-6 text-lg border-b border-white/10 pb-2 inline-block">
+                    <span class="lang-ar">روابط</span><span class="lang-en hidden-lang">Links</span>
+                </h4>
+                <ul class="space-y-3 text-slate-400">
+                    <li><button onclick="openMsgModal()" class="hover:text-indigo-400 transition"><span class="lang-ar">طلب استشارة</span><span class="lang-en hidden-lang">Request Consultation</span></button></li>
+                    <li><a href="projects.html" class="hover:text-indigo-400 transition"><span class="lang-ar">المشاريع</span><span class="lang-en hidden-lang">Projects</span></a></li>
+                    <li><a href="https://wa.me/201121748885" class="hover:text-green-400 transition"><i class="fab fa-whatsapp"></i> WhatsApp</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="text-center text-slate-600 text-xs mt-16 pt-8 border-t border-slate-900">
+            <p>© 2026 24Seven AI. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <div id="msgModal" class="modal fixed inset-0 z-[3000] flex items-center justify-center p-4">
+        <div class="glass-card w-full max-w-2xl p-8 relative transform transition-all scale-100 bg-[#121212] border border-white/10 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <button onclick="closeAllModals()" class="absolute top-4 right-4 text-slate-400 hover:text-white bg-white/5 p-2 rounded-lg"><i class="fas fa-times text-xl"></i></button>
+            <div class="text-center mb-8">
+                <h3 class="text-2xl font-bold mb-2 text-white">
+                    <span class="lang-ar">ابدأ رحلة التحول الرقمي</span>
+                    <span class="lang-en hidden-lang">Start Digital Transformation</span>
+                </h3>
+                <p class="text-sm text-slate-400">
+                    <span class="lang-ar">املأ النموذج أدناه وسيقوم فريقنا الهندسي بتحليل طلبك والرد خلال 24 ساعة.</span>
+                    <span class="lang-en hidden-lang">Fill the form below. Our engineering team will analyze your request and reply within 24 hours.</span>
+                </p>
+            </div>
+            
+            <form action="https://formspree.io/f/xzddpdga" method="POST" class="space-y-6">
+                <input type="hidden" name="_subject" value="Inquiry Source: Footer/Home Contact">
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1"><span class="lang-ar">الاسم بالكامل *</span><span class="lang-en hidden-lang">Full Name *</span></label>
+                        <input type="text" name="name" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-indigo-500 text-white transition outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1"><span class="lang-ar">البريد الإلكتروني *</span><span class="lang-en hidden-lang">Email Address *</span></label>
+                        <input type="email" name="email" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-indigo-500 text-white transition outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1"><span class="lang-ar">رقم الهاتف</span><span class="lang-en hidden-lang">Phone Number</span></label>
+                        <input type="tel" name="phone" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-indigo-500 text-white transition outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1"><span class="lang-ar">نوع المشروع *</span><span class="lang-en hidden-lang">Project Type *</span></label>
+                        <select name="project_type" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-indigo-500 text-white transition outline-none appearance-none">
+                            <option value="" disabled selected>Select project type</option>
+                            <option value="Web Application">Web Application</option>
+                            <option value="Mobile App">Mobile App</option>
+                            <option value="E-commerce Platform">E-commerce Platform</option>
+                            <option value="Custom Software">Custom Software</option>
+                            <option value="API Development">API Development</option>
+                            <option value="Database Design">Database Design</option>
+                            <option value="System Integration">System Integration</option>
+                            <option value="Automation Bot">Automation Bot</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1"><span class="lang-ar">ميزانية المشروع (اختياري)</span><span class="lang-en hidden-lang">Budget Range (Optional)</span></label>
+                    <select name="budget" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-indigo-500 text-white transition outline-none appearance-none">
+                        <option value="" disabled selected>Select budget range</option>
+                        <option value="$5,000 - $10,000">$5,000 - $10,000</option>
+                        <option value="$10,000 - $25,000">$10,000 - $25,000</option>
+                        <option value="$25,000 - $50,000">$25,000 - $50,000</option>
+                        <option value="$50,000 - $100,000">$50,000 - $100,000</option>
+                        <option value="$100,000+">$100,000+</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1"><span class="lang-ar">تفاصيل المشكلة / الفكرة *</span><span class="lang-en hidden-lang">Project Details / Problem *</span></label>
+                    <textarea name="message" rows="4" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-indigo-500 text-white transition outline-none" placeholder="اشرح لنا التحدي الذي تواجهه..."></textarea>
+                </div>
+
+                <button type="submit" class="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-xl transition shadow-lg transform hover:scale-[1.01]">
+                    <span class="lang-ar">إرسال الطلب</span>
+                    <span class="lang-en hidden-lang">Submit Request</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function closeAllModals() { 
+            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active')); 
+            document.getElementById('overlay').classList.remove('active'); 
+            document.getElementById('sidebar').classList.remove('active'); 
+        }
+        
+        function openMsgModal() { 
+            closeAllModals();
+            setTimeout(() => {
+                document.getElementById('overlay').classList.add('active'); 
+                document.getElementById('msgModal').classList.add('active'); 
+            }, 100);
+        }
+        
+        function toggleSidebar() { 
+            const sidebar = document.getElementById('sidebar'); 
+            const overlay = document.getElementById('overlay'); 
+            if (sidebar.classList.contains('active')) { 
+                sidebar.classList.remove('active'); 
+                overlay.classList.remove('active'); 
+            } else { 
+                sidebar.classList.add('active'); 
+                overlay.classList.add('active'); 
+            } 
+        }
+        
+        function toggleLang() {
+            const html = document.documentElement;
+            const currentLang = html.getAttribute('lang');
+            const newLang = currentLang === 'ar' ? 'en' : 'ar';
+            const langLabelNav = document.getElementById('lang-label-nav');
+            
+            html.setAttribute('lang', newLang);
+            html.setAttribute('dir', newLang === 'ar' ? 'rtl' : 'ltr');
+            if(langLabelNav) langLabelNav.innerText = newLang === 'ar' ? 'English' : 'العربية';
+            
+            const arElements = document.querySelectorAll('.lang-ar');
+            const enElements = document.querySelectorAll('.lang-en');
+            
+            if (newLang === 'en') {
+                arElements.forEach(el => el.classList.add('hidden-lang'));
+                enElements.forEach(el => el.classList.remove('hidden-lang'));
+            } else {
+                arElements.forEach(el => el.classList.remove('hidden-lang'));
+                enElements.forEach(el => el.classList.add('hidden-lang'));
+            }
+        }
+    </script>
+</body>
+</html>
