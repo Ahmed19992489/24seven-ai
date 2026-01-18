@@ -4,7 +4,6 @@ import os
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
-# استيراد المكتبة الجديدة للبحث المباشر
 from duckduckgo_search import DDGS
 
 class DataEnricher:
@@ -22,10 +21,9 @@ class DataEnricher:
         chrome_options.add_argument("--disable-notifications")
         chrome_options.add_argument("--blink-settings=imagesEnabled=false")
         
-        # User-Agent للتمويه عند زيارة مواقع الشركات
+        # User-Agent للتمويه
         chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36")
 
-        # مسارات Render
         chrome_bin = os.environ.get("CHROME_BIN")
         if chrome_bin:
             chrome_options.binary_location = chrome_bin
@@ -60,31 +58,41 @@ class DataEnricher:
 
     def _smart_search_fallback(self, company_name):
         """
-        Flow 2: البحث باستخدام مكتبة DDGS (بدون متصفح لتفادي الحظر)
+        Flow 2: البحث باستخدام DDGS مع تحديد backend='html' لتجاوز الحظر
         """
-        print(f"🦆 [Flow 2] Searching via DDGS API for: {company_name}...")
+        print(f"🦆 [Flow 2] Searching via DDGS (HTML Mode) for: {company_name}...")
+        
+        # محاولة أولى: وضع HTML (الأقوى للسيرفرات)
         try:
             query = f"{company_name} Egypt official website facebook"
-            
-            # استخدام المكتبة للبحث المباشر (أسرع وأدق)
             with DDGS() as ddgs:
-                results = list(ddgs.text(query, max_results=3))
+                # ⚠️ التعديل الجوهري هنا: backend='html'
+                results = list(ddgs.text(query, region='wt-wt', safesearch='off', backend='html', max_results=3))
                 
                 for res in results:
                     url = res.get('href')
                     if url:
-                        print(f"🔗 Found via DDGS: {url}")
+                        print(f"🔗 Found via DDGS (HTML): {url}")
                         return url
-                        
         except Exception as e:
-            print(f"⚠️ Search API Error: {e}")
+            print(f"⚠️ DDGS HTML Error: {e}")
+
+        # محاولة ثانية: وضع Lite (أخف وأسرع)
+        try:
+            print("Trying DDGS Lite mode...")
+            with DDGS() as ddgs:
+                results = list(ddgs.text(query, region='wt-wt', safesearch='off', backend='lite', max_results=3))
+                for res in results:
+                    url = res.get('href')
+                    if url:
+                        print(f"🔗 Found via DDGS (Lite): {url}")
+                        return url
+        except Exception as e:
+            print(f"⚠️ DDGS Lite Error: {e}")
             
         return None
 
     def find_emails_and_people(self, company_name, website):
-        """
-        المحرك الذكي: يطبق الـ 3 Flows
-        """
         data = {
             "email": "غير متوفر",
             "decision_maker_name": "",
@@ -93,12 +101,8 @@ class DataEnricher:
         }
 
         try:
-            # ---------------------------------------------------------
-            # Flow 1 & 2: التحقق من الرابط أو البحث عنه
-            # ---------------------------------------------------------
+            # Flow 1 & 2
             target_website = website
-
-            # إذا كان الرابط مفقوداً أو غير صالح، نفعّل Flow 2
             if not target_website or "غير" in target_website or "google" in target_website:
                 target_website = self._smart_search_fallback(company_name)
             
@@ -106,9 +110,7 @@ class DataEnricher:
                 print(f"❌ Flow 2 Failed: No website found for {company_name}")
                 return data 
 
-            # ---------------------------------------------------------
-            # Flow 3: زيارة الموقع واستخراج البيانات (يحتاج متصفح)
-            # ---------------------------------------------------------
+            # Flow 3
             if not self.driver:
                 self.start_session()
 
@@ -123,14 +125,11 @@ class DataEnricher:
                 pass
 
             page_source = self.driver.page_source
-            
-            # استخراج الإيميلات بـ Regex
             emails = re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', page_source)
             bad_ext = ('.png', '.jpg', '.jpeg', '.gif', '.svg', '.css', '.js', '.webp', '.mp4')
             valid_emails = list(set([e for e in emails if not e.lower().endswith(bad_ext)]))
 
             if valid_emails:
-                # ترتيب الإيميلات حسب الأهمية
                 priority = ['info', 'contact', 'sales', 'hello', 'admin', 'support']
                 preferred = None
                 for p in priority:
@@ -143,12 +142,10 @@ class DataEnricher:
                 data['email'] = preferred if preferred else valid_emails[0]
                 print(f"✅ Email Found: {data['email']}")
 
-            # محاولة صفحة Contact Us
             if data['email'] == "غير متوفر":
                 try:
                     xpath = "//a[contains(@href, 'contact') or contains(@href, 'Contact') or contains(text(), 'Contact') or contains(text(), 'اتصل')]"
                     contact_links = self.driver.find_elements(By.XPATH, xpath)
-                    
                     if contact_links:
                         c_url = contact_links[0].get_attribute("href")
                         if c_url and c_url != self.driver.current_url:
