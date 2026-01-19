@@ -21,7 +21,7 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="24Seven Sales Intelligence Platform",
     description="Professional SaaS Platform.",
-    version="2.3.0"
+    version="2.4.0"
 )
 
 # --- 2. إعدادات CORS (السماح بالاتصال) ---
@@ -125,6 +125,19 @@ async def read_admin_panel():
             <p>Files in current dir: {os.listdir(BASE_DIR)}</p>
         </div>
     """, status_code=404)
+
+# 6. صفحة حجز الليموزين (تمت إضافتها) ✅
+@app.get("/limousine.html")
+async def read_limousine_page():
+    file_path = BASE_DIR / "limousine.html"
+    if file_path.exists():
+        return FileResponse(file_path)
+    return HTMLResponse("<h1>Error: limousine.html not found! Please check file name.</h1>", status_code=404)
+
+# مسار إضافي لفتح الصفحة بدون .html
+@app.get("/limousine")
+async def read_limousine_clean():
+    return await read_limousine_page()
 
 # --- Setup Admin (لإنشاء حساب الأدمن الأول مرة واحدة) ---
 @app.post("/setup-admin/", tags=["Admin & Setup"])
