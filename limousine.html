@@ -3,234 +3,287 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>حجز ليموزين | 24Seven Limousine</title>
+    <title>24Seven | منصة التنقل الذكي</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Outfit:wght@700&display=swap" rel="stylesheet">
-    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
-        :root { --bg-dark: #050505; --primary: #6366f1; }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-dark); color: #f3f4f6; overflow-x: hidden; }
+        :root { --bg-dark: #0f172a; --primary: #f59e0b; --sidebar: #1e293b; } /* ألوان ستايل GetTransfer (داكن مع برتقالي) */
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-dark); color: #f8fafc; overflow-x: hidden; }
         .font-num { font-family: 'Outfit', sans-serif; }
-        .glass-card { background: rgba(20, 20, 20, 0.95); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(20px); border-radius: 20px; }
-        .input-field { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 12px 16px; width: 100%; color: white; outline: none; transition: 0.3s; }
-        .input-field:focus { border-color: var(--primary); background: rgba(99, 102, 241, 0.1); }
-        .car-option.active { border-color: var(--primary); background: rgba(99, 102, 241, 0.2); transform: scale(1.05); }
         
-        #login-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(5, 5, 5, 0.95); backdrop-filter: blur(15px);
-            z-index: 9999; display: flex; justify-content: center; align-items: center;
-        }
-        #map { height: 350px; width: 100%; border-radius: 15px; margin-top: 15px; display: none; }
+        /* Sidebar Styles */
+        .sidebar-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; transition: 0.3s; color: #94a3b8; cursor: pointer; }
+        .sidebar-link:hover, .sidebar-link.active { background: rgba(245, 158, 11, 0.1); color: var(--primary); }
+        .sidebar-link i { width: 24px; text-align: center; font-size: 1.1rem; }
+        
+        .glass-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; }
+        .input-field { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 12px; width: 100%; color: white; outline: none; }
+        .input-field:focus { border-color: var(--primary); }
+        
+        .car-option.active { border-color: var(--primary); background: rgba(245, 158, 11, 0.1); }
+        #map { height: 100%; width: 100%; border-radius: 16px; }
     </style>
 </head>
-<body class="selection:bg-indigo-600 selection:text-white">
+<body class="flex h-screen overflow-hidden">
 
-    <div id="login-overlay">
-        <div class="glass-card p-8 text-center max-w-md w-full mx-4 shadow-2xl shadow-indigo-500/20">
-            <div class="w-16 h-16 bg-indigo-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i class="fas fa-shield-alt text-2xl text-indigo-400"></i>
+    <aside class="w-64 bg-slate-900 border-l border-slate-800 hidden md:flex flex-col p-4 z-20">
+        <div class="mb-8 px-2">
+            <h1 class="text-2xl font-black text-white flex items-center gap-2">
+                <i class="fas fa-bolt text-amber-500"></i> 24Seven
+            </h1>
+        </div>
+
+        <nav class="space-y-2 flex-1">
+            <div onclick="switchTab('booking')" class="sidebar-link active" id="nav-booking">
+                <i class="fas fa-map-location-dot"></i> <span>حجز رحلة</span>
             </div>
-            <h2 class="text-2xl font-bold text-white mb-2">مرحباً بك في 24Seven</h2>
-            <p class="text-slate-400 mb-6 text-sm">سجل دخولك لحجز رحلتك ومتابعة السائق</p>
+            <div onclick="switchTab('trips')" class="sidebar-link" id="nav-trips">
+                <i class="fas fa-history"></i> <span>رحلاتي</span>
+            </div>
+            <div onclick="switchTab('wallet')" class="sidebar-link" id="nav-wallet">
+                <i class="fas fa-wallet"></i> <span>المحفظة</span>
+            </div>
+            <div onclick="switchTab('chat')" class="sidebar-link" id="nav-chat">
+                <i class="fas fa-comments"></i> <span>المحادثات</span>
+            </div>
+            <div onclick="switchTab('support')" class="sidebar-link" id="nav-support">
+                <i class="fas fa-headset"></i> <span>الدعم والشكاوى</span>
+            </div>
+        </nav>
 
-            <div class="space-y-3">
-                <button onclick="handleGoogleLogin()" class="w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-slate-200 transition flex items-center justify-center gap-2">
-                    <img src="https://img.icons8.com/color/48/google-logo.png" class="w-5 h-5"> متابعة باستخدام جوجل
-                </button>
+        <div class="mt-auto pt-4 border-t border-slate-800">
+            <div class="flex items-center gap-3 px-2 mb-4">
+                <img id="user-avatar-side" src="" class="w-10 h-10 rounded-full bg-slate-800">
+                <div class="overflow-hidden">
+                    <p id="user-name-side" class="text-sm font-bold text-white truncate">زائر</p>
+                    <p class="text-xs text-slate-500">عميل مميز</p>
+                </div>
+            </div>
+            <button onclick="handleLogout()" class="sidebar-link w-full text-red-400 hover:text-red-500 hover:bg-red-500/10">
+                <i class="fas fa-sign-out-alt"></i> <span>تسجيل خروج</span>
+            </button>
+        </div>
+    </aside>
 
-                <div class="relative py-2">
-                    <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-white/10"></div></div>
-                    <div class="relative flex justify-center text-xs uppercase"><span class="bg-[#141414] px-2 text-slate-500">أو عبر البريد</span></div>
+    <main class="flex-1 flex flex-col relative h-full overflow-hidden">
+        
+        <header class="md:hidden h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 z-20">
+            <h1 class="text-xl font-bold text-white">24Seven</h1>
+            <button onclick="document.querySelector('aside').classList.toggle('hidden'); document.querySelector('aside').classList.toggle('absolute'); document.querySelector('aside').classList.toggle('h-full');" class="text-white p-2">
+                <i class="fas fa-bars"></i>
+            </button>
+        </header>
+
+        <div id="content-area" class="flex-1 relative overflow-y-auto p-4 md:p-6">
+            
+            <div id="tab-booking" class="section-content h-full flex flex-col lg:flex-row gap-6">
+                <div class="w-full lg:w-1/3 space-y-4 z-10">
+                    <div class="glass-card p-5 space-y-4">
+                        <h2 class="text-xl font-bold text-white mb-4">وجهتك القادمة؟</h2>
+                        
+                        <div class="space-y-3">
+                            <div class="relative">
+                                <i class="fas fa-circle text-[10px] text-green-500 absolute top-4 right-4"></i>
+                                <input id="origin-input" type="text" placeholder="من: (مطار القاهرة، المنزل...)" class="input-field pr-8">
+                            </div>
+                            <div class="relative">
+                                <i class="fas fa-circle text-[10px] text-amber-500 absolute top-4 right-4"></i>
+                                <input id="destination-input" type="text" placeholder="إلى: (الإسكندرية، الفندق...)" class="input-field pr-8">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2">
+                            <div class="car-option active cursor-pointer border border-slate-700 rounded-lg p-2 text-center" onclick="selectCar(this, 10, 50, 'Sedan')">
+                                <i class="fas fa-car text-xl text-slate-400 mb-1"></i>
+                                <span class="block text-[10px] font-bold text-slate-300">Sedan</span>
+                            </div>
+                            <div class="car-option cursor-pointer border border-slate-700 rounded-lg p-2 text-center" onclick="selectCar(this, 15, 100, 'Van')">
+                                <i class="fas fa-shuttle-van text-xl text-slate-400 mb-1"></i>
+                                <span class="block text-[10px] font-bold text-slate-300">Van</span>
+                            </div>
+                            <div class="car-option cursor-pointer border border-slate-700 rounded-lg p-2 text-center" onclick="selectCar(this, 25, 200, 'VIP')">
+                                <i class="fas fa-gem text-xl text-slate-400 mb-1"></i>
+                                <span class="block text-[10px] font-bold text-slate-300">VIP</span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="date" id="trip-date" class="input-field font-num text-sm text-slate-400">
+                            <input type="time" id="trip-time" class="input-field font-num text-sm text-slate-400">
+                        </div>
+
+                        <button onclick="calculateRoute()" class="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl transition">
+                            عرض الأسعار
+                        </button>
+
+                        <div id="price-box" class="hidden bg-slate-800/50 p-4 rounded-xl border border-amber-500/30 text-center animate-pulse">
+                            <p class="text-xs text-slate-400">السعر التقديري</p>
+                            <p id="price-display" class="text-2xl font-num font-black text-white my-1">0 EGP</p>
+                            <button onclick="saveTripToDatabase()" class="w-full mt-2 py-2 bg-amber-500 hover:bg-amber-600 text-black font-bold rounded-lg shadow-lg shadow-amber-500/20">
+                                تأكيد وحجز الآن 🚀
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                <input type="email" id="email" placeholder="البريد الإلكتروني" class="input-field text-right" dir="ltr">
-                <input type="password" id="password" placeholder="كلمة المرور" class="input-field text-right" dir="ltr">
-                
-                <div class="grid grid-cols-2 gap-3">
-                    <button onclick="handleLogin()" class="py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition">دخول</button>
-                    <button onclick="handleSignUp()" class="py-3 border border-indigo-500/30 text-indigo-400 font-bold rounded-xl hover:bg-indigo-500/10 transition">حساب جديد</button>
+                <div class="flex-1 glass-card p-1 min-h-[300px] lg:min-h-0 relative">
+                    <div id="map"></div>
+                    <div id="map-overlay" class="absolute inset-0 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm rounded-xl">
+                        <div class="text-center">
+                            <i class="fas fa-map-marked-alt text-4xl text-slate-600 mb-2"></i>
+                            <p class="text-slate-400 text-sm">أدخل الوجهة لعرض الخريطة</p>
+                        </div>
+                    </div>
                 </div>
-                
-                <p id="auth-message" class="text-xs text-yellow-400 mt-2 h-4"></p>
+            </div>
+
+            <div id="tab-trips" class="section-content hidden space-y-6">
+                <h2 class="text-2xl font-bold text-white">سجل الرحلات</h2>
+                <div id="trips-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="text-slate-400 text-center col-span-full py-10">
+                        <i class="fas fa-spinner fa-spin text-2xl"></i> جاري تحميل رحلاتك...
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-wallet" class="section-content hidden max-w-2xl mx-auto space-y-6">
+                <div class="glass-card p-8 text-center bg-gradient-to-br from-slate-800 to-slate-900">
+                    <p class="text-slate-400 mb-2">رصيدك الحالي</p>
+                    <h2 class="text-5xl font-num font-black text-white mb-4">0.00 <span class="text-xl text-amber-500">EGP</span></h2>
+                    <div class="flex gap-4 justify-center">
+                        <button class="px-6 py-2 bg-amber-500 text-black font-bold rounded-lg hover:bg-amber-600">
+                            <i class="fas fa-plus"></i> شحن رصيد
+                        </button>
+                        <button class="px-6 py-2 border border-slate-600 text-white font-bold rounded-lg hover:bg-slate-800">
+                            <i class="fas fa-history"></i> المعاملات
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-chat" class="section-content hidden h-full">
+                <div class="glass-card h-full flex flex-col justify-center items-center text-center p-8">
+                    <img src="https://img.icons8.com/fluency/96/chat.png" class="mb-4 opacity-80">
+                    <h3 class="text-xl font-bold text-white">مركز الرسائل</h3>
+                    <p class="text-slate-400 mt-2 max-w-md">لا توجد محادثات نشطة حالياً. ستبدأ المحادثة تلقائياً عند قبول السائق لرحلتك.</p>
+                </div>
+            </div>
+             <div id="tab-support" class="section-content hidden max-w-2xl mx-auto space-y-6">
+                <h2 class="text-2xl font-bold text-white">كيف يمكننا مساعدتك؟</h2>
+                <div class="glass-card p-6">
+                    <label class="block text-slate-400 mb-2 text-sm">الموضوع</label>
+                    <input type="text" class="input-field mb-4" placeholder="مثال: مشكلة في رحلة سابقة">
+                    <label class="block text-slate-400 mb-2 text-sm">التفاصيل</label>
+                    <textarea class="input-field h-32 mb-4" placeholder="اكتب تفاصيل مشكلتك هنا..."></textarea>
+                    <button class="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl">إرسال التذكرة</button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <div id="login-overlay" class="fixed inset-0 bg-slate-950/95 z-50 flex items-center justify-center p-4">
+        <div class="glass-card p-8 max-w-sm w-full text-center border-slate-700">
+            <div class="w-16 h-16 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="fas fa-user-lock text-2xl text-amber-500"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-white mb-2">تسجيل الدخول</h2>
+            <p class="text-slate-400 mb-6 text-sm">مرحباً بك مجدداً في 24Seven</p>
+            
+            <button onclick="handleGoogleLogin()" class="w-full py-3 bg-white text-slate-900 font-bold rounded-xl hover:bg-slate-200 transition mb-4 flex items-center justify-center gap-2">
+                <img src="https://img.icons8.com/color/48/google-logo.png" class="w-5 h-5"> متابعة بجوجل
+            </button>
+            
+            <div class="text-xs text-slate-500 mb-4 separator">أو عبر البريد</div>
+            
+            <input type="email" id="email" placeholder="name@example.com" class="input-field mb-2 text-center" dir="ltr">
+            <input type="password" id="password" placeholder="******" class="input-field mb-4 text-center" dir="ltr">
+            
+            <div class="flex gap-2">
+                <button onclick="handleLogin()" class="flex-1 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600">دخول</button>
+                <button onclick="handleSignUp()" class="flex-1 py-2 border border-amber-500/50 text-amber-500 rounded-lg hover:bg-amber-500/10">جديد</button>
             </div>
         </div>
     </div>
 
-    <nav class="fixed top-0 w-full z-50 backdrop-blur-md bg-black/50 border-b border-white/10 py-4 px-6 flex justify-between items-center">
-        <a href="/" class="text-xl font-bold text-white"><i class="fas fa-car-side text-indigo-500"></i> 24Seven <span class="text-indigo-500">Limo</span></a>
-        
-        <div id="user-info" class="hidden items-center gap-3">
-            <div class="text-right hidden md:block">
-                <span id="user-name" class="block text-sm text-white font-bold">زائر</span>
-                <span onclick="handleLogout()" class="text-xs text-red-400 cursor-pointer hover:underline">تسجيل خروج</span>
-            </div>
-            <img id="user-avatar" src="" class="w-9 h-9 rounded-full border border-indigo-500 bg-indigo-900">
-        </div>
-    </nav>
-
-    <section class="min-h-screen flex items-center justify-center pt-24 pb-12 px-4">
-        <div class="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-            
-            <div class="order-2 lg:order-1 space-y-6">
-                <div class="glass-card p-6 min-h-[400px]" id="map-container">
-                    <div id="map-placeholder" class="text-center py-20">
-                        <i class="fas fa-map-marked-alt text-6xl text-slate-700 mb-4"></i>
-                        <p class="text-slate-500">حدد وجهتك لرؤية المسار والسعر</p>
-                    </div>
-                    <div id="map"></div>
-                    
-                    <div id="trip-details" class="hidden w-full mt-4 space-y-3 border-t border-white/10 pt-4">
-                        <div class="grid grid-cols-2 gap-4 text-center">
-                            <div class="bg-white/5 p-3 rounded-lg">
-                                <span class="block text-xs text-slate-400">المسافة</span>
-                                <span id="distance-display" class="font-num font-bold text-white text-lg">0 km</span>
-                            </div>
-                            <div class="bg-white/5 p-3 rounded-lg">
-                                <span class="block text-xs text-slate-400">الوقت</span>
-                                <span id="duration-display" class="font-num font-bold text-white text-lg">0 min</span>
-                            </div>
-                        </div>
-                        <div class="flex justify-between items-center bg-indigo-600/10 p-4 rounded-xl border border-indigo-600/30">
-                            <span class="text-indigo-400 font-bold">السعر التقديري:</span>
-                            <span id="price-display" class="font-num text-2xl font-black text-white">0 EGP</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="order-1 lg:order-2 glass-card p-6 md:p-8 relative z-10">
-                <h3 class="text-2xl font-bold text-white mb-6">تفاصيل الرحلة</h3>
-                <div class="space-y-4">
-                    <div class="space-y-3">
-                        <input id="origin-input" type="text" placeholder="نقطة الانطلاق" class="input-field pr-4">
-                        <input id="destination-input" type="text" placeholder="الوجهة" class="input-field pr-4">
-                    </div>
-
-                    <div class="grid grid-cols-3 gap-3">
-                        <div class="car-option active cursor-pointer border border-white/10 rounded-xl p-3 text-center" onclick="selectCar(this, 10, 50, 'Sedan')">
-                            <i class="fas fa-car text-xl text-slate-300 mb-1"></i> <span class="block text-xs font-bold text-slate-300">Sedan</span>
-                        </div>
-                        <div class="car-option cursor-pointer border border-white/10 rounded-xl p-3 text-center" onclick="selectCar(this, 15, 100, 'Van')">
-                            <i class="fas fa-shuttle-van text-xl text-slate-300 mb-1"></i> <span class="block text-xs font-bold text-slate-300">Van</span>
-                        </div>
-                        <div class="car-option cursor-pointer border border-white/10 rounded-xl p-3 text-center" onclick="selectCar(this, 25, 200, 'VIP')">
-                            <i class="fas fa-gem text-xl text-slate-300 mb-1"></i> <span class="block text-xs font-bold text-slate-300">VIP</span>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <input type="number" id="passengers" min="1" value="1" placeholder="ركاب" class="input-field font-num text-center">
-                        <input type="number" id="bags" min="0" value="0" placeholder="شنط" class="input-field font-num text-center">
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <input type="date" id="trip-date" class="input-field font-num text-sm text-slate-300">
-                        <input type="time" id="trip-time" class="input-field font-num text-sm text-slate-300">
-                    </div>
-
-                    <button onclick="calculateRoute()" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition">
-                         حساب السعر 
-                    </button>
-                    
-                    <button onclick="saveTripToDatabase()" class="hidden w-full py-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-lg transition animate-pulse" id="confirm-btn">
-                        تأكيد الحجز ✅
-                    </button>
-                </div>
-            </div>
-        </div>
-    </section>
-
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBFcMkqiLCX2z94HrIxmAnT47gpxIocB_E&libraries=places&language=ar"></script>
-
     <script>
-        // --- 1. إعدادات الاتصال بالسيرفر ---
+        // Supabase Init
         const supabaseUrl = 'https://qxtlsfmfetwcflbpvwuf.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4dGxzZm1mZXR3Y2ZsYnB2d3VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0MzMzODEsImV4cCI6MjA3ODAwOTM4MX0.FFGXNfx0FDA4FmJB1gVorNigs9nRoO4q1pCj2BOMDbU';
-        
-        // تغيير اسم المتغير لمنع التعارض مع المكتبة
         const sbClient = supabase.createClient(supabaseUrl, supabaseKey);
 
         let currentUser = null;
 
-        // --- 2. إدارة المستخدمين ---
+        // 1. Auth & Session Logic
         async function checkSession() {
             const { data: { session } } = await sbClient.auth.getSession();
             if (session) {
                 currentUser = session.user;
-                showApp(currentUser);
-            } else {
-                document.getElementById('login-overlay').style.display = 'flex';
+                initDashboard(currentUser);
             }
         }
-        
-        function showApp(user) {
+
+        function initDashboard(user) {
             document.getElementById('login-overlay').style.display = 'none';
-            document.getElementById('user-info').classList.remove('hidden');
-            document.getElementById('user-info').classList.add('flex');
-            
             const email = user.email;
             const name = user.user_metadata.full_name || email.split('@')[0];
-            const avatar = user.user_metadata.avatar_url || `https://ui-avatars.com/api/?name=${name}&background=6366f1&color=fff`;
+            const avatar = user.user_metadata.avatar_url || `https://ui-avatars.com/api/?name=${name}&background=f59e0b&color=fff`;
             
-            document.getElementById('user-name').innerText = name;
-            document.getElementById('user-avatar').src = avatar;
+            document.getElementById('user-name-side').innerText = name;
+            document.getElementById('user-avatar-side').src = avatar;
             
-            initMap(); 
+            initMap();
         }
 
-        // تسجيل الدخول بجوجل
+        // Tabs Switching
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.section-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
+            
+            // Show selected tab
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+            document.getElementById(`nav-${tabName}`).classList.add('active');
+
+            if (tabName === 'trips') loadMyTrips();
+            if (tabName === 'wallet') loadWallet();
+        }
+
+        // --- Auth Functions ---
         async function handleGoogleLogin() {
-            try {
-                const { data, error } = await sbClient.auth.signInWithOAuth({
-                    provider: 'google',
-                    options: {
-                        // استخدام الرابط الكامل كما في Supabase بالضبط
-                        redirectTo: 'https://24seven-ai.com/limousine.html',
-                        queryParams: { access_type: 'offline', prompt: 'consent' }
-                    },
-                });
-                if (error) alert("خطأ في جوجل: " + error.message);
-            } catch (err) {
-                alert("حدث خطأ غير متوقع: " + err.message);
-            }
+            await sbClient.auth.signInWithOAuth({
+                provider: 'google',
+                options: { redirectTo: 'https://24seven-ai.com/limousine.html' }
+            });
         }
 
-        // تسجيل الدخول بالإيميل
         async function handleLogin() {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            if(!email || !password) {
-                alert("الرجاء إدخال البريد وكلمة المرور");
-                return;
-            }
+            if(!validateEmail(email)) return alert("الرجاء إدخال إيميل صحيح");
             
-            const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
-            if (error) document.getElementById('auth-message').innerText = error.message;
+            const { error } = await sbClient.auth.signInWithPassword({ email, password });
+            if(error) alert(error.message);
             else location.reload();
         }
 
-        // إنشاء حساب جديد
         async function handleSignUp() {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            if(!email || !password) {
-                alert("الرجاء إدخال البريد وكلمة المرور لإنشاء حساب");
-                return;
-            }
+            if(!validateEmail(email)) return alert("الرجاء إدخال إيميل صحيح (مثال: name@gmail.com)");
+            
+            const { error } = await sbClient.auth.signUp({ email, password });
+            if(error) alert(error.message);
+            else alert("تم إنشاء الحساب! افحص بريدك أو سجل الدخول.");
+        }
 
-            const { data, error } = await sbClient.auth.signUp({ email, password });
-            if (error) {
-                document.getElementById('auth-message').innerText = error.message;
-                alert("فشل إنشاء الحساب: " + error.message);
-            } else {
-                alert("تم إنشاء الحساب بنجاح! جاري الدخول...");
-                location.reload();
-            }
+        function validateEmail(email) {
+            return String(email).toLowerCase().match(/^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/);
         }
 
         async function handleLogout() {
@@ -238,12 +291,10 @@
             location.reload();
         }
 
-        // --- 3. منطق الخريطة والحجز ---
+        // --- Map Logic ---
         let map, directionsService, directionsRenderer;
-        let selectedRate = 10;
-        let baseFare = 50;
-        let selectedCarType = 'Sedan';
-        let tripData = {}; 
+        let selectedRate = 10, baseFare = 50, selectedCarType = 'Sedan';
+        let tripData = {};
 
         function initMap() {
             if(map) return;
@@ -253,6 +304,7 @@
             });
             directionsService = new google.maps.DirectionsService();
             directionsRenderer = new google.maps.DirectionsRenderer({ map: map });
+            
             new google.maps.places.Autocomplete(document.getElementById("origin-input"));
             new google.maps.places.Autocomplete(document.getElementById("destination-input"));
         }
@@ -261,80 +313,96 @@
             document.querySelectorAll('.car-option').forEach(e => e.classList.remove('active'));
             el.classList.add('active');
             selectedRate = rate; baseFare = base; selectedCarType = type;
-            if(document.getElementById("trip-details").classList.contains("block")) calculateRoute();
         }
 
         function calculateRoute() {
             const origin = document.getElementById("origin-input").value;
             const destination = document.getElementById("destination-input").value;
-
-            if (!origin || !destination) { alert("يرجى إدخال الموقع والوجهة"); return; }
+            if (!origin || !destination) return alert("أدخل الموقع والوجهة أولاً");
 
             directionsService.route({
                 origin: origin, destination: destination, travelMode: google.maps.TravelMode.DRIVING,
             }, (response, status) => {
                 if (status === "OK") {
-                    document.getElementById("map-placeholder").style.display = "none";
-                    document.getElementById("map").style.display = "block";
-                    document.getElementById("trip-details").classList.remove("hidden");
-                    document.getElementById("trip-details").classList.add("block");
-                    document.getElementById("confirm-btn").classList.remove("hidden");
-                    
+                    document.getElementById("map-overlay").classList.add("hidden");
                     directionsRenderer.setDirections(response);
-
-                    const route = response.routes[0].legs[0];
-                    const distanceKm = route.distance.value / 1000;
-                    const totalPrice = Math.round((distanceKm * selectedRate) + baseFare);
-
-                    document.getElementById("distance-display").innerText = route.distance.text;
-                    document.getElementById("duration-display").innerText = route.duration.text;
-                    document.getElementById("price-display").innerText = totalPrice + " EGP";
-
-                    tripData = {
-                        pickup_location: origin,
-                        dropoff_location: destination,
-                        distance_km: distanceKm,
-                        estimated_price: totalPrice,
-                        car_type: selectedCarType,
-                        passengers_count: document.getElementById('passengers').value,
-                        bags_count: document.getElementById('bags').value,
-                        pickup_datetime: document.getElementById('trip-date').value ? 
-                            (document.getElementById('trip-date').value + ' ' + document.getElementById('trip-time').value) : new Date()
-                    };
+                    
+                    const distanceKm = response.routes[0].legs[0].distance.value / 1000;
+                    const price = Math.round((distanceKm * selectedRate) + baseFare);
+                    
+                    document.getElementById("price-box").classList.remove("hidden");
+                    document.getElementById("price-display").innerText = price + " EGP";
+                    
+                    tripData = { pickup: origin, dropoff: destination, km: distanceKm, price: price, type: selectedCarType };
                 }
             });
         }
 
-        // --- 4. الحفظ في قاعدة البيانات ---
         async function saveTripToDatabase() {
-            if (!currentUser) return alert("يجب تسجيل الدخول أولاً");
-
-            const btn = document.getElementById("confirm-btn");
+            const btn = event.target;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحجز...';
+            
+            const { error } = await sbClient.from('trips').insert([{
+                user_id: currentUser.id,
+                pickup_location: tripData.pickup,
+                dropoff_location: tripData.dropoff,
+                distance_km: tripData.km,
+                estimated_price: tripData.price,
+                car_type: tripData.type,
+                status: 'pending'
+            }]);
 
+            if(error) alert(error.message);
+            else {
+                alert("تم الحجز بنجاح! 🎉");
+                switchTab('trips'); // نقل المستخدم لصفحة الرحلات
+                btn.innerHTML = 'تأكيد وحجز الآن 🚀';
+            }
+        }
+
+        // --- Fetch Data Logic ---
+        async function loadMyTrips() {
+            const list = document.getElementById('trips-list');
+            list.innerHTML = '<div class="col-span-full text-center py-4"><i class="fas fa-spinner fa-spin"></i> تحميل...</div>';
+            
             const { data, error } = await sbClient
                 .from('trips')
-                .insert([
-                    {
-                        user_id: currentUser.id,
-                        pickup_location: tripData.pickup_location,
-                        dropoff_location: tripData.dropoff_location,
-                        distance_km: tripData.distance_km,
-                        estimated_price: tripData.estimated_price,
-                        car_type: tripData.car_type,
-                        passengers_count: tripData.passengers_count,
-                        bags_count: tripData.bags_count,
-                        status: 'pending'
-                    }
-                ]);
+                .select('*')
+                .eq('user_id', currentUser.id)
+                .order('created_at', { ascending: false });
 
-            if (error) {
-                alert("حدث خطأ: " + error.message);
-                btn.innerHTML = 'تأكيد الحجز ✅';
-            } else {
-                alert("تم الحجز بنجاح! 🎉\nسيتم نقلك لصفحة رحلاتك قريباً.");
-                location.reload();
+            list.innerHTML = '';
+            if(!data || data.length === 0) {
+                list.innerHTML = '<div class="col-span-full text-center text-slate-500">لا توجد رحلات سابقة</div>';
+                return;
             }
+
+            data.forEach(trip => {
+                const date = new Date(trip.created_at).toLocaleDateString('ar-EG');
+                const statusColor = trip.status === 'pending' ? 'text-yellow-500' : 'text-green-500';
+                
+                const card = `
+                    <div class="glass-card p-4 hover:bg-slate-800 transition">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-xs text-slate-500">${date}</span>
+                            <span class="text-xs font-bold ${statusColor} border border-dashed border-current px-2 py-0.5 rounded">${trip.status}</span>
+                        </div>
+                        <h4 class="font-bold text-white mb-1">${trip.dropoff_location}</h4>
+                        <p class="text-xs text-slate-400 mb-3">من: ${trip.pickup_location}</p>
+                        <div class="flex justify-between items-center border-t border-slate-700 pt-2">
+                            <span class="font-num font-bold text-amber-500">${trip.estimated_price} EGP</span>
+                            <span class="text-xs bg-slate-700 px-2 py-1 rounded">${trip.car_type}</span>
+                        </div>
+                    </div>
+                `;
+                list.innerHTML += card;
+            });
+        }
+        
+        async function loadWallet() {
+            // يمكن تفعيل هذا الجزء بعد إنشاء جدول المحفظة
+            // const { data } = await sbClient.from('wallets').select('balance').eq('user_id', currentUser.id).single();
+            // if(data) document.querySelector('#tab-wallet h2').innerHTML = `${data.balance} <span class="text-xl text-amber-500">EGP</span>`;
         }
 
         checkSession();
