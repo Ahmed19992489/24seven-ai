@@ -373,7 +373,7 @@
                             <p class="text-xs text-amber-700 font-mono">Ref: ${tx.reference_id}</p>
                         </div>
                         <div class="flex gap-2">
-                            <button onclick="approveTx('${tx.id}')" class="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600">قبول</button>
+                            <button onclick="approveTx('${tx.id}', '${tx.user_id}', ${tx.amount})" class="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600">قبول</button>
                             <button onclick="rejectTx('${tx.id}')" class="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600">رفض</button>
                         </div>
                     </div>
@@ -381,9 +381,33 @@
             });
         }
 
-        async function approveTx(id) {
-            if(!confirm("تأكيد استلام المبلغ؟")) return;
-            await sbClient.from('transactions').update({ status: 'approved' }).eq('id', id);
+        async function approveTx(id, userId, amount) {
+            if(!confirm("تأكيد استلام المبلغ وإضافته لمحفظة العميل؟")) return;
+            
+            // 1. Update transaction status
+            const { error: txError } = await sbClient.from('transactions').update({ status: 'approved' }).eq('id', id);
+            if (txError) return alert("خطأ: " + txError.message);
+
+            // 2. Update user wallet balance (Profile)
+            // Get current balance first
+            const { data: profile } = await sbClient.from('profiles').select('wallet_balance').eq('id', userId).single();
+            const currentBalance = profile ? profile.wallet_balance : 0;
+            const newBalance = Number(currentBalance) + Number(amount);
+
+            // Update profile
+            const { error: profileError } = await sbClient.from('profiles').upsert({ id: userId, wallet_balance: newBalance });
+
+            if (!profileError) {
+                alert(`تم شحن المحفظة بنجاح! الرصيد الجديد: ${newBalance} EGP`);
+                loadFinance();
+            } else {
+                alert("تم قبول العملية ولكن حدث خطأ في تحديث المحفظة: " + profileError.message);
+            }
+        }
+
+        async function rejectTx(id) {
+            if(!confirm("رفض العملية؟")) return;
+            await sbClient.from('transactions').update({ status: 'rejected' }).eq('id', id);
             loadFinance();
         }
 
@@ -419,10 +443,20 @@
             if(!max || !rate || !base) return alert("أكمل البيانات");
 
             const { error } = await sbClient.from('pricing_rules').insert([{
-                car_type: type, min_km: min, max_km: max, price_per_km: rate, base_fare: base
+                car_type: type, 
+                min_km: Number(min), 
+                max_km: Number(max), 
+                price_per_km: Number(rate), 
+                base_fare: Number(base),
+                min_trip_price: 0
             }]);
 
-            if(!error) { alert("تمت إضافة الشريحة"); loadPricingTable(); }
+            if(!error) { 
+                alert("تمت إضافة الشريحة"); 
+                loadPricingTable(); 
+            } else {
+                alert(error.message);
+            }
         }
 
         async function deletePricingRule(id) {
@@ -456,8 +490,10 @@
         async function addDriverPrompt() {
             const name = prompt("اسم الكابتن:");
             const phone = prompt("رقم الهاتف:");
-            if(name && phone) await sbClient.from('drivers').insert([{name, phone}]);
-            loadFleet();
+            if(name && phone) {
+                await sbClient.from('drivers').insert([{name, phone}]);
+                loadFleet();
+            }
         }
 
         async function addCarPrompt() {
@@ -465,8 +501,10 @@
             const model = prompt("الموديل (Hiace):");
             const plate = prompt("اللوحة (أ ب ج 123):");
             const type = prompt("النوع (sedan, suv, van):");
-            if(brand && model && plate && type) await sbClient.from('cars').insert([{brand, model, plate_number: plate, type}]);
-            loadFleet();
+            if(brand && model && plate && type) {
+                await sbClient.from('cars').insert([{brand, model, plate_number: plate, type}]);
+                loadFleet();
+            }
         }
 
     </script>
