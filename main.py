@@ -9,7 +9,6 @@ import os
 from pathlib import Path
 
 # --- 1. تحديد المسار الرئيسي للمشروع بدقة (Absolute Path) ---
-# هذا السطر يضمن أن السيرفر يرى الملفات أينما كان مكانه
 BASE_DIR = Path(__file__).resolve().parent
 
 # --- استيراد الروابط (APIs) ---
@@ -40,16 +39,23 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
     return response
 
-# --- 4. إعداد الملفات الثابتة (Static Files) ---
-# هذا السطر مهم جداً لكي تظهر الصور وملفات الـ CSS
+# ========================================================
+# --- 4. إعداد الملفات الثابتة (Static & Images) --- هام جداً
+# ========================================================
+
+# أ) إعداد مجلد static (للملفات العامة)
 static_path = BASE_DIR / "static"
 upload_path = static_path / "uploads"
-
-# التأكد من وجود مجلد التحميلات
 os.makedirs(upload_path, exist_ok=True)
-
-# ربط المسار (Mount)
 app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
+
+# ب) إعداد مجلد images (لصور السيارات) ✅✅ هذا هو التعديل المطلوب
+images_path = BASE_DIR / "images"
+# نتأكد إن المجلد موجود عشان ميديناش Error لو مش موجود
+os.makedirs(images_path, exist_ok=True)
+# بنقول للسيرفر: أي رابط يبدأ بـ /images اقرأه من مجلد images
+app.mount("/images", StaticFiles(directory=str(images_path)), name="images")
+
 
 # --- 5. المسارات الخلفية (Backend Routes) ---
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
@@ -88,45 +94,23 @@ async def read_web_design_page():
         return FileResponse(file_path)
     return HTMLResponse("<h1>Error: web_design.html not found!</h1>")
 
-# 4. صفحة الأداة (Dashboard) - مع فحص المسار
+# 4. صفحة الأداة (Dashboard)
 @app.get("/dashboard")
 async def read_app_dashboard():
     file_path = BASE_DIR / "dashboard.html"
-    
-    # طباعة للتصحيح في اللوج
-    print(f"🔍 Searching for Dashboard at: {file_path}")
-    
     if file_path.exists():
         return FileResponse(file_path)
-    
-    return HTMLResponse(f"""
-        <div style='text-align:center; padding:20px'>
-            <h1>⚠️ Error: dashboard.html not found!</h1>
-            <p>Server looked at: {file_path}</p>
-            <p>Files in current dir: {os.listdir(BASE_DIR)}</p>
-        </div>
-    """, status_code=404)
+    return HTMLResponse("<h1>Error: dashboard.html not found!</h1>", status_code=404)
 
-# 5. لوحة تحكم الأدمن - مع فحص المسار
+# 5. لوحة تحكم الأدمن
 @app.get("/admin-panel")
 async def read_admin_panel():
     file_path = BASE_DIR / "admin.html"
-    
-    # طباعة للتصحيح في اللوج
-    print(f"🔍 Searching for Admin Panel at: {file_path}")
-    
     if file_path.exists():
         return FileResponse(file_path)
-    
-    return HTMLResponse(f"""
-        <div style='text-align:center; padding:20px'>
-            <h1>⚠️ Error: admin.html not found!</h1>
-            <p>Server looked at: {file_path}</p>
-            <p>Files in current dir: {os.listdir(BASE_DIR)}</p>
-        </div>
-    """, status_code=404)
+    return HTMLResponse("<h1>Error: admin.html not found!</h1>", status_code=404)
 
-# 6. صفحة حجز الليموزين (تمت إضافتها) ✅
+# 6. صفحة حجز الليموزين ✅
 @app.get("/limousine.html")
 async def read_limousine_page():
     file_path = BASE_DIR / "limousine.html"
@@ -139,7 +123,7 @@ async def read_limousine_page():
 async def read_limousine_clean():
     return await read_limousine_page()
 
-# --- Setup Admin (لإنشاء حساب الأدمن الأول مرة واحدة) ---
+# --- Setup Admin ---
 @app.post("/setup-admin/", tags=["Admin & Setup"])
 def create_founder_account(db: Session = Depends(get_db)):
     existing_user = db.query(models.User).filter(models.User.email == "admin@24seven.com").first()
@@ -157,3 +141,8 @@ def create_founder_account(db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     return {"message": "Created", "user": new_user.email}
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 10000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
