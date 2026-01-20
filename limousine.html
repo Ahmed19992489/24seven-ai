@@ -15,7 +15,6 @@
         body { font-family: 'Cairo', sans-serif; background-color: var(--bg-dark); color: #f8fafc; overflow-x: hidden; }
         .font-num { font-family: 'Outfit', sans-serif; }
         
-        /* Sidebar & Navigation */
         .sidebar-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; transition: 0.3s; color: #94a3b8; cursor: pointer; }
         .sidebar-link:hover, .sidebar-link.active { background: rgba(245, 158, 11, 0.15); color: var(--primary); font-weight: bold; border-right: 3px solid var(--primary); }
         
@@ -23,17 +22,14 @@
         .input-field { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 12px; width: 100%; color: white; outline: none; transition: 0.3s; }
         .input-field:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2); }
         
-        /* صور السيارات الواقعية */
         .car-option { transition: all 0.3s ease; border: 2px solid transparent; position: relative; overflow: hidden; background: #0f172a; padding: 10px; border-radius: 12px; cursor: pointer; }
         .car-option:hover { transform: translateY(-3px); border-color: #475569; }
         .car-option.active { border-color: var(--primary); background: rgba(245, 158, 11, 0.05); }
         .car-img { height: 75px; object-fit: contain; margin: 5px auto; filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5)); }
         
-        /* كروت الرحلات (GetTransfer Style) */
         .trip-card { position: relative; overflow: hidden; border-right: 4px solid transparent; transition: 0.3s; }
         .trip-card:hover { border-right-color: var(--primary); background: #252f40; }
         
-        /* بادج الحالة */
         .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; }
         .status-pending { background: #fff7ed; color: #c2410c; }
         .status-approved { background: #f0fdf4; color: #15803d; }
@@ -114,17 +110,17 @@
                         <label class="text-xs text-slate-400 font-bold block mb-2">اختر السيارة المناسبة</label>
                         <div class="grid grid-cols-3 gap-3">
                             <div class="car-option active" onclick="selectCar(this, 'sedan')">
-                                <img src="https://di-uploads-pod16.dealerinspire.com/toyotaofnorthcharlotte/uploads/2020/03/2020-Toyota-Corolla-LE-Blueprint.png" class="car-img" alt="Toyota Corolla">
+                                <img src="https://www.pngmart.com/files/22/Toyota-Corolla-PNG-Photos.png" class="car-img" alt="Toyota Corolla">
                                 <span class="block text-xs font-bold text-white text-center">Corolla</span>
-                                <span class="block text-[10px] text-slate-400 text-center">اقتصادية</span>
+                                <span class="block text-[10px] text-slate-400 text-center">سيدان</span>
                             </div>
                             <div class="car-option" onclick="selectCar(this, 'suv')">
-                                <img src="https://images.dealer.com/ddc/vehicles/2023/Mitsubishi/Outlander/SUV/trim_SE_25_FWD/perspective/front-left/2023_24.png" class="car-img" alt="Mitsubishi Xpander">
+                                <img src="https://purepng.com/public/uploads/large/purepng.com-mitsubishi-xpander-gls-carcarvehicletransportmitsubishi-961524663360s8h1h.png" class="car-img" alt="Mitsubishi Xpander">
                                 <span class="block text-xs font-bold text-white text-center">Xpander</span>
                                 <span class="block text-[10px] text-slate-400 text-center">عائلية</span>
                             </div>
                             <div class="car-option" onclick="selectCar(this, 'van')">
-                                <img src="https://global.toyota/pages/news/images/2019/02/18/1330/001.png" class="car-img" alt="Toyota Hiace">
+                                <img src="https://www.pngmart.com/files/22/Toyota-Hiace-PNG-Pic.png" class="car-img" alt="Toyota Hiace">
                                 <span class="block text-xs font-bold text-white text-center">Hiace</span>
                                 <span class="block text-[10px] text-slate-400 text-center">مجموعات</span>
                             </div>
@@ -168,26 +164,23 @@
             </div>
 
             <div id="tab-wallet" class="section-content hidden max-w-3xl mx-auto">
-                <div class="glass-card p-8 mb-6 bg-gradient-to-br from-slate-800 to-[#121b2e] flex justify-between items-center relative overflow-hidden">
+                <div class="glass-card p-8 mb-6 bg-gradient-to-br from-slate-800 to-[#121b2e] flex justify-between items-center">
                     <div class="relative z-10">
                         <p class="text-slate-400 mb-1">رصيدك الحالي</p>
                         <h2 class="text-5xl font-num font-black text-white">0.00 <span class="text-lg text-amber-500 font-bold">EGP</span></h2>
                     </div>
                     <i class="fas fa-wallet text-8xl text-white/5 absolute -left-4 -bottom-4"></i>
                 </div>
-
                 <div class="grid md:grid-cols-2 gap-6">
                     <div class="glass-card p-6">
                         <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
                             <i class="fas fa-bolt text-purple-500"></i> شحن الرصيد (InstaPay)
                         </h3>
-                        
                         <div class="bg-white p-4 rounded-xl mb-4 text-center">
                             <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=InstaPay-01000000000" class="mx-auto w-32 h-32 mb-2">
                             <p class="text-black font-bold text-sm">امسح الكود أو حول إلى:</p>
                             <p class="font-num font-bold text-purple-600 text-xl select-all">01000000000</p>
                         </div>
-
                         <div class="space-y-3">
                             <input type="number" id="deposit-amount" placeholder="المبلغ المحول (EGP)" class="input-field font-num">
                             <input type="text" id="deposit-ref" placeholder="رقم العملية (Reference ID)" class="input-field font-num">
@@ -196,7 +189,6 @@
                             </button>
                         </div>
                     </div>
-
                     <div class="glass-card p-6">
                         <h3 class="text-lg font-bold text-white mb-4">سجل العمليات</h3>
                         <div id="transactions-list" class="space-y-3 max-h-[300px] overflow-y-auto pr-1"></div>
@@ -217,17 +209,30 @@
                     فتح واتساب
                 </a>
             </div>
-
         </div>
     </main>
 
     <div id="login-overlay" class="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4">
         <div class="glass-card p-8 max-w-sm w-full text-center border-slate-700">
             <h2 class="text-3xl font-black text-white mb-2">24Seven</h2>
-            <p class="text-slate-400 mb-6">سجل دخولك لحجز رحلتك</p>
-            <button onclick="handleGoogleLogin()" class="w-full py-3 bg-white text-slate-900 font-bold rounded-xl flex items-center justify-center gap-2">
-                <img src="https://img.icons8.com/color/48/google-logo.png" class="w-5 h-5"> دخول بجوجل
+            <p class="text-slate-400 mb-6 text-sm">سجل دخولك لحجز رحلتك</p>
+            
+            <button onclick="handleGoogleLogin()" class="w-full py-3 bg-white text-slate-900 font-bold rounded-xl hover:bg-slate-200 transition mb-4 flex items-center justify-center gap-2">
+                <img src="https://img.icons8.com/color/48/google-logo.png" class="w-5 h-5"> متابعة بجوجل
             </button>
+            
+            <div class="relative py-2 mb-4">
+                <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-700"></div></div>
+                <div class="relative flex justify-center text-xs uppercase"><span class="bg-[#1e293b] px-3 text-slate-500">أو عبر البريد</span></div>
+            </div>
+            
+            <input type="email" id="email" placeholder="name@example.com" class="input-field mb-2 text-center" dir="ltr">
+            <input type="password" id="password" placeholder="******" class="input-field mb-4 text-center" dir="ltr">
+            
+            <div class="flex gap-2">
+                <button onclick="handleLogin()" class="flex-1 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600">دخول</button>
+                <button onclick="handleSignUp()" class="flex-1 py-2 border border-slate-600 text-slate-300 rounded-lg hover:bg-slate-800">حساب جديد</button>
+            </div>
         </div>
     </div>
 
@@ -238,10 +243,7 @@
         const sbClient = supabase.createClient(supabaseUrl, supabaseKey);
         let currentUser = null;
 
-        // --- إعدادات التسعير (مستخلصة من شيت الإكسل) ---
-        // baseStart: فتحة العداد
-        // shortRate: سعر الكيلو للمسافات القصيرة (أقل من 50كم)
-        // longRate: سعر الكيلو للمسافات الطويلة (أكثر من 50كم)
+        // Pricing Config (Updated)
         const PRICING_CONFIG = {
             'sedan': { baseStart: 150, shortRate: 15, longRate: 7.5, threshold: 50 },
             'suv':   { baseStart: 200, shortRate: 18, longRate: 8.5, threshold: 50 },
@@ -269,6 +271,33 @@
             await sbClient.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: 'https://24seven-ai.com/limousine.html' } });
         }
 
+        // Login Logic
+        async function handleLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            if(!email || !password) return alert("الرجاء إدخال البيانات");
+            
+            const { error } = await sbClient.auth.signInWithPassword({ email, password });
+            if(error) alert(error.message);
+            else location.reload();
+        }
+
+        // Signup Logic (Triggers Confirmation Email)
+        async function handleSignUp() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            if(!email || !password) return alert("الرجاء إدخال إيميل وكلمة مرور");
+            
+            const { error } = await sbClient.auth.signUp({ 
+                email, 
+                password,
+                options: { emailRedirectTo: 'https://24seven-ai.com/limousine.html' }
+            });
+            
+            if(error) alert(error.message);
+            else alert("تم التسجيل بنجاح! 🚀\n\nتم إرسال رابط التفعيل إلى بريدك الإلكتروني (inbox أو spam).\nيرجى الضغط عليه لتفعيل الحساب.");
+        }
+
         async function handleLogout() { await sbClient.auth.signOut(); location.reload(); }
 
         function switchTab(tab) {
@@ -282,7 +311,7 @@
             if(tab === 'invoices') loadInvoices();
         }
 
-        // --- Map & Pricing Logic ---
+        // --- Map & Pricing ---
         let map, directionsService, directionsRenderer;
 
         function initMap() {
@@ -314,25 +343,19 @@
                 if (status === "OK") {
                     directionsRenderer.setDirections(response);
                     const distanceKm = response.routes[0].legs[0].distance.value / 1000;
-                    
-                    // --- معادلة السعر الذكية من تحليل الإكسل ---
                     const config = PRICING_CONFIG[currentCar];
                     let price = 0;
                     
                     if (distanceKm <= config.threshold) {
-                        // مسافة قصيرة (توصيلة)
                         price = config.baseStart + (distanceKm * config.shortRate);
                     } else {
-                        // سفر (نظام شرائح: أول 50 بسعر، والباقي بسعر)
                         price = config.baseStart + (config.threshold * config.shortRate) + ((distanceKm - config.threshold) * config.longRate);
                     }
-                    
-                    price = Math.round(price / 10) * 10; // تقريب لأقرب 10 جنيه
+                    price = Math.round(price / 10) * 10;
 
                     document.getElementById("price-box").classList.remove("hidden");
                     document.getElementById("price-display").innerText = price + " EGP";
                     document.getElementById("distance-display").innerText = Math.round(distanceKm) + " km";
-                    
                     tripData = { pickup: origin, dropoff: destination, km: distanceKm, price: price, type: currentCar };
                 }
             });
@@ -341,7 +364,6 @@
         async function saveTripToDatabase() {
             const btn = event.target;
             btn.innerHTML = 'جاري الحجز...';
-            // 1. حفظ الرحلة
             const { data: trip, error } = await sbClient.from('trips').insert([{
                 user_id: currentUser.id,
                 pickup_location: tripData.pickup,
@@ -354,21 +376,19 @@
 
             if(error) alert(error.message);
             else {
-                // 2. إنشاء فاتورة تلقائية (غير مدفوعة)
                 await sbClient.from('invoices').insert([{
                     user_id: currentUser.id,
                     trip_id: trip[0].id,
                     amount: tripData.price,
                     status: 'unpaid'
                 }]);
-                
                 alert("تم الحجز بنجاح!");
                 switchTab('trips');
                 btn.innerHTML = 'تأكيد وحجز';
             }
         }
 
-        // --- Wallet & InstaPay Logic ---
+        // --- Wallet & Transactions ---
         async function submitDeposit() {
             const amount = document.getElementById('deposit-amount').value;
             const ref = document.getElementById('deposit-ref').value;
@@ -383,7 +403,7 @@
             
             if(error) alert("خطأ: " + error.message);
             else {
-                alert("تم إرسال الطلب للمراجعة. سيتم إضافة الرصيد بعد التأكد.");
+                alert("تم إرسال الطلب للمراجعة.");
                 loadTransactions();
                 document.getElementById('deposit-amount').value = '';
                 document.getElementById('deposit-ref').value = '';
@@ -394,21 +414,11 @@
             const list = document.getElementById('transactions-list');
             list.innerHTML = 'Loading...';
             const { data } = await sbClient.from('transactions').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
-            
             list.innerHTML = '';
             if(!data || data.length === 0) { list.innerHTML = '<div class="text-center text-slate-500">لا توجد عمليات</div>'; return; }
-            
             data.forEach(tx => {
                 const badgeClass = tx.status === 'approved' ? 'status-approved' : (tx.status === 'rejected' ? 'bg-red-100 text-red-600 px-2 py-1 rounded text-xs' : 'status-pending');
-                list.innerHTML += `
-                    <div class="flex justify-between items-center border-b border-slate-700 pb-2">
-                        <div>
-                            <p class="text-white font-bold">${tx.amount} EGP</p>
-                            <p class="text-[10px] text-slate-400">REF: ${tx.reference_id}</p>
-                        </div>
-                        <span class="status-badge ${badgeClass}">${tx.status}</span>
-                    </div>
-                `;
+                list.innerHTML += `<div class="flex justify-between items-center border-b border-slate-700 pb-2"><div><p class="text-white font-bold">${tx.amount} EGP</p><p class="text-[10px] text-slate-400">REF: ${tx.reference_id}</p></div><span class="status-badge ${badgeClass}">${tx.status}</span></div>`;
             });
         }
 
@@ -418,21 +428,8 @@
             const { data } = await sbClient.from('trips').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
             list.innerHTML = '';
             if(!data || data.length === 0) { list.innerHTML = '<div class="text-center text-slate-500 py-10">لا توجد رحلات</div>'; return; }
-            
             data.forEach(trip => {
-                list.innerHTML += `
-                    <div class="trip-card glass-card p-4 flex justify-between items-center">
-                        <div>
-                            <h4 class="font-bold text-white text-lg mb-1">${trip.dropoff_location}</h4>
-                            <p class="text-xs text-slate-400">من: ${trip.pickup_location}</p>
-                            <span class="text-xs bg-slate-700 px-2 py-1 rounded mt-2 inline-block">${trip.car_type}</span>
-                        </div>
-                        <div class="text-left">
-                            <p class="text-xl font-num font-bold text-amber-500">${trip.estimated_price} EGP</p>
-                            <span class="status-badge ${trip.status === 'pending' ? 'status-pending' : 'status-approved'}">${trip.status}</span>
-                        </div>
-                    </div>
-                `;
+                list.innerHTML += `<div class="trip-card glass-card p-4 flex justify-between items-center"><div><h4 class="font-bold text-white text-lg mb-1">${trip.dropoff_location}</h4><p class="text-xs text-slate-400">من: ${trip.pickup_location}</p><span class="text-xs bg-slate-700 px-2 py-1 rounded mt-2 inline-block">${trip.car_type}</span></div><div class="text-left"><p class="text-xl font-num font-bold text-amber-500">${trip.estimated_price} EGP</p><span class="status-badge ${trip.status === 'pending' ? 'status-pending' : 'status-approved'}">${trip.status}</span></div></div>`;
             });
         }
 
@@ -442,20 +439,8 @@
             const { data } = await sbClient.from('invoices').select('*, trips(pickup_location, dropoff_location)').eq('user_id', currentUser.id).order('created_at', { ascending: false });
             list.innerHTML = '';
             if(!data || data.length === 0) { list.innerHTML = '<div class="text-center text-slate-500">لا توجد فواتير</div>'; return; }
-            
             data.forEach(inv => {
-                list.innerHTML += `
-                    <div class="glass-card p-4 flex justify-between items-center">
-                        <div>
-                            <p class="text-sm text-white font-bold">فاتورة رحلة #${inv.trip_id.split('-')[0]}</p>
-                            <p class="text-xs text-slate-400">${new Date(inv.created_at).toLocaleDateString()}</p>
-                        </div>
-                        <div class="text-left">
-                            <p class="font-bold text-white">${inv.amount} EGP</p>
-                            <span class="status-badge ${inv.status === 'paid' ? 'status-paid' : 'status-unpaid'}">${inv.status}</span>
-                        </div>
-                    </div>
-                `;
+                list.innerHTML += `<div class="glass-card p-4 flex justify-between items-center"><div><p class="text-sm text-white font-bold">فاتورة رحلة #${inv.trip_id.split('-')[0]}</p><p class="text-xs text-slate-400">${new Date(inv.created_at).toLocaleDateString()}</p></div><div class="text-left"><p class="font-bold text-white">${inv.amount} EGP</p><span class="status-badge ${inv.status === 'paid' ? 'status-paid' : 'status-unpaid'}">${inv.status}</span></div></div>`;
             });
         }
 
