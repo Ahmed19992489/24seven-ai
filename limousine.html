@@ -140,7 +140,7 @@
                             <div class="car-option" onclick="selectCar(this, 'van')">
                                 <img src="images/van.png" class="car-img" alt="Van" onerror="this.src='https://via.placeholder.com/150?text=Van'">
                                 <span class="block text-xs font-bold text-white text-center">Hiace</span>
-                                <span class="block text-[10px] text-slate-400 text-center">14 راكب</span>
+                                <span class="block text-[10px] text-slate-400 text-center">13 راكب</span>
                             </div>
                         </div>
 
@@ -343,7 +343,6 @@
             document.querySelectorAll('.trip-type-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(`btn-${type}`).classList.add('active');
             
-            // Show note only for same-day round trip
             if (type === 'round-same') {
                 document.getElementById('same-day-note').classList.remove('hidden');
             } else {
@@ -367,24 +366,20 @@
                     let price = 0;
                     let displayKm = distanceOneWay;
 
-                    // Logic: Round Trip (Same Day) -> Treat as ONE LONG trip (Double Distance)
                     if (tripType === 'round-same') {
                         calcDistance = distanceOneWay * 2;
                         displayKm = calcDistance;
                     }
 
-                    // 1. Find Price Base
                     const rule = pricingRules.find(r => r.car_type === currentCar && calcDistance >= r.min_km && calcDistance < r.max_km);
                     
                     if (rule) {
                         price = parseFloat(rule.base_fare) + (calcDistance * parseFloat(rule.price_per_km));
                         if (price < parseFloat(rule.min_trip_price)) price = parseFloat(rule.min_trip_price);
                     } else {
-                        // Fallback (Safe Default)
                         price = 250 + (calcDistance * 15);
                     }
 
-                    // Logic: Round Trip (Diff Days) -> Treat as TWO Separate Trips (Price * 2)
                     if (tripType === 'round-diff') {
                         price = price * 2;
                         displayKm = distanceOneWay * 2;
@@ -416,7 +411,7 @@
                 distance_km: tripData.km,
                 estimated_price: tripData.price,
                 car_type: tripData.type,
-                status: 'pending' // You might want to add 'trip_type' column to DB later
+                status: 'pending'
             }]).select();
 
             if(error) alert(error.message);
@@ -452,27 +447,138 @@
             });
         }
 
+        // --- UPDATED LOAD TRIPS (SHOWS DRIVER) ---
         async function loadTrips() {
             const list = document.getElementById('trips-list');
-            const { data } = await sbClient.from('trips').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+            list.innerHTML = '<div class="text-center text-slate-400 mt-4"><i class="fas fa-spinner fa-spin"></i> جاري التحميل...</div>';
+
+            const { data: trips } = await sbClient
+                .from('trips')
+                .select('*, drivers(name, phone), cars(model, plate_number, color)')
+                .eq('user_id', currentUser.id)
+                .order('created_at', { ascending: false });
+
             list.innerHTML = '';
-            if(!data || data.length === 0) list.innerHTML = '<div class="text-center text-slate-500 py-10">لا توجد رحلات</div>';
-            else data.forEach(trip => {
-                list.innerHTML += `<div class="trip-card glass-card p-4 flex justify-between items-center"><div><h4 class="font-bold text-white text-lg mb-1">${trip.dropoff_location}</h4><p class="text-xs text-slate-400">من: ${trip.pickup_location}</p><span class="text-xs bg-slate-700 px-2 py-1 rounded mt-2 inline-block">${trip.car_type}</span></div><div class="text-left"><p class="text-xl font-num font-bold text-amber-500">${trip.estimated_price} EGP</p><span class="status-badge ${trip.status === 'pending' ? 'status-pending' : 'status-approved'}">${trip.status}</span></div></div>`;
+            
+            if (!trips || trips.length === 0) {
+                list.innerHTML = '<div class="text-center text-slate-500 py-10">لا توجد رحلات سابقة</div>';
+                return;
+            }
+
+            let htmlContent = '';
+            trips.forEach(trip => {
+                let statusBadge = trip.status === 'pending' 
+                    ? '<span class="status-badge status-pending">قيد الانتظار</span>' 
+                    : '<span class="status-badge status-approved">تم التعيين</span>';
+
+                let driverInfo = '';
+                if (trip.status === 'approved' && trip.drivers && trip.cars) {
+                    driverInfo = `
+                        <div class="mt-3 pt-3 border-t border-slate-700 bg-slate-800/50 p-2 rounded-lg">
+                            <div class="flex items-center gap-2 text-green-400 font-bold text-sm mb-1">
+                                <i class="fas fa-check-circle"></i> تم تعيين الكابتن
+                            </div>
+                            <div class="text-sm text-white">
+                                <p>👮‍♂️ <strong>الكابتن:</strong> ${trip.drivers.name}</p>
+                                <p>🚗 <strong>السيارة:</strong> ${trip.cars.model} (${trip.cars.color})</p>
+                                <p>🔢 <strong>اللوحة:</strong> <span class="bg-white text-slate-900 px-1 rounded font-mono font-bold">${trip.cars.plate_number}</span></p>
+                                <p>📞 <strong>هاتف:</strong> ${trip.drivers.phone}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                htmlContent += `
+                    <div class="trip-card glass-card p-4 mb-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-bold text-white text-lg mb-1">${trip.dropoff_location}</h4>
+                                <p class="text-xs text-slate-400">من: ${trip.pickup_location}</p>
+                                <span class="text-xs bg-slate-700 px-2 py-1 rounded mt-2 inline-block text-amber-500 font-bold">${trip.car_type.toUpperCase()}</span>
+                            </div>
+                            <div class="text-left">
+                                <p class="text-xl font-num font-bold text-amber-500">${trip.estimated_price} EGP</p>
+                                ${statusBadge}
+                            </div>
+                        </div>
+                        ${driverInfo}
+                    </div>`;
             });
+            list.innerHTML = htmlContent;
         }
 
         async function loadInvoices() {
             const list = document.getElementById('invoices-list');
             const { data } = await sbClient.from('invoices').select('*, trips(pickup_location, dropoff_location)').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+            
             list.innerHTML = '';
-            if(!data || data.length === 0) list.innerHTML = '<div class="text-center text-slate-500">لا توجد فواتير</div>';
-            else data.forEach(inv => {
-                list.innerHTML += `<div class="glass-card p-4 flex justify-between items-center"><div><p class="text-sm text-white font-bold">فاتورة رحلة #${inv.trip_id.split('-')[0]}</p><p class="text-xs text-slate-400">${new Date(inv.created_at).toLocaleDateString()}</p></div><div class="text-left"><p class="font-bold text-white">${inv.amount} EGP</p><span class="status-badge ${inv.status === 'paid' ? 'status-paid' : 'status-unpaid'}">${inv.status}</span></div></div>`;
+            if(!data || data.length === 0) {
+                list.innerHTML = '<div class="text-center text-slate-500">لا توجد فواتير</div>';
+                return;
+            }
+
+            let htmlContent = '';
+            data.forEach(inv => {
+                const tripId = inv.trip_id ? inv.trip_id.split('-')[0] : '???';
+                htmlContent += `
+                    <div class="glass-card p-4 flex justify-between items-center mb-3">
+                        <div>
+                            <p class="text-sm text-white font-bold">فاتورة رحلة #${tripId}</p>
+                            <p class="text-xs text-slate-400">${new Date(inv.created_at).toLocaleDateString()}</p>
+                        </div>
+                        <div class="text-left">
+                            <p class="font-bold text-white">${inv.amount} EGP</p>
+                            <span class="status-badge ${inv.status === 'paid' ? 'status-paid' : 'status-unpaid'}">${inv.status}</span>
+                        </div>
+                    </div>`;
             });
+            list.innerHTML = htmlContent;
         }
 
         checkSession();
+
+        // --- REAL-TIME UPDATES (FIXED) ---
+        setInterval(async () => {
+            if (!currentUser) return;
+            
+            // 1. Trips Updates
+            const { data: trips } = await sbClient.from('trips')
+                .select('*, drivers(name, phone), cars(brand, model, plate_number)')
+                .eq('user_id', currentUser.id)
+                .eq('status', 'approved');
+
+            if (trips && trips.length > 0) {
+                let needRefresh = false;
+                trips.forEach(trip => {
+                    if (!localStorage.getItem(`notified_trip_${trip.id}`)) {
+                        alert(`✅ تم تعيين سائق لرحلتك!\n\n👮‍♂️ الكابتن: ${trip.drivers.name}\n🚗 السيارة: ${trip.cars.brand} ${trip.cars.model}\n🔢 اللوحة: ${trip.cars.plate_number}\n\nتمنياتنا برحلة آمنة! 🌹`);
+                        localStorage.setItem(`notified_trip_${trip.id}`, 'true');
+                        needRefresh = true;
+                    }
+                });
+                if (needRefresh) loadTrips();
+            }
+
+            // 2. Transactions Updates
+            const { data: txs } = await sbClient.from('transactions')
+                .select('*')
+                .eq('user_id', currentUser.id)
+                .eq('status', 'approved');
+                
+             if (txs && txs.length > 0) {
+                let needRefreshWallet = false;
+                txs.forEach(tx => {
+                    if (!localStorage.getItem(`notified_tx_${tx.id}`)) {
+                        alert(`💰 تم قبول شحن الرصيد بنجاح!\n\nالمبلغ: ${tx.amount} EGP\nرقم العملية: ${tx.reference_id}`);
+                        localStorage.setItem(`notified_tx_${tx.id}`, 'true');
+                        needRefreshWallet = true;
+                    }
+                });
+                if (needRefreshWallet) loadTransactions();
+             }
+
+        }, 10000); 
+
     </script>
 </body>
 </html>
