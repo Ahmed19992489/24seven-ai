@@ -40,7 +40,7 @@ async def add_security_headers(request: Request, call_next):
     return response
 
 # ========================================================
-# --- 4. إعداد الملفات الثابتة (Static & Images) --- هام جداً
+# --- 4. إعداد الملفات الثابتة (Static & Images) ---
 # ========================================================
 
 # أ) إعداد مجلد static (للملفات العامة)
@@ -49,11 +49,9 @@ upload_path = static_path / "uploads"
 os.makedirs(upload_path, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 
-# ب) إعداد مجلد images (لصور السيارات) ✅✅ هذا هو التعديل المطلوب
+# ب) إعداد مجلد images (لصور السيارات) ✅
 images_path = BASE_DIR / "images"
-# نتأكد إن المجلد موجود عشان ميديناش Error لو مش موجود
 os.makedirs(images_path, exist_ok=True)
-# بنقول للسيرفر: أي رابط يبدأ بـ /images اقرأه من مجلد images
 app.mount("/images", StaticFiles(directory=str(images_path)), name="images")
 
 
@@ -102,15 +100,16 @@ async def read_app_dashboard():
         return FileResponse(file_path)
     return HTMLResponse("<h1>Error: dashboard.html not found!</h1>", status_code=404)
 
-# 5. لوحة تحكم الأدمن
+# 5. لوحة تحكم الأدمن (تم التعديل للملف الجديد admin-crm.html) ✅
 @app.get("/admin-panel")
 async def read_admin_panel():
-    file_path = BASE_DIR / "admin.html"
+    # هنا تم تغيير الاسم ليتطابق مع ملفك الجديد
+    file_path = BASE_DIR / "admin-crm.html"
     if file_path.exists():
         return FileResponse(file_path)
-    return HTMLResponse("<h1>Error: admin.html not found!</h1>", status_code=404)
+    return HTMLResponse("<h1>Error: admin-crm.html not found!</h1>", status_code=404)
 
-# 6. صفحة حجز الليموزين ✅
+# 6. صفحة حجز الليموزين
 @app.get("/limousine.html")
 async def read_limousine_page():
     file_path = BASE_DIR / "limousine.html"
