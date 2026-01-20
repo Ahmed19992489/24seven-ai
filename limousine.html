@@ -11,290 +11,279 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
-        :root { --bg-dark: #0f172a; --primary: #f59e0b; --sidebar: #1e293b; } /* ألوان ستايل GetTransfer (داكن مع برتقالي) */
+        :root { --bg-dark: #0f172a; --primary: #f59e0b; --card-bg: #1e293b; }
         body { font-family: 'Cairo', sans-serif; background-color: var(--bg-dark); color: #f8fafc; overflow-x: hidden; }
         .font-num { font-family: 'Outfit', sans-serif; }
         
-        /* Sidebar Styles */
+        /* Sidebar & Navigation */
         .sidebar-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; transition: 0.3s; color: #94a3b8; cursor: pointer; }
-        .sidebar-link:hover, .sidebar-link.active { background: rgba(245, 158, 11, 0.1); color: var(--primary); }
-        .sidebar-link i { width: 24px; text-align: center; font-size: 1.1rem; }
+        .sidebar-link:hover, .sidebar-link.active { background: rgba(245, 158, 11, 0.15); color: var(--primary); font-weight: bold; border-right: 3px solid var(--primary); }
         
-        .glass-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; }
-        .input-field { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 12px; width: 100%; color: white; outline: none; }
-        .input-field:focus { border-color: var(--primary); }
+        .glass-card { background: var(--card-bg); border: 1px solid #334155; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .input-field { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 12px; width: 100%; color: white; outline: none; transition: 0.3s; }
+        .input-field:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2); }
         
-        .car-option.active { border-color: var(--primary); background: rgba(245, 158, 11, 0.1); }
-        #map { height: 100%; width: 100%; border-radius: 16px; }
+        /* صور السيارات الواقعية */
+        .car-option { transition: all 0.3s ease; border: 2px solid transparent; position: relative; overflow: hidden; background: #0f172a; padding: 10px; border-radius: 12px; cursor: pointer; }
+        .car-option:hover { transform: translateY(-3px); border-color: #475569; }
+        .car-option.active { border-color: var(--primary); background: rgba(245, 158, 11, 0.05); }
+        .car-img { height: 75px; object-fit: contain; margin: 5px auto; filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5)); }
+        
+        /* كروت الرحلات (GetTransfer Style) */
+        .trip-card { position: relative; overflow: hidden; border-right: 4px solid transparent; transition: 0.3s; }
+        .trip-card:hover { border-right-color: var(--primary); background: #252f40; }
+        
+        /* بادج الحالة */
+        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; }
+        .status-pending { background: #fff7ed; color: #c2410c; }
+        .status-approved { background: #f0fdf4; color: #15803d; }
+        .status-paid { background: #dcfce7; color: #166534; }
+        .status-unpaid { background: #fee2e2; color: #991b1b; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
 
     <aside class="w-64 bg-slate-900 border-l border-slate-800 hidden md:flex flex-col p-4 z-20">
-        <div class="mb-8 px-2">
-            <h1 class="text-2xl font-black text-white flex items-center gap-2">
-                <i class="fas fa-bolt text-amber-500"></i> 24Seven
-            </h1>
+        <div class="mb-8 px-2 flex items-center gap-2">
+            <div class="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center font-black text-slate-900 text-xl">24</div>
+            <h1 class="text-2xl font-black text-white tracking-tighter">Seven</h1>
         </div>
 
         <nav class="space-y-2 flex-1">
             <div onclick="switchTab('booking')" class="sidebar-link active" id="nav-booking">
-                <i class="fas fa-map-location-dot"></i> <span>حجز رحلة</span>
+                <i class="fas fa-map-location-dot w-6"></i> <span>حجز جديد</span>
             </div>
             <div onclick="switchTab('trips')" class="sidebar-link" id="nav-trips">
-                <i class="fas fa-history"></i> <span>رحلاتي</span>
+                <i class="fas fa-route w-6"></i> <span>رحلاتي</span>
             </div>
             <div onclick="switchTab('wallet')" class="sidebar-link" id="nav-wallet">
-                <i class="fas fa-wallet"></i> <span>المحفظة</span>
+                <i class="fas fa-wallet w-6"></i> <span>المحفظة</span>
+            </div>
+            <div onclick="switchTab('invoices')" class="sidebar-link" id="nav-invoices">
+                <i class="fas fa-file-invoice w-6"></i> <span>الفواتير</span>
             </div>
             <div onclick="switchTab('chat')" class="sidebar-link" id="nav-chat">
-                <i class="fas fa-comments"></i> <span>المحادثات</span>
-            </div>
-            <div onclick="switchTab('support')" class="sidebar-link" id="nav-support">
-                <i class="fas fa-headset"></i> <span>الدعم والشكاوى</span>
+                <i class="fas fa-comments w-6"></i> <span>الرسائل</span>
             </div>
         </nav>
 
-        <div class="mt-auto pt-4 border-t border-slate-800">
+        <div class="mt-auto border-t border-slate-800 pt-4">
             <div class="flex items-center gap-3 px-2 mb-4">
-                <img id="user-avatar-side" src="" class="w-10 h-10 rounded-full bg-slate-800">
+                <img id="user-avatar-side" src="" class="w-10 h-10 rounded-full border border-slate-600">
                 <div class="overflow-hidden">
-                    <p id="user-name-side" class="text-sm font-bold text-white truncate">زائر</p>
-                    <p class="text-xs text-slate-500">عميل مميز</p>
+                    <p id="user-name-side" class="text-sm font-bold text-white truncate">...</p>
+                    <p class="text-xs text-amber-500">Gold Member</p>
                 </div>
             </div>
-            <button onclick="handleLogout()" class="sidebar-link w-full text-red-400 hover:text-red-500 hover:bg-red-500/10">
-                <i class="fas fa-sign-out-alt"></i> <span>تسجيل خروج</span>
+            <button onclick="handleLogout()" class="sidebar-link w-full text-red-400 hover:bg-red-500/10 hover:text-red-500">
+                <i class="fas fa-power-off w-6"></i> <span>خروج</span>
             </button>
         </div>
     </aside>
 
-    <main class="flex-1 flex flex-col relative h-full overflow-hidden">
+    <main class="flex-1 flex flex-col relative h-full bg-[#0b1120]">
         
-        <header class="md:hidden h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 z-20">
-            <h1 class="text-xl font-bold text-white">24Seven</h1>
-            <button onclick="document.querySelector('aside').classList.toggle('hidden'); document.querySelector('aside').classList.toggle('absolute'); document.querySelector('aside').classList.toggle('h-full');" class="text-white p-2">
-                <i class="fas fa-bars"></i>
+        <header class="md:hidden h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 z-20 shadow-lg">
+            <span class="text-xl font-black text-white">24<span class="text-amber-500">Seven</span></span>
+            <button onclick="document.querySelector('aside').classList.toggle('hidden'); document.querySelector('aside').classList.toggle('absolute'); document.querySelector('aside').classList.toggle('h-full');" class="text-slate-300 p-2">
+                <i class="fas fa-bars text-xl"></i>
             </button>
         </header>
 
-        <div id="content-area" class="flex-1 relative overflow-y-auto p-4 md:p-6">
+        <div id="content-area" class="flex-1 relative overflow-y-auto p-4 md:p-6 scroll-smooth">
             
             <div id="tab-booking" class="section-content h-full flex flex-col lg:flex-row gap-6">
-                <div class="w-full lg:w-1/3 space-y-4 z-10">
-                    <div class="glass-card p-5 space-y-4">
-                        <h2 class="text-xl font-bold text-white mb-4">وجهتك القادمة؟</h2>
+                <div class="w-full lg:w-[420px] flex flex-col gap-4 z-10">
+                    <div class="glass-card p-6 space-y-5">
+                        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                            <i class="fas fa-paper-plane text-amber-500"></i> تفاصيل الرحلة
+                        </h2>
                         
-                        <div class="space-y-3">
+                        <div class="space-y-3 relative">
+                            <div class="absolute right-[19px] top-10 bottom-10 w-0.5 bg-slate-700 border-r border-dashed border-slate-600"></div>
                             <div class="relative">
-                                <i class="fas fa-circle text-[10px] text-green-500 absolute top-4 right-4"></i>
-                                <input id="origin-input" type="text" placeholder="من: (مطار القاهرة، المنزل...)" class="input-field pr-8">
+                                <i class="fas fa-circle-dot text-green-500 absolute top-3.5 right-3 text-sm z-10 bg-[#1e293b]"></i>
+                                <input id="origin-input" type="text" placeholder="نقطة الانطلاق (مطار، فندق..)" class="input-field pr-10">
                             </div>
                             <div class="relative">
-                                <i class="fas fa-circle text-[10px] text-amber-500 absolute top-4 right-4"></i>
-                                <input id="destination-input" type="text" placeholder="إلى: (الإسكندرية، الفندق...)" class="input-field pr-8">
+                                <i class="fas fa-location-dot text-amber-500 absolute top-3.5 right-3.5 text-sm z-10 bg-[#1e293b]"></i>
+                                <input id="destination-input" type="text" placeholder="وجهة الوصول" class="input-field pr-10">
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-3 gap-2">
-                            <div class="car-option active cursor-pointer border border-slate-700 rounded-lg p-2 text-center" onclick="selectCar(this, 10, 50, 'Sedan')">
-                                <i class="fas fa-car text-xl text-slate-400 mb-1"></i>
-                                <span class="block text-[10px] font-bold text-slate-300">Sedan</span>
+                        <label class="text-xs text-slate-400 font-bold block mb-2">اختر السيارة المناسبة</label>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div class="car-option active" onclick="selectCar(this, 'sedan')">
+                                <img src="https://di-uploads-pod16.dealerinspire.com/toyotaofnorthcharlotte/uploads/2020/03/2020-Toyota-Corolla-LE-Blueprint.png" class="car-img" alt="Toyota Corolla">
+                                <span class="block text-xs font-bold text-white text-center">Corolla</span>
+                                <span class="block text-[10px] text-slate-400 text-center">اقتصادية</span>
                             </div>
-                            <div class="car-option cursor-pointer border border-slate-700 rounded-lg p-2 text-center" onclick="selectCar(this, 15, 100, 'Van')">
-                                <i class="fas fa-shuttle-van text-xl text-slate-400 mb-1"></i>
-                                <span class="block text-[10px] font-bold text-slate-300">Van</span>
+                            <div class="car-option" onclick="selectCar(this, 'suv')">
+                                <img src="https://images.dealer.com/ddc/vehicles/2023/Mitsubishi/Outlander/SUV/trim_SE_25_FWD/perspective/front-left/2023_24.png" class="car-img" alt="Mitsubishi Xpander">
+                                <span class="block text-xs font-bold text-white text-center">Xpander</span>
+                                <span class="block text-[10px] text-slate-400 text-center">عائلية</span>
                             </div>
-                            <div class="car-option cursor-pointer border border-slate-700 rounded-lg p-2 text-center" onclick="selectCar(this, 25, 200, 'VIP')">
-                                <i class="fas fa-gem text-xl text-slate-400 mb-1"></i>
-                                <span class="block text-[10px] font-bold text-slate-300">VIP</span>
+                            <div class="car-option" onclick="selectCar(this, 'van')">
+                                <img src="https://global.toyota/pages/news/images/2019/02/18/1330/001.png" class="car-img" alt="Toyota Hiace">
+                                <span class="block text-xs font-bold text-white text-center">Hiace</span>
+                                <span class="block text-[10px] text-slate-400 text-center">مجموعات</span>
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-2">
-                            <input type="date" id="trip-date" class="input-field font-num text-sm text-slate-400">
-                            <input type="time" id="trip-time" class="input-field font-num text-sm text-slate-400">
+                        <div class="grid grid-cols-2 gap-3">
+                            <input type="date" id="trip-date" class="input-field font-num text-sm text-slate-300">
+                            <input type="time" id="trip-time" class="input-field font-num text-sm text-slate-300">
                         </div>
 
-                        <button onclick="calculateRoute()" class="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl transition">
-                            عرض الأسعار
+                        <button onclick="calculateRoute()" class="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold rounded-xl shadow-lg transition transform active:scale-95">
+                            حساب التكلفة
                         </button>
+                    </div>
 
-                        <div id="price-box" class="hidden bg-slate-800/50 p-4 rounded-xl border border-amber-500/30 text-center animate-pulse">
-                            <p class="text-xs text-slate-400">السعر التقديري</p>
-                            <p id="price-display" class="text-2xl font-num font-black text-white my-1">0 EGP</p>
-                            <button onclick="saveTripToDatabase()" class="w-full mt-2 py-2 bg-amber-500 hover:bg-amber-600 text-black font-bold rounded-lg shadow-lg shadow-amber-500/20">
-                                تأكيد وحجز الآن 🚀
+                    <div id="price-box" class="hidden glass-card p-5 animate-fade-in border-amber-500/50 border">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <p class="text-xs text-slate-400">التكلفة الإجمالية</p>
+                                <p id="price-display" class="text-3xl font-num font-black text-white">0 EGP</p>
+                            </div>
+                            <div class="text-left">
+                                <p id="distance-display" class="text-sm font-num text-amber-400 font-bold">0 km</p>
+                                <p class="text-xs text-slate-400">شامل الرسوم</p>
+                            </div>
+                        </div>
+                        <button onclick="saveTripToDatabase()" class="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-lg flex justify-center items-center gap-2">
+                            <span>تأكيد وحجز</span> <i class="fas fa-check-circle"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex-1 glass-card p-1 min-h-[350px] relative overflow-hidden">
+                    <div id="map" class="w-full h-full rounded-xl"></div>
+                </div>
+            </div>
+
+            <div id="tab-trips" class="section-content hidden max-w-5xl mx-auto">
+                <h2 class="text-2xl font-bold text-white mb-6 border-r-4 border-amber-500 pr-3">سجل رحلاتي</h2>
+                <div id="trips-list" class="grid gap-4"></div>
+            </div>
+
+            <div id="tab-wallet" class="section-content hidden max-w-3xl mx-auto">
+                <div class="glass-card p-8 mb-6 bg-gradient-to-br from-slate-800 to-[#121b2e] flex justify-between items-center relative overflow-hidden">
+                    <div class="relative z-10">
+                        <p class="text-slate-400 mb-1">رصيدك الحالي</p>
+                        <h2 class="text-5xl font-num font-black text-white">0.00 <span class="text-lg text-amber-500 font-bold">EGP</span></h2>
+                    </div>
+                    <i class="fas fa-wallet text-8xl text-white/5 absolute -left-4 -bottom-4"></i>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="glass-card p-6">
+                        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <i class="fas fa-bolt text-purple-500"></i> شحن الرصيد (InstaPay)
+                        </h3>
+                        
+                        <div class="bg-white p-4 rounded-xl mb-4 text-center">
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=InstaPay-01000000000" class="mx-auto w-32 h-32 mb-2">
+                            <p class="text-black font-bold text-sm">امسح الكود أو حول إلى:</p>
+                            <p class="font-num font-bold text-purple-600 text-xl select-all">01000000000</p>
+                        </div>
+
+                        <div class="space-y-3">
+                            <input type="number" id="deposit-amount" placeholder="المبلغ المحول (EGP)" class="input-field font-num">
+                            <input type="text" id="deposit-ref" placeholder="رقم العملية (Reference ID)" class="input-field font-num">
+                            <button onclick="submitDeposit()" class="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition">
+                                إرسال للتحقق <i class="fas fa-paper-plane"></i>
                             </button>
                         </div>
                     </div>
-                </div>
 
-                <div class="flex-1 glass-card p-1 min-h-[300px] lg:min-h-0 relative">
-                    <div id="map"></div>
-                    <div id="map-overlay" class="absolute inset-0 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm rounded-xl">
-                        <div class="text-center">
-                            <i class="fas fa-map-marked-alt text-4xl text-slate-600 mb-2"></i>
-                            <p class="text-slate-400 text-sm">أدخل الوجهة لعرض الخريطة</p>
-                        </div>
+                    <div class="glass-card p-6">
+                        <h3 class="text-lg font-bold text-white mb-4">سجل العمليات</h3>
+                        <div id="transactions-list" class="space-y-3 max-h-[300px] overflow-y-auto pr-1"></div>
                     </div>
                 </div>
             </div>
 
-            <div id="tab-trips" class="section-content hidden space-y-6">
-                <h2 class="text-2xl font-bold text-white">سجل الرحلات</h2>
-                <div id="trips-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div class="text-slate-400 text-center col-span-full py-10">
-                        <i class="fas fa-spinner fa-spin text-2xl"></i> جاري تحميل رحلاتك...
-                    </div>
-                </div>
+            <div id="tab-invoices" class="section-content hidden max-w-4xl mx-auto">
+                <h2 class="text-2xl font-bold text-white mb-6">الفواتير</h2>
+                <div id="invoices-list" class="space-y-4"></div>
             </div>
-
-            <div id="tab-wallet" class="section-content hidden max-w-2xl mx-auto space-y-6">
-                <div class="glass-card p-8 text-center bg-gradient-to-br from-slate-800 to-slate-900">
-                    <p class="text-slate-400 mb-2">رصيدك الحالي</p>
-                    <h2 class="text-5xl font-num font-black text-white mb-4">0.00 <span class="text-xl text-amber-500">EGP</span></h2>
-                    <div class="flex gap-4 justify-center">
-                        <button class="px-6 py-2 bg-amber-500 text-black font-bold rounded-lg hover:bg-amber-600">
-                            <i class="fas fa-plus"></i> شحن رصيد
-                        </button>
-                        <button class="px-6 py-2 border border-slate-600 text-white font-bold rounded-lg hover:bg-slate-800">
-                            <i class="fas fa-history"></i> المعاملات
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="tab-chat" class="section-content hidden h-full">
-                <div class="glass-card h-full flex flex-col justify-center items-center text-center p-8">
-                    <img src="https://img.icons8.com/fluency/96/chat.png" class="mb-4 opacity-80">
-                    <h3 class="text-xl font-bold text-white">مركز الرسائل</h3>
-                    <p class="text-slate-400 mt-2 max-w-md">لا توجد محادثات نشطة حالياً. ستبدأ المحادثة تلقائياً عند قبول السائق لرحلتك.</p>
-                </div>
-            </div>
-             <div id="tab-support" class="section-content hidden max-w-2xl mx-auto space-y-6">
-                <h2 class="text-2xl font-bold text-white">كيف يمكننا مساعدتك؟</h2>
-                <div class="glass-card p-6">
-                    <label class="block text-slate-400 mb-2 text-sm">الموضوع</label>
-                    <input type="text" class="input-field mb-4" placeholder="مثال: مشكلة في رحلة سابقة">
-                    <label class="block text-slate-400 mb-2 text-sm">التفاصيل</label>
-                    <textarea class="input-field h-32 mb-4" placeholder="اكتب تفاصيل مشكلتك هنا..."></textarea>
-                    <button class="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl">إرسال التذكرة</button>
-                </div>
+            
+            <div id="tab-chat" class="section-content hidden h-full flex flex-col items-center justify-center text-center">
+                <i class="fab fa-whatsapp text-6xl text-green-500 mb-4"></i>
+                <h3 class="text-xl font-bold text-white mb-2">الدعم الفني المباشر</h3>
+                <p class="text-slate-400 mb-6">فريقنا متاح 24/7 لمساعدتك في أي وقت</p>
+                <a href="https://wa.me/201000000000" target="_blank" class="px-8 py-3 bg-[#25D366] text-white font-bold rounded-xl hover:bg-[#20b85c]">
+                    فتح واتساب
+                </a>
             </div>
 
         </div>
     </main>
 
-    <div id="login-overlay" class="fixed inset-0 bg-slate-950/95 z-50 flex items-center justify-center p-4">
+    <div id="login-overlay" class="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4">
         <div class="glass-card p-8 max-w-sm w-full text-center border-slate-700">
-            <div class="w-16 h-16 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <i class="fas fa-user-lock text-2xl text-amber-500"></i>
-            </div>
-            <h2 class="text-2xl font-bold text-white mb-2">تسجيل الدخول</h2>
-            <p class="text-slate-400 mb-6 text-sm">مرحباً بك مجدداً في 24Seven</p>
-            
-            <button onclick="handleGoogleLogin()" class="w-full py-3 bg-white text-slate-900 font-bold rounded-xl hover:bg-slate-200 transition mb-4 flex items-center justify-center gap-2">
-                <img src="https://img.icons8.com/color/48/google-logo.png" class="w-5 h-5"> متابعة بجوجل
+            <h2 class="text-3xl font-black text-white mb-2">24Seven</h2>
+            <p class="text-slate-400 mb-6">سجل دخولك لحجز رحلتك</p>
+            <button onclick="handleGoogleLogin()" class="w-full py-3 bg-white text-slate-900 font-bold rounded-xl flex items-center justify-center gap-2">
+                <img src="https://img.icons8.com/color/48/google-logo.png" class="w-5 h-5"> دخول بجوجل
             </button>
-            
-            <div class="text-xs text-slate-500 mb-4 separator">أو عبر البريد</div>
-            
-            <input type="email" id="email" placeholder="name@example.com" class="input-field mb-2 text-center" dir="ltr">
-            <input type="password" id="password" placeholder="******" class="input-field mb-4 text-center" dir="ltr">
-            
-            <div class="flex gap-2">
-                <button onclick="handleLogin()" class="flex-1 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600">دخول</button>
-                <button onclick="handleSignUp()" class="flex-1 py-2 border border-amber-500/50 text-amber-500 rounded-lg hover:bg-amber-500/10">جديد</button>
-            </div>
         </div>
     </div>
 
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBFcMkqiLCX2z94HrIxmAnT47gpxIocB_E&libraries=places&language=ar"></script>
     <script>
-        // Supabase Init
         const supabaseUrl = 'https://qxtlsfmfetwcflbpvwuf.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4dGxzZm1mZXR3Y2ZsYnB2d3VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0MzMzODEsImV4cCI6MjA3ODAwOTM4MX0.FFGXNfx0FDA4FmJB1gVorNigs9nRoO4q1pCj2BOMDbU';
         const sbClient = supabase.createClient(supabaseUrl, supabaseKey);
-
         let currentUser = null;
 
-        // 1. Auth & Session Logic
+        // --- إعدادات التسعير (مستخلصة من شيت الإكسل) ---
+        // baseStart: فتحة العداد
+        // shortRate: سعر الكيلو للمسافات القصيرة (أقل من 50كم)
+        // longRate: سعر الكيلو للمسافات الطويلة (أكثر من 50كم)
+        const PRICING_CONFIG = {
+            'sedan': { baseStart: 150, shortRate: 15, longRate: 7.5, threshold: 50 },
+            'suv':   { baseStart: 200, shortRate: 18, longRate: 8.5, threshold: 50 },
+            'van':   { baseStart: 300, shortRate: 30, longRate: 11.5, threshold: 50 }
+        };
+
+        let currentCar = 'sedan';
+        let tripData = {};
+
         async function checkSession() {
             const { data: { session } } = await sbClient.auth.getSession();
-            if (session) {
-                currentUser = session.user;
-                initDashboard(currentUser);
-            }
+            if (session) { currentUser = session.user; initApp(currentUser); }
         }
 
-        function initDashboard(user) {
+        function initApp(user) {
             document.getElementById('login-overlay').style.display = 'none';
-            const email = user.email;
-            const name = user.user_metadata.full_name || email.split('@')[0];
+            const name = user.user_metadata.full_name || user.email.split('@')[0];
             const avatar = user.user_metadata.avatar_url || `https://ui-avatars.com/api/?name=${name}&background=f59e0b&color=fff`;
-            
             document.getElementById('user-name-side').innerText = name;
             document.getElementById('user-avatar-side').src = avatar;
-            
             initMap();
         }
 
-        // Tabs Switching
-        function switchTab(tabName) {
-            // Hide all tabs
-            document.querySelectorAll('.section-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
-            
-            // Show selected tab
-            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
-            document.getElementById(`nav-${tabName}`).classList.add('active');
-
-            if (tabName === 'trips') loadMyTrips();
-            if (tabName === 'wallet') loadWallet();
-        }
-
-        // --- Auth Functions ---
         async function handleGoogleLogin() {
-            await sbClient.auth.signInWithOAuth({
-                provider: 'google',
-                options: { redirectTo: 'https://24seven-ai.com/limousine.html' }
-            });
+            await sbClient.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: 'https://24seven-ai.com/limousine.html' } });
         }
 
-        async function handleLogin() {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            if(!validateEmail(email)) return alert("الرجاء إدخال إيميل صحيح");
+        async function handleLogout() { await sbClient.auth.signOut(); location.reload(); }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.section-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
+            document.getElementById(`nav-${tab}`).classList.add('active');
             
-            const { error } = await sbClient.auth.signInWithPassword({ email, password });
-            if(error) alert(error.message);
-            else location.reload();
+            if(tab === 'trips') loadTrips();
+            if(tab === 'wallet') loadTransactions();
+            if(tab === 'invoices') loadInvoices();
         }
 
-        async function handleSignUp() {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            if(!validateEmail(email)) return alert("الرجاء إدخال إيميل صحيح (مثال: name@gmail.com)");
-            
-            const { error } = await sbClient.auth.signUp({ email, password });
-            if(error) alert(error.message);
-            else alert("تم إنشاء الحساب! افحص بريدك أو سجل الدخول.");
-        }
-
-        function validateEmail(email) {
-            return String(email).toLowerCase().match(/^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/);
-        }
-
-        async function handleLogout() {
-            await sbClient.auth.signOut();
-            location.reload();
-        }
-
-        // --- Map Logic ---
+        // --- Map & Pricing Logic ---
         let map, directionsService, directionsRenderer;
-        let selectedRate = 10, baseFare = 50, selectedCarType = 'Sedan';
-        let tripData = {};
 
         function initMap() {
             if(map) return;
@@ -303,46 +292,57 @@
                 styles: [ { "elementType": "geometry", "stylers": [{ "color": "#242f3e" }] }, { "elementType": "labels.text.stroke", "stylers": [{ "color": "#242f3e" }] }, { "elementType": "labels.text.fill", "stylers": [{ "color": "#746855" }] }, { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#38414e" }] } ]
             });
             directionsService = new google.maps.DirectionsService();
-            directionsRenderer = new google.maps.DirectionsRenderer({ map: map });
-            
+            directionsRenderer = new google.maps.DirectionsRenderer({ map: map, polylineOptions: { strokeColor: "#f59e0b", strokeWeight: 5 } });
             new google.maps.places.Autocomplete(document.getElementById("origin-input"));
             new google.maps.places.Autocomplete(document.getElementById("destination-input"));
         }
 
-        function selectCar(el, rate, base, type) {
+        function selectCar(el, type) {
             document.querySelectorAll('.car-option').forEach(e => e.classList.remove('active'));
             el.classList.add('active');
-            selectedRate = rate; baseFare = base; selectedCarType = type;
+            currentCar = type;
         }
 
         function calculateRoute() {
             const origin = document.getElementById("origin-input").value;
             const destination = document.getElementById("destination-input").value;
-            if (!origin || !destination) return alert("أدخل الموقع والوجهة أولاً");
+            if(!origin || !destination) return alert("حدد الموقع والوجهة");
 
             directionsService.route({
-                origin: origin, destination: destination, travelMode: google.maps.TravelMode.DRIVING,
+                origin: origin, destination: destination, travelMode: google.maps.TravelMode.DRIVING
             }, (response, status) => {
                 if (status === "OK") {
-                    document.getElementById("map-overlay").classList.add("hidden");
                     directionsRenderer.setDirections(response);
-                    
                     const distanceKm = response.routes[0].legs[0].distance.value / 1000;
-                    const price = Math.round((distanceKm * selectedRate) + baseFare);
                     
+                    // --- معادلة السعر الذكية من تحليل الإكسل ---
+                    const config = PRICING_CONFIG[currentCar];
+                    let price = 0;
+                    
+                    if (distanceKm <= config.threshold) {
+                        // مسافة قصيرة (توصيلة)
+                        price = config.baseStart + (distanceKm * config.shortRate);
+                    } else {
+                        // سفر (نظام شرائح: أول 50 بسعر، والباقي بسعر)
+                        price = config.baseStart + (config.threshold * config.shortRate) + ((distanceKm - config.threshold) * config.longRate);
+                    }
+                    
+                    price = Math.round(price / 10) * 10; // تقريب لأقرب 10 جنيه
+
                     document.getElementById("price-box").classList.remove("hidden");
                     document.getElementById("price-display").innerText = price + " EGP";
+                    document.getElementById("distance-display").innerText = Math.round(distanceKm) + " km";
                     
-                    tripData = { pickup: origin, dropoff: destination, km: distanceKm, price: price, type: selectedCarType };
+                    tripData = { pickup: origin, dropoff: destination, km: distanceKm, price: price, type: currentCar };
                 }
             });
         }
 
         async function saveTripToDatabase() {
             const btn = event.target;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحجز...';
-            
-            const { error } = await sbClient.from('trips').insert([{
+            btn.innerHTML = 'جاري الحجز...';
+            // 1. حفظ الرحلة
+            const { data: trip, error } = await sbClient.from('trips').insert([{
                 user_id: currentUser.id,
                 pickup_location: tripData.pickup,
                 dropoff_location: tripData.dropoff,
@@ -350,59 +350,113 @@
                 estimated_price: tripData.price,
                 car_type: tripData.type,
                 status: 'pending'
-            }]);
+            }]).select();
 
             if(error) alert(error.message);
             else {
-                alert("تم الحجز بنجاح! 🎉");
-                switchTab('trips'); // نقل المستخدم لصفحة الرحلات
-                btn.innerHTML = 'تأكيد وحجز الآن 🚀';
+                // 2. إنشاء فاتورة تلقائية (غير مدفوعة)
+                await sbClient.from('invoices').insert([{
+                    user_id: currentUser.id,
+                    trip_id: trip[0].id,
+                    amount: tripData.price,
+                    status: 'unpaid'
+                }]);
+                
+                alert("تم الحجز بنجاح!");
+                switchTab('trips');
+                btn.innerHTML = 'تأكيد وحجز';
             }
         }
 
-        // --- Fetch Data Logic ---
-        async function loadMyTrips() {
-            const list = document.getElementById('trips-list');
-            list.innerHTML = '<div class="col-span-full text-center py-4"><i class="fas fa-spinner fa-spin"></i> تحميل...</div>';
+        // --- Wallet & InstaPay Logic ---
+        async function submitDeposit() {
+            const amount = document.getElementById('deposit-amount').value;
+            const ref = document.getElementById('deposit-ref').value;
+            if(!amount || !ref) return alert("البيانات ناقصة");
             
-            const { data, error } = await sbClient
-                .from('trips')
-                .select('*')
-                .eq('user_id', currentUser.id)
-                .order('created_at', { ascending: false });
-
-            list.innerHTML = '';
-            if(!data || data.length === 0) {
-                list.innerHTML = '<div class="col-span-full text-center text-slate-500">لا توجد رحلات سابقة</div>';
-                return;
+            const { error } = await sbClient.from('transactions').insert([{
+                user_id: currentUser.id,
+                amount: amount,
+                reference_id: ref,
+                status: 'pending'
+            }]);
+            
+            if(error) alert("خطأ: " + error.message);
+            else {
+                alert("تم إرسال الطلب للمراجعة. سيتم إضافة الرصيد بعد التأكد.");
+                loadTransactions();
+                document.getElementById('deposit-amount').value = '';
+                document.getElementById('deposit-ref').value = '';
             }
+        }
 
-            data.forEach(trip => {
-                const date = new Date(trip.created_at).toLocaleDateString('ar-EG');
-                const statusColor = trip.status === 'pending' ? 'text-yellow-500' : 'text-green-500';
-                
-                const card = `
-                    <div class="glass-card p-4 hover:bg-slate-800 transition">
-                        <div class="flex justify-between items-start mb-2">
-                            <span class="text-xs text-slate-500">${date}</span>
-                            <span class="text-xs font-bold ${statusColor} border border-dashed border-current px-2 py-0.5 rounded">${trip.status}</span>
+        async function loadTransactions() {
+            const list = document.getElementById('transactions-list');
+            list.innerHTML = 'Loading...';
+            const { data } = await sbClient.from('transactions').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+            
+            list.innerHTML = '';
+            if(!data || data.length === 0) { list.innerHTML = '<div class="text-center text-slate-500">لا توجد عمليات</div>'; return; }
+            
+            data.forEach(tx => {
+                const badgeClass = tx.status === 'approved' ? 'status-approved' : (tx.status === 'rejected' ? 'bg-red-100 text-red-600 px-2 py-1 rounded text-xs' : 'status-pending');
+                list.innerHTML += `
+                    <div class="flex justify-between items-center border-b border-slate-700 pb-2">
+                        <div>
+                            <p class="text-white font-bold">${tx.amount} EGP</p>
+                            <p class="text-[10px] text-slate-400">REF: ${tx.reference_id}</p>
                         </div>
-                        <h4 class="font-bold text-white mb-1">${trip.dropoff_location}</h4>
-                        <p class="text-xs text-slate-400 mb-3">من: ${trip.pickup_location}</p>
-                        <div class="flex justify-between items-center border-t border-slate-700 pt-2">
-                            <span class="font-num font-bold text-amber-500">${trip.estimated_price} EGP</span>
-                            <span class="text-xs bg-slate-700 px-2 py-1 rounded">${trip.car_type}</span>
+                        <span class="status-badge ${badgeClass}">${tx.status}</span>
+                    </div>
+                `;
+            });
+        }
+
+        async function loadTrips() {
+            const list = document.getElementById('trips-list');
+            list.innerHTML = 'Loading...';
+            const { data } = await sbClient.from('trips').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+            list.innerHTML = '';
+            if(!data || data.length === 0) { list.innerHTML = '<div class="text-center text-slate-500 py-10">لا توجد رحلات</div>'; return; }
+            
+            data.forEach(trip => {
+                list.innerHTML += `
+                    <div class="trip-card glass-card p-4 flex justify-between items-center">
+                        <div>
+                            <h4 class="font-bold text-white text-lg mb-1">${trip.dropoff_location}</h4>
+                            <p class="text-xs text-slate-400">من: ${trip.pickup_location}</p>
+                            <span class="text-xs bg-slate-700 px-2 py-1 rounded mt-2 inline-block">${trip.car_type}</span>
+                        </div>
+                        <div class="text-left">
+                            <p class="text-xl font-num font-bold text-amber-500">${trip.estimated_price} EGP</p>
+                            <span class="status-badge ${trip.status === 'pending' ? 'status-pending' : 'status-approved'}">${trip.status}</span>
                         </div>
                     </div>
                 `;
-                list.innerHTML += card;
             });
         }
-        
-        async function loadWallet() {
-            // يمكن تفعيل هذا الجزء بعد إنشاء جدول المحفظة
-            // const { data } = await sbClient.from('wallets').select('balance').eq('user_id', currentUser.id).single();
-            // if(data) document.querySelector('#tab-wallet h2').innerHTML = `${data.balance} <span class="text-xl text-amber-500">EGP</span>`;
+
+        async function loadInvoices() {
+            const list = document.getElementById('invoices-list');
+            list.innerHTML = 'Loading...';
+            const { data } = await sbClient.from('invoices').select('*, trips(pickup_location, dropoff_location)').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+            list.innerHTML = '';
+            if(!data || data.length === 0) { list.innerHTML = '<div class="text-center text-slate-500">لا توجد فواتير</div>'; return; }
+            
+            data.forEach(inv => {
+                list.innerHTML += `
+                    <div class="glass-card p-4 flex justify-between items-center">
+                        <div>
+                            <p class="text-sm text-white font-bold">فاتورة رحلة #${inv.trip_id.split('-')[0]}</p>
+                            <p class="text-xs text-slate-400">${new Date(inv.created_at).toLocaleDateString()}</p>
+                        </div>
+                        <div class="text-left">
+                            <p class="font-bold text-white">${inv.amount} EGP</p>
+                            <span class="status-badge ${inv.status === 'paid' ? 'status-paid' : 'status-unpaid'}">${inv.status}</span>
+                        </div>
+                    </div>
+                `;
+            });
         }
 
         checkSession();
