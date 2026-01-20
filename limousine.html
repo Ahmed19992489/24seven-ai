@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>24Seven | منصة التنقل الذكي</title>
+    <title>24Seven | حجز ليموزين فاخر</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -22,16 +22,20 @@
         .input-field { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 12px; width: 100%; color: white; outline: none; transition: 0.3s; }
         .input-field:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2); }
         
-        /* صور السيارات (روابط ثابتة) */
         .car-option { transition: all 0.3s ease; border: 2px solid transparent; position: relative; overflow: hidden; background: #0f172a; padding: 10px; border-radius: 12px; cursor: pointer; }
         .car-option:hover { transform: translateY(-3px); border-color: #475569; }
         .car-option.active { border-color: var(--primary); background: rgba(245, 158, 11, 0.05); }
-        /* استخدام صور عالية الجودة ومضمونة */
-        .car-img { height: 80px; width: 100%; object-fit: contain; margin: 5px auto; filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5)); }
+        .car-img { height: 85px; width: 100%; object-fit: contain; margin: 5px auto; filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5)); }
         
         .trip-card { position: relative; overflow: hidden; border-right: 4px solid transparent; transition: 0.3s; }
         .trip-card:hover { border-right-color: var(--primary); background: #252f40; }
         
+        /* Trip Type Selector */
+        .trip-type-btn { flex: 1; padding: 10px; text-align: center; border: 1px solid #334155; cursor: pointer; font-size: 0.85rem; transition: 0.3s; background: #0f172a; color: #94a3b8; }
+        .trip-type-btn:first-child { border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
+        .trip-type-btn:last-child { border-top-left-radius: 10px; border-bottom-left-radius: 10px; }
+        .trip-type-btn.active { background: var(--primary); color: #000; font-weight: bold; border-color: var(--primary); }
+
         .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; }
         .status-pending { background: #fff7ed; color: #c2410c; }
         .status-approved { background: #f0fdf4; color: #15803d; }
@@ -80,6 +84,7 @@
     </aside>
 
     <main class="flex-1 flex flex-col relative h-full bg-[#0b1120]">
+        
         <header class="md:hidden h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 z-20 shadow-lg">
             <span class="text-xl font-black text-white">24<span class="text-amber-500">Seven</span></span>
             <button onclick="document.querySelector('aside').classList.toggle('hidden'); document.querySelector('aside').classList.toggle('absolute'); document.querySelector('aside').classList.toggle('h-full');" class="text-slate-300 p-2">
@@ -108,22 +113,34 @@
                             </div>
                         </div>
 
+                        <div>
+                            <label class="text-xs text-slate-400 font-bold block mb-2">نوع الرحلة</label>
+                            <div class="flex w-full">
+                                <div onclick="setTripType('one-way')" class="trip-type-btn active" id="btn-one-way">اتجاه واحد</div>
+                                <div onclick="setTripType('round-same')" class="trip-type-btn" id="btn-round-same">ذهاب وعودة (نفس اليوم)</div>
+                                <div onclick="setTripType('round-diff')" class="trip-type-btn" id="btn-round-diff">أيام مختلفة</div>
+                            </div>
+                            <div id="same-day-note" class="hidden mt-2 p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-500 text-[10px] flex items-center gap-2">
+                                <i class="fas fa-clock"></i> يشمل ساعتين انتظار مجاناً (بدون تحركات إضافية)
+                            </div>
+                        </div>
+
                         <label class="text-xs text-slate-400 font-bold block mb-2">اختر السيارة المناسبة</label>
                         <div class="grid grid-cols-3 gap-3">
                             <div class="car-option active" onclick="selectCar(this, 'sedan')">
-                                <img src="https://www.pngmart.com/files/22/Toyota-Corolla-PNG-Transparent.png" class="car-img" alt="Toyota Corolla">
+                                <img src="images/sedan.png" class="car-img" alt="Sedan" onerror="this.src='https://via.placeholder.com/150?text=Sedan'">
                                 <span class="block text-xs font-bold text-white text-center">Sedan</span>
-                                <span class="block text-[10px] text-slate-400 text-center">3 ركاب</span>
+                                <span class="block text-[10px] text-slate-400 text-center">اقتصادية</span>
                             </div>
                             <div class="car-option" onclick="selectCar(this, 'suv')">
-                                <img src="https://purepng.com/public/uploads/large/purepng.com-mitsubishi-xpander-gls-carcarvehicletransportmitsubishi-961524663360s8h1h.png" class="car-img" alt="Mitsubishi Xpander">
-                                <span class="block text-xs font-bold text-white text-center">Family</span>
-                                <span class="block text-[10px] text-slate-400 text-center">5-7 ركاب</span>
+                                <img src="images/suv.png" class="car-img" alt="SUV" onerror="this.src='https://via.placeholder.com/150?text=SUV'">
+                                <span class="block text-xs font-bold text-white text-center">Xpander</span>
+                                <span class="block text-[10px] text-slate-400 text-center">عائلية</span>
                             </div>
                             <div class="car-option" onclick="selectCar(this, 'van')">
-                                <img src="https://www.pngmart.com/files/22/Toyota-Hiace-PNG-Pic.png" class="car-img" alt="Toyota Hiace">
+                                <img src="images/van.png" class="car-img" alt="Van" onerror="this.src='https://via.placeholder.com/150?text=Van'">
                                 <span class="block text-xs font-bold text-white text-center">Hiace</span>
-                                <span class="block text-[10px] text-slate-400 text-center">13 راكب</span>
+                                <span class="block text-[10px] text-slate-400 text-center">14 راكب</span>
                             </div>
                         </div>
 
@@ -145,7 +162,7 @@
                             </div>
                             <div class="text-left">
                                 <p id="distance-display" class="text-sm font-num text-amber-400 font-bold">0 km</p>
-                                <p class="text-xs text-slate-400">شامل الرسوم</p>
+                                <p id="trip-details-display" class="text-xs text-slate-400">شامل الرسوم</p>
                             </div>
                         </div>
                         <button onclick="saveTripToDatabase()" class="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-lg flex justify-center items-center gap-2">
@@ -178,9 +195,9 @@
                             <i class="fas fa-bolt text-purple-500"></i> شحن الرصيد
                         </h3>
                         <div class="bg-white p-4 rounded-xl mb-4 text-center">
-                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=InstaPay-01000000000" class="mx-auto w-32 h-32 mb-2">
-                            <p class="text-black font-bold text-sm">InstaPay</p>
-                            <p class="font-num font-bold text-purple-600 text-xl select-all">01000000000</p>
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=01121748885" class="mx-auto w-32 h-32 mb-2">
+                            <p class="text-black font-bold text-sm">InstaPay (أحمد هاشم)</p>
+                            <p class="font-num font-bold text-purple-600 text-xl select-all">01121748885</p>
                         </div>
                         <div class="space-y-3">
                             <input type="number" id="deposit-amount" placeholder="المبلغ (EGP)" class="input-field font-num">
@@ -205,7 +222,7 @@
             <div id="tab-chat" class="section-content hidden h-full flex flex-col items-center justify-center text-center">
                 <i class="fab fa-whatsapp text-6xl text-green-500 mb-4"></i>
                 <h3 class="text-xl font-bold text-white mb-2">الدعم الفني</h3>
-                <a href="https://wa.me/201000000000" target="_blank" class="px-8 py-3 bg-[#25D366] text-white font-bold rounded-xl hover:bg-[#20b85c]">
+                <a href="https://wa.me/201121748885" target="_blank" class="px-8 py-3 bg-[#25D366] text-white font-bold rounded-xl hover:bg-[#20b85c]">
                     فتح واتساب
                 </a>
             </div>
@@ -215,10 +232,10 @@
     <div id="login-overlay" class="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4">
         <div class="glass-card p-8 max-w-sm w-full text-center border-slate-700">
             <h2 class="text-3xl font-black text-white mb-2">24Seven</h2>
-            <p class="text-slate-400 mb-6 text-sm">بوابتك للتنقل الفاخر</p>
+            <p class="text-slate-400 mb-6 text-sm">سجل دخولك لحجز رحلتك</p>
             
             <button onclick="handleGoogleLogin()" class="w-full py-3 bg-white text-slate-900 font-bold rounded-xl hover:bg-slate-200 transition mb-4 flex items-center justify-center gap-2">
-                <img src="https://img.icons8.com/color/48/google-logo.png" class="w-5 h-5"> دخول بجوجل
+                <img src="https://img.icons8.com/color/48/google-logo.png" class="w-5 h-5"> متابعة بجوجل
             </button>
             
             <div class="relative py-2 mb-4">
@@ -242,25 +259,10 @@
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4dGxzZm1mZXR3Y2ZsYnB2d3VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0MzMzODEsImV4cCI6MjA3ODAwOTM4MX0.FFGXNfx0FDA4FmJB1gVorNigs9nRoO4q1pCj2BOMDbU';
         const sbClient = supabase.createClient(supabaseUrl, supabaseKey);
         let currentUser = null;
-
-        // --- Pricing Config (With Minimum Fare) ---
-        const PRICING_CONFIG = {
-            'sedan': { 
-                baseStart: 100, // فتحة العداد
-                shortRate: 15,  // سعر الكيلو للمسافات القصيرة
-                longRate: 7.5,  // سعر السفر
-                threshold: 50,  // مسافة التحول من قصير لطويل
-                minPrice: 250   // *الحد الأدنى* (حتى لو مشي كيلو واحد مش هيدفع أقل من ده)
-            },
-            'suv': { 
-                baseStart: 150, shortRate: 18, longRate: 8.5, threshold: 50, minPrice: 350 
-            },
-            'van': { 
-                baseStart: 250, shortRate: 30, longRate: 11.5, threshold: 50, minPrice: 500 
-            }
-        };
+        let pricingRules = [];
 
         let currentCar = 'sedan';
+        let tripType = 'one-way'; // one-way, round-same, round-diff
         let tripData = {};
 
         async function checkSession() {
@@ -268,13 +270,20 @@
             if (session) { currentUser = session.user; initApp(currentUser); }
         }
 
-        function initApp(user) {
+        async function initApp(user) {
             document.getElementById('login-overlay').style.display = 'none';
             const name = user.user_metadata.full_name || user.email.split('@')[0];
             const avatar = user.user_metadata.avatar_url || `https://ui-avatars.com/api/?name=${name}&background=f59e0b&color=fff`;
             document.getElementById('user-name-side').innerText = name;
             document.getElementById('user-avatar-side').src = avatar;
+            await fetchPricingRules();
             initMap();
+        }
+
+        async function fetchPricingRules() {
+            const { data, error } = await sbClient.from('pricing_rules').select('*');
+            if (error) console.error("Error fetching pricing:", error);
+            else pricingRules = data;
         }
 
         async function handleGoogleLogin() {
@@ -293,13 +302,8 @@
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             if(!email || !password) return alert("البيانات ناقصة");
-            
-            const { error } = await sbClient.auth.signUp({ 
-                email, password, 
-                options: { emailRedirectTo: 'https://24seven-ai.com/limousine.html' } 
-            });
-            if(error) alert(error.message);
-            else alert("تم التسجيل! راجع بريدك (أو السبام) لتفعيل الحساب.");
+            const { error } = await sbClient.auth.signUp({ email, password, options: { emailRedirectTo: 'https://24seven-ai.com/limousine.html' } });
+            if(error) alert(error.message); else alert("تم التسجيل! راجع بريدك.");
         }
 
         async function handleLogout() { await sbClient.auth.signOut(); location.reload(); }
@@ -309,7 +313,6 @@
             document.getElementById(`tab-${tab}`).classList.remove('hidden');
             document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
             document.getElementById(`nav-${tab}`).classList.add('active');
-            
             if(tab === 'trips') loadTrips();
             if(tab === 'wallet') loadTransactions();
             if(tab === 'invoices') loadInvoices();
@@ -335,6 +338,19 @@
             currentCar = type;
         }
 
+        function setTripType(type) {
+            tripType = type;
+            document.querySelectorAll('.trip-type-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-${type}`).classList.add('active');
+            
+            // Show note only for same-day round trip
+            if (type === 'round-same') {
+                document.getElementById('same-day-note').classList.remove('hidden');
+            } else {
+                document.getElementById('same-day-note').classList.add('hidden');
+            }
+        }
+
         function calculateRoute() {
             const origin = document.getElementById("origin-input").value;
             const destination = document.getElementById("destination-input").value;
@@ -345,27 +361,47 @@
             }, (response, status) => {
                 if (status === "OK") {
                     directionsRenderer.setDirections(response);
-                    const distanceKm = response.routes[0].legs[0].distance.value / 1000;
-                    const config = PRICING_CONFIG[currentCar];
+                    const distanceOneWay = response.routes[0].legs[0].distance.value / 1000;
                     
+                    let calcDistance = distanceOneWay;
                     let price = 0;
-                    if (distanceKm <= config.threshold) {
-                        price = config.baseStart + (distanceKm * config.shortRate);
-                    } else {
-                        price = config.baseStart + (config.threshold * config.shortRate) + ((distanceKm - config.threshold) * config.longRate);
+                    let displayKm = distanceOneWay;
+
+                    // Logic: Round Trip (Same Day) -> Treat as ONE LONG trip (Double Distance)
+                    if (tripType === 'round-same') {
+                        calcDistance = distanceOneWay * 2;
+                        displayKm = calcDistance;
                     }
+
+                    // 1. Find Price Base
+                    const rule = pricingRules.find(r => r.car_type === currentCar && calcDistance >= r.min_km && calcDistance < r.max_km);
                     
-                    // --- تطبيق الحد الأدنى للسعر (Fix for Short Trips) ---
-                    if (price < config.minPrice) {
-                        price = config.minPrice;
+                    if (rule) {
+                        price = parseFloat(rule.base_fare) + (calcDistance * parseFloat(rule.price_per_km));
+                        if (price < parseFloat(rule.min_trip_price)) price = parseFloat(rule.min_trip_price);
+                    } else {
+                        // Fallback (Safe Default)
+                        price = 250 + (calcDistance * 15);
+                    }
+
+                    // Logic: Round Trip (Diff Days) -> Treat as TWO Separate Trips (Price * 2)
+                    if (tripType === 'round-diff') {
+                        price = price * 2;
+                        displayKm = distanceOneWay * 2;
                     }
 
                     price = Math.round(price / 10) * 10;
 
                     document.getElementById("price-box").classList.remove("hidden");
                     document.getElementById("price-display").innerText = price + " EGP";
-                    document.getElementById("distance-display").innerText = Math.round(distanceKm) + " km";
-                    tripData = { pickup: origin, dropoff: destination, km: distanceKm, price: price, type: currentCar };
+                    document.getElementById("distance-display").innerText = Math.round(displayKm) + " km";
+                    
+                    let typeText = tripType === 'one-way' ? 'اتجاه واحد' : (tripType === 'round-same' ? 'ذهاب وعودة (نفس اليوم)' : 'ذهاب وعودة (أيام مختلفة)');
+                    document.getElementById("trip-details-display").innerText = typeText;
+
+                    tripData = { 
+                        pickup: origin, dropoff: destination, km: displayKm, price: price, type: currentCar, tripType: tripType 
+                    };
                 }
             });
         }
@@ -380,16 +416,13 @@
                 distance_km: tripData.km,
                 estimated_price: tripData.price,
                 car_type: tripData.type,
-                status: 'pending'
+                status: 'pending' // You might want to add 'trip_type' column to DB later
             }]).select();
 
             if(error) alert(error.message);
             else {
                 await sbClient.from('invoices').insert([{
-                    user_id: currentUser.id,
-                    trip_id: trip[0].id,
-                    amount: tripData.price,
-                    status: 'unpaid'
+                    user_id: currentUser.id, trip_id: trip[0].id, amount: tripData.price, status: 'unpaid'
                 }]);
                 alert("تم الحجز بنجاح!");
                 switchTab('trips');
