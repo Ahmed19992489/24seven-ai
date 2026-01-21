@@ -86,7 +86,7 @@
         
         <header class="md:hidden h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 z-20 shadow-lg">
             <span class="text-xl font-black text-white">24<span class="text-amber-500">Seven</span></span>
-            <button onclick="document.querySelector('aside').classList.toggle('hidden');" class="text-slate-300 p-2">
+            <button onclick="document.querySelector('aside').classList.toggle('hidden'); document.querySelector('aside').classList.toggle('absolute'); document.querySelector('aside').classList.toggle('h-full');" class="text-slate-300 p-2">
                 <i class="fas fa-bars text-xl"></i>
             </button>
         </header>
@@ -458,7 +458,7 @@
             });
         }
 
-        // --- UPDATED LOAD TRIPS (Fixing Visibility of Pending Trips) ---
+        // --- UPDATED LOAD TRIPS (FIXED: Left Join + Pending Visibility) ---
         async function loadTrips() {
             const list = document.getElementById('trips-list');
             list.innerHTML = '<div class="text-center text-slate-400 mt-4"><i class="fas fa-spinner fa-spin"></i> جاري التحميل...</div>';
@@ -484,7 +484,8 @@
                     : '<span class="status-badge status-approved">تم التعيين</span>';
 
                 let driverInfo = '';
-                // التحقق من وجود بيانات السائق قبل عرضها
+                
+                // حالة 1: تم تعيين سائق
                 if (trip.status === 'approved' && trip.drivers && trip.cars) {
                     driverInfo = `
                         <div class="mt-3 pt-3 border-t border-slate-700 bg-slate-800/50 p-2 rounded-lg">
@@ -497,6 +498,14 @@
                                 <p>🔢 <strong>اللوحة:</strong> <span class="bg-white text-slate-900 px-1 rounded font-mono font-bold">${trip.cars.plate_number}</span></p>
                                 <p>📞 <strong>هاتف:</strong> ${trip.drivers.phone}</p>
                             </div>
+                        </div>
+                    `;
+                } 
+                // حالة 2: قيد الانتظار (لم يعين سائق بعد)
+                else if (trip.status === 'pending') {
+                     driverInfo = `
+                        <div class="mt-2 pt-2 border-t border-slate-700 text-xs text-amber-500 flex items-center gap-2">
+                            <i class="fas fa-clock fa-spin"></i> جاري البحث عن أقرب سائق لك...
                         </div>
                     `;
                 }
@@ -550,11 +559,11 @@
 
         checkSession();
 
-        // --- REAL-TIME UPDATES (Enhanced) ---
+        // --- REAL-TIME UPDATES & NOTIFICATIONS ---
         setInterval(async () => {
             if (!currentUser) return;
             
-            // 1. Trips Updates (Checks ALL approved trips)
+            // 1. Trips Updates
             const { data: trips } = await sbClient.from('trips')
                 .select('*, drivers:driver_id(name, phone), cars:car_id(brand, model, plate_number)')
                 .eq('user_id', currentUser.id)
@@ -563,10 +572,9 @@
             if (trips && trips.length > 0) {
                 let needRefresh = false;
                 trips.forEach(trip => {
-                    // Check if notified before
                     if (!localStorage.getItem(`notified_trip_${trip.id}`)) {
-                        const driverName = trip.drivers ? trip.drivers.name : 'غير محدد';
-                        const carModel = trip.cars ? trip.cars.model : 'غير محدد';
+                        const driverName = (trip.drivers && trip.drivers.name) ? trip.drivers.name : 'غير محدد';
+                        const carModel = (trip.cars && trip.cars.model) ? trip.cars.model : 'غير محدد';
                         
                         alert(`✅ تم تعيين سائق لرحلتك!\n\n👮‍♂️ الكابتن: ${driverName}\n🚗 السيارة: ${carModel}\n\nتمنياتنا برحلة آمنة! 🌹`);
                         
