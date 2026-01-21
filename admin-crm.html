@@ -15,6 +15,14 @@
         .sidebar-item:hover, .sidebar-item.active { background-color: #e2e8f0; color: #0f172a; font-weight: bold; border-right-color: #f59e0b; }
         .glass-panel { background: white; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0; }
         .status-dot { height: 10px; width: 10px; border-radius: 50%; display: inline-block; margin-left: 5px; }
+        
+        /* Animation for new items */
+        @keyframes flash {
+            0% { background-color: #fff; }
+            50% { background-color: #fff7ed; }
+            100% { background-color: #fff; }
+        }
+        .new-item { animation: flash 2s ease-in-out; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden text-slate-800">
@@ -33,6 +41,7 @@
             </div>
             <div onclick="showPage('finance')" id="nav-finance" class="sidebar-item p-3 rounded-l-lg flex items-center gap-3">
                 <i class="fas fa-wallet text-green-600"></i> المالية (InstaPay)
+                <span id="finance-badge" class="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full hidden">0</span>
             </div>
             <div onclick="showPage('pricing')" id="nav-pricing" class="sidebar-item p-3 rounded-l-lg flex items-center gap-3">
                 <i class="fas fa-sliders-h text-purple-600"></i> محرك التسعير
@@ -89,7 +98,7 @@
         </div>
 
         <div id="page-operations" class="page-section hidden">
-            <h2 class="text-2xl font-bold mb-6">غرفة العمليات</h2>
+            <h2 class="text-2xl font-bold mb-6">غرفة العمليات (Live)</h2>
             <div class="glass-panel overflow-hidden">
                 <table class="w-full text-right">
                     <thead class="bg-slate-50 text-slate-500 text-xs uppercase">
@@ -215,6 +224,7 @@
 
         function initDashboard() {
             renderCharts();
+            // Load initial data
             loadKPIs();
             loadOperations();
             loadFinance();
@@ -233,8 +243,9 @@
         async function loadKPIs() {
             const { count: total } = await sbClient.from('trips').select('*', { count: 'exact', head: true });
             const { count: pending } = await sbClient.from('trips').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+            const { count: financePending } = await sbClient.from('transactions').select('*', { count: 'exact', head: true }).eq('status', 'pending');
             
-            // Calculate revenue (Mock calc for demo - typically requires aggregation query)
+            // Calculate revenue
             const { data: paidTrips } = await sbClient.from('invoices').select('amount').eq('status', 'paid');
             const revenue = paidTrips ? paidTrips.reduce((acc, curr) => acc + curr.amount, 0) : 0;
 
@@ -242,9 +253,21 @@
             document.getElementById('kpi-pending').innerText = pending || 0;
             document.getElementById('kpi-revenue').innerText = revenue.toLocaleString() + ' EGP';
             
+            // Update Badges
             if(pending > 0) {
-                document.getElementById('pending-badge').innerText = pending;
-                document.getElementById('pending-badge').classList.remove('hidden');
+                const badge = document.getElementById('pending-badge');
+                badge.innerText = pending;
+                badge.classList.remove('hidden');
+            } else {
+                document.getElementById('pending-badge').classList.add('hidden');
+            }
+
+            if(financePending > 0) {
+                const fBadge = document.getElementById('finance-badge');
+                fBadge.innerText = financePending;
+                fBadge.classList.remove('hidden');
+            } else {
+                document.getElementById('finance-badge').classList.add('hidden');
             }
         }
 
@@ -256,7 +279,7 @@
                     labels: ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'],
                     datasets: [{
                         label: 'الرحلات المكتملة',
-                        data: [12, 19, 3, 5, 2, 3, 10], // Replace with real data later
+                        data: [12, 19, 3, 5, 2, 3, 10], // Placeholder data
                         borderColor: '#3b82f6',
                         tension: 0.4
                     }]
@@ -269,7 +292,7 @@
                 data: {
                     labels: ['Sedan', 'SUV', 'Van'],
                     datasets: [{
-                        data: [50, 30, 20], // Replace with real data
+                        data: [50, 30, 20], // Placeholder data
                         backgroundColor: ['#f59e0b', '#3b82f6', '#10b981']
                     }]
                 }
@@ -278,18 +301,31 @@
 
         // --- 2. OPERATIONS ---
         async function loadOperations() {
-            const { data: trips } = await sbClient.from('trips').select('*, drivers(name), cars(model, plate_number)').order('created_at', { ascending: false });
+            // استخدام left join (relations aliases) لضمان ظهور الرحلات الجديدة
+            const { data: trips, error } = await sbClient
+                .from('trips')
+                .select('*, drivers:driver_id(name), cars:car_id(model, plate_number)')
+                .order('created_at', { ascending: false });
+            
+            if (error) { console.error(error); return; }
+
             const tbody = document.getElementById('ops-table');
             tbody.innerHTML = '';
             
+            if (!trips || trips.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4">لا توجد رحلات حالياً</td></tr>';
+                return;
+            }
+
             trips.forEach(trip => {
                 let statusBadge = '';
                 if(trip.status === 'pending') statusBadge = '<span class="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-bold">قيد الانتظار</span>';
                 else if(trip.status === 'approved') statusBadge = '<span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">تم التعيين</span>';
                 else if(trip.status === 'completed') statusBadge = '<span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">مكتملة</span>';
 
-                const driverName = trip.drivers ? trip.drivers.name : '-';
-                const carInfo = trip.cars ? `${trip.cars.model} (${trip.cars.plate_number})` : '-';
+                // Handle joined data safely
+                const driverName = (trip.drivers && trip.drivers.name) ? trip.drivers.name : '-';
+                const carInfo = (trip.cars && trip.cars.model) ? `${trip.cars.model} (${trip.cars.plate_number})` : '-';
 
                 tbody.innerHTML += `
                     <tr class="hover:bg-slate-50 transition">
@@ -299,11 +335,11 @@
                             <div class="text-xs text-slate-500">${new Date(trip.created_at).toLocaleDateString()}</div>
                         </td>
                         <td class="p-4 text-sm">
-                            <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-500"></span> ${trip.pickup_location}</div>
-                            <div class="flex items-center gap-2 mt-1"><span class="w-2 h-2 rounded-full bg-red-500"></span> ${trip.dropoff_location}</div>
+                            <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-500"></span> ${trip.pickup_location.slice(0, 20)}...</div>
+                            <div class="flex items-center gap-2 mt-1"><span class="w-2 h-2 rounded-full bg-red-500"></span> ${trip.dropoff_location.slice(0, 20)}...</div>
                         </td>
                         <td class="p-4 text-sm font-bold">${trip.car_type}</td>
-                        <td class="p-4 font-bold text-green-600">${trip.estimated_price}</td>
+                        <td class="p-4 font-bold text-green-600">${trip.estimated_price} EGP</td>
                         <td class="p-4">${statusBadge}</td>
                         <td class="p-4">
                             ${trip.status === 'pending' ? 
@@ -325,13 +361,17 @@
             const { data: drivers } = await sbClient.from('drivers').select('*').eq('status', 'active');
             const drSelect = document.getElementById('op-driver');
             drSelect.innerHTML = '<option value="">اختر الكابتن...</option>';
-            drivers.forEach(d => drSelect.innerHTML += `<option value="${d.id}">${d.name} (${d.phone})</option>`);
+            if(drivers) {
+                drivers.forEach(d => drSelect.innerHTML += `<option value="${d.id}">${d.name} (${d.phone})</option>`);
+            }
 
-            // Load Cars (Filtered by Type preferably)
-            const { data: cars } = await sbClient.from('cars').select('*').eq('status', 'active'); // .eq('type', carType) if you want strict filtering
+            // Load Cars
+            const { data: cars } = await sbClient.from('cars').select('*').eq('status', 'active'); 
             const carSelect = document.getElementById('op-car');
             carSelect.innerHTML = '<option value="">اختر السيارة...</option>';
-            cars.forEach(c => carSelect.innerHTML += `<option value="${c.id}">${c.brand} ${c.model} - ${c.plate_number}</option>`);
+            if(cars) {
+                cars.forEach(c => carSelect.innerHTML += `<option value="${c.id}">${c.brand} ${c.model} - ${c.plate_number}</option>`);
+            }
         }
 
         async function confirmOperation() {
@@ -346,13 +386,14 @@
                 driver_id: driverId,
                 car_id: carId,
                 admin_notes: note,
-                status: 'approved' // This status triggers client update
+                status: 'approved' 
             }).eq('id', tripId);
 
             if(!error) {
-                alert("تم التعيين بنجاح! سيظهر للكابتن والعميل الآن.");
+                alert("✅ تم التعيين بنجاح! تم إخطار العميل.");
                 document.getElementById('assign-modal').style.display = 'none';
-                loadOperations();
+                loadOperations(); // Refresh list immediately
+                loadKPIs(); // Refresh badges
             } else {
                 alert(error.message);
             }
@@ -363,22 +404,39 @@
             const list = document.getElementById('pending-tx-list');
             const { data: txs } = await sbClient.from('transactions').select('*').eq('status', 'pending');
             list.innerHTML = '';
-            if(txs.length === 0) list.innerHTML = '<p class="text-slate-400 text-sm">لا توجد طلبات معلقة</p>';
+            if(!txs || txs.length === 0) list.innerHTML = '<p class="text-slate-400 text-sm">لا توجد طلبات معلقة</p>';
             
-            txs.forEach(tx => {
-                list.innerHTML += `
-                    <div class="bg-amber-50 border border-amber-200 p-3 rounded-lg flex justify-between items-center">
-                        <div>
-                            <p class="font-bold text-amber-900">${tx.amount} EGP</p>
-                            <p class="text-xs text-amber-700 font-mono">Ref: ${tx.reference_id}</p>
+            if(txs) {
+                txs.forEach(tx => {
+                    list.innerHTML += `
+                        <div class="bg-amber-50 border border-amber-200 p-3 rounded-lg flex justify-between items-center">
+                            <div>
+                                <p class="font-bold text-amber-900">${tx.amount} EGP</p>
+                                <p class="text-xs text-amber-700 font-mono">Ref: ${tx.reference_id}</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="approveTx('${tx.id}', '${tx.user_id}', ${tx.amount})" class="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600">قبول</button>
+                                <button onclick="rejectTx('${tx.id}')" class="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600">رفض</button>
+                            </div>
                         </div>
-                        <div class="flex gap-2">
-                            <button onclick="approveTx('${tx.id}', '${tx.user_id}', ${tx.amount})" class="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600">قبول</button>
-                            <button onclick="rejectTx('${tx.id}')" class="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600">رفض</button>
+                    `;
+                });
+            }
+
+            // Load Approved History (Last 10)
+            const { data: approved } = await sbClient.from('transactions').select('*').eq('status', 'approved').order('created_at', { ascending: false }).limit(10);
+            const historyList = document.getElementById('approved-tx-list');
+            historyList.innerHTML = '';
+            if(approved) {
+                approved.forEach(tx => {
+                    historyList.innerHTML += `
+                        <div class="flex justify-between border-b pb-2 mb-2 text-sm">
+                            <span class="text-green-600 font-bold">+${tx.amount} EGP</span>
+                            <span class="text-slate-400 text-xs">${new Date(tx.created_at).toLocaleDateString()}</span>
                         </div>
-                    </div>
-                `;
-            });
+                    `;
+                });
+            }
         }
 
         async function approveTx(id, userId, amount) {
@@ -390,17 +448,20 @@
 
             // 2. Update user wallet balance (Profile)
             // Get current balance first
-            const { data: profile } = await sbClient.from('profiles').select('wallet_balance').eq('id', userId).single();
-            const currentBalance = profile ? profile.wallet_balance : 0;
+            let { data: profile } = await sbClient.from('profiles').select('wallet_balance').eq('id', userId).maybeSingle();
+            
+            const currentBalance = profile ? (profile.wallet_balance || 0) : 0;
             const newBalance = Number(currentBalance) + Number(amount);
 
             // Update profile
             const { error: profileError } = await sbClient.from('profiles').upsert({ id: userId, wallet_balance: newBalance });
 
             if (!profileError) {
-                alert(`تم شحن المحفظة بنجاح! الرصيد الجديد: ${newBalance} EGP`);
+                alert(`✅ تم شحن المحفظة بنجاح! الرصيد الجديد: ${newBalance} EGP`);
                 loadFinance();
+                loadKPIs();
             } else {
+                console.error(profileError);
                 alert("تم قبول العملية ولكن حدث خطأ في تحديث المحفظة: " + profileError.message);
             }
         }
@@ -409,6 +470,7 @@
             if(!confirm("رفض العملية؟")) return;
             await sbClient.from('transactions').update({ status: 'rejected' }).eq('id', id);
             loadFinance();
+            loadKPIs();
         }
 
         // --- 4. PRICING ---
@@ -416,21 +478,23 @@
             const list = document.getElementById('pricing-list');
             const { data: rules } = await sbClient.from('pricing_rules').select('*').order('car_type').order('min_km');
             list.innerHTML = '';
-            rules.forEach(r => {
-                list.innerHTML += `
-                    <div class="flex justify-between items-center bg-white border border-slate-200 p-3 rounded shadow-sm">
-                        <div class="flex items-center gap-4">
-                            <span class="font-bold uppercase w-16 text-center bg-slate-100 rounded px-1">${r.car_type}</span>
-                            <span class="text-sm text-slate-600">من ${r.min_km} إلى ${r.max_km} كم</span>
+            if(rules) {
+                rules.forEach(r => {
+                    list.innerHTML += `
+                        <div class="flex justify-between items-center bg-white border border-slate-200 p-3 rounded shadow-sm">
+                            <div class="flex items-center gap-4">
+                                <span class="font-bold uppercase w-16 text-center bg-slate-100 rounded px-1">${r.car_type}</span>
+                                <span class="text-sm text-slate-600">من ${r.min_km} إلى ${r.max_km} كم</span>
+                            </div>
+                            <div class="text-sm font-mono">
+                                <span class="text-green-600 font-bold">${r.price_per_km} ج/كم</span> + 
+                                <span class="text-blue-600 font-bold">${r.base_fare} ج فتح</span>
+                            </div>
+                            <button onclick="deletePricingRule('${r.id}')" class="text-red-400 hover:text-red-600"><i class="fas fa-trash"></i></button>
                         </div>
-                        <div class="text-sm font-mono">
-                            <span class="text-green-600 font-bold">${r.price_per_km} ج/كم</span> + 
-                            <span class="text-blue-600 font-bold">${r.base_fare} ج فتح</span>
-                        </div>
-                        <button onclick="deletePricingRule('${r.id}')" class="text-red-400 hover:text-red-600"><i class="fas fa-trash"></i></button>
-                    </div>
-                `;
-            });
+                    `;
+                });
+            }
         }
 
         async function addPricingRule() {
@@ -455,7 +519,8 @@
                 alert("تمت إضافة الشريحة"); 
                 loadPricingTable(); 
             } else {
-                alert(error.message);
+                console.error(error);
+                alert("حدث خطأ: " + error.message);
             }
         }
 
@@ -470,21 +535,25 @@
         async function loadFleet() {
             // Load Drivers
             const { data: drivers } = await sbClient.from('drivers').select('*');
-            document.getElementById('drivers-list').innerHTML = drivers.map(d => `
-                <div class="flex justify-between bg-white border p-2 rounded">
-                    <span>${d.name} (${d.phone})</span>
-                    <span class="text-xs bg-green-100 text-green-700 px-2 rounded">${d.status}</span>
-                </div>
-            `).join('');
+            if(drivers) {
+                document.getElementById('drivers-list').innerHTML = drivers.map(d => `
+                    <div class="flex justify-between bg-white border p-2 rounded">
+                        <span>${d.name} (${d.phone})</span>
+                        <span class="text-xs bg-green-100 text-green-700 px-2 rounded">${d.status}</span>
+                    </div>
+                `).join('');
+            }
 
             // Load Cars
             const { data: cars } = await sbClient.from('cars').select('*');
-            document.getElementById('cars-list').innerHTML = cars.map(c => `
-                <div class="flex justify-between bg-white border p-2 rounded">
-                    <span>${c.brand} ${c.model} (${c.plate_number})</span>
-                    <span class="uppercase text-xs font-bold text-slate-400">${c.type}</span>
-                </div>
-            `).join('');
+            if(cars) {
+                document.getElementById('cars-list').innerHTML = cars.map(c => `
+                    <div class="flex justify-between bg-white border p-2 rounded">
+                        <span>${c.brand} ${c.model} (${c.plate_number})</span>
+                        <span class="uppercase text-xs font-bold text-slate-400">${c.type}</span>
+                    </div>
+                `).join('');
+            }
         }
 
         async function addDriverPrompt() {
@@ -506,6 +575,21 @@
                 loadFleet();
             }
         }
+
+        // --- REAL-TIME AUTO REFRESH SYSTEM ---
+        // هذا الكود يضمن أن صفحة الأدمن "حية" وتحدث البيانات تلقائياً
+        setInterval(() => {
+            // تحديث الطلبات والتحويلات كل 10 ثواني
+            loadKPIs();
+            
+            // تحديث الجداول فقط لو كنا فاتحين الصفحة الخاصة بها لتوفير الموارد
+            if(!document.getElementById('page-operations').classList.contains('hidden')) {
+                loadOperations();
+            }
+            if(!document.getElementById('page-finance').classList.contains('hidden')) {
+                loadFinance();
+            }
+        }, 10000);
 
     </script>
 </body>

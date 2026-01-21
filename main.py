@@ -12,6 +12,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 
 # --- استيراد الروابط (APIs) ---
+# تأكد من وجود مجلد app/api وبداخله هذه الملفات
 from app.api import search, export, auth, suggestions, admin, payments, chat
 
 # إنشاء جداول قاعدة البيانات
@@ -23,7 +24,8 @@ app = FastAPI(
     version="2.4.0"
 )
 
-# --- 2. إعدادات CORS (السماح بالاتصال) ---
+# --- 2. إعدادات CORS (السماح بالاتصال من أي مكان) ---
+# هذا ضروري جداً لكي يعمل الفرونت إند مع الباك إند على الدومين
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -36,6 +38,7 @@ app.add_middleware(
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
+    # هذا الهيدر مهم أحياناً لعمليات المصادقة (Auth)
     response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
     return response
 
@@ -43,15 +46,15 @@ async def add_security_headers(request: Request, call_next):
 # --- 4. إعداد الملفات الثابتة (Static & Images) ---
 # ========================================================
 
-# أ) إعداد مجلد static (للملفات العامة)
+# أ) إعداد مجلد static (للملفات العامة CSS/JS)
 static_path = BASE_DIR / "static"
 upload_path = static_path / "uploads"
-os.makedirs(upload_path, exist_ok=True)
+os.makedirs(upload_path, exist_ok=True) # ينشئ المجلد لو مش موجود
 app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 
-# ب) إعداد مجلد images (لصور السيارات) ✅
+# ب) إعداد مجلد images (لصور السيارات في صفحة الليموزين) ✅
 images_path = BASE_DIR / "images"
-os.makedirs(images_path, exist_ok=True)
+os.makedirs(images_path, exist_ok=True) # ينشئ المجلد لو مش موجود
 app.mount("/images", StaticFiles(directory=str(images_path)), name="images")
 
 
@@ -74,7 +77,7 @@ async def read_company_site():
     file_path = BASE_DIR / "index.html"
     if file_path.exists():
         return FileResponse(file_path)
-    return HTMLResponse("<h1>Error: index.html not found! Please upload the website file.</h1>")
+    return HTMLResponse("<h1>Error: index.html not found! Please check GitHub files.</h1>")
 
 # 2. صفحة المشاريع
 @app.get("/projects.html")
@@ -84,7 +87,7 @@ async def read_projects_page():
         return FileResponse(file_path)
     return HTMLResponse("<h1>Error: projects.html not found!</h1>")
 
-# 3. صفحة العروض
+# 3. صفحة العروض (Web Design)
 @app.get("/web-design")
 async def read_web_design_page():
     file_path = BASE_DIR / "web_design.html"
@@ -92,7 +95,7 @@ async def read_web_design_page():
         return FileResponse(file_path)
     return HTMLResponse("<h1>Error: web_design.html not found!</h1>")
 
-# 4. صفحة الأداة (Dashboard)
+# 4. صفحة الأداة (Dashboard - القديمة)
 @app.get("/dashboard")
 async def read_app_dashboard():
     file_path = BASE_DIR / "dashboard.html"
@@ -103,13 +106,13 @@ async def read_app_dashboard():
 # 5. لوحة تحكم الأدمن (تم التعديل للملف الجديد admin-crm.html) ✅
 @app.get("/admin-panel")
 async def read_admin_panel():
-    # هنا تم تغيير الاسم ليتطابق مع ملفك الجديد
+    # هنا تم توجيه الرابط لفتح ملف الداش بورد الجديد المتكامل
     file_path = BASE_DIR / "admin-crm.html"
     if file_path.exists():
         return FileResponse(file_path)
-    return HTMLResponse("<h1>Error: admin-crm.html not found!</h1>", status_code=404)
+    return HTMLResponse("<h1>Error: admin-crm.html not found! Please make sure you uploaded the file.</h1>", status_code=404)
 
-# 6. صفحة حجز الليموزين
+# 6. صفحة حجز الليموزين (للعملاء)
 @app.get("/limousine.html")
 async def read_limousine_page():
     file_path = BASE_DIR / "limousine.html"
@@ -117,12 +120,13 @@ async def read_limousine_page():
         return FileResponse(file_path)
     return HTMLResponse("<h1>Error: limousine.html not found! Please check file name.</h1>", status_code=404)
 
-# مسار إضافي لفتح الصفحة بدون .html
+# مسار إضافي لفتح صفحة الليموزين بدون .html
 @app.get("/limousine")
 async def read_limousine_clean():
     return await read_limousine_page()
 
-# --- Setup Admin ---
+# --- Setup Admin (خاص بقاعدة البيانات المحلية SQL) ---
+# ملاحظة: Supabase يستخدم نظام Auth منفصل، هذا الكود للـ Local Testing
 @app.post("/setup-admin/", tags=["Admin & Setup"])
 def create_founder_account(db: Session = Depends(get_db)):
     existing_user = db.query(models.User).filter(models.User.email == "admin@24seven.com").first()
@@ -143,5 +147,6 @@ def create_founder_account(db: Session = Depends(get_db)):
 
 if __name__ == "__main__":
     import uvicorn
+    # إعدادات التشغيل لـ Render
     port = int(os.environ.get("PORT", 10000))
     uvicorn.run(app, host="0.0.0.0", port=port)
