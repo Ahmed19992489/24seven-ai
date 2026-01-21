@@ -86,7 +86,7 @@
         
         <header class="md:hidden h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 z-20 shadow-lg">
             <span class="text-xl font-black text-white">24<span class="text-amber-500">Seven</span></span>
-            <button onclick="document.querySelector('aside').classList.toggle('hidden'); document.querySelector('aside').classList.toggle('absolute'); document.querySelector('aside').classList.toggle('h-full');" class="text-slate-300 p-2">
+            <button onclick="document.querySelector('aside').classList.toggle('hidden');" class="text-slate-300 p-2">
                 <i class="fas fa-bars text-xl"></i>
             </button>
         </header>
@@ -120,7 +120,7 @@
                                 <div onclick="setTripType('round-diff')" class="trip-type-btn" id="btn-round-diff">أيام مختلفة</div>
                             </div>
                             <div id="same-day-note" class="hidden mt-2 p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-500 text-[10px] flex items-center gap-2">
-                                <i class="fas fa-clock"></i> يشمل ساعتين انتظار مجاناً (بدون تحركات إضافية)
+                                <i class="fas fa-clock"></i> يشمل ساعتين انتظار مجاناً
                             </div>
                         </div>
 
@@ -458,13 +458,15 @@
             });
         }
 
+        // --- UPDATED LOAD TRIPS (Fixing Visibility of Pending Trips) ---
         async function loadTrips() {
             const list = document.getElementById('trips-list');
             list.innerHTML = '<div class="text-center text-slate-400 mt-4"><i class="fas fa-spinner fa-spin"></i> جاري التحميل...</div>';
 
+            // استخدام drivers:driver_id(...) لضمان عمل left join (إظهار الرحلات حتى بدون سائق)
             const { data: trips } = await sbClient
                 .from('trips')
-                .select('*, drivers(name, phone), cars(model, plate_number, color)')
+                .select('*, drivers:driver_id(name, phone), cars:car_id(model, plate_number, color)')
                 .eq('user_id', currentUser.id)
                 .order('created_at', { ascending: false });
 
@@ -482,6 +484,7 @@
                     : '<span class="status-badge status-approved">تم التعيين</span>';
 
                 let driverInfo = '';
+                // التحقق من وجود بيانات السائق قبل عرضها
                 if (trip.status === 'approved' && trip.drivers && trip.cars) {
                     driverInfo = `
                         <div class="mt-3 pt-3 border-t border-slate-700 bg-slate-800/50 p-2 rounded-lg">
@@ -553,7 +556,7 @@
             
             // 1. Trips Updates (Checks ALL approved trips)
             const { data: trips } = await sbClient.from('trips')
-                .select('*, drivers(name, phone), cars(brand, model, plate_number)')
+                .select('*, drivers:driver_id(name, phone), cars:car_id(brand, model, plate_number)')
                 .eq('user_id', currentUser.id)
                 .eq('status', 'approved');
 
