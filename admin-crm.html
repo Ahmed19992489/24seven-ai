@@ -233,9 +233,13 @@
             document.getElementById(`page-${id}`).classList.remove('hidden');
             document.querySelectorAll('.sidebar-item').forEach(e => e.classList.remove('active'));
             document.getElementById(`nav-${id}`).classList.add('active');
+            
+            // تحديث البيانات عند فتح الصفحة
+            if(id === 'operations') loadOperations();
+            if(id === 'finance') loadFinance();
         }
 
-        // --- 1. KPI ---
+        // --- 1. KPI & CHARTS ---
         async function loadKPIs() {
             const { count: total } = await sbClient.from('trips').select('*', { count: 'exact', head: true });
             const { count: pending } = await sbClient.from('trips').select('*', { count: 'exact', head: true }).eq('status', 'pending');
@@ -278,37 +282,41 @@
             });
         }
 
-        // --- 2. OPERATIONS ---
+        // --- 2. OPERATIONS (تم التعديل لإصلاح مشكلة الاختفاء) ---
         async function loadOperations() {
+            // التعديل: تبسيط الاستعلام لإزالة التعقيد في الربط
             const { data: trips, error } = await sbClient
                 .from('trips')
-                .select('*, drivers:driver_id(name), cars:car_id(model, plate_number)')
+                .select('*, drivers(name), cars(model, plate_number)')
                 .order('created_at', { ascending: false });
             
-            if (error) { console.error("Error:", error); return; }
+            if (error) { 
+                console.error("Supabase Error:", error); 
+                return; 
+            }
 
             const tbody = document.getElementById('ops-table');
             tbody.innerHTML = '';
             
             if (!trips || trips.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4">لا توجد رحلات حالياً</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4 text-slate-500">لا توجد رحلات حالياً</td></tr>';
                 return;
             }
 
             trips.forEach(trip => {
                 let statusBadge = '';
                 let rowClass = '';
+                
                 if(trip.status === 'pending') {
                     statusBadge = '<span class="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-bold">قيد الانتظار</span>';
                     rowClass = 'new-order';
-                } else if(trip.status === 'approved') {
-                    statusBadge = '<span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">تم التعيين</span>';
-                } else if(trip.status === 'completed') {
-                    statusBadge = '<span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">مكتملة</span>';
                 }
+                else if(trip.status === 'approved') statusBadge = '<span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">تم التعيين</span>';
+                else if(trip.status === 'completed') statusBadge = '<span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">مكتملة</span>';
 
-                const driverName = (trip.drivers && trip.drivers.name) ? trip.drivers.name : '-';
-                const carInfo = (trip.cars && trip.cars.model) ? `${trip.cars.model} (${trip.cars.plate_number})` : '-';
+                // استخدام التحقق الآمن لمنع توقف الكود
+                const driverName = trip.drivers?.name || '-';
+                const carInfo = trip.cars ? `${trip.cars.model} (${trip.cars.plate_number})` : '-';
 
                 tbody.innerHTML += `
                     <tr class="hover:bg-slate-50 transition ${rowClass}">
@@ -318,8 +326,8 @@
                             <div class="text-xs text-slate-500">${new Date(trip.created_at).toLocaleDateString()}</div>
                         </td>
                         <td class="p-4 text-sm">
-                            <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-500"></span> ${trip.pickup_location.slice(0, 20)}...</div>
-                            <div class="flex items-center gap-2 mt-1"><span class="w-2 h-2 rounded-full bg-red-500"></span> ${trip.dropoff_location.slice(0, 20)}...</div>
+                            <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-500"></span> ${trip.pickup_location.split(',')[0]}</div>
+                            <div class="flex items-center gap-2 mt-1"><span class="w-2 h-2 rounded-full bg-red-500"></span> ${trip.dropoff_location.split(',')[0]}</div>
                         </td>
                         <td class="p-4 text-sm font-bold">${trip.car_type}</td>
                         <td class="p-4 font-bold text-green-600">${trip.estimated_price} EGP</td>
@@ -514,7 +522,6 @@
                     </div>
                 `).join('');
             }
-
             const { data: cars } = await sbClient.from('cars').select('*');
             if(cars) {
                 document.getElementById('cars-list').innerHTML = cars.map(c => `
@@ -546,7 +553,7 @@
             }
         }
 
-        // --- AUTO REFRESH ---
+        // --- Auto Refresh ---
         setInterval(() => {
             loadKPIs();
             if(!document.getElementById('page-operations').classList.contains('hidden')) {
