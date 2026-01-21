@@ -282,18 +282,17 @@
             });
         }
 
-        // --- 2. OPERATIONS (تم التعديل: استخدام Left Join) ---
+        // --- 2. OPERATIONS (تم التعديل: استخدام Left Join الآمن) ---
         async function loadOperations() {
-            // التعديل هنا: استخدام driver_id و car_id بشكل صريح لضمان جلب الرحلات حتى لو كانت الحقول فارغة
+            // التعديل: جلب (*) لكل من السائق والسيارة لتجنب خطأ اختلاف أسماء الأعمدة
             const { data: trips, error } = await sbClient
                 .from('trips')
-                .select('*, drivers:driver_id(name, phone), cars:car_id(model, plate_number)')
+                .select('*, drivers:driver_id(*), cars:car_id(*)')
                 .order('created_at', { ascending: false });
             
             if (error) { 
                 console.error("Supabase Error:", error);
-                // في حال حدوث خطأ، نعرضه في الجدول للمساعدة في التتبع
-                document.getElementById('ops-table').innerHTML = `<tr><td colspan="7" class="text-center text-red-500 p-4">خطأ في جلب البيانات: ${error.message}</td></tr>`;
+                document.getElementById('ops-table').innerHTML = `<tr><td colspan="7" class="text-center text-red-500 p-4 font-bold">⚠️ خطأ تقني: ${error.message}</td></tr>`;
                 return; 
             }
 
@@ -316,15 +315,19 @@
                 else if(trip.status === 'approved') statusBadge = '<span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">تم التعيين</span>';
                 else if(trip.status === 'completed') statusBadge = '<span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">مكتملة</span>';
 
-                // التحقق الآمن: إذا لم يكن هناك سائق (null)، نعرض شرطة (-) بدلاً من الخطأ
-                const driverName = (trip.drivers && trip.drivers.name) ? trip.drivers.name : '-';
-                const carInfo = (trip.cars && trip.cars.model) ? `${trip.cars.model} (${trip.cars.plate_number})` : '-';
+                // --- المعالجة الذكية للبيانات المفقودة ---
+                const dr = trip.drivers; // بيانات السائق
+                const cr = trip.cars;    // بيانات السيارة
+
+                // نحاول العثور على الاسم سواء كان name أو full_name
+                const driverName = dr ? (dr.name || dr.full_name || 'سائق غير مسجل') : '-';
+                const carInfo = cr ? `${cr.model || ''} (${cr.plate_number || 'بدون لوحة'})` : '-';
 
                 tbody.innerHTML += `
                     <tr class="hover:bg-slate-50 transition ${rowClass}">
                         <td class="p-4 text-xs font-mono text-slate-400">#${trip.id.slice(0,6)}</td>
                         <td class="p-4">
-                            <div class="font-bold text-slate-800">${trip.user_id.slice(0,5)}...</div>
+                            <div class="font-bold text-slate-800">..${trip.user_id.slice(0,5)}</div>
                             <div class="text-xs text-slate-500">${new Date(trip.created_at).toLocaleDateString()}</div>
                         </td>
                         <td class="p-4 text-sm">
