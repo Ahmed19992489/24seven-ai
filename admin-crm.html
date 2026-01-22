@@ -15,19 +15,22 @@
         .sidebar-item:hover, .sidebar-item.active { background-color: #e2e8f0; color: #0f172a; font-weight: bold; border-right-color: #f59e0b; }
         .glass-panel { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
         .status-badge { padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
-        /* Scrollbar styling */
+        
+        /* وميض للإشعارات */
+        @keyframes pulse-red { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        .badge-pulse { animation: pulse-red 2s infinite; }
+        
+        /* Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        .animate-pulse-slow { animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden text-slate-800">
 
     <aside class="w-64 bg-white border-l border-slate-200 flex flex-col z-20 shadow-lg shrink-0">
         <div class="h-16 flex items-center justify-center border-b border-slate-100 bg-slate-900 text-white">
-            <h1 class="text-xl font-black">24<span class="text-amber-500">Seven</span> <span class="text-[10px] font-normal text-slate-400">Pro</span></h1>
+            <h1 class="text-xl font-black">24<span class="text-amber-500">Seven</span> <span class="text-[10px] font-normal text-slate-400">ERP Pro</span></h1>
         </div>
         
         <nav class="flex-1 p-2 space-y-1 overflow-y-auto">
@@ -35,10 +38,10 @@
                 <i class="fas fa-home w-5 text-center text-blue-600"></i> الرئيسية
             </div>
             
-            <p class="text-[10px] font-bold text-slate-400 mt-4 mb-1 px-3">العمليات</p>
+            <p class="text-[10px] font-bold text-slate-400 mt-4 mb-1 px-3">العمليات والعملاء</p>
             <div onclick="showPage('operations')" id="nav-operations" class="sidebar-item p-3 rounded-lg flex items-center gap-3 justify-between">
                 <div class="flex items-center gap-3"><i class="fas fa-satellite-dish w-5 text-center text-amber-600"></i> غرفة العمليات</div>
-                <span id="pending-badge" class="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full hidden animate-pulse-slow">0</span>
+                <span id="pending-badge" class="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full hidden badge-pulse">0</span>
             </div>
             <div onclick="showPage('crm')" id="nav-crm" class="sidebar-item p-3 rounded-lg flex items-center gap-3">
                 <i class="fas fa-users w-5 text-center text-purple-600"></i> العملاء (CRM)
@@ -49,7 +52,7 @@
                 <i class="fas fa-calculator w-5 text-center text-green-600"></i> الحسابات العامة
             </div>
             <div onclick="showPage('fleet')" id="nav-fleet" class="sidebar-item p-3 rounded-lg flex items-center gap-3">
-                <i class="fas fa-car w-5 text-center text-slate-600"></i> الأسطول والكباتن
+                <i class="fas fa-car w-5 text-center text-slate-600"></i> إدارة الأسطول
             </div>
             
             <p class="text-[10px] font-bold text-slate-400 mt-4 mb-1 px-3">التسويق والإعدادات</p>
@@ -60,6 +63,16 @@
                 <i class="fas fa-tags w-5 text-center text-gray-600"></i> التسعير
             </div>
         </nav>
+        
+        <div class="p-4 border-t border-slate-100 bg-slate-50">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold">AH</div>
+                <div>
+                    <p class="text-sm font-bold">Ahmed Hashem</p>
+                    <p class="text-[10px] text-green-600 font-bold">● متصل الآن</p>
+                </div>
+            </div>
+        </div>
     </aside>
 
     <main class="flex-1 overflow-y-auto p-6 relative bg-[#f1f5f9]">
@@ -205,9 +218,23 @@
 
         <div id="page-pricing" class="page-section hidden">
             <h2 class="text-2xl font-bold mb-6">إعدادات التسعير</h2>
-            <div class="glass-panel p-6" id="pricing-container">
-                <div id="pricing-list" class="space-y-2 mb-4"></div>
-                <button onclick="addPricingRule()" class="bg-slate-800 text-white w-full py-2 rounded">إضافة شريحة جديدة</button>
+            <div class="glass-panel p-6 mb-6">
+                <h3 class="font-bold mb-4">إضافة شريحة تسعير جديدة</h3>
+                <div class="grid grid-cols-5 gap-4 items-end">
+                    <div>
+                        <label class="text-xs font-bold text-slate-500">نوع السيارة</label>
+                        <select id="price-car" class="w-full p-2 border rounded-lg bg-slate-50"><option value="sedan">Sedan</option><option value="suv">SUV</option><option value="van">Van</option></select>
+                    </div>
+                    <div><label class="text-xs font-bold text-slate-500">من (كم)</label><input type="number" id="price-min" class="w-full p-2 border rounded-lg" value="0"></div>
+                    <div><label class="text-xs font-bold text-slate-500">إلى (كم)</label><input type="number" id="price-max" class="w-full p-2 border rounded-lg" placeholder="50"></div>
+                    <div><label class="text-xs font-bold text-slate-500">سعر الكيلو</label><input type="number" id="price-rate" class="w-full p-2 border rounded-lg" placeholder="10"></div>
+                    <div><label class="text-xs font-bold text-slate-500">فتحة العداد</label><input type="number" id="price-base" class="w-full p-2 border rounded-lg" placeholder="100"></div>
+                </div>
+                <button onclick="addPricingRule()" class="mt-4 bg-slate-900 text-white px-6 py-2 rounded-lg hover:bg-slate-800 w-full font-bold">حفظ الشريحة</button>
+            </div>
+            <div class="glass-panel p-6">
+                <h3 class="font-bold mb-4">الشرائح الحالية</h3>
+                <div id="pricing-list" class="space-y-2"></div>
             </div>
         </div>
 
@@ -346,14 +373,13 @@
             loadOperations();
         }
 
-        // --- 2. ASSIGNMENT (FIXED) ---
+        // --- 2. ASSIGNMENT (FIXED FK ERROR) ---
         async function openAssignModal(tripId) {
             document.getElementById('op-trip-id').value = tripId;
             document.getElementById('assign-modal').style.display = 'flex';
             
-            // تحميل الكباتن (إزالة فلتر active مؤقتاً لتصحيح البيانات)
-            const { data: drivers } = await sbClient.from('drivers').select('id, name, phone');
-            const { data: cars } = await sbClient.from('cars').select('id, brand, model, plate_number');
+            const { data: drivers } = await sbClient.from('drivers').select('id, name, phone').eq('status', 'active');
+            const { data: cars } = await sbClient.from('cars').select('id, brand, model, plate_number').eq('status', 'active');
             
             const drSelect = document.getElementById('op-driver');
             drSelect.innerHTML = '<option value="">-- اختر الكابتن --</option>';
@@ -452,9 +478,10 @@
             
             if(pending && pending.length > 0) {
                 pending.forEach(tx => {
+                    const userName = tx.profiles?.full_name || 'عميل';
                     list.innerHTML += `
                         <div class="bg-white border p-2 rounded flex justify-between items-center text-sm mb-2">
-                            <div><span class="font-bold text-green-600">+${tx.amount}</span> <span class="text-xs text-slate-500">${tx.profiles?.full_name}</span></div>
+                            <div><span class="font-bold text-green-600">+${tx.amount}</span> <span class="text-xs text-slate-500">${userName}</span></div>
                             <button onclick="approveTx('${tx.id}', '${tx.user_id}', ${tx.amount})" class="bg-green-500 text-white px-2 rounded text-xs">✔</button>
                         </div>
                     `;
