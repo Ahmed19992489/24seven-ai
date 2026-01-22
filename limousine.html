@@ -25,9 +25,12 @@
         .trip-type-selector { display: flex; background: #0f172a; padding: 4px; border-radius: 12px; margin-bottom: 15px; }
         .trip-type-btn { flex: 1; text-align: center; padding: 8px; border-radius: 8px; font-size: 0.8rem; color: #94a3b8; cursor: pointer; }
         .trip-type-btn.active { background: var(--primary); color: #000; font-weight: bold; }
-        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; }
         
         #map { height: 200px; width: 100%; border-radius: 12px; margin-top: 10px; }
+        
+        /* Loading Spinner */
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #f59e0b; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="pb-20">
@@ -92,7 +95,7 @@
                     </div>
                 </div>
 
-                <button onclick="calculatePrice()" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl font-bold text-white shadow-lg active:scale-95 transition">
+                <button onclick="calculatePrice()" id="calc-btn" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl font-bold text-white shadow-lg active:scale-95 transition">
                     عرض السعر المبدئي
                 </button>
             </div>
@@ -123,8 +126,8 @@
             <h2 class="text-xl font-bold mb-4 text-white">رحلاتي</h2>
             <div id="trips-list" class="space-y-4 pb-20">
                 <div class="text-center py-20 text-slate-500">
-                    <i class="fas fa-route text-4xl mb-4 opacity-50"></i>
-                    <p>لا توجد رحلات حالياً</p>
+                    <i class="fas fa-spinner fa-spin text-2xl"></i>
+                    <p class="mt-2">جاري التحميل...</p>
                 </div>
             </div>
         </div>
@@ -171,20 +174,16 @@
 
     <nav class="bottom-nav">
         <div onclick="switchTab('booking')" class="nav-item active" id="nav-booking">
-            <i class="fas fa-map-location-dot"></i>
-            <span>حجز</span>
+            <i class="fas fa-map-location-dot"></i><span>حجز</span>
         </div>
         <div onclick="switchTab('trips')" class="nav-item" id="nav-trips">
-            <i class="fas fa-list-ul"></i>
-            <span>رحلاتي</span>
+            <i class="fas fa-list-ul"></i><span>رحلاتي</span>
         </div>
         <div onclick="switchTab('wallet')" class="nav-item" id="nav-wallet">
-            <i class="fas fa-wallet"></i>
-            <span>المحفظة</span>
+            <i class="fas fa-wallet"></i><span>المحفظة</span>
         </div>
         <div onclick="switchTab('support')" class="nav-item" id="nav-support">
-            <i class="fas fa-headset"></i>
-            <span>الدعم</span>
+            <i class="fas fa-headset"></i><span>الدعم</span>
         </div>
     </nav>
 
@@ -221,7 +220,7 @@
                 </div>
 
                 <div class="pt-4 flex gap-3">
-                    <button onclick="confirmFinalBooking()" class="flex-1 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold py-3 rounded-xl shadow-lg">تأكيد نهائي</button>
+                    <button onclick="confirmFinalBooking()" id="confirm-btn" class="flex-1 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold py-3 rounded-xl shadow-lg">تأكيد نهائي</button>
                     <button onclick="document.getElementById('details-modal').style.display='none'" class="flex-1 bg-slate-700 text-white font-bold py-3 rounded-xl">رجوع</button>
                 </div>
             </div>
@@ -253,28 +252,38 @@
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBFcMkqiLCX2z94HrIxmAnT47gpxIocB_E&libraries=places&language=ar"></script>
     
     <script>
-        // Supabase Config
+        // --- 1. إعدادات Supabase ---
         const supabaseUrl = 'https://qxtlsfmfetwcflbpvwuf.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4dGxzZm1mZXR3Y2ZsYnB2d3VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0MzMzODEsImV4cCI6MjA3ODAwOTM4MX0.FFGXNfx0FDA4FmJB1gVorNigs9nRoO4q1pCj2BOMDbU';
         const sbClient = supabase.createClient(supabaseUrl, supabaseKey);
 
         let currentUser = null;
-        let pricingRules = [];
-        let tripData = {}; // تخزين مؤقت لبيانات الرحلة
+        let pricingRules = []; // سيتم ملؤه من قاعدة البيانات
+        let tripData = {
+            type: 'one-way',
+            car: 'sedan',
+            pickup: '',
+            dropoff: '',
+            dist: 0,
+            price: 0
+        };
 
-        // 1. Initialization
+        // --- 2. التحميل الأولي ---
         (async function init() {
+            // التحقق من تسجيل الدخول
             const { data } = await sbClient.auth.getSession();
             if (data.session) {
                 currentUser = data.session.user;
                 document.getElementById('login-screen').style.display = 'none';
-                loadUserData();
-                loadPricingRules();
-                initMaps();
+                
+                // تحميل البيانات الأساسية
+                await loadPricingRules(); // تحميل الشرائح
+                await loadUserData();     // تحميل بيانات المستخدم
+                initMaps();               // تشغيل الخرائط
             }
         })();
 
-        // 2. Navigation
+        // --- 3. التنقل بين الصفحات ---
         function switchTab(id) {
             document.querySelectorAll('.page-content').forEach(e => e.classList.add('hidden'));
             document.getElementById(`page-${id}`).classList.remove('hidden');
@@ -286,9 +295,9 @@
             if(id === 'wallet') { loadWallet(); loadTransactions(); }
         }
 
-        // 3. Booking Logic
+        // --- 4. منطق الحجز والتسعير الجديد ---
         function setTripType(type) {
-            tripData.type = type; // one-way or round
+            tripData.type = type;
             document.querySelectorAll('.trip-type-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(`btn-${type}`).classList.add('active');
         }
@@ -299,34 +308,74 @@
             document.getElementById(`car-${type}`).classList.add('active');
         }
 
+        async function loadPricingRules() {
+            // جلب شرائح التسعير من جدول pricing_tiers
+            const { data, error } = await sbClient.from('pricing_tiers').select('*');
+            if(!error && data) {
+                pricingRules = data;
+                console.log("تم تحميل قواعد التسعير:", pricingRules);
+            }
+        }
+
         function calculatePrice() {
             const p = document.getElementById('pickup').value;
             const d = document.getElementById('dropoff').value;
             if(!p || !d) return alert("الرجاء تحديد الموقع والوجهة");
 
-            // Mock Calculation (Replace with Distance Matrix API later)
-            const dist = 50; // km افتراضي للتجربة
-            const basePrice = 150; 
-            const price = basePrice + (dist * 10); 
+            const btn = document.getElementById('calc-btn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحساب...';
 
-            tripData.pickup = p;
-            tripData.dropoff = d;
-            tripData.price = price;
-            tripData.dist = dist;
-            tripData.car = tripData.car || 'sedan'; // default
+            // محاكاة المسافة (في الواقع نستخدم Distance Matrix API)
+            // هنا سنضع مسافة عشوائية للتجربة أو بناءً على مدخلات بسيطة
+            // لأن الـ API Key قد لا يدعم Distance Matrix مجاناً
+            setTimeout(() => {
+                const dist = Math.floor(Math.random() * 30) + 5; // مسافة عشوائية بين 5 و 35 كم للتجربة
+                
+                // منطق التسعير المتقدم (الشرائح)
+                let finalPrice = 0;
+                let foundRule = false;
+                
+                // البحث عن الشريحة المناسبة
+                // نبحث عن قاعدة تطابق نوع السيارة والمسافة تقع بين الحد الأدنى والأقصى
+                const rule = pricingRules.find(r => 
+                    r.car_type === tripData.car && 
+                    dist >= r.min_km && 
+                    dist <= r.max_km
+                );
 
-            document.getElementById('modal-price').innerText = price;
-            document.getElementById('modal-dist').innerText = dist + ' km';
-            document.getElementById('modal-type').innerText = tripData.car.toUpperCase();
-            document.getElementById('price-modal').style.display = 'flex';
+                if (rule) {
+                    // السعر = فتحة العداد + (المسافة * سعر الكيلو)
+                    finalPrice = Number(rule.base_price) + (dist * Number(rule.price_per_km));
+                    foundRule = true;
+                } else {
+                    // سعر افتراضي في حالة عدم وجود شريحة (احتياطي)
+                    finalPrice = 100 + (dist * 10); 
+                }
+
+                // إذا كانت رحلة ذهاب وعودة، نضاعف السعر مع خصم بسيط
+                if(tripData.type === 'round') finalPrice = finalPrice * 1.8;
+
+                tripData.pickup = p;
+                tripData.dropoff = d;
+                tripData.dist = dist;
+                tripData.price = Math.round(finalPrice); // تقريب السعر
+
+                // عرض النتائج
+                document.getElementById('modal-price').innerText = tripData.price;
+                document.getElementById('modal-dist').innerText = dist + ' km';
+                document.getElementById('modal-type').innerText = tripData.car.toUpperCase();
+                
+                document.getElementById('price-modal').style.display = 'flex';
+                btn.innerHTML = 'عرض السعر المبدئي';
+            }, 1000);
         }
 
         function showDetailsForm() {
             document.getElementById('price-modal').style.display = 'none';
             document.getElementById('details-modal').style.display = 'flex';
             
-            // تعبئة بيانات المستخدم تلقائياً إذا وجدت
-            if(currentUser.user_metadata) {
+            // ملء البيانات تلقائياً إذا وجدت في البروفايل
+            if(currentUser && currentUser.user_metadata) {
                 document.getElementById('guest-name').value = currentUser.user_metadata.full_name || '';
                 document.getElementById('guest-phone').value = currentUser.user_metadata.phone || '';
             }
@@ -341,18 +390,22 @@
 
             if(!date || !time || !name || !phone) return alert("جميع البيانات مطلوبة");
 
-            const btn = event.target;
+            const btn = document.getElementById('confirm-btn');
             btn.innerHTML = 'جاري الحجز...';
             btn.disabled = true;
 
-            // 1. تحديث بروفايل العميل (لضمان ظهور الاسم في الأدمن)
-            await sbClient.from('profiles').update({
+            // 1. تحديث بروفايل العميل (هام جداً للـ CRM)
+            // نتأكد أن بيانات العميل محدثة في جدول profiles
+            const { error: profileError } = await sbClient.from('profiles').upsert({
+                id: currentUser.id,
                 full_name: name,
-                phone: phone
-            }).eq('id', currentUser.id);
+                phone: phone,
+                updated_at: new Date()
+            });
 
-            // 2. إنشاء الرحلة
-            // نخزن الموعد والواتساب في admin_notes ليراها الأدمن
+            if (profileError) console.error("Profile Update Error:", profileError);
+
+            // 2. إرسال الطلب لجدول trips
             const adminNote = `📅 الموعد: ${date} الساعة ${time} \n📱 واتساب: ${wa}`;
 
             const { error } = await sbClient.from('trips').insert([{
@@ -360,10 +413,11 @@
                 pickup_location: tripData.pickup,
                 dropoff_location: tripData.dropoff,
                 distance_km: tripData.dist,
-                estimated_price: tripData.price,
+                estimated_price: tripData.price, // هذا هو الإيراد المتوقع
                 car_type: tripData.car,
-                status: 'pending',
-                admin_notes: adminNote
+                status: 'pending', // يظهر في الأدمن كطلب جديد
+                admin_notes: adminNote,
+                payment_status: 'unpaid'
             }]);
 
             if(error) {
@@ -371,25 +425,23 @@
                 btn.innerHTML = 'تأكيد نهائي';
                 btn.disabled = false;
             } else {
-                // إنشاء الفاتورة
-                await sbClient.from('invoices').insert([{
-                    user_id: currentUser.id, trip_id: trip[0].id, amount: tripData.price, status: 'unpaid'
-                }]);
-
-                alert("🎉 تم استلام طلبك بنجاح! سيتم التواصل معك قريباً.");
+                alert("🎉 تم استلام طلبك بنجاح! سيقوم فريق العمليات بمراجعة الطلب وتعيين سائق.");
                 document.getElementById('details-modal').style.display = 'none';
                 switchTab('trips');
+                btn.innerHTML = 'تأكيد نهائي';
+                btn.disabled = false;
             }
         }
 
-        // 4. Data Loading
+        // --- 5. تحميل البيانات (رحلات، محفظة) ---
         async function loadTrips() {
             const list = document.getElementById('trips-list');
             list.innerHTML = '<div class="text-center p-10"><i class="fas fa-spinner fa-spin text-2xl text-amber-500"></i></div>';
 
-            const { data: trips } = await sbClient
+            // جلب الرحلات مع بيانات السائق والسيارة
+            const { data: trips, error } = await sbClient
                 .from('trips')
-                .select('*, drivers:driver_id(name, phone), cars:car_id(model, plate_number, color)')
+                .select('*, drivers:driver_id(name, phone), cars:car_id(model, plate_number, brand)')
                 .eq('user_id', currentUser.id)
                 .order('created_at', { ascending: false });
 
@@ -403,13 +455,14 @@
                 let statusBadge = '';
                 let driverSection = '';
 
+                // حالات الرحلة
                 if(t.status === 'pending') {
                     statusBadge = '<span class="bg-amber-500/10 text-amber-500 px-2 py-1 rounded text-[10px] font-bold">قيد الانتظار</span>';
-                    driverSection = `<div class="mt-3 pt-3 border-t border-slate-700 text-xs text-slate-400 flex items-center gap-2"><i class="fas fa-clock fa-spin"></i> جاري البحث عن كابتن...</div>`;
+                    driverSection = `<div class="mt-3 pt-3 border-t border-slate-700 text-xs text-slate-400 flex items-center gap-2"><i class="fas fa-clock fa-spin"></i> جاري المراجعة وتعيين كابتن...</div>`;
                 } else if(t.status === 'approved') {
-                    statusBadge = '<span class="bg-blue-500/10 text-blue-500 px-2 py-1 rounded text-[10px] font-bold">مقبولة</span>';
+                    statusBadge = '<span class="bg-blue-500/10 text-blue-500 px-2 py-1 rounded text-[10px] font-bold">مقبولة (جاري التنفيذ)</span>';
                     const drName = t.drivers?.name || 'تم التعيين';
-                    const carInfo = t.cars ? `${t.cars.model} - ${t.cars.plate_number}` : 'سيارة';
+                    const carInfo = t.cars ? `${t.cars.brand} ${t.cars.model} (${t.cars.plate_number})` : 'سيارة';
                     driverSection = `
                         <div class="mt-3 pt-3 border-t border-slate-700 flex items-center gap-3">
                             <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center"><i class="fas fa-user-tie text-slate-300"></i></div>
@@ -420,8 +473,11 @@
                             <a href="tel:${t.drivers?.phone}" class="mr-auto w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white"><i class="fas fa-phone"></i></a>
                         </div>
                     `;
-                } else {
+                } else if(t.status === 'completed') {
                     statusBadge = '<span class="bg-green-500/10 text-green-500 px-2 py-1 rounded text-[10px] font-bold">مكتملة</span>';
+                    driverSection = `<div class="mt-3 pt-3 border-t border-slate-700 text-xs text-green-500 flex items-center gap-2"><i class="fas fa-check-circle"></i> تم الوصول بنجاح</div>`;
+                } else {
+                    statusBadge = '<span class="bg-red-500/10 text-red-500 px-2 py-1 rounded text-[10px] font-bold">ملغاة</span>';
                 }
 
                 list.innerHTML += `
@@ -443,6 +499,7 @@
         }
 
         async function loadWallet() {
+            // جلب الرصيد من جدول profiles
             const { data } = await sbClient.from('profiles').select('wallet_balance').eq('id', currentUser.id).single();
             const bal = (data?.wallet_balance || 0).toFixed(2);
             document.getElementById('wallet-balance-page').innerText = bal;
@@ -479,45 +536,47 @@
             }
         }
 
-        // Helpers & Maps
-        async function fetchPricingRules() {
-            const { data } = await sbClient.from('pricing_rules').select('*');
-            pricingRules = data || [];
-        }
-
         async function loadUserData() {
+            // تحميل اسم المستخدم للهيدر
             const { data } = await sbClient.from('profiles').select('*').eq('id', currentUser.id).single();
-            if(data) document.getElementById('header-user-name').innerText = data.full_name || 'عميلنا العزيز';
+            if(data && data.full_name) {
+                document.getElementById('header-user-name').innerText = data.full_name;
+            } else {
+                document.getElementById('header-user-name').innerText = currentUser.email.split('@')[0];
+            }
         }
 
-        function loadPricingRules() { fetchPricingRules(); }
-
+        // --- 6. الخرائط ---
         function initMaps() {
-            new google.maps.places.Autocomplete(document.getElementById("pickup"));
-            new google.maps.places.Autocomplete(document.getElementById("dropoff"));
-            
-            // Init Mini Map
-            const map = new google.maps.Map(document.getElementById("map"), {
-                center: { lat: 30.0444, lng: 31.2357 }, zoom: 10,
-                disableDefaultUI: true,
-                styles: [ { "elementType": "geometry", "stylers": [{ "color": "#242f3e" }] }, { "elementType": "labels.text.stroke", "stylers": [{ "color": "#242f3e" }] }, { "elementType": "labels.text.fill", "stylers": [{ "color": "#746855" }] }, { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#38414e" }] } ]
-            });
+            try {
+                const p = new google.maps.places.Autocomplete(document.getElementById("pickup"));
+                const d = new google.maps.places.Autocomplete(document.getElementById("dropoff"));
+            } catch (e) { console.log("Google Maps not loaded yet"); }
         }
 
-        // Auth Functions
+        // --- 7. المصادقة (Auth) ---
         async function handleGoogleLogin() { await sbClient.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } }); }
+        
         async function emailLogin() {
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-pass').value;
             const { error } = await sbClient.auth.signInWithPassword({ email, password });
             if(error) alert(error.message); else location.reload();
         }
+        
         async function emailSignUp() {
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-pass').value;
-            const { error } = await sbClient.auth.signUp({ email, password });
-            if(error) alert(error.message); else alert("تم التسجيل! راجع بريدك للتفعيل.");
+            // عند التسجيل الجديد، ننشئ المستخدم
+            const { data, error } = await sbClient.auth.signUp({ email, password });
+            if(error) {
+                alert(error.message);
+            } else {
+                alert("تم التسجيل! يرجى التحقق من بريدك الإلكتروني.");
+                // يمكننا هنا إنشاء سجل مبدئي في profiles إذا أردنا
+            }
         }
+        
         async function handleLogout() { await sbClient.auth.signOut(); location.reload(); }
 
     </script>
