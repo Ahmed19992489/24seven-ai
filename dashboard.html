@@ -15,11 +15,8 @@
         .sidebar-item:hover, .sidebar-item.active { background-color: #e2e8f0; color: #0f172a; font-weight: bold; border-right-color: #f59e0b; }
         .glass-panel { background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0; }
         .input-std { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem; outline: none; }
-        .input-std:focus { border-color: #f59e0b; ring: 2px solid #fcd34d; }
         .btn-action { transition: transform 0.1s; } .btn-action:active { transform: scale(0.95); }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #f1f1f1; } ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden text-slate-800">
@@ -225,15 +222,15 @@
             <input type="hidden" id="comp-trip-id">
             <div class="space-y-4">
                 <div>
-                    <label class="text-xs font-bold text-slate-500">إجمالي تحصيل من العميل</label>
+                    <label class="text-xs font-bold text-slate-500">إجمالي الإيراد (من العميل)</label>
                     <input type="number" id="comp-price" class="input-std font-bold text-green-600">
                 </div>
                 <div>
-                    <label class="text-xs font-bold text-slate-500">يومية الكابتن (مصروف)</label>
+                    <label class="text-xs font-bold text-slate-500">يومية الكابتن (تخصم من الإيراد)</label>
                     <input type="number" id="comp-wage" class="input-std font-bold text-red-600" value="0">
                 </div>
                 <div>
-                    <label class="text-xs font-bold text-slate-500">بنزين / كارتة (مصروف)</label>
+                    <label class="text-xs font-bold text-slate-500">مصروفات أخرى (بنزين/كارتة)</label>
                     <input type="number" id="comp-fuel" class="input-std font-bold text-amber-600" value="0">
                 </div>
                 <div class="flex gap-2 pt-2">
@@ -310,7 +307,7 @@
 
                 document.getElementById('kpi-main-vault').innerText = `${main.balance} EGP`;
                 document.getElementById('kpi-maint-vault').innerText = `${maint.balance} EGP`;
-                document.getElementById('kpi-cars-salary').innerText = `${cars.balance} EGP`; // NEW
+                document.getElementById('kpi-cars-salary').innerText = `${cars.balance} EGP`;
             }
         }
 
@@ -388,36 +385,37 @@
             // 3. Record Expenses Automatically
             const { data: trip } = await sbClient.from('trips').select('driver_id, car_id').eq('id', tripId).single();
             
-            // A. Driver Wage -> Deduct from Main Vault (Paid out) OR just record as expense
+            // A. Driver Wage -> Deduct from Main Vault (Paid out)
             if(wage > 0 && trip.driver_id) {
-                // Record expense linked to driver
                 await sbClient.from('expenses').insert([{
                     title: `يومية رحلة #${tripId.slice(0,6)}`,
                     amount: wage,
                     category: 'رواتب',
                     related_trip_id: tripId,
                     related_driver_id: trip.driver_id,
-                    related_vault_id: mainVault.id // Paid from main vault
+                    related_vault_id: mainVault.id
                 }]);
-                // Deduct from Main Vault (Actual payout)
                 await sbClient.from('vaults').update({ balance: ((mainVault.balance||0) + price) - wage }).eq('id', mainVault.id);
             }
 
-            // B. Fuel/Maintenance -> Deduct from Main, Add to Fuel Vault (or just record expense)
+            // B. Fuel/Maintenance -> Deduct from Main
             if(fuel > 0 && trip.car_id) {
                 const { data: fuelVault } = await sbClient.from('vaults').select('id, balance').eq('name', 'خزنة البنزين والتشغيل').single();
-                if(fuelVault) {
-                    await sbClient.from('expenses').insert([{
-                        title: `بنزين/كارتة رحلة #${tripId.slice(0,6)}`,
-                        amount: fuel,
-                        category: 'تشغيل',
-                        related_trip_id: tripId,
-                        related_car_id: trip.car_id,
-                        related_vault_id: fuelVault.id
-                    }]);
-                    // Update Fuel Vault (it spent money)
-                    // await sbClient.from('vaults').update({ balance: (fuelVault.balance||0) - fuel }).eq('id', fuelVault.id);
-                }
+                // If fuel vault exists, link it, otherwise allow general expense
+                const fuelVaultId = fuelVault ? fuelVault.id : null;
+                
+                await sbClient.from('expenses').insert([{
+                    title: `بنزين/كارتة رحلة #${tripId.slice(0,6)}`,
+                    amount: fuel,
+                    category: 'تشغيل',
+                    related_trip_id: tripId,
+                    related_car_id: trip.car_id,
+                    related_vault_id: fuelVaultId
+                }]);
+                // We typically assume driver paid fuel from the revenue he collected, so we deduct it from "Net" calculation or Vault if we reimbursed him.
+                // Assuming company pays fuel:
+                const currentBal = (await sbClient.from('vaults').select('balance').eq('id', mainVault.id).single()).data.balance;
+                await sbClient.from('vaults').update({ balance: currentBal - fuel }).eq('id', mainVault.id);
             }
 
             document.getElementById('complete-modal').style.display = 'none';
@@ -445,6 +443,7 @@
                         </div>
                     </div>
                 `;
+                
                 if(v.name !== 'الخزينة الرئيسية') {
                     select.innerHTML += `<option value="${v.id}">${v.name}</option>`;
                     modalSelect.innerHTML += `<option value="${v.id}">${v.name}</option>`;
@@ -598,7 +597,7 @@
             const { data: mainVault } = await sbClient.from('vaults').select('id, balance').eq('name', 'الخزينة الرئيسية').single();
             
             if(mainVault) await sbClient.from('vaults').update({ balance: (mainVault.balance||0) - amount }).eq('id', mainVault.id);
-            if(salaryVault) await sbClient.from('vaults').update({ balance: (salaryVault.balance||0) + amount }).eq('id', salaryVault.id); // Add to 'Paid Salaries' vault to track total paid
+            if(salaryVault) await sbClient.from('vaults').update({ balance: (salaryVault.balance||0) + amount }).eq('id', salaryVault.id); 
 
             alert("تم سداد الراتب وخصمه بنجاح");
             loadDashboard();
