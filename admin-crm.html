@@ -254,10 +254,10 @@
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4dGxzZm1mZXR3Y2ZsYnB2d3VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0MzMzODEsImV4cCI6MjA3ODAwOTM4MX0.FFGXNfx0FDA4FmJB1gVorNigs9nRoO4q1pCj2BOMDbU';
         const sbClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-        // تشغيل الداشبورد عند الفتح
+        // Init - هذا هو السطر الذي تم تصحيحه ليعمل فوراً
         showPage('dashboard');
 
-        // --- التنقل بين الصفحات ---
+        // --- Navigation Logic ---
         function showPage(pageId) {
             document.querySelectorAll('.page-section').forEach(e => e.classList.add('hidden'));
             document.getElementById(`page-${pageId}`).classList.remove('hidden');
@@ -289,7 +289,7 @@
             }
         }
 
-        // --- 2. Operations (Trip Management) ---
+        // --- 2. Operations ---
         async function loadOperations() {
             const list = document.getElementById('ops-table');
             list.innerHTML = '<tr><td colspan="7" class="text-center p-4">جاري التحميل...</td></tr>';
@@ -299,7 +299,6 @@
                 .select(`*, cars(brand, model), drivers(name)`)
                 .order('created_at', { ascending: false });
 
-            // Fetch Profiles Manually for Robustness
             const userIds = trips?.map(t => t.user_id).filter(Boolean) || [];
             let profilesMap = {};
             if(userIds.length) {
@@ -332,13 +331,18 @@
             });
         }
 
-        // --- 3. Finance & Vaults Logic ---
+        // --- 3. Finance ---
         async function loadFinance() {
-            // 1. Load Vaults for Grid
             const { data: vaults } = await sbClient.from('vaults').select('*');
             const grid = document.getElementById('vaults-grid');
             grid.innerHTML = '';
             
+            // تحديث القوائم المنسدلة للخزن
+            const select = document.getElementById('gen-exp-vault');
+            const modalSelect = document.getElementById('exp-modal-vault');
+            select.innerHTML = '<option value="main">الخزينة الرئيسية</option>';
+            modalSelect.innerHTML = '<option value="main">الخزينة الرئيسية</option>';
+
             if(vaults) vaults.forEach(v => {
                 grid.innerHTML += `
                     <div class="glass-panel p-5 border-l-4 border-amber-500 flex justify-between items-center">
@@ -349,14 +353,12 @@
                     </div>
                 `;
                 
-                // Update select options
-                const select = document.getElementById('gen-exp-vault');
-                const modalSelect = document.getElementById('exp-modal-vault');
-                if(!select.innerHTML.includes(v.id)) select.innerHTML += `<option value="${v.id}">${v.name}</option>`;
-                if(!modalSelect.innerHTML.includes(v.id)) modalSelect.innerHTML += `<option value="${v.id}">${v.name}</option>`;
+                if(v.name !== 'الخزينة الرئيسية') {
+                    select.innerHTML += `<option value="${v.id}">${v.name}</option>`;
+                    modalSelect.innerHTML += `<option value="${v.id}">${v.name}</option>`;
+                }
             });
 
-            // 2. Load Deposit Requests
             const { data: requests } = await sbClient.from('transactions').select('*, profiles(full_name)').eq('status', 'pending');
             const reqList = document.getElementById('deposit-requests-list');
             reqList.innerHTML = '';
@@ -407,19 +409,34 @@
         async function addGeneralExpense() {
             const title = document.getElementById('gen-exp-title').value;
             const amount = document.getElementById('gen-exp-amount').value;
-            const vaultId = document.getElementById('gen-exp-vault').value; // if 'main' handled carefully
+            const vaultId = document.getElementById('gen-exp-vault').value; 
 
             if(!title || !amount) return alert("أكمل البيانات");
 
+            const vid = vaultId === 'main' ? (await getMainVaultId()) : vaultId;
+
             // Insert
-            await sbClient.from('expenses').insert([{
-                title, amount, category: 'عام', related_vault_id: (vaultId === 'main' ? null : vaultId)
+            const { error } = await sbClient.from('expenses').insert([{
+                title, amount, category: 'عام', related_vault_id: vid
             }]);
             
-            // Deduct form vault logic (simplified)
-            // Ideally trigger on DB side or separate update here
+            if(error) {
+                alert("خطأ: " + error.message);
+                return;
+            }
+
+            // Deduct from vault
+            const { data: v } = await sbClient.from('vaults').select('balance').eq('id', vid).single();
+            await sbClient.from('vaults').update({ balance: (v.balance || 0) - Number(amount) }).eq('id', vid);
+
             alert("تم تسجيل المصروف");
             loadFinance();
+            loadDashboard();
+        }
+
+        async function getMainVaultId() {
+            const { data } = await sbClient.from('vaults').select('id').eq('name', 'الخزينة الرئيسية').single();
+            return data?.id;
         }
 
         // --- 4. Fleet & Ledger Logic ---
@@ -490,7 +507,7 @@
                     </div>
                     <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
                         <p class="text-xs font-bold text-slate-400 uppercase">الصافي</p>
-                        <p class="text-2xl font-black ${(income-outcome) >= 0 ? 'text-slate-800' : 'text-red-600'}">${income - outcome}</p>
+                        <p class="text-2xl font-black ${income - outcome >= 0 ? 'text-slate-800' : 'text-red-600'}">${income - outcome}</p>
                     </div>
                 </div>
 
@@ -533,14 +550,16 @@
             const title = document.getElementById('exp-modal-title').value;
             const amount = document.getElementById('exp-modal-amount').value;
             const tripId = document.getElementById('exp-modal-trip').value || null;
-            const vaultId = document.getElementById('exp-modal-vault').value || null;
+            let vaultId = document.getElementById('exp-modal-vault').value;
 
             if(!title || !amount) return alert("يرجى إدخال البيانات");
+
+            if(vaultId === 'main') vaultId = await getMainVaultId();
 
             const insertData = {
                 title, amount, category: 'تشغيل',
                 related_trip_id: tripId,
-                related_vault_id: vaultId
+                related_vault_id: vaultId || null
             };
             
             if(type === 'car') insertData.related_car_id = targetId;
@@ -549,9 +568,16 @@
             const { error } = await sbClient.from('expenses').insert([insertData]);
 
             if(!error) {
+                // Deduct from Vault if selected
+                if(vaultId) {
+                    const { data: v } = await sbClient.from('vaults').select('balance').eq('id', vaultId).single();
+                    await sbClient.from('vaults').update({ balance: (v.balance || 0) - Number(amount) }).eq('id', vaultId);
+                }
+
                 document.getElementById('expense-modal').style.display = 'none';
                 alert("تم تسجيل المصروف");
                 openLedger(type, targetId, '...'); // Reload current ledger
+                loadFinance();
             } else {
                 alert(error.message);
             }
@@ -559,24 +585,57 @@
 
         // --- Helpers: CRM & Pricing ---
         async function loadCRM() {
-            const list = document.getElementById('crm-table');
+            const list = document.getElementById('crm-users-list');
+            const detailView = document.getElementById('crm-detail-view');
+            
             // Fetch ALL profiles
             const { data: profiles } = await sbClient.from('profiles').select('*');
             list.innerHTML = '';
+            
             if(!profiles || profiles.length === 0) {
-                list.innerHTML = '<tr><td colspan="4" class="text-center p-4">لا يوجد عملاء</td></tr>';
+                list.innerHTML = '<p class="text-center text-slate-400 p-4">لا يوجد عملاء</p>';
                 return;
             }
+            
             profiles.forEach(p => {
                 list.innerHTML += `
-                    <tr class="border-b bg-white">
-                        <td class="p-4 font-bold text-slate-700">${p.full_name || 'غير مسجل'}</td>
-                        <td class="p-4 text-slate-500">${p.phone || '-'}</td>
-                        <td class="p-4 font-bold font-num ${p.wallet_balance < 0 ? 'text-red-500' : 'text-green-600'}">${p.wallet_balance || 0} EGP</td>
-                        <td class="p-4 text-xs text-slate-400">${new Date(p.created_at).toLocaleDateString()}</td>
-                    </tr>
+                    <div onclick="showClientDetails('${p.id}')" class="bg-white p-3 border rounded-lg cursor-pointer hover:bg-purple-50 transition mb-2">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-sm text-slate-800">${p.full_name || 'غير مسجل'}</span>
+                            <span class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">${p.wallet_balance || 0} EGP</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-1">${p.phone || '-'}</p>
+                    </div>
                 `;
             });
+        }
+
+        async function showClientDetails(id) {
+            const view = document.getElementById('crm-detail-view');
+            const { data: p } = await sbClient.from('profiles').select('*').eq('id', id).single();
+            const { data: trips } = await sbClient.from('trips').select('*').eq('user_id', id).order('created_at', {ascending:false});
+
+            let tripsHtml = '';
+            if(trips) trips.forEach(t => {
+                tripsHtml += `<div class="border-b py-2 flex justify-between text-xs"><span>${t.pickup_location}</span> <span class="font-bold">${t.estimated_price}</span></div>`;
+            });
+
+            view.innerHTML = `
+                <h3 class="text-xl font-bold mb-2">${p.full_name}</h3>
+                <p class="text-slate-500 mb-6">${p.phone}</p>
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="bg-purple-50 p-4 rounded text-center">
+                        <p class="text-xs">الرصيد</p>
+                        <p class="text-2xl font-black text-purple-700">${p.wallet_balance} EGP</p>
+                    </div>
+                    <div class="bg-blue-50 p-4 rounded text-center">
+                        <p class="text-xs">الرحلات</p>
+                        <p class="text-2xl font-black text-blue-700">${trips?.length || 0}</p>
+                    </div>
+                </div>
+                <h4 class="font-bold text-sm mb-2">سجل الرحلات</h4>
+                <div class="bg-white rounded border p-4">${tripsHtml || 'لا توجد رحلات'}</div>
+            `;
         }
 
         async function loadPricing() {
@@ -618,8 +677,14 @@
         async function completeTrip(tripId, price) {
             if(!confirm(`إنهاء الرحلة وتحصيل ${price}؟`)) return;
             await sbClient.from('trips').update({ status: 'completed', final_price: price }).eq('id', tripId);
-            const { data: v } = await sbClient.from('vaults').select('balance').eq('name', 'الخزينة الرئيسية').single();
-            await sbClient.from('vaults').update({ balance: (v.balance||0) + Number(price) }).eq('name', 'الخزينة الرئيسية');
+            
+            // Add revenue to Main Vault
+            const vid = await getMainVaultId();
+            if(vid) {
+                const { data: v } = await sbClient.from('vaults').select('balance').eq('id', vid).single();
+                await sbClient.from('vaults').update({ balance: (v.balance||0) + Number(price) }).eq('id', vid);
+            }
+            
             loadOperations();
             loadDashboard();
         }
