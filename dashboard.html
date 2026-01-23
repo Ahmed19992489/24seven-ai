@@ -88,8 +88,7 @@
             </div>
             <div class="bg-indigo-900/30 p-4 rounded-lg border border-indigo-500/30 mb-6">
                 <div class="flex justify-between items-center mb-2">
-                    <p class="text-xs text-indigo-300">رقم التحويل (InstaPay,
-                         محفظه كاش)</p>
+                    <p class="text-xs text-indigo-300">رقم التحويل (InstaPay, محفظه كاش)</p>
                     <p class="text-lg font-mono font-bold text-white tracking-widest select-all">01121748885 01007317927</p>
                 </div>
                 <hr class="border-indigo-500/20 mb-3">
@@ -351,7 +350,6 @@
             loadBillingHistory();
             loadSmartTips(); 
             
-            // ✅ التحديث التلقائي للبيانات كل 5 ثواني
             setInterval(() => {
                 refreshLeads();
                 updateStats();
@@ -432,7 +430,6 @@
             term.innerHTML += `<p>> بدأ البحث عن: "${keyword}"...</p>`;
 
             try {
-                // ✅ الكود الصحيح: إرسال البيانات كـ JSON
                 const res = await authFetch(`/search/start-search/`, {
                     method: 'POST',
                     body: JSON.stringify({
@@ -706,7 +703,6 @@
             } catch (e) {}
         }
 
-        // ✅ دالة شحن الكوبون (الجديدة)
         async function redeemCoupon() {
             const codeInput = document.getElementById('coupon-code');
             const code = codeInput.value.trim();
@@ -738,7 +734,36 @@
             }
         }
 
-        async function fetchSuggestions(val) { }
+        // ✅ دالة الاقتراحات الذكية (تم إضافتها)
+        async function fetchSuggestions(val) {
+            const box = document.getElementById('suggestions-box');
+            if (!val || val.length < 2) {
+                box.classList.add('hidden');
+                return;
+            }
+            try {
+                // استدعاء API الاقتراحات (تأكد من وجود هذا المسار في الباك إند)
+                const res = await authFetch(`/ai/suggestions?query=${val}`);
+                if (!res || !res.ok) return;
+                const data = await res.json();
+                
+                if (data.length > 0) {
+                    box.innerHTML = data.map(item => 
+                        `<div onclick="selectSuggestion('${item}')" class="p-2 hover:bg-slate-700 cursor-pointer text-xs text-slate-300 transition">${item}</div>`
+                    ).join('');
+                    box.classList.remove('hidden');
+                } else {
+                    box.classList.add('hidden');
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function selectSuggestion(val) {
+            document.getElementById('keyword').value = val;
+            document.getElementById('suggestions-box').classList.add('hidden');
+        }
     </script>
 </body>
 </html>
