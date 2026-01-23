@@ -8,37 +8,28 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Outfit:wght@700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
     <style>
         :root { --bg-dark: #0f172a; --primary: #f59e0b; --card-bg: #1e293b; }
         body { font-family: 'Cairo', sans-serif; background-color: var(--bg-dark); color: #f8fafc; overflow-x: hidden; padding-bottom: 90px; }
         .font-num { font-family: 'Outfit', sans-serif; }
-        
-        /* Glass Effect */
         .glass-card { background: var(--card-bg); border: 1px solid #334155; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
-        
-        /* Inputs */
         .input-field { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 14px; width: 100%; color: white; outline: none; transition: 0.3s; }
         .input-field:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2); }
         
-        /* Bottom Navigation */
         .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #1e293b; border-top: 1px solid #334155; display: flex; justify-content: space-around; padding: 12px 0; z-index: 50; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: #64748b; font-size: 0.7rem; gap: 4px; cursor: pointer; transition: 0.3s; }
         .nav-item.active { color: var(--primary); transform: translateY(-2px); }
         .nav-item i { font-size: 1.4rem; margin-bottom: 2px; }
 
-        /* Car Selection */
         .car-option { border: 2px solid transparent; background: #0f172a; padding: 10px; border-radius: 12px; cursor: pointer; transition: 0.3s; position: relative; overflow: hidden; }
         .car-option.active { border-color: var(--primary); background: rgba(245, 158, 11, 0.1); }
         .car-img { height: 60px; object-fit: contain; margin: 0 auto; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); }
 
-        /* Trip Type Buttons */
         .trip-type-selector { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
         .trip-btn { flex: 1; min-width: 30%; text-align: center; padding: 12px 5px; border: 1px solid #334155; border-radius: 10px; cursor: pointer; font-size: 0.75rem; transition: 0.3s; background: #0f172a; color: #94a3b8; }
         .trip-btn.active { background: var(--primary); color: #000; font-weight: bold; border-color: var(--primary); box-shadow: 0 0 10px rgba(245, 158, 11, 0.3); }
         
-        /* Map */
-        #map { width: 100%; height: 200px; border-radius: 12px; margin-top: 15px; border: 2px solid #334155; }
+        #map { width: 100%; height: 250px; border-radius: 12px; margin-top: 15px; border: 2px solid #334155; }
         
         /* Modal Animation */
         .modal-enter { animation: slideUp 0.3s ease-out forwards; }
@@ -77,7 +68,7 @@
                         <i class="fas fa-arrow-right block mb-1"></i> ذهاب فقط
                     </div>
                     <div onclick="setTripType('round')" class="trip-btn" id="btn-round">
-                        <i class="fas fa-sync block mb-1"></i> ذهاب وعودة<br><span class="text-[9px]">(نفس اليوم + انتظار)</span>
+                        <i class="fas fa-sync block mb-1"></i> ذهاب وعودة<br><span class="text-[9px]">(نفس اليوم + ساعتين انتظار)</span>
                     </div>
                     <div onclick="setTripType('round-diff')" class="trip-btn" id="btn-round-diff">
                         <i class="fas fa-calendar-alt block mb-1"></i> ذهاب وعودة<br><span class="text-[9px]">(أيام مختلفة)</span>
@@ -283,12 +274,15 @@
             <button onclick="handleGoogleLogin()" class="w-full bg-white text-slate-900 font-bold py-4 rounded-xl flex items-center justify-center gap-3 hover:bg-gray-100 transition shadow-lg">
                 <img src="https://img.icons8.com/color/48/google-logo.png" class="w-5 h-5"> متابعة باستخدام Google
             </button>
+            
             <div class="relative py-4">
                 <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-700"></div></div>
                 <div class="relative flex justify-center text-xs uppercase"><span class="bg-slate-900 px-3 text-slate-500 font-bold">أو عبر البريد</span></div>
             </div>
+            
             <input type="email" id="login-email" placeholder="البريد الإلكتروني" class="input-field text-center">
             <input type="password" id="login-pass" placeholder="كلمة المرور" class="input-field text-center">
+            
             <div class="flex gap-3 mt-2">
                 <button onclick="emailLogin()" class="flex-1 bg-slate-800 text-white font-bold py-3 rounded-xl border border-slate-700 hover:bg-slate-700">دخول</button>
                 <button onclick="emailSignUp()" class="flex-1 bg-transparent text-slate-400 font-bold py-3 rounded-xl border border-slate-700 hover:text-white">حساب جديد</button>
@@ -296,7 +290,7 @@
         </div>
     </div>
 
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBFcMkqiLCX2z94HrIxmAnT47gpxIocB_E&libraries=places&language=ar&callback=initMaps" async defer></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBFcMkqiLCX2z94HrIxmAnT47gpxIocB_E&libraries=places&language=ar"></script>
     
     <script>
         // Supabase Config
@@ -315,7 +309,8 @@
                 currentUser = data.session.user;
                 document.getElementById('login-screen').style.display = 'none';
                 loadUserData();
-                loadTrips(); // تحميل الرحلات فوراً
+                loadPricingRules();
+                initMaps();
             }
         })();
 
@@ -323,6 +318,7 @@
         function switchTab(id) {
             document.querySelectorAll('.page-content').forEach(e => e.classList.add('hidden'));
             document.getElementById(`page-${id}`).classList.remove('hidden');
+            
             document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
             document.getElementById(`nav-${id}`).classList.add('active');
 
@@ -348,17 +344,17 @@
             const d = document.getElementById('dropoff').value;
             if(!p || !d) return alert("الرجاء تحديد الموقع والوجهة");
 
-            // حساب السعر (تقريبي لحين تفعيل Distance Matrix API)
-            const dist = 50; // km
+            // Mock Calculation (Later use Google Distance Matrix)
+            const dist = 50; 
             let base = 250;
             if(tripData.car === 'suv') base = 350;
             if(tripData.car === 'van') base = 500;
             
             let price = base + (dist * 10); 
 
-            // منطق مضاعفة السعر حسب النوع
-            if(tripData.type === 'round') price *= 1.5; // خصم للعودة في نفس اليوم
-            if(tripData.type === 'round-diff') price *= 2; // عودة في يوم آخر = رحلتين كاملتين
+            // Trip Type Multiplier Logic
+            if(tripData.type === 'round') price *= 1.5; // Round trip same day
+            if(tripData.type === 'round-diff') price *= 2; // Round trip different day
 
             tripData.pickup = p;
             tripData.dropoff = d;
@@ -367,25 +363,32 @@
             tripData.car = tripData.car || 'sedan';
             tripData.type = tripData.type || 'one-way';
 
-            // عرض البيانات في المودال
+            // Fill Modal
             document.getElementById('modal-price').innerText = tripData.price;
             document.getElementById('modal-dist').innerText = dist + ' km';
             document.getElementById('modal-type').innerText = tripData.car.toUpperCase();
             
+            // Show Details Modal directly
             showDetailsForm();
         }
 
         function showDetailsForm() {
+            document.getElementById('price-modal').style.display = 'none';
             document.getElementById('details-modal').style.display = 'flex';
             
-            // تعبئة البيانات تلقائياً
-            const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
-            document.getElementById('book-date').valueAsDate = tomorrow;
+            // Init Map in Modal
+            setTimeout(() => initMaps(), 500);
 
+            // Prefill Data
             if(currentUser?.user_metadata) {
                 document.getElementById('guest-name').value = currentUser.user_metadata.full_name || '';
                 document.getElementById('guest-phone').value = currentUser.user_metadata.phone || '';
             }
+            
+            // Set default date to tomorrow
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            document.getElementById('book-date').valueAsDate = tomorrow;
         }
 
         async function confirmFinalBooking() {
@@ -395,28 +398,32 @@
             const phone = document.getElementById('guest-phone').value;
             const wa = document.getElementById('guest-whatsapp').value;
             
-            // تجميع الإضافات
+            // Extras
             const pax = document.getElementById('pax-count').value;
             const bags = document.getElementById('bags-count').value;
             const childSeat = document.getElementById('opt-child-seat').checked ? 'نعم' : 'لا';
             const wheelchair = document.getElementById('opt-wheelchair').checked ? 'نعم' : 'لا';
             
+            // Trip Type Text Map
             const typeMap = {
                 'one-way': 'ذهاب فقط',
-                'round': 'ذهاب وعودة (نفس اليوم)',
+                'round': 'ذهاب وعودة (نفس اليوم + انتظار)',
                 'round-diff': 'ذهاب وعودة (أيام مختلفة)'
             };
 
-            if(!date || !time || !name || !phone) return alert("الرجاء إدخال البيانات الأساسية");
+            if(!date || !time || !name || !phone) return alert("البيانات الأساسية مطلوبة");
 
             const btn = event.target;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحجز...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري المعالجة...';
             btn.disabled = true;
 
-            // 1. تحديث البروفايل
-            await sbClient.from('profiles').update({full_name: name, phone: phone}).eq('id', currentUser.id);
+            // 1. Update Profile (لضمان ظهور الاسم في الأدمن)
+            await sbClient.from('profiles').update({
+                full_name: name,
+                phone: phone
+            }).eq('id', currentUser.id);
 
-            // 2. تجميع الملاحظات للأدمن
+            // 2. Build Admin Notes (التفاصيل الكاملة)
             const adminNote = `
 📅 الموعد: ${date} الساعة ${time}
 📱 واتساب: ${wa}
@@ -437,16 +444,16 @@
             }]).select();
 
             if(error) {
-                alert("حدث خطأ: " + error.message);
+                alert("خطأ: " + error.message);
                 btn.innerHTML = 'تأكيد الحجز';
                 btn.disabled = false;
             } else {
-                // إنشاء فاتورة غير مدفوعة
+                // إنشاء الفاتورة
                 await sbClient.from('invoices').insert([{
                     user_id: currentUser.id, trip_id: trip[0].id, amount: tripData.price, status: 'unpaid'
                 }]);
 
-                alert("🎉 تم الحجز بنجاح! سيتم التواصل معك لتأكيد الرحلة.");
+                alert("🎉 تم استلام طلبك بنجاح! سيتم التواصل معك قريباً.");
                 document.getElementById('details-modal').style.display = 'none';
                 switchTab('trips');
                 btn.innerHTML = 'تأكيد الحجز';
@@ -564,27 +571,33 @@
             }
         }
 
-        // Helpers & Maps Init
-        function initMaps() {
-            // التحقق من أن الخريطة لم يتم تحميلها من قبل لتجنب الأخطاء
-            const mapElement = document.getElementById("map");
-            if (mapElement && typeof google !== 'undefined' && google.maps) {
-                new google.maps.places.Autocomplete(document.getElementById("pickup"));
-                new google.maps.places.Autocomplete(document.getElementById("dropoff"));
-                
-                const map = new google.maps.Map(mapElement, {
-                    center: { lat: 30.0444, lng: 31.2357 },
-                    zoom: 10,
-                    disableDefaultUI: true,
-                    styles: [ { "elementType": "geometry", "stylers": [{ "color": "#242f3e" }] }, { "elementType": "labels.text.stroke", "stylers": [{ "color": "#242f3e" }] }, { "elementType": "labels.text.fill", "stylers": [{ "color": "#746855" }] }, { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#38414e" }] } ]
-                });
-            }
+        // Helpers & Maps
+        async function fetchPricingRules() {
+            const { data } = await sbClient.from('pricing_rules').select('*');
+            pricingRules = data || [];
         }
-        function loadPricingRules() {}
 
         async function loadUserData() {
             const { data } = await sbClient.from('profiles').select('*').eq('id', currentUser.id).single();
             if(data) document.getElementById('header-user-name').innerText = data.full_name || 'عميلنا العزيز';
+        }
+
+        function loadPricingRules() { fetchPricingRules(); }
+
+        function initMaps() {
+            // Check if map element exists
+            const mapElement = document.getElementById("map");
+            if (!mapElement) return;
+
+            new google.maps.places.Autocomplete(document.getElementById("pickup"));
+            new google.maps.places.Autocomplete(document.getElementById("dropoff"));
+            
+            // Init Mini Map
+            const map = new google.maps.Map(mapElement, {
+                center: { lat: 30.0444, lng: 31.2357 }, zoom: 10,
+                disableDefaultUI: true,
+                styles: [ { "elementType": "geometry", "stylers": [{ "color": "#242f3e" }] }, { "elementType": "labels.text.stroke", "stylers": [{ "color": "#242f3e" }] }, { "elementType": "labels.text.fill", "stylers": [{ "color": "#746855" }] }, { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#38414e" }] } ]
+            });
         }
 
         // Auth Functions
