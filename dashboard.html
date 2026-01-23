@@ -72,8 +72,8 @@
                     <h3 class="text-3xl font-black mt-2 text-amber-600 dir-ltr" id="kpi-maint-vault">0 EGP</h3>
                 </div>
                 <div class="glass-panel p-6 border-b-4 border-purple-500">
-                    <p class="text-slate-400 text-xs font-bold uppercase">خزنة الكباتن</p>
-                    <h3 class="text-3xl font-black mt-2 text-purple-600 dir-ltr" id="kpi-drivers-vault">0 EGP</h3>
+                    <p class="text-slate-400 text-xs font-bold uppercase">رواتب السيارات (مدفوع)</p>
+                    <h3 class="text-3xl font-black mt-2 text-purple-600 dir-ltr" id="kpi-cars-salary">0 EGP</h3>
                 </div>
             </div>
             <div class="glass-panel p-6">
@@ -221,16 +221,20 @@
 
     <div id="complete-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 backdrop-blur-sm">
         <div class="bg-white p-6 rounded-2xl w-[400px] shadow-2xl">
-            <h3 class="text-xl font-bold mb-4 text-green-700 border-b pb-3">تصفية الرحلة والحسابات</h3>
+            <h3 class="text-xl font-bold mb-4 text-green-700 border-b pb-3">تصفية الرحلة</h3>
             <input type="hidden" id="comp-trip-id">
             <div class="space-y-4">
                 <div>
-                    <label class="text-xs font-bold text-slate-500">سعر الرحلة (الإيراد)</label>
+                    <label class="text-xs font-bold text-slate-500">إجمالي تحصيل من العميل</label>
                     <input type="number" id="comp-price" class="input-std font-bold text-green-600">
                 </div>
                 <div>
-                    <label class="text-xs font-bold text-slate-500">يومية الكابتن (تخرج من الإيراد)</label>
-                    <input type="number" id="comp-wage" class="input-std font-bold text-red-600" value="0" placeholder="ادخل المبلغ">
+                    <label class="text-xs font-bold text-slate-500">يومية الكابتن (مصروف)</label>
+                    <input type="number" id="comp-wage" class="input-std font-bold text-red-600" value="0">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500">بنزين / كارتة (مصروف)</label>
+                    <input type="number" id="comp-fuel" class="input-std font-bold text-amber-600" value="0">
                 </div>
                 <div class="flex gap-2 pt-2">
                     <button onclick="confirmComplete()" class="flex-1 bg-green-600 text-white py-2.5 rounded-lg font-bold hover:bg-green-700">تأكيد وحفظ</button>
@@ -302,11 +306,11 @@
             if(vaults) {
                 const main = vaults.find(v => v.name === 'الخزينة الرئيسية') || {balance:0};
                 const maint = vaults.find(v => v.name === 'خزنة الصيانة') || {balance:0};
-                const drivers = vaults.find(v => v.name === 'رواتب الكباتن') || {balance:0};
+                const cars = vaults.find(v => v.name === 'خزنة رواتب السيارات') || {balance:0};
 
                 document.getElementById('kpi-main-vault').innerText = `${main.balance} EGP`;
                 document.getElementById('kpi-maint-vault').innerText = `${maint.balance} EGP`;
-                document.getElementById('kpi-drivers-vault').innerText = `${drivers.balance} EGP`;
+                document.getElementById('kpi-cars-salary').innerText = `${cars.balance} EGP`; // NEW
             }
         }
 
@@ -336,7 +340,6 @@
                 
                 let btns = '';
                 if(t.status === 'pending') btns = `<button onclick="openAssignModal('${t.id}')" class="bg-slate-900 text-white px-3 py-1 rounded text-xs">تعيين</button>`;
-                // تم التعديل: الزر يفتح نافذة تصفية الرحلة
                 else if(t.status === 'approved') btns = `<button onclick="openCompleteModal('${t.id}', ${t.estimated_price})" class="bg-green-600 text-white px-3 py-1 rounded text-xs">إنهاء</button>`;
 
                 list.innerHTML += `
@@ -353,11 +356,12 @@
             });
         }
 
-        // --- NEW: Trip Completion Logic (With Wage) ---
+        // --- NEW: Trip Completion Logic ---
         function openCompleteModal(tripId, price) {
             document.getElementById('comp-trip-id').value = tripId;
             document.getElementById('comp-price').value = price;
             document.getElementById('comp-wage').value = 0;
+            document.getElementById('comp-fuel').value = 0;
             document.getElementById('complete-modal').style.display = 'flex';
         }
 
@@ -365,31 +369,54 @@
             const tripId = document.getElementById('comp-trip-id').value;
             const price = Number(document.getElementById('comp-price').value);
             const wage = Number(document.getElementById('comp-wage').value);
+            const fuel = Number(document.getElementById('comp-fuel').value);
 
-            if(!confirm(`تأكيد إنهاء الرحلة؟`)) return;
+            if(!confirm(`تأكيد إنهاء الرحلة؟\nالإيراد: ${price}\nيومية الكابتن: ${wage}\nمصروفات أخرى: ${fuel}`)) return;
 
-            // 1. Update Trip
+            // 1. Update Trip Status
             await sbClient.from('trips').update({ 
                 status: 'completed', 
                 final_price: price, 
                 driver_wage: wage 
             }).eq('id', tripId);
 
-            // 2. Add Revenue to Vault
-            const { data: v } = await sbClient.from('vaults').select('balance').eq('name', 'الخزينة الرئيسية').single();
-            await sbClient.from('vaults').update({ balance: (v.balance||0) + price }).eq('name', 'الخزينة الرئيسية');
+            // 2. Financial Logic
+            // Add Full Revenue to Main Vault
+            const { data: mainVault } = await sbClient.from('vaults').select('id, balance').eq('name', 'الخزينة الرئيسية').single();
+            await sbClient.from('vaults').update({ balance: (mainVault.balance||0) + price }).eq('id', mainVault.id);
 
-            // 3. Register Driver Wage Expense (Optional: appears in driver ledger)
-            if(wage > 0) {
-                const { data: trip } = await sbClient.from('trips').select('driver_id').eq('id', tripId).single();
-                if(trip && trip.driver_id) {
+            // 3. Record Expenses Automatically
+            const { data: trip } = await sbClient.from('trips').select('driver_id, car_id').eq('id', tripId).single();
+            
+            // A. Driver Wage -> Deduct from Main Vault (Paid out) OR just record as expense
+            if(wage > 0 && trip.driver_id) {
+                // Record expense linked to driver
+                await sbClient.from('expenses').insert([{
+                    title: `يومية رحلة #${tripId.slice(0,6)}`,
+                    amount: wage,
+                    category: 'رواتب',
+                    related_trip_id: tripId,
+                    related_driver_id: trip.driver_id,
+                    related_vault_id: mainVault.id // Paid from main vault
+                }]);
+                // Deduct from Main Vault (Actual payout)
+                await sbClient.from('vaults').update({ balance: ((mainVault.balance||0) + price) - wage }).eq('id', mainVault.id);
+            }
+
+            // B. Fuel/Maintenance -> Deduct from Main, Add to Fuel Vault (or just record expense)
+            if(fuel > 0 && trip.car_id) {
+                const { data: fuelVault } = await sbClient.from('vaults').select('id, balance').eq('name', 'خزنة البنزين والتشغيل').single();
+                if(fuelVault) {
                     await sbClient.from('expenses').insert([{
-                        title: `يومية رحلة #${tripId.slice(0,6)}`,
-                        amount: wage,
-                        category: 'رواتب',
+                        title: `بنزين/كارتة رحلة #${tripId.slice(0,6)}`,
+                        amount: fuel,
+                        category: 'تشغيل',
                         related_trip_id: tripId,
-                        related_driver_id: trip.driver_id
+                        related_car_id: trip.car_id,
+                        related_vault_id: fuelVault.id
                     }]);
+                    // Update Fuel Vault (it spent money)
+                    // await sbClient.from('vaults').update({ balance: (fuelVault.balance||0) - fuel }).eq('id', fuelVault.id);
                 }
             }
 
@@ -418,7 +445,6 @@
                         </div>
                     </div>
                 `;
-                
                 if(v.name !== 'الخزينة الرئيسية') {
                     select.innerHTML += `<option value="${v.id}">${v.name}</option>`;
                     modalSelect.innerHTML += `<option value="${v.id}">${v.name}</option>`;
@@ -428,21 +454,12 @@
             const { data: requests } = await sbClient.from('transactions').select('*, profiles(full_name)').eq('status', 'pending');
             const reqList = document.getElementById('deposit-requests-list');
             reqList.innerHTML = '';
-            
             if(!requests?.length) reqList.innerHTML = '<p class="text-center text-slate-400 text-sm">لا توجد طلبات جديدة</p>';
-            
             requests.forEach(r => {
                 reqList.innerHTML += `
                     <div class="bg-white border rounded-lg p-3 flex justify-between items-center">
-                        <div>
-                            <p class="font-bold text-sm text-slate-800">${r.profiles?.full_name}</p>
-                            <p class="text-xs text-slate-500">Ref: ${r.reference_id}</p>
-                            <p class="text-green-600 font-bold font-num mt-1">${r.amount} EGP</p>
-                        </div>
-                        <div class="flex flex-col gap-2">
-                            <button onclick="processDeposit('${r.id}', '${r.user_id}', ${r.amount}, true)" class="bg-green-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-green-700">قبول</button>
-                            <button onclick="processDeposit('${r.id}', null, null, false)" class="bg-red-100 text-red-600 px-3 py-1 rounded text-xs font-bold hover:bg-red-200">رفض</button>
-                        </div>
+                        <div><p class="font-bold text-sm text-slate-800">${r.profiles?.full_name}</p><p class="text-green-600 font-bold font-num mt-1">${r.amount} EGP</p></div>
+                        <div class="flex flex-col gap-2"><button onclick="processDeposit('${r.id}', '${r.user_id}', ${r.amount}, true)" class="bg-green-600 text-white px-3 py-1 rounded text-xs font-bold">قبول</button><button onclick="processDeposit('${r.id}', null, null, false)" class="bg-red-100 text-red-600 px-3 py-1 rounded text-xs font-bold">رفض</button></div>
                     </div>
                 `;
             });
@@ -453,8 +470,7 @@
                 if(!confirm(`قبول إيداع بقيمة ${amount}؟`)) return;
                 await sbClient.from('transactions').update({ status: 'approved' }).eq('id', txId);
                 const { data: profile } = await sbClient.from('profiles').select('wallet_balance').eq('id', userId).single();
-                const newBal = (profile?.wallet_balance || 0) + Number(amount);
-                await sbClient.from('profiles').update({ wallet_balance: newBal }).eq('id', userId);
+                await sbClient.from('profiles').update({ wallet_balance: (profile?.wallet_balance || 0) + Number(amount) }).eq('id', userId);
                 const { data: vault } = await sbClient.from('vaults').select('balance').eq('name', 'الخزينة الرئيسية').single();
                 await sbClient.from('vaults').update({ balance: (vault.balance || 0) + Number(amount) }).eq('name', 'الخزينة الرئيسية');
                 alert("تم قبول الإيداع.");
@@ -469,23 +485,14 @@
             const title = document.getElementById('gen-exp-title').value;
             const amount = document.getElementById('gen-exp-amount').value;
             const vaultId = document.getElementById('gen-exp-vault').value; 
-
             if(!title || !amount) return alert("أكمل البيانات");
-
             const vid = vaultId === 'main' ? (await getMainVaultId()) : vaultId;
-
-            const { error } = await sbClient.from('expenses').insert([{
-                title, amount, category: 'عام', related_vault_id: vid
-            }]);
-            
+            const { error } = await sbClient.from('expenses').insert([{ title, amount, category: 'عام', related_vault_id: vid }]);
             if(error) { alert("خطأ: " + error.message); return; }
-
             const { data: v } = await sbClient.from('vaults').select('balance').eq('id', vid).single();
             await sbClient.from('vaults').update({ balance: (v.balance || 0) - Number(amount) }).eq('id', vid);
-
             alert("تم تسجيل المصروف");
-            loadFinance();
-            loadDashboard();
+            loadFinance(); loadDashboard();
         }
 
         async function getMainVaultId() {
@@ -500,7 +507,7 @@
 
             const carsDiv = document.getElementById('fleet-cars-list');
             carsDiv.innerHTML = cars.map(c => `
-                <div onclick="openLedger('car', '${c.id}', '${c.brand} ${c.plate_number}')" class="bg-white p-3 border rounded-lg cursor-pointer hover:bg-slate-100 text-sm font-bold mb-2 shadow-sm">
+                <div onclick="openLedger('car', '${c.id}', '${c.brand} ${c.plate_number}', ${c.monthly_salary || 0})" class="bg-white p-3 border rounded-lg cursor-pointer hover:bg-slate-100 text-sm font-bold mb-2 shadow-sm">
                     <div class="flex justify-between"><span>${c.brand}</span> <span class="bg-slate-100 px-1 rounded text-xs">${c.plate_number}</span></div>
                 </div>
             `).join('');
@@ -513,7 +520,7 @@
             `).join('');
         }
 
-        async function openLedger(type, id, name) {
+        async function openLedger(type, id, name, salary=0) {
             const view = document.getElementById('ledger-view');
             view.innerHTML = '<div class="flex justify-center items-center h-full"><i class="fas fa-circle-notch fa-spin text-2xl text-slate-300"></i></div>';
 
@@ -521,12 +528,12 @@
 
             // Get Expenses
             const { data: expenses } = await sbClient.from('expenses').select('*').eq(type === 'car' ? 'related_car_id' : 'related_driver_id', id);
-
             if(expenses) expenses.forEach(e => {
                 outcome += e.amount;
                 movements.push({ date: e.created_at, title: e.title, amount: -e.amount, type: 'out' });
             });
 
+            // Get Income
             if(type === 'car') {
                 const { data: trips } = await sbClient.from('trips').select('*').eq('car_id', id).eq('status', 'completed');
                 if(trips) trips.forEach(t => {
@@ -546,42 +553,56 @@
 
             movements.sort((a,b) => new Date(b.date) - new Date(a.date));
 
+            // NEW: Pay Car Salary Button
+            let salaryBtn = '';
+            if(type === 'car') {
+                salaryBtn = `<button onclick="payCarSalary('${id}', ${salary})" class="mt-4 bg-purple-600 text-white px-4 py-2 rounded-lg font-bold w-full hover:bg-purple-700">سداد الراتب الشهري (${salary} ج.م)</button>`;
+            }
+
             view.innerHTML = `
                 <div class="flex justify-between items-start mb-6 pb-4 border-b">
                     <div>
                         <h3 class="text-2xl font-bold text-slate-800">${name}</h3>
                         <span class="text-xs font-bold text-white bg-slate-800 px-2 py-1 rounded">${type === 'car' ? 'سيارة' : 'كابتن'}</span>
                     </div>
-                    <button onclick="openExpenseModal('${type}', '${id}')" class="bg-red-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-red-700 shadow-lg shadow-red-200">
-                        <i class="fas fa-minus-circle mr-1"></i> تسجيل مصروف / خصم
-                    </button>
+                    <button onclick="openExpenseModal('${type}', '${id}')" class="bg-red-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-red-700 shadow-lg shadow-red-200"><i class="fas fa-minus-circle mr-1"></i> تسجيل مصروف</button>
                 </div>
-
                 <div class="grid grid-cols-3 gap-4 mb-8">
-                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
-                        <p class="text-xs font-bold text-slate-400 uppercase">${type==='car'?'الإيراد':'مستحق للكابتن'}</p>
-                        <p class="text-2xl font-black text-green-600">${income}</p>
-                    </div>
-                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
-                        <p class="text-xs font-bold text-slate-400 uppercase">المصروفات / الخصومات</p>
-                        <p class="text-2xl font-black text-red-600">${outcome}</p>
-                    </div>
-                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
-                        <p class="text-xs font-bold text-slate-400 uppercase">الصافي</p>
-                        <p class="text-2xl font-black ${income - outcome >= 0 ? 'text-slate-800' : 'text-red-600'}">${income - outcome}</p>
-                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center"><p class="text-xs font-bold text-slate-400 uppercase">الإيراد / المستحق</p><p class="text-2xl font-black text-green-600">${income}</p></div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center"><p class="text-xs font-bold text-slate-400 uppercase">المصروفات</p><p class="text-2xl font-black text-red-600">${outcome}</p></div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center"><p class="text-xs font-bold text-slate-400 uppercase">الصافي</p><p class="text-2xl font-black ${income - outcome >= 0 ? 'text-slate-800' : 'text-red-600'}">${income - outcome}</p></div>
                 </div>
-
-                <h4 class="font-bold mb-3 text-sm">سجل الحركة</h4>
-                <div class="bg-white rounded-xl border overflow-hidden">
-                    ${movements.length ? movements.map(m => `
-                        <div class="flex justify-between p-3 border-b last:border-0 hover:bg-slate-50">
-                            <div><p class="font-bold text-sm">${m.title}</p><p class="text-[10px] text-slate-400">${new Date(m.date).toLocaleDateString()}</p></div>
-                            <span class="font-bold font-num ${m.type === 'in' ? 'text-green-600' : 'text-red-600'}">${m.amount}</span>
-                        </div>
-                    `).join('') : '<p class="text-center py-6 text-slate-400 text-sm">لا توجد حركات مسجلة</p>'}
+                ${salaryBtn}
+                <h4 class="font-bold mb-3 text-sm mt-6">سجل الحركة</h4>
+                <div class="bg-white rounded-xl border overflow-hidden max-h-60 overflow-y-auto">
+                    ${movements.length ? movements.map(m => `<div class="flex justify-between p-3 border-b last:border-0 hover:bg-slate-50"><div><p class="font-bold text-sm">${m.title}</p><p class="text-[10px] text-slate-400">${new Date(m.date).toLocaleDateString()}</p></div><span class="font-bold font-num ${m.type === 'in' ? 'text-green-600' : 'text-red-600'}">${m.amount}</span></div>`).join('') : '<p class="text-center py-6 text-slate-400 text-sm">لا توجد حركات مسجلة</p>'}
                 </div>
             `;
+        }
+
+        async function payCarSalary(carId, amount) {
+            if(amount <= 0) return alert("يرجى تحديد راتب السيارة أولاً من قاعدة البيانات");
+            if(!confirm(`هل تريد سداد الراتب الشهري (${amount}) للسيارة؟\nسيتم الخصم من رصيد السيارة ومن الخزينة الرئيسية.`)) return;
+
+            // 1. Record Expense for Car
+            const { data: salaryVault } = await sbClient.from('vaults').select('id, balance').eq('name', 'خزنة رواتب السيارات').single();
+            await sbClient.from('expenses').insert([{
+                title: 'راتب شهري / قسط',
+                amount: amount,
+                category: 'رواتب سيارات',
+                related_car_id: carId,
+                related_vault_id: salaryVault?.id
+            }]);
+
+            // 2. Update Vaults (Main & Salary)
+            const { data: mainVault } = await sbClient.from('vaults').select('id, balance').eq('name', 'الخزينة الرئيسية').single();
+            
+            if(mainVault) await sbClient.from('vaults').update({ balance: (mainVault.balance||0) - amount }).eq('id', mainVault.id);
+            if(salaryVault) await sbClient.from('vaults').update({ balance: (salaryVault.balance||0) + amount }).eq('id', salaryVault.id); // Add to 'Paid Salaries' vault to track total paid
+
+            alert("تم سداد الراتب وخصمه بنجاح");
+            loadDashboard();
+            loadFleetList(); // Refresh view
         }
 
         // --- 5. Expense Logic (Modal) ---
@@ -593,8 +614,7 @@
             const tripSel = document.getElementById('exp-modal-trip');
             tripSel.innerHTML = '<option value="">-- مصروف عام (غير مرتبط برحلة) --</option>';
             if(type === 'car') {
-                const { data: trips } = await sbClient.from('trips').select('id, dropoff_location, created_at')
-                    .eq('car_id', id).order('created_at', {ascending: false}).limit(5);
+                const { data: trips } = await sbClient.from('trips').select('id, dropoff_location, created_at').eq('car_id', id).order('created_at', {ascending: false}).limit(5);
                 if(trips) trips.forEach(t => {
                     tripSel.innerHTML += `<option value="${t.id}">رحلة: ${t.dropoff_location} (${new Date(t.created_at).toLocaleDateString()})</option>`;
                 });
@@ -615,15 +635,9 @@
             let vaultId = document.getElementById('exp-modal-vault').value;
 
             if(!title || !amount) return alert("يرجى إدخال البيانات");
-
             if(vaultId === 'main') vaultId = await getMainVaultId();
 
-            const insertData = {
-                title, amount, category: 'تشغيل',
-                related_trip_id: tripId,
-                related_vault_id: vaultId || null
-            };
-            
+            const insertData = { title, amount, category: 'تشغيل', related_trip_id: tripId, related_vault_id: vaultId || null };
             if(type === 'car') insertData.related_car_id = targetId;
             if(type === 'driver') insertData.related_driver_id = targetId;
 
@@ -637,9 +651,8 @@
                 document.getElementById('expense-modal').style.display = 'none';
                 alert("تم تسجيل المصروف");
                 openLedger(type, targetId, '...'); 
-            } else {
-                alert(error.message);
-            }
+                loadFinance();
+            } else { alert(error.message); }
         }
 
         // --- Helpers: CRM & Pricing ---
@@ -655,37 +668,13 @@
 
         async function loadPricing() {
             const { data } = await sbClient.from('pricing_tiers').select('*').order('min_km', {ascending: true});
-            const div = document.getElementById('pricing-list');
-            div.innerHTML = '';
-            if(data) data.forEach(r => {
-                div.innerHTML += `
-                    <div class="bg-white p-3 border rounded flex justify-between items-center mb-2">
-                        <div>
-                            <span class="font-bold text-slate-800">${r.car_type.toUpperCase()}</span>
-                            <span class="text-xs text-slate-500 mx-2">من ${r.min_km} كم إلى ${r.max_km} كم</span>
-                        </div>
-                        <div class="text-left text-xs">
-                            <p>فتح: <strong>${r.base_price}</strong></p>
-                            <p>كم: <strong>${r.price_per_km}</strong></p>
-                        </div>
-                    </div>
-                `;
-            });
+            document.getElementById('pricing-list').innerHTML = data.map(r => `<div class="bg-white p-3 border rounded flex justify-between items-center mb-2"><div><span class="font-bold text-slate-800">${r.car_type.toUpperCase()}</span><span class="text-xs text-slate-500 mx-2">من ${r.min_km} كم إلى ${r.max_km} كم</span></div><div class="text-left text-xs"><p>فتح: <strong>${r.base_price}</strong></p><p>كم: <strong>${r.price_per_km}</strong></p></div></div>`).join('');
         }
 
         async function addPricingTier() {
-            const type = document.getElementById('rule-type').value;
-            const min = document.getElementById('rule-min').value;
-            const max = document.getElementById('rule-max').value;
-            const base = document.getElementById('rule-base').value;
-            const km = document.getElementById('rule-km').value;
-
+            const type = document.getElementById('rule-type').value, min = document.getElementById('rule-min').value, max = document.getElementById('rule-max').value, base = document.getElementById('rule-base').value, km = document.getElementById('rule-km').value;
             if(!max || !km) return alert("أدخل البيانات");
-
-            const { error } = await sbClient.from('pricing_tiers').insert([{
-                car_type: type, min_km: min, max_km: max, base_price: base, price_per_km: km
-            }]);
-
+            const { error } = await sbClient.from('pricing_tiers').insert([{ car_type: type, min_km: min, max_km: max, base_price: base, price_per_km: km }]);
             if(!error) { alert("تم الحفظ"); loadPricing(); }
         }
         
@@ -710,7 +699,10 @@
             loadOperations();
         }
         
-        async function addCarPrompt() { const b=prompt("ماركة:"); const p=prompt("لوحة:"); if(b) { await sbClient.from('cars').insert([{brand:b, plate_number:p}]); loadFleetList(); } }
+        async function addCarPrompt() { 
+            const b=prompt("ماركة:"); const p=prompt("لوحة:"); const s=prompt("الراتب الشهري للسيارة:");
+            if(b) { await sbClient.from('cars').insert([{brand:b, plate_number:p, monthly_salary: s || 0}]); loadFleetList(); } 
+        }
         async function addDriverPrompt() { const n=prompt("اسم:"); const p=prompt("هاتف:"); if(n) { await sbClient.from('drivers').insert([{name:n, phone:p}]); loadFleetList(); } }
 
         // Chart
