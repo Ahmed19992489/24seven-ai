@@ -281,7 +281,6 @@
             document.getElementById(`page-${pageId}`).classList.remove('hidden');
             document.querySelectorAll('.sidebar-item').forEach(e => e.classList.remove('active'));
             document.getElementById(`nav-${pageId}`).classList.add('active');
-
             if(pageId === 'dashboard') loadDashboard();
             if(pageId === 'operations') loadOperations();
             if(pageId === 'crm') loadCRM();
@@ -294,13 +293,11 @@
         async function loadDashboard() {
             const { count } = await sbClient.from('trips').select('*', { count: 'exact', head: true });
             document.getElementById('kpi-total').innerText = count || 0;
-
             const { data: vaults } = await sbClient.from('vaults').select('*');
             if(vaults) {
                 const main = vaults.find(v => v.name === 'الخزينة الرئيسية') || {balance:0};
                 const maint = vaults.find(v => v.name === 'خزنة الصيانة') || {balance:0};
                 const cars = vaults.find(v => v.name === 'خزنة رواتب السيارات') || {balance:0};
-
                 document.getElementById('kpi-main-vault').innerText = `${main.balance} EGP`;
                 document.getElementById('kpi-maint-vault').innerText = `${maint.balance} EGP`;
                 document.getElementById('kpi-cars-salary').innerText = `${cars.balance} EGP`;
@@ -311,10 +308,8 @@
         async function loadOperations() {
             const list = document.getElementById('ops-table');
             list.innerHTML = '<tr><td colspan="8" class="text-center p-4">جاري التحميل...</td></tr>';
-            
             const { data: trips } = await sbClient.from('trips').select(`*, cars(brand, model), drivers(name)`).order('created_at', { ascending: false });
-
-            // Fetch Profiles Manually for Robustness
+            
             const userIds = trips?.map(t => t.user_id).filter(Boolean) || [];
             let profilesMap = {};
             if(userIds.length) {
@@ -330,6 +325,7 @@
                 const statusColor = t.status === 'pending' ? 'bg-amber-100 text-amber-800' : (t.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800');
                 
                 // استخراج التفاصيل من الملاحظات
+                // ملاحظة: الملاحظات تأتي بتنسيق نصي، سنعرضها كما هي بشكل أنيق
                 const rawNotes = t.admin_notes || '';
                 
                 let btns = '';
@@ -432,7 +428,6 @@
                             </div>
                         </div>
                     `;
-                    
                     if(v.name !== 'الخزينة الرئيسية') {
                         select.innerHTML += `<option value="${v.id}">${v.name}</option>`;
                         modalSelect.innerHTML += `<option value="${v.id}">${v.name}</option>`;
@@ -440,27 +435,39 @@
                 });
             }
 
-            const { data: requests } = await sbClient.from('transactions').select('*, profiles(full_name)').eq('status', 'pending');
+            // تعديل جلب التحويلات ليشمل طلبات بدون بروفايل مكتمل
+            const { data: reqs } = await sbClient.from('transactions').select('*').eq('status', 'pending');
             const reqList = document.getElementById('deposit-requests-list');
             reqList.innerHTML = '';
             
-            if(!requests?.length) reqList.innerHTML = '<p class="text-center text-slate-400 text-sm">لا توجد طلبات جديدة</p>';
-            
-            requests.forEach(r => {
-                reqList.innerHTML += `
-                    <div class="bg-white border rounded-lg p-3 flex justify-between items-center">
-                        <div>
-                            <p class="font-bold text-sm text-slate-800">${r.profiles?.full_name}</p>
-                            <p class="text-xs text-slate-500">Ref: ${r.reference_id}</p>
-                            <p class="text-green-600 font-bold font-num mt-1">${r.amount} EGP</p>
+            if(!reqs || reqs.length === 0) {
+                reqList.innerHTML = '<p class="text-center text-slate-400 text-sm">لا توجد طلبات جديدة</p>';
+            } else {
+                // جلب الأسماء
+                const userIds = reqs.map(r => r.user_id);
+                let profilesMap = {};
+                if(userIds.length > 0) {
+                    const { data: profiles } = await sbClient.from('profiles').select('id, full_name').in('id', userIds);
+                    if(profiles) profiles.forEach(p => profilesMap[p.id] = p.full_name);
+                }
+
+                reqs.forEach(r => {
+                    const clientName = profilesMap[r.user_id] || 'عميل غير مسجل';
+                    reqList.innerHTML += `
+                        <div class="bg-white border rounded-lg p-3 flex justify-between items-center mb-2">
+                            <div>
+                                <p class="font-bold text-sm text-slate-800">${clientName}</p>
+                                <p class="text-xs text-slate-500">Ref: ${r.reference_id}</p>
+                                <p class="text-green-600 font-bold font-num mt-1">${r.amount} EGP</p>
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <button onclick="processDeposit('${r.id}', '${r.user_id}', ${r.amount}, true)" class="bg-green-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-green-700">قبول</button>
+                                <button onclick="processDeposit('${r.id}', null, null, false)" class="bg-red-100 text-red-600 px-3 py-1 rounded text-xs font-bold hover:bg-red-200">رفض</button>
+                            </div>
                         </div>
-                        <div class="flex flex-col gap-2">
-                            <button onclick="processDeposit('${r.id}', '${r.user_id}', ${r.amount}, true)" class="bg-green-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-green-700">قبول</button>
-                            <button onclick="processDeposit('${r.id}', null, null, false)" class="bg-red-100 text-red-600 px-3 py-1 rounded text-xs font-bold hover:bg-red-200">رفض</button>
-                        </div>
-                    </div>
-                `;
-            });
+                    `;
+                });
+            }
         }
 
         async function processDeposit(txId, userId, amount, isApproved) {
@@ -553,14 +560,14 @@
             `;
         }
 
-        async function payCarSalary(carId, salary) {
-            if(!confirm(`سداد ${salary}؟`)) return;
+        async function payCarSalary(carId, amount) {
+            if(!confirm(`سداد ${amount}؟`)) return;
             const vid = await getMainVaultId();
-            await sbClient.from('expenses').insert([{ title: 'راتب شهري', amount: salary, category: 'رواتب سيارات', related_car_id: carId }]);
+            await sbClient.from('expenses').insert([{ title: 'راتب شهري', amount: amount, category: 'رواتب سيارات', related_car_id: carId }]);
             const { data: v } = await sbClient.from('vaults').select('balance').eq('id', vid).single();
-            await sbClient.from('vaults').update({ balance: (v.balance||0) - salary }).eq('id', vid);
+            await sbClient.from('vaults').update({ balance: (v.balance||0) - amount }).eq('id', vid);
             const { data: cv } = await sbClient.from('vaults').select('id, balance').eq('name', 'خزنة رواتب السيارات').single();
-            if(cv) await sbClient.from('vaults').update({ balance: (cv.balance||0) + salary }).eq('id', cv.id);
+            if(cv) await sbClient.from('vaults').update({ balance: (cv.balance||0) + amount }).eq('id', cv.id);
             alert("تم السداد"); loadDashboard(); openLedger('car', carId, '...');
         }
 
@@ -575,9 +582,11 @@
             const id = document.getElementById('exp-target-id').value;
             const title = document.getElementById('exp-modal-title').value;
             const amount = document.getElementById('exp-modal-amount').value;
-            const vid = document.getElementById('exp-modal-vault').value;
+            const vaultId = document.getElementById('exp-modal-vault').value;
             
-            const vaultId = vid === 'main' ? (await getMainVaultId()) : vid;
+            const mainVaultId = await getMainVaultId();
+
+            if(!title || !amount) return alert("يرجى إدخال البيانات");
 
             const insertData = { title, amount, category: 'يدوي', related_vault_id: vaultId };
             if(type === 'car') insertData.related_car_id = id;
@@ -585,11 +594,18 @@
 
             await sbClient.from('expenses').insert([insertData]);
             
-            const { data: v } = await sbClient.from('vaults').select('balance').eq('id', vaultId).single();
-            await sbClient.from('vaults').update({ balance: (v.balance||0) - amount }).eq('id', vaultId);
+            // خصم من الرئيسية دائمًا (الأصل)
+            const { data: mainV } = await sbClient.from('vaults').select('balance').eq('id', mainVaultId).single();
+            await sbClient.from('vaults').update({ balance: (mainV.balance||0) - Number(amount) }).eq('id', mainVaultId);
+
+            // خصم من الفرعية أيضًا للتتبع
+            if(vaultId !== 'main' && vaultId !== mainVaultId) {
+                const { data: subV } = await sbClient.from('vaults').select('balance').eq('id', vaultId).single();
+                await sbClient.from('vaults').update({ balance: (subV.balance||0) - Number(amount) }).eq('id', vaultId);
+            }
             
             document.getElementById('expense-modal').style.display = 'none';
-            alert("تم"); openLedger(type, id, '...');
+            alert("تم"); openLedger(type, id, '...'); loadFinance();
         }
 
         // --- Helpers ---
@@ -599,7 +615,7 @@
             list.innerHTML = '';
             if(!profiles || profiles.length === 0) list.innerHTML = '<tr><td colspan="4" class="text-center p-4">لا يوجد عملاء</td></tr>';
             else profiles.forEach(p => {
-                list.innerHTML += `<tr class="border-b bg-white"><td class="p-4 font-bold text-slate-700">${p.full_name||'-'}</td><td class="p-4 text-slate-500">${p.phone||'-'}</td><td class="p-4 font-bold ${p.wallet_balance<0?'text-red-500':'text-green-600'}">${p.wallet_balance||0}</td><td class="p-4 text-xs text-slate-400">${new Date(p.created_at).toLocaleDateString()}</td></tr>`;
+                list.innerHTML += `<tr class="border-b bg-white"><td class="p-4 font-bold text-slate-700">${p.full_name||'-'}</td><td class="p-4 text-slate-500">${p.phone||'-'}</td><td class="p-4 font-bold ${p.wallet_balance<0?'text-red-500':'text-green-600'}">${p.wallet_balance||0} EGP</td><td class="p-4 text-xs text-slate-400">${new Date(p.created_at).toLocaleDateString()}</td></tr>`;
             });
         }
         async function loadPricing() {
