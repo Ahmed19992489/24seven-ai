@@ -17,7 +17,6 @@
         .input-std { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem; outline: none; }
         .input-std:focus { border-color: #f59e0b; ring: 2px solid #fcd34d; }
         .btn-action { transition: transform 0.1s; } .btn-action:active { transform: scale(0.95); }
-        /* Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
@@ -34,7 +33,6 @@
             <div onclick="showPage('dashboard')" id="nav-dashboard" class="sidebar-item active p-3 rounded-lg flex items-center gap-3">
                 <i class="fas fa-chart-line w-5 text-center text-blue-600"></i> لوحة القيادة
             </div>
-            
             <p class="text-[10px] font-bold text-slate-400 mt-4 mb-1 px-3">إدارة العمليات</p>
             <div onclick="showPage('operations')" id="nav-operations" class="sidebar-item p-3 rounded-lg flex items-center gap-3">
                 <i class="fas fa-satellite-dish w-5 text-center text-amber-600"></i> غرفة العمليات
@@ -42,7 +40,6 @@
             <div onclick="showPage('crm')" id="nav-crm" class="sidebar-item p-3 rounded-lg flex items-center gap-3">
                 <i class="fas fa-users w-5 text-center text-purple-600"></i> العملاء (CRM)
             </div>
-
             <p class="text-[10px] font-bold text-slate-400 mt-4 mb-1 px-3">المالية والموارد</p>
             <div onclick="showPage('finance')" id="nav-finance" class="sidebar-item p-3 rounded-lg flex items-center gap-3">
                 <i class="fas fa-wallet w-5 text-center text-green-600"></i> الخزينة والمحافظ
@@ -50,7 +47,6 @@
             <div onclick="showPage('fleet')" id="nav-fleet" class="sidebar-item p-3 rounded-lg flex items-center gap-3">
                 <i class="fas fa-car w-5 text-center text-slate-600"></i> السيارات والكباتن
             </div>
-            
             <p class="text-[10px] font-bold text-slate-400 mt-4 mb-1 px-3">الإعدادات</p>
             <div onclick="showPage('pricing')" id="nav-pricing" class="sidebar-item p-3 rounded-lg flex items-center gap-3">
                 <i class="fas fa-tags w-5 text-center text-gray-600"></i> التسعير
@@ -89,7 +85,7 @@
         <div id="page-operations" class="page-section hidden">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl font-bold">غرفة العمليات المركزية</h2>
-                <button onclick="loadOperations()" class="bg-white border px-4 py-2 rounded-lg hover:bg-slate-100 font-bold text-sm"><i class="fas fa-sync-alt mr-2"></i> تحديث البيانات</button>
+                <button onclick="loadOperations()" class="bg-white border px-4 py-2 rounded-lg hover:bg-slate-100 font-bold text-sm"><i class="fas fa-sync-alt mr-2"></i> تحديث</button>
             </div>
             <div class="glass-panel overflow-hidden">
                 <table class="w-full text-right text-sm">
@@ -113,7 +109,7 @@
             <h2 class="text-2xl font-bold mb-6">الإدارة المالية والخزن</h2>
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" id="vaults-grid">
-            </div>
+                </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div class="glass-panel p-6">
@@ -226,7 +222,8 @@
     <div id="expense-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 backdrop-blur-sm">
         <div class="bg-white p-6 rounded-2xl w-[500px] shadow-2xl">
             <h3 class="text-xl font-bold mb-4 border-b pb-3 text-red-600">إضافة مصروف / خصم</h3>
-            <input type="hidden" id="exp-target-id"> <input type="hidden" id="exp-target-type"> <div class="space-y-4">
+            <input type="hidden" id="exp-target-id"> <input type="hidden" id="exp-target-type"> 
+            <div class="space-y-4">
                 <div><label class="text-xs font-bold text-slate-500">نوع المصروف</label><input type="text" id="exp-modal-title" placeholder="مثال: بنزين، سلفة، صيانة" class="input-std"></div>
                 <div><label class="text-xs font-bold text-slate-500">المبلغ</label><input type="number" id="exp-modal-amount" class="input-std"></div>
                 
@@ -234,14 +231,14 @@
                     <label class="text-xs font-bold text-slate-500">ربط برحلة (اختياري)</label>
                     <select id="exp-modal-trip" class="input-std bg-slate-50">
                         <option value="">-- مصروف عام (غير مرتبط برحلة) --</option>
-                        </select>
+                    </select>
                 </div>
 
                 <div>
                     <label class="text-xs font-bold text-slate-500">يخصم من خزنة (اختياري)</label>
                     <select id="exp-modal-vault" class="input-std bg-slate-50">
                         <option value="main">الخزينة الرئيسية</option>
-                        </select>
+                    </select>
                 </div>
 
                 <div class="flex gap-2 pt-2">
@@ -257,10 +254,10 @@
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4dGxzZm1mZXR3Y2ZsYnB2d3VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0MzMzODEsImV4cCI6MjA3ODAwOTM4MX0.FFGXNfx0FDA4FmJB1gVorNigs9nRoO4q1pCj2BOMDbU';
         const sbClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-        // Init - هذا هو السطر الذي تم تصحيحه ليعمل فوراً
+        // تشغيل الداشبورد عند الفتح
         showPage('dashboard');
 
-        // --- Navigation Logic (Corrected Name: showPage) ---
+        // --- التنقل بين الصفحات ---
         function showPage(pageId) {
             document.querySelectorAll('.page-section').forEach(e => e.classList.add('hidden'));
             document.getElementById(`page-${pageId}`).classList.remove('hidden');
@@ -292,7 +289,7 @@
             }
         }
 
-        // --- 2. Operations ---
+        // --- 2. Operations (Trip Management) ---
         async function loadOperations() {
             const list = document.getElementById('ops-table');
             list.innerHTML = '<tr><td colspan="7" class="text-center p-4">جاري التحميل...</td></tr>';
@@ -302,6 +299,7 @@
                 .select(`*, cars(brand, model), drivers(name)`)
                 .order('created_at', { ascending: false });
 
+            // Fetch Profiles Manually for Robustness
             const userIds = trips?.map(t => t.user_id).filter(Boolean) || [];
             let profilesMap = {};
             if(userIds.length) {
@@ -334,13 +332,14 @@
             });
         }
 
-        // --- 3. Finance ---
+        // --- 3. Finance & Vaults Logic ---
         async function loadFinance() {
+            // 1. Load Vaults for Grid
             const { data: vaults } = await sbClient.from('vaults').select('*');
             const grid = document.getElementById('vaults-grid');
             grid.innerHTML = '';
             
-            vaults.forEach(v => {
+            if(vaults) vaults.forEach(v => {
                 grid.innerHTML += `
                     <div class="glass-panel p-5 border-l-4 border-amber-500 flex justify-between items-center">
                         <div>
@@ -349,8 +348,15 @@
                         </div>
                     </div>
                 `;
+                
+                // Update select options
+                const select = document.getElementById('gen-exp-vault');
+                const modalSelect = document.getElementById('exp-modal-vault');
+                if(!select.innerHTML.includes(v.id)) select.innerHTML += `<option value="${v.id}">${v.name}</option>`;
+                if(!modalSelect.innerHTML.includes(v.id)) modalSelect.innerHTML += `<option value="${v.id}">${v.name}</option>`;
             });
 
+            // 2. Load Deposit Requests
             const { data: requests } = await sbClient.from('transactions').select('*, profiles(full_name)').eq('status', 'pending');
             const reqList = document.getElementById('deposit-requests-list');
             reqList.innerHTML = '';
@@ -372,21 +378,24 @@
                     </div>
                 `;
             });
-
-            const select = document.getElementById('gen-exp-vault');
-            select.innerHTML = '<option value="">الخزينة الرئيسية</option>';
-            vaults.forEach(v => select.innerHTML += `<option value="${v.id}">${v.name}</option>`);
         }
 
         async function processDeposit(txId, userId, amount, isApproved) {
             if(isApproved) {
                 if(!confirm(`قبول إيداع بقيمة ${amount}؟`)) return;
+                
+                // 1. Update Tx
                 await sbClient.from('transactions').update({ status: 'approved' }).eq('id', txId);
+                
+                // 2. User Wallet
                 const { data: profile } = await sbClient.from('profiles').select('wallet_balance').eq('id', userId).single();
                 const newBal = (profile?.wallet_balance || 0) + Number(amount);
                 await sbClient.from('profiles').update({ wallet_balance: newBal }).eq('id', userId);
+
+                // 3. Main Vault
                 const { data: vault } = await sbClient.from('vaults').select('balance').eq('name', 'الخزينة الرئيسية').single();
                 await sbClient.from('vaults').update({ balance: (vault.balance || 0) + Number(amount) }).eq('name', 'الخزينة الرئيسية');
+
                 alert("تم قبول الإيداع.");
             } else {
                 if(!confirm("رفض الطلب؟")) return;
@@ -395,7 +404,25 @@
             loadFinance();
         }
 
-        // --- 4. Fleet & Ledger ---
+        async function addGeneralExpense() {
+            const title = document.getElementById('gen-exp-title').value;
+            const amount = document.getElementById('gen-exp-amount').value;
+            const vaultId = document.getElementById('gen-exp-vault').value; // if 'main' handled carefully
+
+            if(!title || !amount) return alert("أكمل البيانات");
+
+            // Insert
+            await sbClient.from('expenses').insert([{
+                title, amount, category: 'عام', related_vault_id: (vaultId === 'main' ? null : vaultId)
+            }]);
+            
+            // Deduct form vault logic (simplified)
+            // Ideally trigger on DB side or separate update here
+            alert("تم تسجيل المصروف");
+            loadFinance();
+        }
+
+        // --- 4. Fleet & Ledger Logic ---
         async function loadFleetList() {
             const { data: cars } = await sbClient.from('cars').select('*');
             const { data: drivers } = await sbClient.from('drivers').select('*');
@@ -421,6 +448,7 @@
 
             let income = 0; let outcome = 0; let movements = [];
 
+            // Get Expenses
             const { data: expenses } = await sbClient.from('expenses').select('*')
                 .eq(type === 'car' ? 'related_car_id' : 'related_driver_id', id);
 
@@ -429,6 +457,7 @@
                 movements.push({ date: e.created_at, title: e.title, amount: -e.amount, type: 'out' });
             });
 
+            // Get Income (Trips) for cars
             if(type === 'car') {
                 const { data: trips } = await sbClient.from('trips').select('*').eq('car_id', id).eq('status', 'completed');
                 if(trips) trips.forEach(t => {
@@ -449,6 +478,7 @@
                         <i class="fas fa-minus-circle mr-1"></i> تسجيل مصروف / خصم
                     </button>
                 </div>
+
                 <div class="grid grid-cols-3 gap-4 mb-8">
                     <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
                         <p class="text-xs font-bold text-slate-400 uppercase">الإيراد / المستحق</p>
@@ -463,11 +493,15 @@
                         <p class="text-2xl font-black ${(income-outcome) >= 0 ? 'text-slate-800' : 'text-red-600'}">${income - outcome}</p>
                     </div>
                 </div>
+
                 <h4 class="font-bold mb-3 text-sm">سجل الحركة</h4>
                 <div class="bg-white rounded-xl border overflow-hidden">
                     ${movements.length ? movements.map(m => `
                         <div class="flex justify-between p-3 border-b last:border-0 hover:bg-slate-50">
-                            <div><p class="font-bold text-sm">${m.title}</p><p class="text-[10px] text-slate-400">${new Date(m.date).toLocaleDateString()}</p></div>
+                            <div>
+                                <p class="font-bold text-sm">${m.title}</p>
+                                <p class="text-[10px] text-slate-400">${new Date(m.date).toLocaleDateString()}</p>
+                            </div>
                             <span class="font-bold font-num ${m.type === 'in' ? 'text-green-600' : 'text-red-600'}">${m.amount}</span>
                         </div>
                     `).join('') : '<p class="text-center py-6 text-slate-400 text-sm">لا توجد حركات مسجلة</p>'}
@@ -475,15 +509,15 @@
             `;
         }
 
-        // --- 5. Expense Logic ---
+        // --- 5. Expense Logic (Modal) ---
         async function openExpenseModal(type, id) {
             document.getElementById('expense-modal').style.display = 'flex';
             document.getElementById('exp-target-type').value = type;
             document.getElementById('exp-target-id').value = id;
             
+            // Load Trips
             const tripSel = document.getElementById('exp-modal-trip');
             tripSel.innerHTML = '<option value="">-- مصروف عام (غير مرتبط برحلة) --</option>';
-            
             if(type === 'car') {
                 const { data: trips } = await sbClient.from('trips').select('id, dropoff_location, created_at')
                     .eq('car_id', id).order('created_at', {ascending: false}).limit(5);
@@ -491,11 +525,6 @@
                     tripSel.innerHTML += `<option value="${t.id}">رحلة: ${t.dropoff_location} (${new Date(t.created_at).toLocaleDateString()})</option>`;
                 });
             }
-            
-            const vaultSel = document.getElementById('exp-modal-vault');
-            vaultSel.innerHTML = '<option value="">الخزينة الرئيسية</option>';
-            const { data: vaults } = await sbClient.from('vaults').select('*');
-            if(vaults) vaults.forEach(v => vaultSel.innerHTML += `<option value="${v.id}">${v.name}</option>`);
         }
 
         async function confirmExpense() {
@@ -520,21 +549,25 @@
             const { error } = await sbClient.from('expenses').insert([insertData]);
 
             if(!error) {
-                if(vaultId) { /* Add vault update logic if needed or rely on RPC */ }
                 document.getElementById('expense-modal').style.display = 'none';
                 alert("تم تسجيل المصروف");
-                openLedger(type, targetId, '...'); 
+                openLedger(type, targetId, '...'); // Reload current ledger
             } else {
                 alert(error.message);
             }
         }
 
-        // --- Helpers ---
+        // --- Helpers: CRM & Pricing ---
         async function loadCRM() {
             const list = document.getElementById('crm-table');
+            // Fetch ALL profiles
             const { data: profiles } = await sbClient.from('profiles').select('*');
             list.innerHTML = '';
-            if(profiles) profiles.forEach(p => {
+            if(!profiles || profiles.length === 0) {
+                list.innerHTML = '<tr><td colspan="4" class="text-center p-4">لا يوجد عملاء</td></tr>';
+                return;
+            }
+            profiles.forEach(p => {
                 list.innerHTML += `
                     <tr class="border-b bg-white">
                         <td class="p-4 font-bold text-slate-700">${p.full_name || 'غير مسجل'}</td>
@@ -544,6 +577,42 @@
                     </tr>
                 `;
             });
+        }
+
+        async function loadPricing() {
+            const { data } = await sbClient.from('pricing_tiers').select('*').order('min_km', {ascending: true});
+            const div = document.getElementById('pricing-list');
+            div.innerHTML = '';
+            if(data) data.forEach(r => {
+                div.innerHTML += `
+                    <div class="bg-white p-3 border rounded flex justify-between items-center mb-2">
+                        <div>
+                            <span class="font-bold text-slate-800">${r.car_type.toUpperCase()}</span>
+                            <span class="text-xs text-slate-500 mx-2">من ${r.min_km} كم إلى ${r.max_km} كم</span>
+                        </div>
+                        <div class="text-left text-xs">
+                            <p>فتح: <strong>${r.base_price}</strong></p>
+                            <p>كم: <strong>${r.price_per_km}</strong></p>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        async function addPricingTier() {
+            const type = document.getElementById('rule-type').value;
+            const min = document.getElementById('rule-min').value;
+            const max = document.getElementById('rule-max').value;
+            const base = document.getElementById('rule-base').value;
+            const km = document.getElementById('rule-km').value;
+
+            if(!max || !km) return alert("أدخل البيانات");
+
+            const { error } = await sbClient.from('pricing_tiers').insert([{
+                car_type: type, min_km: min, max_km: max, base_price: base, price_per_km: km
+            }]);
+
+            if(!error) { alert("تم الحفظ"); loadPricing(); }
         }
         
         async function completeTrip(tripId, price) {
