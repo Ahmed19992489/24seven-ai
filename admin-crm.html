@@ -281,6 +281,7 @@
             document.getElementById(`page-${pageId}`).classList.remove('hidden');
             document.querySelectorAll('.sidebar-item').forEach(e => e.classList.remove('active'));
             document.getElementById(`nav-${pageId}`).classList.add('active');
+
             if(pageId === 'dashboard') loadDashboard();
             if(pageId === 'operations') loadOperations();
             if(pageId === 'crm') loadCRM();
@@ -293,11 +294,13 @@
         async function loadDashboard() {
             const { count } = await sbClient.from('trips').select('*', { count: 'exact', head: true });
             document.getElementById('kpi-total').innerText = count || 0;
+
             const { data: vaults } = await sbClient.from('vaults').select('*');
             if(vaults) {
                 const main = vaults.find(v => v.name === 'الخزينة الرئيسية') || {balance:0};
                 const maint = vaults.find(v => v.name === 'خزنة الصيانة') || {balance:0};
                 const cars = vaults.find(v => v.name === 'خزنة رواتب السيارات') || {balance:0};
+
                 document.getElementById('kpi-main-vault').innerText = `${main.balance} EGP`;
                 document.getElementById('kpi-maint-vault').innerText = `${maint.balance} EGP`;
                 document.getElementById('kpi-cars-salary').innerText = `${cars.balance} EGP`;
@@ -308,8 +311,10 @@
         async function loadOperations() {
             const list = document.getElementById('ops-table');
             list.innerHTML = '<tr><td colspan="8" class="text-center p-4">جاري التحميل...</td></tr>';
-            const { data: trips } = await sbClient.from('trips').select(`*, cars(brand, model), drivers(name)`).order('created_at', { ascending: false });
             
+            const { data: trips } = await sbClient.from('trips').select(`*, cars(brand, model), drivers(name)`).order('created_at', { ascending: false });
+
+            // Fetch Profiles Manually for Robustness
             const userIds = trips?.map(t => t.user_id).filter(Boolean) || [];
             let profilesMap = {};
             if(userIds.length) {
@@ -412,23 +417,66 @@
             const grid = document.getElementById('vaults-grid');
             const select = document.getElementById('gen-exp-vault');
             const modalSelect = document.getElementById('exp-modal-vault');
-            grid.innerHTML = ''; select.innerHTML = '<option value="main">الخزينة الرئيسية</option>'; modalSelect.innerHTML = '<option value="main">الخزينة الرئيسية</option>';
-            vaults.forEach(v => {
-                grid.innerHTML += `<div class="glass-panel p-5 border-l-4 border-amber-500 flex justify-between items-center"><div><p class="text-xs font-bold text-slate-400 uppercase">${v.name}</p><h3 class="text-2xl font-black mt-1">${v.balance} <span class="text-sm font-normal">EGP</span></h3></div></div>`;
-                if(v.name !== 'الخزينة الرئيسية') { select.innerHTML += `<option value="${v.id}">${v.name}</option>`; modalSelect.innerHTML += `<option value="${v.id}">${v.name}</option>`; }
+            
+            grid.innerHTML = '';
+            select.innerHTML = '<option value="main">الخزينة الرئيسية</option>';
+            modalSelect.innerHTML = '<option value="main">الخزينة الرئيسية</option>';
+
+            if (vaults) {
+                vaults.forEach(v => {
+                    grid.innerHTML += `
+                        <div class="glass-panel p-5 border-l-4 border-amber-500 flex justify-between items-center">
+                            <div>
+                                <p class="text-xs font-bold text-slate-400 uppercase">${v.name}</p>
+                                <h3 class="text-2xl font-black mt-1">${v.balance} <span class="text-sm font-normal">EGP</span></h3>
+                            </div>
+                        </div>
+                    `;
+                    
+                    if(v.name !== 'الخزينة الرئيسية') {
+                        select.innerHTML += `<option value="${v.id}">${v.name}</option>`;
+                        modalSelect.innerHTML += `<option value="${v.id}">${v.name}</option>`;
+                    }
+                });
+            }
+
+            const { data: requests } = await sbClient.from('transactions').select('*, profiles(full_name)').eq('status', 'pending');
+            const reqList = document.getElementById('deposit-requests-list');
+            reqList.innerHTML = '';
+            
+            if(!requests?.length) reqList.innerHTML = '<p class="text-center text-slate-400 text-sm">لا توجد طلبات جديدة</p>';
+            
+            requests.forEach(r => {
+                reqList.innerHTML += `
+                    <div class="bg-white border rounded-lg p-3 flex justify-between items-center">
+                        <div>
+                            <p class="font-bold text-sm text-slate-800">${r.profiles?.full_name}</p>
+                            <p class="text-xs text-slate-500">Ref: ${r.reference_id}</p>
+                            <p class="text-green-600 font-bold font-num mt-1">${r.amount} EGP</p>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <button onclick="processDeposit('${r.id}', '${r.user_id}', ${r.amount}, true)" class="bg-green-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-green-700">قبول</button>
+                            <button onclick="processDeposit('${r.id}', null, null, false)" class="bg-red-100 text-red-600 px-3 py-1 rounded text-xs font-bold hover:bg-red-200">رفض</button>
+                        </div>
+                    </div>
+                `;
             });
-            const { data: reqs } = await sbClient.from('transactions').select('*, profiles(full_name)').eq('status', 'pending');
-            document.getElementById('deposit-requests-list').innerHTML = reqs?.length ? reqs.map(r => `<div class="bg-white border rounded p-2 flex justify-between text-sm mb-2"><span>${r.profiles?.full_name} (${r.amount})</span><button onclick="processDeposit('${r.id}', '${r.user_id}', ${r.amount})" class="text-green-600 font-bold">قبول</button></div>`).join('') : '<p class="text-center text-xs text-slate-400">لا توجد طلبات</p>';
         }
 
-        async function processDeposit(txId, userId, amount) {
-            if(!confirm(`قبول ${amount}؟`)) return;
-            await sbClient.from('transactions').update({ status: 'approved' }).eq('id', txId);
-            const { data: p } = await sbClient.from('profiles').select('wallet_balance').eq('id', userId).single();
-            await sbClient.from('profiles').update({ wallet_balance: (p.wallet_balance||0) + Number(amount) }).eq('id', userId);
-            const vid = await getMainVaultId();
-            const { data: v } = await sbClient.from('vaults').select('balance').eq('id', vid).single();
-            await sbClient.from('vaults').update({ balance: (v.balance||0) + Number(amount) }).eq('id', vid);
+        async function processDeposit(txId, userId, amount, isApproved) {
+            if(isApproved) {
+                if(!confirm(`قبول إيداع بقيمة ${amount}؟`)) return;
+                await sbClient.from('transactions').update({ status: 'approved' }).eq('id', txId);
+                const { data: profile } = await sbClient.from('profiles').select('wallet_balance').eq('id', userId).single();
+                await sbClient.from('profiles').update({ wallet_balance: (profile?.wallet_balance || 0) + Number(amount) }).eq('id', userId);
+                const vid = await getMainVaultId();
+                const { data: v } = await sbClient.from('vaults').select('balance').eq('id', vid).single();
+                await sbClient.from('vaults').update({ balance: (v.balance || 0) + Number(amount) }).eq('id', vid);
+                alert("تم قبول الإيداع.");
+            } else {
+                if(!confirm("رفض الطلب؟")) return;
+                await sbClient.from('transactions').update({ status: 'rejected' }).eq('id', txId);
+            }
             loadFinance();
         }
 
@@ -453,8 +501,12 @@
         async function loadFleetList() {
             const { data: cars } = await sbClient.from('cars').select('*');
             const { data: drivers } = await sbClient.from('drivers').select('*');
-            document.getElementById('fleet-cars-list').innerHTML = cars.map(c => `<div onclick="openLedger('car', '${c.id}', '${c.brand} ${c.plate_number}', ${c.monthly_salary||0})" class="bg-white p-3 border rounded cursor-pointer hover:bg-slate-50 mb-2 font-bold flex justify-between"><span>${c.brand}</span><span>${c.plate_number}</span></div>`).join('');
-            document.getElementById('fleet-drivers-list').innerHTML = drivers.map(d => `<div onclick="openLedger('driver', '${d.id}', '${d.name}')" class="bg-white p-3 border rounded cursor-pointer hover:bg-slate-50 mb-2 font-bold">${d.name}</div>`).join('');
+            
+            const carsDiv = document.getElementById('fleet-cars-list');
+            if(cars) carsDiv.innerHTML = cars.map(c => `<div onclick="openLedger('car', '${c.id}', '${c.brand} ${c.plate_number}', ${c.monthly_salary||0})" class="bg-white p-3 border rounded cursor-pointer hover:bg-slate-50 mb-2 font-bold flex justify-between"><span>${c.brand}</span><span>${c.plate_number}</span></div>`).join('');
+            
+            const driversDiv = document.getElementById('fleet-drivers-list');
+            if(drivers) driversDiv.innerHTML = drivers.map(d => `<div onclick="openLedger('driver', '${d.id}', '${d.name}')" class="bg-white p-3 border rounded cursor-pointer hover:bg-slate-50 mb-2 font-bold">${d.name}</div>`).join('');
         }
 
         async function openLedger(type, id, name, salary=0) {
