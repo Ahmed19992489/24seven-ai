@@ -18,7 +18,7 @@
         .input-std:focus { border-color: #f59e0b; ring: 2px solid #fcd34d; }
         .btn-primary { background: #0f172a; color: white; padding: 8px 16px; border-radius: 8px; font-weight: bold; transition: 0.3s; }
         .btn-primary:hover { background: #334155; }
-        /* Scrollbar */
+        /* Scrollbar Styling */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
@@ -227,7 +227,7 @@
 
         // --- 1. DASHBOARD & KPIs ---
         async function loadDashboard() {
-            // جلب الإجماليات
+            // جلب عدد الرحلات
             const { count: tripsCount } = await sbClient.from('trips').select('*', { count: 'exact', head: true });
             document.getElementById('kpi-total').innerText = tripsCount || 0;
 
@@ -246,49 +246,89 @@
             const list = document.getElementById('ops-table');
             list.innerHTML = '<tr><td colspan="7" class="p-4 text-center">جاري التحميل...</td></tr>';
             
-            // جلب البيانات مع العلاقات
+            // 1. جلب الرحلات (بدون ربط البروفايل لتجنب الخطأ)
             const { data: trips, error } = await sbClient
                 .from('trips')
                 .select(`
                     *,
                     cars (brand, plate_number, model),
-                    drivers (name, phone),
-                    profiles:user_id (full_name, phone) 
+                    drivers (name, phone)
                 `)
                 .order('created_at', { ascending: false });
 
-            // ملاحظة: قد يحتاج profiles لتعديل حسب اسم الجدول لديك (profiles أو users)
+            if (error) {
+                console.error("Error:", error);
+                list.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">خطأ في الجلب: ${error.message}</td></tr>`;
+                return;
+            }
 
-            list.innerHTML = '';
             if(!trips || trips.length === 0) {
                 list.innerHTML = '<tr><td colspan="7" class="p-4 text-center">لا توجد رحلات</td></tr>';
                 return;
             }
 
+            // 2. جلب بيانات العملاء يدوياً
+            const userIds = trips.map(t => t.user_id).filter(id => id); 
+            let profilesMap = {};
+
+            if (userIds.length > 0) {
+                const { data: profiles } = await sbClient.from('profiles').select('id, full_name, phone').in('id', userIds);
+                if (profiles) {
+                    profiles.forEach(p => { profilesMap[p.id] = p; });
+                }
+            }
+
+            // 3. رسم الجدول
+            list.innerHTML = '';
             trips.forEach(t => {
-                const clientName = t.profiles?.full_name || 'عميل';
-                const statusColor = t.status === 'pending' ? 'bg-amber-100 text-amber-800' : (t.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800');
-                const statusText = t.status === 'pending' ? 'انتظار' : (t.status === 'completed' ? 'مكتملة' : 'جارية');
+                const profile = profilesMap[t.user_id] || { full_name: 'عميل', phone: '' };
+                const clientName = profile.full_name || 'غير محدد';
+                const clientPhone = profile.phone || '-';
+
+                const statusColor = t.status === 'pending' ? 'bg-amber-100 text-amber-800' : (t.status === 'completed' ? 'bg-green-100 text-green-800' : (t.status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'));
+                
+                let statusText = 'انتظار';
+                if(t.status === 'approved') statusText = 'جارية';
+                if(t.status === 'completed') statusText = 'مكتملة';
+                if(t.status === 'cancelled') statusText = 'ملغاة';
                 
                 let btns = '';
                 if(t.status === 'pending') {
                     btns = `<button onclick="openAssignModal('${t.id}')" class="bg-slate-800 text-white px-3 py-1 rounded text-xs">تعيين</button>`;
+                    btns += ` <button onclick="cancelTrip('${t.id}')" class="text-red-500 text-xs mr-2 underline">إلغاء</button>`;
                 } else if (t.status === 'approved') {
                     btns = `<button onclick="completeTrip('${t.id}', ${t.estimated_price})" class="bg-green-600 text-white px-3 py-1 rounded text-xs">إنهاء وتحصيل</button>`;
                 }
 
                 list.innerHTML += `
-                    <tr class="border-b hover:bg-slate-50">
+                    <tr class="border-b hover:bg-slate-50 transition">
                         <td class="p-4">#${t.id.substring(0,6)}</td>
-                        <td class="p-4 font-bold text-xs">${clientName}<br><span class="text-slate-400 font-normal">${t.profiles?.phone || ''}</span></td>
-                        <td class="p-4 text-xs">${t.pickup_location} <i class="fas fa-arrow-left mx-1 text-slate-300"></i> ${t.dropoff_location}</td>
-                        <td class="p-4 text-xs font-bold text-slate-600">${t.cars ? t.cars.model : '-'}</td>
-                        <td class="p-4 font-bold text-green-700">${t.estimated_price}</td>
+                        <td class="p-4">
+                            <div class="font-bold text-sm">${clientName}</div>
+                            <div class="text-xs text-slate-400 dir-ltr text-right">${clientPhone}</div>
+                        </td>
+                        <td class="p-4 text-xs">
+                            <div class="flex items-center gap-2">
+                                <span class="text-slate-500">${t.pickup_location.split(',')[0]}</span>
+                                <i class="fas fa-arrow-left text-amber-500 text-[10px]"></i>
+                                <span class="text-slate-900 font-bold">${t.dropoff_location.split(',')[0]}</span>
+                            </div>
+                        </td>
+                        <td class="p-4 text-xs font-bold text-slate-600">
+                            ${t.cars ? (t.cars.brand + ' ' + t.cars.model) : '<span class="text-amber-600">-- ' + t.car_type + ' --</span>'}
+                        </td>
+                        <td class="p-4 font-bold text-green-700 font-num">${t.estimated_price}</td>
                         <td class="p-4"><span class="px-2 py-1 rounded text-[10px] font-bold ${statusColor}">${statusText}</span></td>
                         <td class="p-4">${btns}</td>
                     </tr>
                 `;
             });
+        }
+        
+        async function cancelTrip(id) {
+            if(!confirm("إلغاء الرحلة؟")) return;
+            await sbClient.from('trips').update({ status: 'cancelled' }).eq('id', id);
+            loadOperations();
         }
 
         // --- Assignment Logic ---
@@ -296,7 +336,6 @@
             document.getElementById('modal-trip-id').value = tripId;
             document.getElementById('assign-modal').style.display = 'flex';
             
-            // تحميل القوائم
             const { data: drivers } = await sbClient.from('drivers').select('*');
             const { data: cars } = await sbClient.from('cars').select('*');
 
@@ -329,7 +368,6 @@
 
         async function completeTrip(tripId, price) {
             if(!confirm("هل أنت متأكد من إنهاء الرحلة؟ سيتم إضافة المبلغ لإيراد السيارة والخزينة.")) return;
-            // تحديث الحالة + السعر النهائي (مهم جداً للحسابات)
             await sbClient.from('trips').update({ status: 'completed', final_price: price }).eq('id', tripId);
             loadOperations();
         }
@@ -337,12 +375,11 @@
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
 
-        // --- 3. CRM (Fixing Data Issue) ---
+        // --- 3. CRM ---
         async function loadCRM() {
             const list = document.getElementById('crm-table');
             list.innerHTML = '<tr><td colspan="3" class="text-center p-4">جاري التحميل...</td></tr>';
 
-            // تأكد أن لديك جدول باسم profiles فيه full_name, phone
             const { data: users, error } = await sbClient.from('profiles').select('*');
             
             list.innerHTML = '';
@@ -363,11 +400,9 @@
         }
 
 
-        // --- 4. ACCOUNTING (Fixing Persistence) ---
+        // --- 4. ACCOUNTING ---
         async function loadAccounting() {
-            // 1. جلب كل الرحلات المكتملة
             const { data: trips } = await sbClient.from('trips').select('created_at, final_price, id').eq('status', 'completed');
-            // 2. جلب كل المصروفات
             const { data: expenses } = await sbClient.from('expenses').select('*');
 
             const log = document.getElementById('accounting-log');
@@ -376,7 +411,6 @@
             let totalRev = 0;
             let totalExp = 0;
 
-            // دمج القائمتين للعرض
             const allItems = [];
             if(trips) trips.forEach(t => {
                 totalRev += (t.final_price || 0);
@@ -387,11 +421,9 @@
                 allItems.push({ type: 'out', amount: e.amount, date: e.created_at, label: `مصروف: ${e.title}` });
             });
 
-            // تحديث الملخص بالأعلى
             document.getElementById('acc-revenue').innerText = totalRev.toFixed(2);
             document.getElementById('acc-expenses').innerText = totalExp.toFixed(2);
 
-            // عرض السجل
             allItems.sort((a,b) => new Date(b.date) - new Date(a.date));
             allItems.forEach(item => {
                 const color = item.type === 'in' ? 'text-green-600' : 'text-red-600';
@@ -424,12 +456,12 @@
                 alert("✅ تم تسجيل المصروف وحفظه في قاعدة البيانات");
                 document.getElementById('exp-title').value = '';
                 document.getElementById('exp-amount').value = '';
-                loadAccounting(); // تحديث فوري
+                loadAccounting();
             }
         }
 
 
-        // --- 5. FLEET (Car Ledger Fix) ---
+        // --- 5. FLEET ---
         async function loadFleetList() {
             const { data: cars } = await sbClient.from('cars').select('*');
             const { data: drivers } = await sbClient.from('drivers').select('*');
@@ -447,15 +479,11 @@
             });
         }
 
-        // دالة عرض كشف حساب السيارة (الحل الجذري لمشكلة عدم ظهور الإيراد)
         async function loadCarLedger(carId, carName) {
             const view = document.getElementById('ledger-details');
             view.innerHTML = '<p class="text-center p-10">جاري حساب الإيرادات والمصروفات...</p>';
 
-            // 1. جلب الإيرادات (الرحلات المكتملة لهذه السيارة)
             const { data: trips } = await sbClient.from('trips').select('final_price, created_at, dropoff_location').eq('car_id', carId).eq('status', 'completed');
-            
-            // 2. جلب المصروفات (المرتبطة بهذه السيارة)
             const { data: exps } = await sbClient.from('expenses').select('amount, created_at, title').eq('related_car_id', carId);
 
             let income = 0;
@@ -472,7 +500,6 @@
                 all.push({ type: 'out', val: e.amount, date: e.created_at, desc: `مصروف: ${e.title}` });
             });
 
-            // ترتيب زمني
             all.sort((a,b) => new Date(b.date) - new Date(a.date));
 
             all.forEach(item => {
@@ -525,8 +552,7 @@
             if(title && amount) {
                 await sbClient.from('expenses').insert([{ title, amount, related_car_id: carId, category: 'تشغيل' }]);
                 alert("تم إضافة المصروف لملف السيارة");
-                // إعادة تحميل الصفحة الحالية (بشكل ذكي سيحتاج لتحديث الواجهة، هنا سنعيد التحميل للأمان)
-                loadFleetList(); // Refresh simulation
+                loadFleetList(); // تحديث
             }
         }
 
@@ -540,7 +566,7 @@
         }
 
 
-        // --- 6. PRICING (Tiered Logic) ---
+        // --- 6. PRICING ---
         async function loadPricing() {
             const { data } = await sbClient.from('pricing_tiers').select('*').order('min_km', {ascending: true});
             const div = document.getElementById('pricing-list');
