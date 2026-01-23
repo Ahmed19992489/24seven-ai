@@ -85,7 +85,7 @@
         <div id="page-operations" class="page-section hidden">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl font-bold">غرفة العمليات المركزية</h2>
-                <button onclick="loadOperations()" class="bg-white border px-4 py-2 rounded-lg hover:bg-slate-100 font-bold text-sm"><i class="fas fa-sync-alt mr-2"></i> تحديث البيانات</button>
+                <button onclick="loadOperations()" class="bg-white border px-4 py-2 rounded-lg hover:bg-slate-100 font-bold text-sm"><i class="fas fa-sync-alt mr-2"></i> تحديث</button>
             </div>
             <div class="glass-panel overflow-hidden">
                 <table class="w-full text-right text-sm">
@@ -221,7 +221,7 @@
 
     <div id="complete-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 backdrop-blur-sm">
         <div class="bg-white p-6 rounded-2xl w-[400px] shadow-2xl">
-            <h3 class="text-xl font-bold mb-4 text-green-700 border-b pb-3">تصفية الرحلة</h3>
+            <h3 class="text-xl font-bold mb-4 text-green-700 border-b pb-3">تصفية الرحلة والحسابات</h3>
             <input type="hidden" id="comp-trip-id">
             <div class="space-y-4">
                 <div>
@@ -275,6 +275,7 @@
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4dGxzZm1mZXR3Y2ZsYnB2d3VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0MzMzODEsImV4cCI6MjA3ODAwOTM4MX0.FFGXNfx0FDA4FmJB1gVorNigs9nRoO4q1pCj2BOMDbU';
         const sbClient = supabase.createClient(supabaseUrl, supabaseKey);
 
+        // Init
         showPage('dashboard');
 
         // --- Navigation ---
@@ -292,7 +293,7 @@
             if(pageId === 'pricing') loadPricing();
         }
 
-        // --- 1. Dashboard ---
+        // --- 1. Dashboard & Vaults ---
         async function loadDashboard() {
             const { count } = await sbClient.from('trips').select('*', { count: 'exact', head: true });
             document.getElementById('kpi-total').innerText = count || 0;
@@ -335,6 +336,7 @@
                 
                 let btns = '';
                 if(t.status === 'pending') btns = `<button onclick="openAssignModal('${t.id}')" class="bg-slate-900 text-white px-3 py-1 rounded text-xs">تعيين</button>`;
+                // تم التعديل: الزر يفتح نافذة تصفية الرحلة
                 else if(t.status === 'approved') btns = `<button onclick="openCompleteModal('${t.id}', ${t.estimated_price})" class="bg-green-600 text-white px-3 py-1 rounded text-xs">إنهاء</button>`;
 
                 list.innerHTML += `
@@ -351,7 +353,7 @@
             });
         }
 
-        // --- NEW: Trip Completion Logic ---
+        // --- NEW: Trip Completion Logic (With Wage) ---
         function openCompleteModal(tripId, price) {
             document.getElementById('comp-trip-id').value = tripId;
             document.getElementById('comp-price').value = price;
@@ -377,7 +379,7 @@
             const { data: v } = await sbClient.from('vaults').select('balance').eq('name', 'الخزينة الرئيسية').single();
             await sbClient.from('vaults').update({ balance: (v.balance||0) + price }).eq('name', 'الخزينة الرئيسية');
 
-            // 3. Register Driver Wage Expense
+            // 3. Register Driver Wage Expense (Optional: appears in driver ledger)
             if(wage > 0) {
                 const { data: trip } = await sbClient.from('trips').select('driver_id').eq('id', tripId).single();
                 if(trip && trip.driver_id) {
@@ -517,6 +519,7 @@
 
             let income = 0; let outcome = 0; let movements = [];
 
+            // Get Expenses
             const { data: expenses } = await sbClient.from('expenses').select('*').eq(type === 'car' ? 'related_car_id' : 'related_driver_id', id);
 
             if(expenses) expenses.forEach(e => {
