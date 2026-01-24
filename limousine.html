@@ -495,62 +495,91 @@
         }
 
         // === دالة عرض الرحلات (المحدثة بالكامل) ===
+        // === دالة عرض الرحلات (المعدلة لإظهار السائق والسيارة) ===
         async function loadTrips() {
-             const { data: trips } = await sb.from('trips').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+             // 1. جلب الرحلات مع ربط جدول السائقين والسيارات
+             // ملاحظة: نستخدم drivers(*) لجلب كل بيانات السائق المرتبط
+             const { data: trips, error } = await sb
+                .from('trips')
+                .select('*, drivers(*), cars(*)') 
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false });
+
+             if (error) {
+                 console.error("Error loading trips:", error);
+                 return;
+             }
              
              document.getElementById('trips-list').innerHTML = trips.map(t => {
-                // تحديد لون الحالة
+                // تحديد حالة الرحلة
                 let statusClass = 'status-pending';
                 let statusText = 'قيد المراجعة';
-                if(t.status === 'approved') { statusClass = 'status-approved'; statusText = 'مقبولة'; }
-                if(t.status === 'driver_assigned') { statusClass = 'status-driver_assigned'; statusText = 'تم تعيين سائق'; }
-                if(t.status === 'completed') { statusClass = 'status-completed'; statusText = 'مكتملة'; }
+                let statusColor = 'text-amber-500';
+                
+                if(t.status === 'approved') { statusClass = 'status-approved'; statusText = 'مقبولة (في انتظار سائق)'; statusColor = 'text-green-500'; }
+                if(t.status === 'driver_assigned') { statusClass = 'status-driver_assigned'; statusText = 'الكابتن في الطريق'; statusColor = 'text-blue-500'; }
+                if(t.status === 'completed') { statusClass = 'status-completed'; statusText = 'مكتملة'; statusColor = 'text-slate-400'; }
 
-                // استخراج التاريخ والوقت
-                // نفترض أن التاريخ مخزن في admin_notes أو يمكن استخراجه من created_at كبديل
-                // هنا سنعرض مقتطفات من admin_notes لأنها تحتوي التفاصيل
-                const dateMatch = t.admin_notes.match(/📅 (.*?)\n/);
+                // استخراج التاريخ
+                const dateMatch = t.admin_notes ? t.admin_notes.match(/📅 (.*?)\n/) : null;
                 const dateStr = dateMatch ? dateMatch[1] : new Date(t.created_at).toLocaleDateString();
 
-                // === الجزء المهم: عرض السائق ===
+                // === تجهيز بيانات السائق والسيارة ===
+                // التحقق هل توجد بيانات للسائق في الرحلة أم لا
                 let driverHtml = '';
-                if(t.driver_phone) {
+                // t.drivers هو الكائن الذي يحتوي بيانات السائق القادمة من الربط
+                if(t.drivers) {
+                    const driverName = t.drivers.name || t.drivers.full_name || 'كابتن 24Seven';
+                    const driverPhone = t.drivers.phone || t.drivers.mobile || '';
+                    const carModel = t.cars ? (t.cars.model || t.cars.type) : 'سيارة فاخرة';
+                    const carPlate = t.cars ? (t.cars.plate_number || t.cars.plate) : '---';
+
                     driverHtml = `
-                    <div class="mt-3 p-3 bg-slate-800 rounded-lg border border-slate-600">
-                        <p class="text-[10px] text-slate-400 mb-1">بيانات السائق</p>
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <p class="text-white font-bold text-sm">${t.driver_name || 'سائق 24Seven'}</p>
-                                <p class="text-amber-500 font-num text-sm">${t.driver_phone}</p>
+                    <div class="mt-4 pt-3 border-t border-slate-700">
+                        <div class="flex items-center gap-3 bg-slate-800/50 p-3 rounded-xl border border-slate-600/50">
+                            <div class="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center text-xl">
+                                👨‍✈️
                             </div>
-                            <a href="https://wa.me/20${t.driver_phone}" target="_blank" class="bg-green-600 text-white w-8 h-8 rounded-full flex items-center justify-center">
-                                <i class="fab fa-whatsapp"></i>
-                            </a>
+                            <div class="flex-1">
+                                <p class="text-white font-bold text-sm">${driverName}</p>
+                                <div class="flex gap-2 text-[10px] text-slate-400">
+                                    <span>${carModel}</span> | <span class="font-num">${carPlate}</span>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <a href="tel:${driverPhone}" class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center text-white hover:bg-slate-600 transition"><i class="fas fa-phone"></i></a>
+                                <a href="https://wa.me/20${driverPhone}" target="_blank" class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white hover:bg-green-500 transition"><i class="fab fa-whatsapp"></i></a>
+                            </div>
                         </div>
                     </div>`;
+                } else if (t.status === 'approved') {
+                    driverHtml = `<div class="mt-3 text-center text-xs text-slate-500 animate-pulse">جاري تعيين أفضل كابتن لك...</div>`;
                 }
 
                 return `
-                <div class="glass-card p-4 trip-card animate-fade-in-up">
-                    <span class="trip-status-badge ${statusClass}">${statusText}</span>
+                <div class="glass-card p-4 trip-card animate-fade-in-up mb-4 border border-slate-700/50">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="trip-status-badge ${statusClass}">${statusText}</span>
+                        <span class="font-bold font-num ${statusColor}">${t.estimated_price} EGP</span>
+                    </div>
                     
-                    <div class="mt-6 flex flex-col gap-2">
-                        <div class="flex items-start gap-2">
-                            <i class="fas fa-circle-dot text-green-500 text-[10px] mt-1.5"></i>
-                            <p class="text-xs text-slate-300 flex-1 leading-relaxed">${t.pickup_location}</p>
+                    <div class="mt-8 space-y-2">
+                        <div class="flex items-start gap-3 relative">
+                            <div class="flex flex-col items-center">
+                                <div class="w-2.5 h-2.5 rounded-full bg-green-500 shadow-lg shadow-green-500/50"></div>
+                                <div class="w-0.5 h-full bg-slate-700 my-1 min-h-[20px]"></div>
+                            </div>
+                            <p class="text-xs text-slate-300 font-bold mt-[-2px]">${t.pickup_location}</p>
                         </div>
-                        <div class="flex items-start gap-2">
-                            <i class="fas fa-location-dot text-amber-500 text-[10px] mt-1.5"></i>
-                            <p class="text-xs text-slate-300 flex-1 leading-relaxed">${t.dropoff_location}</p>
+                        <div class="flex items-start gap-3">
+                            <div class="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-lg shadow-amber-500/50"></div>
+                            <p class="text-xs text-slate-300 font-bold mt-[-2px]">${t.dropoff_location}</p>
                         </div>
                     </div>
 
-                    <div class="flex justify-between items-center mt-3 pt-3 border-t border-slate-700">
-                        <div class="flex items-center gap-2 text-slate-400">
-                            <i class="far fa-calendar-alt text-xs"></i>
-                            <span class="text-[10px] font-num">${dateStr}</span>
-                        </div>
-                        <div class="font-bold font-num text-amber-500">${t.estimated_price} EGP</div>
+                    <div class="mt-3 flex items-center gap-2 text-[10px] text-slate-500 font-num">
+                        <i class="far fa-clock"></i>
+                        <span>${dateStr}</span>
                     </div>
 
                     ${driverHtml}
