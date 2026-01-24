@@ -341,7 +341,7 @@
                 directionsRenderer.setMap(map);
             } catch (e) { console.log("Maps Error"); }
         }
-
+        
         function calculateRealDistanceAndPrice() {
             const p = document.getElementById('pickup').value;
             const d = document.getElementById('dropoff').value;
@@ -351,8 +351,12 @@
             if(!p || !d || !date || !time) return alert("أكمل البيانات");
             
             const btn = document.getElementById('calc-btn'); btn.innerText="جاري الحساب...";
-            document.getElementById('map-container').style.display = 'block'; 
-            document.getElementById('map-container').style.height = "200px";
+            
+            // --- تصحيح الخطأ هنا: استخدام ID الصحيح (map) ---
+            const mapDiv = document.getElementById('map');
+            mapDiv.style.display = 'block'; 
+            mapDiv.style.height = "200px";
+            // ------------------------------------------------
 
             const waypoints = [];
             if(document.getElementById('opt-extra-point').checked && document.getElementById('extra-point').value) {
@@ -363,19 +367,19 @@
             service.getDistanceMatrix({origins:[p], destinations:[d], travelMode:'DRIVING'}, (res, status) => {
                 if(status !== 'OK') { 
                     btn.innerText="حساب السعر والحجز"; 
-                    return alert("خطأ من جوجل: " + status + "\nتأكد من تفعيل Distance Matrix API في الكونسول."); 
+                    return alert("خطأ من جوجل: " + status); 
                 }
                 
-                // في حالة نجاح الطلب
                 const element = res.rows[0].elements[0];
                 if (element.status !== 'OK') {
                     btn.innerText="حساب السعر والحجز";
-                    return alert("لا يمكن حساب المسافة: " + element.status);
+                    // التعامل مع حالات عدم وجود طريق
+                    if(element.status === 'ZERO_RESULTS') return alert("لا يوجد طريق بري بين هاتين النقطتين.");
+                    return alert("تعذر حساب المسافة: " + element.status);
                 }
 
                 const distKm = Math.ceil(element.distance.value / 1000);
                 
-                // Pricing Logic
                 const carRules = pricingRules.filter(r => r.car_type === tripData.car);
                 let rule = carRules.find(r => distKm >= r.min_km && distKm <= r.max_km);
                 if (!rule && carRules.length > 0) rule = carRules.sort((a, b) => b.max_km - a.max_km)[0]; 
@@ -404,7 +408,6 @@
                 tripData.returnDate = document.getElementById('return-date').value;
                 tripData.returnTime = document.getElementById('return-time').value;
 
-                // Render Route
                 directionsService.route({origin:p, destination:d, waypoints:waypoints, travelMode:'DRIVING'}, (rs, st) => {
                     if(st=='OK') directionsRenderer.setDirections(rs);
                 });
