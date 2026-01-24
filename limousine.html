@@ -497,26 +497,35 @@
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-pass').value;
             
-            // التسجيل مع خيار إيقاف تأكيد الإيميل تلقائياً (احتياطياً)
+            // 1. محاولة إنشاء المستخدم في نظام المصادقة
             const { data, error } = await sb.auth.signUp({
                 email: email, 
                 password: password,
-                options: { emailRedirectTo: window.location.href }
             });
             
             if(error) {
-                alert(error.message);
+                alert("خطأ في التسجيل: " + error.message);
             } else {
-                if (data.session) {
-                    // إذا تم الدخول فوراً
-                    alert("تم إنشاء الحساب بنجاح!");
-                    
-                    // محاولة إنشاء البروفايل فوراً
-                    await sb.from('profiles').insert([{ id: data.user.id, full_name: 'عميل جديد', wallet_balance: 0 }]);
-                    
-                    window.location.reload();
+                if (data.user) {
+                    // 2. محاولة إنشاء البروفايل في قاعدة البيانات
+                    const { error: profileError } = await sb.from('profiles').insert([
+                        { 
+                            id: data.user.id, 
+                            full_name: 'عميل جديد', 
+                            wallet_balance: 0 
+                        }
+                    ]);
+
+                    if (profileError) {
+                        // هنا سيظهر لك سبب الخطأ الحقيقي (مثلاً: duplicate key, null value)
+                        alert("تم إنشاء الإيميل ولكن فشل حفظ البيانات: " + profileError.message);
+                        console.error(profileError);
+                    } else {
+                        alert("تم إنشاء الحساب والبيانات بنجاح! سيتم الدخول الآن.");
+                        window.location.reload();
+                    }
                 } else {
-                    alert("تم التسجيل! إذا لم تدخل تلقائياً، يرجى تفعيل الإيميل.");
+                    alert("تحقق من بريدك الإلكتروني (إذا كان تفعيل الإيميل ما زال يعمل).");
                 }
             }
         }
