@@ -31,7 +31,6 @@
         #map { width: 100%; height: 200px; border-radius: 12px; display: none; margin-bottom: 15px; border: 1px solid #334155; }
         #loading-overlay { position: fixed; inset: 0; background: #0f172a; z-index: 200; display: flex; align-items: center; justify-content: center; transition: opacity 0.3s; }
         
-        /* تحسين شكل كارت الرحلة */
         .trip-card { position: relative; overflow: hidden; transition: all 0.3s ease; }
         .trip-status-badge { position: absolute; top: 12px; left: 12px; padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; }
         .status-pending { background: #f59e0b20; color: #f59e0b; border: 1px solid #f59e0b40; }
@@ -67,136 +66,62 @@
                 <h2 class="text-xl font-bold mb-4 flex items-center gap-2 text-white">
                     <i class="fas fa-route text-amber-500"></i> احجز رحلتك
                 </h2>
-
                 <div class="trip-type-selector">
                     <div onclick="setTripType('one-way')" class="trip-type-btn active" id="btn-one-way">ذهاب فقط</div>
                     <div onclick="setTripType('round-same')" class="trip-type-btn" id="btn-round-same">ذهاب وعودة (نفس اليوم)</div>
                     <div onclick="setTripType('round-diff')" class="trip-type-btn" id="btn-round-diff">أيام مختلفة</div>
                 </div>
-
                 <div id="map"></div>
-
                 <div class="space-y-3 mb-4 relative">
                     <div class="absolute right-[22px] top-10 bottom-10 w-0.5 bg-slate-700 border-r border-dashed border-slate-600"></div>
-                    <div class="relative">
-                        <i class="fas fa-circle-dot text-green-500 absolute top-4 right-4 text-xs z-10"></i>
-                        <input id="pickup" type="text" placeholder="نقطة الانطلاق (من)" class="input-field pr-10">
-                    </div>
-                    
-                    <div id="extra-point-div" class="relative hidden">
-                        <i class="fas fa-plus-circle text-blue-500 absolute top-4 right-4 text-xs z-10"></i>
-                        <input id="extra-point" type="text" placeholder="نقطة إضافية (اختياري)" class="input-field pr-10">
-                    </div>
-
-                    <div class="relative">
-                        <i class="fas fa-location-dot text-amber-500 absolute top-4 right-4 text-xs z-10"></i>
-                        <input id="dropoff" type="text" placeholder="الوجهة (إلى)" class="input-field pr-10">
-                    </div>
-
-                    <label class="checkbox-wrapper w-fit">
-                        <input type="checkbox" id="opt-extra-point" onchange="toggleExtraPoint()">
-                        <span class="text-xs text-white">إضافة نقطة توقف (+ تكلفة إضافية)</span>
-                    </label>
+                    <div class="relative"><i class="fas fa-circle-dot text-green-500 absolute top-4 right-4 text-xs z-10"></i><input id="pickup" type="text" placeholder="نقطة الانطلاق (من)" class="input-field pr-10"></div>
+                    <div id="extra-point-div" class="relative hidden"><i class="fas fa-plus-circle text-blue-500 absolute top-4 right-4 text-xs z-10"></i><input id="extra-point" type="text" placeholder="نقطة إضافية (اختياري)" class="input-field pr-10"></div>
+                    <div class="relative"><i class="fas fa-location-dot text-amber-500 absolute top-4 right-4 text-xs z-10"></i><input id="dropoff" type="text" placeholder="الوجهة (إلى)" class="input-field pr-10"></div>
+                    <label class="checkbox-wrapper w-fit"><input type="checkbox" id="opt-extra-point" onchange="toggleExtraPoint()"><span class="text-xs text-white">إضافة نقطة توقف (+ تكلفة إضافية)</span></label>
                 </div>
-
                 <div class="grid grid-cols-2 gap-3 mb-4">
-                    <div>
-                        <label class="text-xs text-slate-400 mb-1 block">تاريخ الذهاب</label>
-                        <input type="date" id="trip-date" class="input-field text-sm">
-                    </div>
-                    <div>
-                        <label class="text-xs text-slate-400 mb-1 block">وقت التحرك</label>
-                        <input type="time" id="trip-time" class="input-field text-sm">
-                    </div>
+                    <div><label class="text-xs text-slate-400 mb-1 block">تاريخ الذهاب</label><input type="date" id="trip-date" class="input-field text-sm"></div>
+                    <div><label class="text-xs text-slate-400 mb-1 block">وقت التحرك</label><input type="time" id="trip-time" class="input-field text-sm"></div>
                 </div>
-
                 <div id="return-date-container" class="hidden mb-4 p-3 bg-slate-800 rounded-xl border border-amber-500/30">
                     <h3 class="text-xs font-bold text-amber-500 mb-2">تفاصيل العودة</h3>
                     <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="text-xs text-slate-400 mb-1 block">تاريخ العودة</label>
-                            <input type="date" id="return-date" class="input-field text-sm">
-                        </div>
-                        <div>
-                            <label class="text-xs text-slate-400 mb-1 block">وقت العودة</label>
-                            <input type="time" id="return-time" class="input-field text-sm">
-                        </div>
+                        <div><label class="text-xs text-slate-400 mb-1 block">تاريخ العودة</label><input type="date" id="return-date" class="input-field text-sm"></div>
+                        <div><label class="text-xs text-slate-400 mb-1 block">وقت العودة</label><input type="time" id="return-time" class="input-field text-sm"></div>
                     </div>
                 </div>
-
                 <p class="text-xs text-slate-400 font-bold mb-2">اختر الفئة</p>
                 <div class="grid grid-cols-3 gap-3 mb-4">
-                    <div onclick="selectCar('sedan')" class="car-option active" id="car-sedan">
-                        <img src="images/sedan.png" class="car-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3202/3202926.png'">
-                        <p class="text-center text-xs font-bold mt-1">Sedan</p>
-                        <p class="text-center text-[10px] text-slate-400">4 ركاب</p>
-                    </div>
-                    <div onclick="selectCar('suv')" class="car-option" id="car-suv">
-                        <img src="images/suv.png" class="car-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3202/3202022.png'">
-                        <p class="text-center text-xs font-bold mt-1">SUV</p>
-                        <p class="text-center text-[10px] text-slate-400">عائلية</p>
-                    </div>
-                    <div onclick="selectCar('van')" class="car-option" id="car-van">
-                        <img src="images/van.png" class="car-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/75/75780.png'">
-                        <p class="text-center text-xs font-bold mt-1">Van</p>
-                        <p class="text-center text-[10px] text-slate-400">14 راكب</p>
-                    </div>
+                    <div onclick="selectCar('sedan')" class="car-option active" id="car-sedan"><img src="images/sedan.png" class="car-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3202/3202926.png'"><p class="text-center text-xs font-bold mt-1">Sedan</p><p class="text-center text-[10px] text-slate-400">4 ركاب</p></div>
+                    <div onclick="selectCar('suv')" class="car-option" id="car-suv"><img src="images/suv.png" class="car-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3202/3202022.png'"><p class="text-center text-xs font-bold mt-1">SUV</p><p class="text-center text-[10px] text-slate-400">عائلية</p></div>
+                    <div onclick="selectCar('van')" class="car-option" id="car-van"><img src="images/van.png" class="car-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/75/75780.png'"><p class="text-center text-xs font-bold mt-1">Van</p><p class="text-center text-[10px] text-slate-400">14 راكب</p></div>
                 </div>
-
                 <div class="grid grid-cols-2 gap-3 mb-4">
-                    <div>
-                        <label class="text-xs text-slate-400 mb-1 block">عدد الأفراد</label>
-                        <input type="number" id="pax-count" min="1" max="14" value="1" class="input-field text-center font-num">
-                    </div>
-                    <div>
-                        <label class="text-xs text-slate-400 mb-1 block">عدد الشنط</label>
-                        <input type="number" id="bags-count" min="0" max="10" value="0" class="input-field text-center font-num">
-                    </div>
+                    <div><label class="text-xs text-slate-400 mb-1 block">عدد الأفراد</label><input type="number" id="pax-count" min="1" max="14" value="1" class="input-field text-center font-num"></div>
+                    <div><label class="text-xs text-slate-400 mb-1 block">عدد الشنط</label><input type="number" id="bags-count" min="0" max="10" value="0" class="input-field text-center font-num"></div>
                 </div>
-
                 <div class="flex gap-3 mb-6">
-                    <label class="checkbox-wrapper flex-1">
-                        <input type="checkbox" id="opt-child-seat">
-                        <span class="text-xs text-white">كرسي أطفال</span>
-                    </label>
-                    <label class="checkbox-wrapper flex-1">
-                        <input type="checkbox" id="opt-wheelchair">
-                        <span class="text-xs text-white">كرسي متحرك</span>
-                    </label>
+                    <label class="checkbox-wrapper flex-1"><input type="checkbox" id="opt-child-seat"><span class="text-xs text-white">كرسي أطفال</span></label>
+                    <label class="checkbox-wrapper flex-1"><input type="checkbox" id="opt-wheelchair"><span class="text-xs text-white">كرسي متحرك</span></label>
                 </div>
-
-                <button onclick="calculateRealDistanceAndPrice()" id="calc-btn" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl font-bold text-slate-900 shadow-lg active:scale-95 transition">
-                    حساب السعر والحجز
-                </button>
+                <button onclick="calculateRealDistanceAndPrice()" id="calc-btn" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl font-bold text-slate-900 shadow-lg active:scale-95 transition">حساب السعر والحجز</button>
             </div>
         </div>
 
         <div id="details-modal" class="fixed inset-0 bg-black/90 z-50 hidden items-center justify-center p-4">
             <div class="bg-slate-800 rounded-2xl w-full max-w-md p-6 border border-slate-700 shadow-2xl overflow-y-auto max-h-[90vh]">
                 <h3 class="text-xl font-bold text-white mb-2">ملخص الحجز</h3>
-                
                 <div class="bg-slate-900 p-4 rounded-xl mb-4 border border-slate-700">
-                    <div class="flex justify-between mb-2">
-                        <span class="text-slate-400 text-xs">نوع الرحلة</span>
-                        <span class="text-white text-xs font-bold" id="summ-type">--</span>
-                    </div>
-                    <div class="flex justify-between mb-2">
-                        <span class="text-slate-400 text-xs">المسافة</span>
-                        <span class="text-white text-xs font-bold font-num" id="summ-dist">--</span>
-                    </div>
-                    <div class="flex justify-between border-t border-slate-700 pt-2 mt-2">
-                        <span class="text-slate-400 text-sm">الإجمالي</span>
-                        <span class="text-amber-500 text-xl font-black font-num" id="summ-price">0 EGP</span>
-                    </div>
+                    <div class="flex justify-between mb-2"><span class="text-slate-400 text-xs">نوع الرحلة</span><span class="text-white text-xs font-bold" id="summ-type">--</span></div>
+                    <div class="flex justify-between mb-2"><span class="text-slate-400 text-xs">المسافة</span><span class="text-white text-xs font-bold font-num" id="summ-dist">--</span></div>
+                    <div class="flex justify-between border-t border-slate-700 pt-2 mt-2"><span class="text-slate-400 text-sm">الإجمالي</span><span class="text-amber-500 text-xl font-black font-num" id="summ-price">0 EGP</span></div>
                     <p class="text-[10px] text-slate-500 mt-1" id="summ-note"></p>
                 </div>
-
                 <h4 class="text-sm font-bold text-white mb-3">بيانات الدفع والتواصل</h4>
                 <div class="space-y-3">
                     <input type="text" id="guest-name" placeholder="الاسم بالكامل" class="input-field">
                     <input type="tel" id="guest-phone" placeholder="رقم الهاتف" class="input-field font-num">
                     <input type="tel" id="guest-whatsapp" placeholder="رقم الواتساب" class="input-field font-num">
-                    
                     <div>
                         <label class="text-xs text-slate-400 mb-2 block">طريقة الدفع</label>
                         <div class="grid grid-cols-3 gap-2">
@@ -205,7 +130,6 @@
                             <div onclick="selectPayment('wallet')" class="pay-opt p-3 rounded-xl bg-slate-900 text-white border border-slate-600 text-center cursor-pointer text-xs" id="pay-wallet">المحفظة</div>
                         </div>
                     </div>
-                    
                     <button onclick="confirmFinalBooking()" id="confirm-btn" class="w-full py-3 bg-green-600 hover:bg-green-500 rounded-xl font-bold text-white mt-4">تأكيد الحجز</button>
                     <button onclick="document.getElementById('details-modal').style.display='none'" class="w-full py-3 text-slate-400 font-bold text-sm">تراجع</button>
                 </div>
@@ -223,15 +147,11 @@
                 <h2 class="text-5xl font-num font-black text-white" id="wallet-page-balance">0.00</h2>
                 <p class="text-amber-500 font-bold text-sm">EGP</p>
             </div>
-            
             <div class="glass-card p-5">
                 <h3 class="font-bold mb-4 flex items-center gap-2"><i class="fas fa-bolt text-purple-500"></i> شحن الرصيد</h3>
                 <div class="bg-white p-3 rounded-xl mb-4 flex items-center gap-3">
                     <img src="https://instapay.eg/wp-content/uploads/2022/04/instapay-logo-new.png" class="h-8 object-contain">
-                    <div class="flex-1 text-right">
-                        <p class="text-slate-900 font-bold text-xs">InstaPay</p>
-                        <p class="text-slate-600 font-num font-bold text-sm select-all">01121748885</p>
-                    </div>
+                    <div class="flex-1 text-right"><p class="text-slate-900 font-bold text-xs">InstaPay</p><p class="text-slate-600 font-num font-bold text-sm select-all">01121748885</p></div>
                 </div>
                 <div class="space-y-3">
                     <input type="number" id="deposit-amount" placeholder="المبلغ المحول" class="input-field">
@@ -239,7 +159,6 @@
                     <button onclick="submitDeposit()" class="w-full py-3 bg-purple-600 rounded-xl font-bold text-white">إرسال الطلب</button>
                 </div>
             </div>
-            
             <h3 class="font-bold mt-6 mb-3">سجل العمليات</h3>
             <div id="transactions-list" class="space-y-2"></div>
         </div>
@@ -274,7 +193,6 @@
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAjFXAiKnbium5bHoR5uB4DftMB2vlpi4M&libraries=places&language=ar"></script>
     
     <script>
-        // تعريف العميل
         const sb = supabase.createClient('https://qxtlsfmfetwcflbpvwuf.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4dGxzZm1mZXR3Y2ZsYnB2d3VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0MzMzODEsImV4cCI6MjA3ODAwOTM4MX0.FFGXNfx0FDA4FmJB1gVorNigs9nRoO4q1pCj2BOMDbU');
         
         let user = null;
@@ -282,51 +200,56 @@
         let tripData = {type:'one-way', car:'sedan', pay:'cash', dist: 0, price: 0};
         let map, directionsService, directionsRenderer;
 
-        // ==========================================
-        // 1. نظام الدخول الذكي (تم التعديل هنا)
-        // ==========================================
-        sb.auth.onAuthStateChange(async (event, session) => {
-            console.log("Auth Event:", event);
-            
+        // --- نظام الدخول المحسن (Robust Login) ---
+        async function checkSession() {
+            const { data: { session } } = await sb.auth.getSession();
             if (session) {
-                // حالة نجاح الدخول (سواء بإيميل أو جوجل)
-                user = session.user;
-                document.getElementById('loading-overlay').style.opacity = 0;
-                setTimeout(() => document.getElementById('loading-overlay').style.display='none', 300);
-                document.getElementById('login-screen').style.display='none'; 
-                
-                // التأكد من وجود بروفايل للمستخدم
-                await ensureProfileExists();
-                
-                // تحميل البيانات والخرائط
-                loadData(); 
-                initMaps(); 
-                setupRealtime();
+                console.log("✅ Session found");
+                handleUserSignedIn(session);
             } else {
-                // حالة عدم الدخول
-                document.getElementById('loading-overlay').style.display='none';
-                document.getElementById('login-screen').style.display='flex';
-            }
-        });
-
-        // دالة لضمان وجود بروفايل (لحل مشاكل جوجل)
-        async function ensureProfileExists() {
-            const { data, error } = await sb.from('profiles').select('id').eq('id', user.id).single();
-            if (!data) {
-                // إذا كان مستخدم جوجل جديد، ننشئ له بروفايل فوراً
-                await sb.from('profiles').insert([
-                    { 
-                        id: user.id, 
-                        full_name: user.user_metadata.full_name || 'عميل جوجل', 
-                        wallet_balance: 0 
-                    }
-                ]);
+                sb.auth.onAuthStateChange((event, session) => {
+                    if (event === 'SIGNED_IN' && session) handleUserSignedIn(session);
+                    else if (event === 'SIGNED_OUT') showLoginScreen();
+                });
+                showLoginScreen();
             }
         }
 
-        // ==========================================
-        // 2. دوال التشغيل الأساسية
-        // ==========================================
+        async function handleUserSignedIn(session) {
+            user = session.user;
+            document.getElementById('login-screen').style.display='none'; 
+            document.getElementById('loading-overlay').style.display = 'flex';
+
+            try { await ensureProfileExists(); } catch(e) { console.error("Profile Error:", e); }
+            try { await loadData(); } catch(e) { console.error("Data Load Error:", e); }
+            
+            initMaps(); 
+            setupRealtime();
+            
+            setTimeout(() => {
+                document.getElementById('loading-overlay').style.opacity = 0;
+                setTimeout(() => document.getElementById('loading-overlay').style.display='none', 300);
+            }, 500);
+        }
+
+        function showLoginScreen() {
+            document.getElementById('loading-overlay').style.display='none';
+            document.getElementById('login-screen').style.display='flex';
+        }
+
+        checkSession();
+
+        async function ensureProfileExists() {
+            const { data, error } = await sb.from('profiles').select('id').eq('id', user.id).single();
+            if (!data) {
+                // محاولة إنشاء بروفايل جديد
+                await sb.from('profiles').insert([{ 
+                    id: user.id, 
+                    full_name: user.user_metadata.full_name || 'عميل جديد', 
+                    wallet_balance: 0 
+                }]);
+            }
+        }
 
         function switchTab(id) {
             document.querySelectorAll('.page-content').forEach(e=>e.classList.add('hidden'));
@@ -361,13 +284,15 @@
 
         async function loadData() {
             const {data} = await sb.from('pricing_tiers').select('*'); if(data) pricingRules=data;
-            const {data:p} = await sb.from('profiles').select('*').eq('id', user.id).single();
+            const {data:p, error} = await sb.from('profiles').select('*').eq('id', user.id).single();
             if(p) {
                 document.getElementById('header-user-name').innerText = p.full_name;
                 document.getElementById('header-balance').innerText = p.wallet_balance;
                 document.getElementById('wallet-page-balance').innerText = p.wallet_balance;
                 document.getElementById('guest-name').value = p.full_name;
                 document.getElementById('guest-phone').value = p.phone;
+            } else if(error) {
+                console.log("Load profile error:", error);
             }
         }
 
@@ -392,7 +317,7 @@
                 directionsService = new google.maps.DirectionsService();
                 directionsRenderer = new google.maps.DirectionsRenderer();
                 directionsRenderer.setMap(map);
-            } catch (e) { console.log("Maps Error"); }
+            } catch (e) { console.log("Maps Error", e); }
         }
 
         function calculateRealDistanceAndPrice() {
@@ -405,6 +330,7 @@
             
             const btn = document.getElementById('calc-btn'); btn.innerText="جاري الحساب...";
             
+            // تأكد من ظهور عنصر الخريطة
             const mapDiv = document.getElementById('map');
             mapDiv.style.display = 'block'; 
             mapDiv.style.height = "200px";
@@ -436,8 +362,13 @@
                 tripData.returnDate = document.getElementById('return-date').value;
                 tripData.returnTime = document.getElementById('return-time').value;
 
+                // رسم المسار
                 directionsService.route({origin:p, destination:d, waypoints:waypoints, travelMode:'DRIVING'}, (rs, st) => {
-                    if(st=='OK') directionsRenderer.setDirections(rs);
+                    if(st=='OK') {
+                         directionsRenderer.setDirections(rs);
+                         // تحديث حجم الخريطة لتظهر بشكل صحيح
+                         google.maps.event.trigger(map, 'resize');
+                    }
                 });
 
                 document.getElementById('summ-dist').innerText = distKm + " km";
@@ -486,27 +417,43 @@
         }
 
         async function loadTrips() {
-             const { data: trips } = await sb
+             // استخدام الاستعلام الآمن
+             const { data: trips, error } = await sb
                 .from('trips')
                 .select('*, drivers:drivers!fk_trips_driver(*), cars:cars!fk_trips_car(*)') 
                 .eq('user_id', user.id)
                 .order('created_at', { ascending: false });
 
+             if(error) {
+                 console.error("Error loading trips:", error);
+                 // محاولة تحميل الرحلات بدون تفاصيل السائق إذا فشل الربط
+                 const { data: simpleTrips } = await sb.from('trips').select('*').eq('user_id', user.id);
+                 if(simpleTrips) renderTrips(simpleTrips);
+                 return;
+             }
+
+             renderTrips(trips);
+        }
+
+        function renderTrips(trips) {
              document.getElementById('trips-list').innerHTML = trips ? trips.map(t => {
                 let statusClass = 'status-pending';
                 let statusText = 'قيد المراجعة';
-                if(t.status === 'approved') { statusClass = 'status-approved'; statusText = 'مقبولة'; }
-                if(t.status === 'driver_assigned') { statusClass = 'status-driver_assigned'; statusText = 'الكابتن في الطريق'; }
-                if(t.status === 'completed') { statusClass = 'status-completed'; statusText = 'مكتملة'; }
+                let statusColor = 'text-amber-500';
+                
+                if(t.status === 'approved') { statusClass = 'status-approved'; statusText = 'مقبولة'; statusColor = 'text-green-500'; }
+                if(t.status === 'driver_assigned') { statusClass = 'status-driver_assigned'; statusText = 'الكابتن في الطريق'; statusColor = 'text-blue-500'; }
+                if(t.status === 'completed') { statusClass = 'status-completed'; statusText = 'مكتملة'; statusColor = 'text-slate-400'; }
 
                 let driverHtml = '';
-                if(t.drivers) {
+                // التحقق من وجود كائن السائق
+                if(t.drivers && t.drivers.name) {
                     driverHtml = `
                     <div class="mt-4 pt-3 border-t border-slate-700">
                         <div class="flex items-center gap-3 bg-slate-800/50 p-3 rounded-xl">
                             <div class="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center text-xl">👨‍✈️</div>
                             <div class="flex-1">
-                                <p class="text-white font-bold text-sm">${t.drivers.name || 'كابتن 24Seven'}</p>
+                                <p class="text-white font-bold text-sm">${t.drivers.name}</p>
                                 <div class="flex gap-2 text-[10px] text-slate-400"><span>${t.cars?.model || 'سيارة'}</span> | <span class="font-num">${t.cars?.plate_number || '---'}</span></div>
                             </div>
                             <a href="tel:${t.drivers.phone}" class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center text-white"><i class="fas fa-phone"></i></a>
@@ -519,12 +466,12 @@
                 <div class="glass-card p-4 trip-card animate-fade-in-up mb-4 border border-slate-700/50">
                     <div class="flex justify-between items-start mb-2">
                         <span class="trip-status-badge ${statusClass}">${statusText}</span>
-                        <span class="font-bold font-num text-amber-500">${t.estimated_price} EGP</span>
+                        <span class="font-bold font-num ${statusColor}">${t.estimated_price} EGP</span>
                     </div>
                     <div class="mt-6"><p class="text-xs text-slate-300 font-bold">${t.pickup_location}</p><p class="text-xs text-slate-300 font-bold mt-2">${t.dropoff_location}</p></div>
                     ${driverHtml}
                 </div>`;
-             }).join('') : '';
+             }).join('') : '<p class="text-center text-slate-500">لا توجد رحلات سابقة</p>';
         }
 
         async function loadWallet() {
@@ -585,3 +532,5 @@
             window.location.reload(); 
         }
     </script>
+</body>
+</html>
