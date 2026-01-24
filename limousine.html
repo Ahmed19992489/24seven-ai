@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --bg-dark: #0f172a; --primary: #f59e0b; --card-bg: #1e293b; }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-dark); color: #f8fafc; overflow-x: hidden; padding-bottom: 90px; }
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-dark); color: #f8fafc; overflow-x: hidden; padding-bottom: 100px; }
         .font-num { font-family: 'Outfit', sans-serif; }
         .glass-card { background: var(--card-bg); border: 1px solid #334155; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
         .input-field { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 14px; width: 100%; color: white; outline: none; transition: 0.3s; }
@@ -21,26 +21,21 @@
         .nav-item i { font-size: 1.2rem; margin-bottom: 2px; }
         .car-option { border: 2px solid transparent; background: #0f172a; padding: 10px; border-radius: 12px; cursor: pointer; transition: 0.3s; position: relative; overflow: hidden; }
         .car-option.active { border-color: var(--primary); background: rgba(245, 158, 11, 0.1); }
-        .car-img { height: 50px; object-fit: contain; margin: 0 auto 5px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); transition: transform 0.3s; }
+        .car-img { height: 50px; object-fit: contain; margin: 0 auto 5px; transition: transform 0.3s; }
         .car-option.active .car-img { transform: scale(1.1); }
         .trip-type-selector { display: flex; background: #0f172a; padding: 4px; border-radius: 12px; margin-bottom: 15px; }
         .trip-type-btn { flex: 1; text-align: center; padding: 8px; border-radius: 8px; font-size: 0.8rem; color: #94a3b8; cursor: pointer; }
         .trip-type-btn.active { background: var(--primary); color: #000; font-weight: bold; }
         .checkbox-wrapper { display: flex; align-items: center; gap: 8px; cursor: pointer; background: #0f172a; padding: 10px; border-radius: 10px; border: 1px solid #334155; }
         .checkbox-wrapper input { accent-color: var(--primary); width: 16px; height: 16px; }
-        
-        /* خريطة */
         #map-container { height: 0; overflow: hidden; transition: height 0.5s ease; border-radius: 12px; margin-bottom: 15px; border: 1px solid #334155; }
         #map { width: 100%; height: 100%; }
-        
-        /* إخفاء العناصر */
-        .hidden-animated { display: none; opacity: 0; transition: opacity 0.3s; }
-        .visible-animated { display: block; opacity: 1; }
+        .hidden-animated { display: none; }
     </style>
 </head>
 <body>
 
-    <header class="p-5 flex justify-between items-center bg-slate-900/80 backdrop-blur-md sticky top-0 z-40 border-b border-slate-800">
+    <header class="p-5 flex justify-between items-center bg-slate-900/90 backdrop-blur-md sticky top-0 z-40 border-b border-slate-800">
         <div class="flex items-center gap-2">
             <div class="w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-600 rounded-lg flex items-center justify-center font-black text-slate-900">24</div>
             <h1 class="text-lg font-bold">Seven <span class="text-xs font-normal text-slate-400 block -mt-1">Limousine</span></h1>
@@ -48,9 +43,9 @@
         <div class="flex items-center gap-3" onclick="handleLogout()">
             <div class="text-left">
                 <p id="header-user-name" class="text-sm font-bold leading-tight">زائر</p>
-                <p id="header-balance" class="text-xs text-amber-500 font-num">0.00 EGP</p>
+                <p class="text-xs text-amber-500 font-num font-bold"><span id="header-balance">0.00</span> EGP</p>
             </div>
-            <div class="w-10 h-10 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center overflow-hidden">
+            <div class="w-10 h-10 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center">
                 <i class="fas fa-user text-slate-400"></i>
             </div>
         </div>
@@ -66,7 +61,8 @@
 
                 <div class="trip-type-selector">
                     <div onclick="setTripType('one-way')" class="trip-type-btn active" id="btn-one-way">ذهاب فقط</div>
-                    <div onclick="setTripType('round')" class="trip-type-btn" id="btn-round">ذهاب وعودة</div>
+                    <div onclick="setTripType('round-same')" class="trip-type-btn" id="btn-round-same">ذهاب وعودة (نفس اليوم)</div>
+                    <div onclick="setTripType('round-diff')" class="trip-type-btn" id="btn-round-diff">أيام مختلفة</div>
                 </div>
 
                 <div id="map-container"><div id="map"></div></div>
@@ -75,12 +71,23 @@
                     <div class="absolute right-[22px] top-10 bottom-10 w-0.5 bg-slate-700 border-r border-dashed border-slate-600"></div>
                     <div class="relative">
                         <i class="fas fa-circle-dot text-green-500 absolute top-4 right-4 text-xs z-10"></i>
-                        <input id="pickup" type="text" placeholder="من (نقطة الانطلاق)" class="input-field pr-10">
+                        <input id="pickup" type="text" placeholder="نقطة الانطلاق (من)" class="input-field pr-10">
                     </div>
+                    
+                    <div id="extra-point-div" class="relative hidden">
+                        <i class="fas fa-plus-circle text-blue-500 absolute top-4 right-4 text-xs z-10"></i>
+                        <input id="extra-point" type="text" placeholder="نقطة إضافية (اختياري)" class="input-field pr-10">
+                    </div>
+
                     <div class="relative">
                         <i class="fas fa-location-dot text-amber-500 absolute top-4 right-4 text-xs z-10"></i>
-                        <input id="dropoff" type="text" placeholder="إلى (الوجهة)" class="input-field pr-10">
+                        <input id="dropoff" type="text" placeholder="الوجهة (إلى)" class="input-field pr-10">
                     </div>
+
+                    <label class="checkbox-wrapper w-fit">
+                        <input type="checkbox" id="opt-extra-point" onchange="toggleExtraPoint()">
+                        <span class="text-xs text-white">إضافة نقطة توقف (+ تكلفة إضافية)</span>
+                    </label>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3 mb-4">
@@ -94,26 +101,34 @@
                     </div>
                 </div>
 
-                <div id="return-date-container" class="hidden mb-4">
-                    <label class="text-xs text-slate-400 mb-1 block">تاريخ العودة</label>
-                    <input type="date" id="return-date" class="input-field text-sm bg-slate-800 border-amber-500/50">
-                    <p class="text-[10px] text-slate-500 mt-1">* نفس اليوم = انتظار ساعتين (×1.75) | يوم مختلف = رحلتين (×2)</p>
+                <div id="return-date-container" class="hidden mb-4 p-3 bg-slate-800 rounded-xl border border-amber-500/30">
+                    <h3 class="text-xs font-bold text-amber-500 mb-2">تفاصيل العودة</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-xs text-slate-400 mb-1 block">تاريخ العودة</label>
+                            <input type="date" id="return-date" class="input-field text-sm">
+                        </div>
+                        <div>
+                            <label class="text-xs text-slate-400 mb-1 block">وقت العودة</label>
+                            <input type="time" id="return-time" class="input-field text-sm">
+                        </div>
+                    </div>
                 </div>
 
                 <p class="text-xs text-slate-400 font-bold mb-2">اختر الفئة</p>
                 <div class="grid grid-cols-3 gap-3 mb-4">
                     <div onclick="selectCar('sedan')" class="car-option active" id="car-sedan">
-                        <img src="https://cdn-icons-png.flaticon.com/512/3202/3202926.png" class="car-img" alt="Sedan">
+                        <img src="images/sedan.png" class="car-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3202/3202926.png'">
                         <p class="text-center text-xs font-bold mt-1">Sedan</p>
                         <p class="text-center text-[10px] text-slate-400">4 ركاب</p>
                     </div>
                     <div onclick="selectCar('suv')" class="car-option" id="car-suv">
-                        <img src="https://cdn-icons-png.flaticon.com/512/3202/3202022.png" class="car-img" alt="SUV">
+                        <img src="images/suv.png" class="car-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3202/3202022.png'">
                         <p class="text-center text-xs font-bold mt-1">SUV</p>
                         <p class="text-center text-[10px] text-slate-400">عائلية</p>
                     </div>
                     <div onclick="selectCar('van')" class="car-option" id="car-van">
-                        <img src="https://cdn-icons-png.flaticon.com/512/75/75780.png" class="car-img" alt="Van" style="filter: invert(1);">
+                        <img src="images/van.png" class="car-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/75/75780.png'">
                         <p class="text-center text-xs font-bold mt-1">Van</p>
                         <p class="text-center text-[10px] text-slate-400">14 راكب</p>
                     </div>
@@ -142,53 +157,64 @@
                 </div>
 
                 <button onclick="calculateRealDistanceAndPrice()" id="calc-btn" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl font-bold text-slate-900 shadow-lg active:scale-95 transition">
-                    عرض السعر والحجز
+                    حساب السعر والحجز
                 </button>
             </div>
+        </div>
 
-            <div id="price-modal" class="fixed inset-0 bg-black/80 z-50 hidden flex-col justify-end">
-                <div class="bg-slate-800 rounded-t-3xl p-6 border-t border-slate-700 animate-slide-up">
-                    <div class="w-12 h-1 bg-slate-600 rounded-full mx-auto mb-6"></div>
-                    <div class="flex justify-between items-end mb-6">
-                        <div>
-                            <p class="text-slate-400 text-sm">التكلفة التقديرية</p>
-                            <h3 class="text-4xl font-num font-black text-white" id="modal-price">0</h3>
-                            <span class="text-amber-500 font-bold text-sm">EGP</span>
-                            <p class="text-[10px] text-slate-400 mt-1" id="modal-note-text"></p>
-                        </div>
-                        <div class="text-left">
-                            <p class="text-white font-bold text-lg" id="modal-dist">0 km</p>
-                            <p class="text-xs text-slate-400" id="modal-type">Sedan</p>
+        <div id="details-modal" class="fixed inset-0 bg-black/90 z-50 hidden items-center justify-center p-4">
+            <div class="bg-slate-800 rounded-2xl w-full max-w-md p-6 border border-slate-700 shadow-2xl overflow-y-auto max-h-[90vh]">
+                <h3 class="text-xl font-bold text-white mb-2">ملخص الحجز</h3>
+                
+                <div class="bg-slate-900 p-4 rounded-xl mb-4 border border-slate-700">
+                    <div class="flex justify-between mb-2">
+                        <span class="text-slate-400 text-xs">نوع الرحلة</span>
+                        <span class="text-white text-xs font-bold" id="summ-type">--</span>
+                    </div>
+                    <div class="flex justify-between mb-2">
+                        <span class="text-slate-400 text-xs">المسافة</span>
+                        <span class="text-white text-xs font-bold font-num" id="summ-dist">--</span>
+                    </div>
+                    <div class="flex justify-between border-t border-slate-700 pt-2 mt-2">
+                        <span class="text-slate-400 text-sm">الإجمالي</span>
+                        <span class="text-amber-500 text-xl font-black font-num" id="summ-price">0 EGP</span>
+                    </div>
+                    <p class="text-[10px] text-slate-500 mt-1" id="summ-note"></p>
+                </div>
+
+                <h4 class="text-sm font-bold text-white mb-3">بيانات الدفع والتواصل</h4>
+                <div class="space-y-3">
+                    <input type="text" id="guest-name" placeholder="الاسم بالكامل" class="input-field">
+                    <input type="tel" id="guest-phone" placeholder="رقم الهاتف" class="input-field font-num">
+                    <input type="tel" id="guest-whatsapp" placeholder="رقم الواتساب" class="input-field font-num">
+                    
+                    <div>
+                        <label class="text-xs text-slate-400 mb-2 block">طريقة الدفع</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div onclick="selectPayment('cash')" class="pay-opt active p-3 rounded-xl bg-amber-500 text-slate-900 border border-slate-600 text-center cursor-pointer text-xs font-bold" id="pay-cash">كاش</div>
+                            <div onclick="selectPayment('instapay')" class="pay-opt p-3 rounded-xl bg-slate-900 text-white border border-slate-600 text-center cursor-pointer text-xs" id="pay-instapay">InstaPay</div>
+                            <div onclick="selectPayment('wallet')" class="pay-opt p-3 rounded-xl bg-slate-900 text-white border border-slate-600 text-center cursor-pointer text-xs" id="pay-wallet">المحفظة</div>
                         </div>
                     </div>
-                    <button onclick="showDetailsForm()" class="w-full py-4 bg-green-600 hover:bg-green-700 rounded-xl font-bold text-white text-lg shadow-lg mb-3">
-                        تأكيد ومتابعة <i class="fas fa-arrow-left mr-2"></i>
-                    </button>
-                    <button onclick="document.getElementById('price-modal').style.display='none'" class="w-full py-3 text-slate-400 font-bold">إلغاء</button>
+                    
+                    <button onclick="confirmFinalBooking()" id="confirm-btn" class="w-full py-3 bg-green-600 hover:bg-green-500 rounded-xl font-bold text-white mt-4">تأكيد الحجز</button>
+                    <button onclick="document.getElementById('details-modal').style.display='none'" class="w-full py-3 text-slate-400 font-bold text-sm">تراجع</button>
                 </div>
             </div>
         </div>
 
         <div id="page-trips" class="page-content hidden">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold text-white">رحلاتي</h2>
-                <button onclick="loadTrips()" class="text-amber-500 text-sm"><i class="fas fa-sync-alt"></i> تحديث</button>
-            </div>
-            <div id="trips-list" class="space-y-4 pb-20">
-                <div class="text-center py-20 text-slate-500">
-                    <i class="fas fa-spinner fa-spin text-2xl"></i>
-                    <p class="mt-2">جاري التحميل...</p>
-                </div>
-            </div>
+            <h2 class="text-xl font-bold mb-4 text-white">رحلاتي</h2>
+            <div id="trips-list" class="space-y-4 pb-20"></div>
         </div>
 
         <div id="page-wallet" class="page-content hidden">
-            <div class="glass-card p-6 mb-6 bg-gradient-to-br from-slate-800 to-slate-900 border-amber-500/20">
+            <div class="glass-card p-6 mb-6 bg-gradient-to-br from-slate-800 to-slate-900 border-amber-500/20 text-center">
                 <p class="text-slate-400 mb-1">رصيدك الحالي</p>
-                <h2 class="text-5xl font-num font-black text-white mb-2" id="wallet-balance-page">0.00</h2>
-                <p class="text-amber-500 font-bold text-sm">الجنيه المصري EGP</p>
+                <h2 class="text-5xl font-num font-black text-white" id="wallet-page-balance">0.00</h2>
+                <p class="text-amber-500 font-bold text-sm">EGP</p>
             </div>
-
+            
             <div class="glass-card p-5">
                 <h3 class="font-bold mb-4 flex items-center gap-2"><i class="fas fa-bolt text-purple-500"></i> شحن الرصيد</h3>
                 <div class="bg-white p-3 rounded-xl mb-4 flex items-center gap-3">
@@ -205,333 +231,95 @@
                 </div>
             </div>
             
-            <h3 class="font-bold mt-6 mb-3">آخر العمليات</h3>
+            <h3 class="font-bold mt-6 mb-3">سجل العمليات</h3>
             <div id="transactions-list" class="space-y-2"></div>
         </div>
 
         <div id="page-support" class="page-content hidden h-[80vh] flex flex-col items-center justify-center text-center">
-            <div class="w-24 h-24 bg-green-500/10 rounded-full flex items-center justify-center mb-6">
-                <i class="fab fa-whatsapp text-6xl text-green-500"></i>
-            </div>
-            <h2 class="text-2xl font-bold text-white mb-2">الدعم الفني 24/7</h2>
-            <p class="text-slate-400 mb-8 max-w-xs mx-auto">فريق خدمة العملاء جاهز لمساعدتك في أي وقت.</p>
-            <a href="https://wa.me/201121748885" target="_blank" class="bg-[#25D366] text-white px-8 py-4 rounded-full font-bold text-lg shadow-lg shadow-green-500/20 hover:scale-105 transition">
-                فتح واتساب الآن
-            </a>
+             <div class="w-24 h-24 bg-green-500/10 rounded-full flex items-center justify-center mb-6"><i class="fab fa-whatsapp text-6xl text-green-500"></i></div>
+             <a href="https://wa.me/201121748885" class="bg-green-600 text-white px-8 py-4 rounded-full font-bold text-lg">تواصل معنا</a>
         </div>
-
     </div>
 
     <nav class="bottom-nav">
-        <div onclick="switchTab('booking')" class="nav-item active" id="nav-booking">
-            <i class="fas fa-map-location-dot"></i>
-            <span>حجز</span>
-        </div>
-        <div onclick="switchTab('trips')" class="nav-item" id="nav-trips">
-            <i class="fas fa-list-ul"></i>
-            <span>رحلاتي</span>
-        </div>
-        <div onclick="switchTab('wallet')" class="nav-item" id="nav-wallet">
-            <i class="fas fa-wallet"></i>
-            <span>المحفظة</span>
-        </div>
-        <div onclick="switchTab('support')" class="nav-item" id="nav-support">
-            <i class="fas fa-headset"></i>
-            <span>الدعم</span>
-        </div>
+        <div onclick="switchTab('booking')" class="nav-item active" id="nav-booking"><i class="fas fa-car"></i><span>حجز</span></div>
+        <div onclick="switchTab('trips')" class="nav-item" id="nav-trips"><i class="fas fa-list"></i><span>رحلاتي</span></div>
+        <div onclick="switchTab('wallet')" class="nav-item" id="nav-wallet"><i class="fas fa-wallet"></i><span>المحفظة</span></div>
+        <div onclick="switchTab('support')" class="nav-item" id="nav-support"><i class="fas fa-headset"></i><span>الدعم</span></div>
     </nav>
 
-    <div id="details-modal" class="fixed inset-0 bg-black/90 z-50 hidden items-center justify-center p-4">
-        <div class="bg-slate-800 rounded-2xl w-full max-w-md p-6 border border-slate-700 shadow-2xl">
-            <h3 class="text-xl font-bold text-white mb-1">بيانات التواصل</h3>
-            <p class="text-slate-400 text-xs mb-6">لإرسال اللوكيشن والتواصل مع الكابتن</p>
-            
-            <div class="space-y-4">
-                <div>
-                    <label class="text-xs text-slate-400 mb-1 block">الاسم بالكامل</label>
-                    <input type="text" id="guest-name" placeholder="اسم المسافر" class="input-field">
-                </div>
-                
-                <div>
-                    <label class="text-xs text-slate-400 mb-1 block">رقم الهاتف</label>
-                    <input type="tel" id="guest-phone" placeholder="01xxxxxxxxx" class="input-field font-num">
-                </div>
-
-                <div>
-                    <label class="text-xs text-slate-400 mb-1 block">رقم الواتساب (لإرسال اللوكيشن)</label>
-                    <input type="tel" id="guest-whatsapp" placeholder="01xxxxxxxxx" class="input-field font-num">
-                </div>
-
-                <div class="pt-4 flex gap-3">
-                    <button onclick="confirmFinalBooking()" id="confirm-btn" class="flex-1 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold py-3 rounded-xl shadow-lg">تأكيد نهائي</button>
-                    <button onclick="document.getElementById('details-modal').style.display='none'" class="flex-1 bg-slate-700 text-white font-bold py-3 rounded-xl">رجوع</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <div id="login-screen" class="fixed inset-0 bg-slate-900 z-[100] flex flex-col items-center justify-center p-6 text-center">
-        <div class="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-600 rounded-2xl flex items-center justify-center font-black text-3xl text-slate-900 mb-6 shadow-xl shadow-amber-500/20">24</div>
-        <h1 class="text-3xl font-bold text-white mb-2">أهلاً بك في 24Seven</h1>
-        <p class="text-slate-400 mb-8">تجربة ليموزين فاخرة تبدأ من هنا</p>
-        
-        <div class="w-full max-w-sm space-y-3">
-            <button onclick="handleGoogleLogin()" class="w-full bg-white text-slate-900 font-bold py-4 rounded-xl flex items-center justify-center gap-3 hover:bg-gray-100 transition">
-                <img src="https://img.icons8.com/color/48/google-logo.png" class="w-6 h-6"> متابعة باستخدام Google
-            </button>
-            <div class="relative py-4">
-                <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-700"></div></div>
-                <div class="relative flex justify-center text-xs uppercase"><span class="bg-slate-900 px-2 text-slate-500">أو</span></div>
-            </div>
-            <input type="email" id="login-email" placeholder="البريد الإلكتروني" class="input-field text-center">
-            <input type="password" id="login-pass" placeholder="كلمة المرور" class="input-field text-center">
-            <div class="flex gap-3 mt-2">
-                <button onclick="emailLogin()" class="flex-1 bg-slate-800 text-white font-bold py-3 rounded-xl border border-slate-700">دخول</button>
-                <button onclick="emailSignUp()" class="flex-1 bg-slate-800 text-slate-300 font-bold py-3 rounded-xl border border-slate-700">حساب جديد</button>
-            </div>
-        </div>
+         <div class="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-600 rounded-2xl flex items-center justify-center font-black text-3xl text-slate-900 mb-6 shadow-xl shadow-amber-500/20">24</div>
+         <h1 class="text-3xl font-bold text-white mb-8">24Seven</h1>
+         <button onclick="handleGoogleLogin()" class="w-full bg-white text-slate-900 font-bold py-3 rounded-xl mb-4 flex justify-center items-center gap-2"><img src="https://img.icons8.com/color/48/google-logo.png" class="w-5"> Google Login</button>
+         <div class="w-full border-t border-slate-700 my-4 relative"><span class="absolute top-[-10px] left-1/2 -translate-x-1/2 bg-slate-900 px-2 text-xs text-slate-500">OR</span></div>
+         <input id="login-email" type="email" placeholder="البريد الإلكتروني" class="input-field mb-2 text-center">
+         <input id="login-pass" type="password" placeholder="كلمة المرور" class="input-field mb-4 text-center">
+         <div class="flex gap-2 w-full">
+            <button onclick="emailLogin()" class="flex-1 bg-amber-500 text-slate-900 font-bold py-3 rounded-xl">دخول</button>
+            <button onclick="emailSignUp()" class="flex-1 bg-slate-800 text-slate-300 font-bold py-3 rounded-xl border border-slate-700">جديد</button>
+         </div>
     </div>
 
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBFcMkqiLCX2z94HrIxmAnT47gpxIocB_E&libraries=places&language=ar"></script>
     
     <script>
-        const supabaseUrl = 'https://qxtlsfmfetwcflbpvwuf.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4dGxzZm1mZXR3Y2ZsYnB2d3VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0MzMzODEsImV4cCI6MjA3ODAwOTM4MX0.FFGXNfx0FDA4FmJB1gVorNigs9nRoO4q1pCj2BOMDbU';
-        const sbClient = supabase.createClient(supabaseUrl, supabaseKey);
-
-        let currentUser = null;
-        let pricingRules = [];
-        let tripData = { type: 'one-way', car: 'sedan', pickup: '', dropoff: '', dist: 0, price: 0 };
+        const sb = supabase.createClient('https://qxtlsfmfetwcflbpvwuf.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4dGxzZm1mZXR3Y2ZsYnB2d3VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0MzMzODEsImV4cCI6MjA3ODAwOTM4MX0.FFGXNfx0FDA4FmJB1gVorNigs9nRoO4q1pCj2BOMDbU');
+        let user = null, pricingRules = [], tripData = {type:'one-way', car:'sedan', pay:'cash', dist: 0, price: 0};
         let map, directionsService, directionsRenderer;
 
-        // --- Init ---
-        (async function init() {
-            const { data } = await sbClient.auth.getSession();
-            if (data.session) {
-                currentUser = data.session.user;
-                document.getElementById('login-screen').style.display = 'none';
-                loadUserData();
-                loadPricingRules();
-                initMaps();
-            }
+        (async () => {
+            const {data} = await sb.auth.getSession();
+            if(data.session) { user = data.session.user; document.getElementById('login-screen').style.display='none'; loadData(); initMaps(); }
         })();
 
         function switchTab(id) {
-            document.querySelectorAll('.page-content').forEach(e => e.classList.add('hidden'));
-            document.getElementById(`page-${id}`).classList.remove('hidden');
-            document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
-            document.getElementById(`nav-${id}`).classList.add('active');
-            if(id === 'trips') loadTrips();
-            if(id === 'wallet') { loadWallet(); loadTransactions(); }
+            document.querySelectorAll('.page-content').forEach(e=>e.classList.add('hidden'));
+            document.getElementById('page-'+id).classList.remove('hidden');
+            document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active'));
+            document.getElementById('nav-'+id).classList.add('active');
+            if(id==='trips') loadTrips();
+            if(id==='wallet') { loadWallet(); loadTransactions(); }
         }
 
-        function setTripType(type) {
-            tripData.type = type;
-            document.querySelectorAll('.trip-type-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(`btn-${type}`).classList.add('active');
-            
-            // Show/Hide Return Date
-            const returnContainer = document.getElementById('return-date-container');
-            if(type === 'round') returnContainer.classList.remove('hidden');
-            else returnContainer.classList.add('hidden');
+        function setTripType(t) {
+            tripData.type = t;
+            document.querySelectorAll('.trip-type-btn').forEach(b=>b.classList.remove('active'));
+            document.getElementById('btn-'+t).classList.add('active');
+            document.getElementById('return-date-container').classList.toggle('hidden', t!=='round-diff');
         }
-
-        function selectCar(type) {
-            tripData.car = type;
-            document.querySelectorAll('.car-option').forEach(e => e.classList.remove('active'));
-            document.getElementById(`car-${type}`).classList.add('active');
+        function selectCar(c) {
+            tripData.car = c;
+            document.querySelectorAll('.car-option').forEach(e=>e.classList.remove('active'));
+            document.getElementById('car-'+c).classList.add('active');
         }
-
-        async function loadPricingRules() {
-            const { data } = await sbClient.from('pricing_tiers').select('*');
-            if(data) pricingRules = data;
+        function selectPayment(m) {
+            tripData.pay = m;
+            document.querySelectorAll('.pay-opt').forEach(e=>{e.classList.remove('bg-amber-500','text-slate-900'); e.classList.add('bg-slate-900','text-white');});
+            const el = document.getElementById('pay-'+m);
+            el.classList.remove('bg-slate-900','text-white'); el.classList.add('bg-amber-500','text-slate-900');
         }
+        function toggleExtraPoint() { document.getElementById('extra-point-div').classList.toggle('hidden'); }
 
-        // --- NEW: Smart Pricing Logic ---
-        function calculateRealDistanceAndPrice() {
-            const p = document.getElementById('pickup').value;
-            const d = document.getElementById('dropoff').value;
-            const date = document.getElementById('trip-date').value;
-            const time = document.getElementById('trip-time').value;
-            const returnDate = document.getElementById('return-date').value;
-
-            if(!p || !d || !date || !time) return alert("يرجى إكمال بيانات الرحلة (الموقع، الوجهة، التاريخ، الوقت)");
-            if(tripData.type === 'round' && !returnDate) return alert("يرجى تحديد تاريخ العودة");
-
-            const btn = document.getElementById('calc-btn');
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الاتصال بالخرائط...';
-
-            document.getElementById('map-container').style.height = '200px';
-
-            const service = new google.maps.DistanceMatrixService();
-            service.getDistanceMatrix(
-                { origins: [p], destinations: [d], travelMode: 'DRIVING' },
-                (response, status) => {
-                    if (status !== 'OK') { alert("خطأ في الخرائط"); btn.innerHTML = 'عرض السعر والحجز'; return; }
-                    const element = response.rows[0].elements[0];
-                    if(element.status !== 'OK') { alert("لا يمكن حساب المسافة"); btn.innerHTML = 'عرض السعر والحجز'; return; }
-
-                    const distKm = Math.ceil(element.distance.value / 1000);
-                    
-                    // Draw Route
-                    const request = { origin: p, destination: d, travelMode: 'DRIVING' };
-                    directionsService.route(request, function(result, status) {
-                        if (status == 'OK') directionsRenderer.setDirections(result);
-                    });
-
-                    // --- PRICE CALCULATION ---
-                    let finalPrice = 0;
-                    
-                    // 1. Get rules for car
-                    const carRules = pricingRules.filter(r => r.car_type === tripData.car);
-                    let rule = carRules.find(r => distKm >= r.min_km && distKm <= r.max_km);
-                    if (!rule && carRules.length > 0) rule = carRules.sort((a, b) => b.max_km - a.max_km)[0];
-
-                    if (rule) {
-                        finalPrice = Number(rule.base_price) + (distKm * Number(rule.price_per_km));
-                    } else {
-                        const defaults = { sedan: 8, suv: 12, van: 15 };
-                        finalPrice = 150 + (distKm * (defaults[tripData.car] || 10)); 
-                    }
-
-                    // --- ROUND TRIP LOGIC (Enhanced) ---
-                    let multiplierNote = '';
-                    if(tripData.type === 'round') {
-                        // Check Same Day
-                        if(date === returnDate) {
-                            finalPrice = finalPrice * 1.75;
-                            multiplierNote = "(شامل ذهاب وعودة نفس اليوم + ساعتين انتظار)";
-                        } else {
-                            finalPrice = finalPrice * 2;
-                            multiplierNote = "(شامل ذهاب وعودة أيام مختلفة)";
-                        }
-                    }
-
-                    tripData.pickup = p; tripData.dropoff = d; tripData.dist = distKm; tripData.price = Math.round(finalPrice);
-                    tripData.date = date; tripData.time = time; tripData.returnDate = returnDate;
-                    tripData.passengers = document.getElementById('pax-count').value;
-                    tripData.bags = document.getElementById('bags-count').value;
-                    tripData.childSeat = document.getElementById('opt-child-seat').checked;
-                    tripData.wheelchair = document.getElementById('opt-wheelchair').checked;
-
-                    document.getElementById('modal-price').innerText = tripData.price;
-                    document.getElementById('modal-dist').innerText = distKm + ' km';
-                    document.getElementById('modal-type').innerText = tripData.car.toUpperCase();
-                    document.getElementById('modal-note-text').innerText = multiplierNote;
-                    
-                    document.getElementById('price-modal').style.display = 'flex';
-                    btn.innerHTML = 'عرض السعر والحجز';
-                }
-            );
-        }
-
-        function showDetailsForm() {
-            document.getElementById('price-modal').style.display = 'none';
-            document.getElementById('details-modal').style.display = 'flex';
-            if(currentUser.user_metadata) {
-                document.getElementById('guest-name').value = currentUser.user_metadata.full_name || '';
-                document.getElementById('guest-phone').value = currentUser.user_metadata.phone || '';
+        async function loadData() {
+            const {data} = await sb.from('pricing_tiers').select('*'); if(data) pricingRules=data;
+            const {data:p} = await sb.from('profiles').select('*').eq('id', user.id).single();
+            if(p) {
+                document.getElementById('header-user-name').innerText = p.full_name;
+                document.getElementById('header-balance').innerText = p.wallet_balance;
+                document.getElementById('wallet-page-balance').innerText = p.wallet_balance;
+                document.getElementById('guest-name').value = p.full_name;
+                document.getElementById('guest-phone').value = p.phone;
             }
         }
 
-        async function confirmFinalBooking() {
-            const name = document.getElementById('guest-name').value;
-            const phone = document.getElementById('guest-phone').value;
-            const wa = document.getElementById('guest-whatsapp').value;
-            if(!name || !phone) return alert("الاسم ورقم الهاتف مطلوبان");
-
-            const btn = document.getElementById('confirm-btn');
-            btn.innerHTML = 'جاري الحجز...'; btn.disabled = true;
-
-            await sbClient.from('profiles').upsert({ id: currentUser.id, full_name: name, phone: phone, updated_at: new Date() });
-
-            let typeText = tripData.type === 'round' ? (tripData.date === tripData.returnDate ? 'ذهاب وعودة (نفس اليوم)' : 'ذهاب وعودة (أيام مختلفة)') : 'ذهاب فقط';
-
-            const adminNote = `
-نوع الرحلة: ${typeText}
-📅 الذهاب: ${tripData.date} - ${tripData.time}
-${tripData.type === 'round' ? `🔙 العودة: ${tripData.returnDate}` : ''}
-👤 الركاب: ${tripData.passengers} | 🧳 الشنط: ${tripData.bags}
-👶 كرسي أطفال: ${tripData.childSeat ? 'نعم' : 'لا'} | ♿ كرسي متحرك: ${tripData.wheelchair ? 'نعم' : 'لا'}
-📱 واتساب: ${wa}
-            `.trim();
-
-            const { error } = await sbClient.from('trips').insert([{
-                user_id: currentUser.id, pickup_location: tripData.pickup, dropoff_location: tripData.dropoff,
-                distance_km: tripData.dist, estimated_price: tripData.price, car_type: tripData.car,
-                status: 'pending', admin_notes: adminNote, payment_status: 'unpaid'
-            }]);
-
-            if(error) {
-                alert("حدث خطأ: " + error.message);
-                btn.innerHTML = 'تأكيد نهائي'; btn.disabled = false;
-            } else {
-                alert("🎉 تم استلام طلبك بنجاح!");
-                document.getElementById('details-modal').style.display = 'none';
-                switchTab('trips');
-                btn.innerHTML = 'تأكيد نهائي'; btn.disabled = false;
-            }
-        }
-
-        // --- Data Loading ---
-        async function loadTrips() {
-            const list = document.getElementById('trips-list');
-            list.innerHTML = '<div class="text-center p-10"><i class="fas fa-spinner fa-spin text-2xl text-amber-500"></i></div>';
-            const { data: trips } = await sbClient.from('trips').select('*, drivers:driver_id(name, phone), cars:car_id(model, plate_number, brand)').eq('user_id', currentUser.id).order('created_at', { ascending: false });
-
-            list.innerHTML = '';
-            if(!trips || trips.length === 0) { list.innerHTML = '<div class="text-center py-20 text-slate-500"><i class="fas fa-road text-4xl mb-4 opacity-50"></i><p>لا توجد رحلات سابقة</p></div>'; return; }
-
-            trips.forEach(t => {
-                let statusBadge = '', driverSection = '';
-                if(t.status === 'pending') {
-                    statusBadge = '<span class="bg-amber-500/10 text-amber-500 px-2 py-1 rounded text-[10px] font-bold">قيد الانتظار</span>';
-                    driverSection = `<div class="mt-3 pt-3 border-t border-slate-700 text-xs text-slate-400 flex items-center gap-2"><i class="fas fa-clock fa-spin"></i> جاري تعيين كابتن...</div>`;
-                } else if(t.status === 'approved') {
-                    statusBadge = '<span class="bg-blue-500/10 text-blue-500 px-2 py-1 rounded text-[10px] font-bold">مقبولة</span>';
-                    const drName = t.drivers?.name || 'تم التعيين', carInfo = t.cars ? `${t.cars.brand} - ${t.cars.plate_number}` : 'سيارة';
-                    driverSection = `<div class="mt-3 pt-3 border-t border-slate-700 flex items-center gap-3"><div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center"><i class="fas fa-user-tie text-slate-300"></i></div><div><p class="text-sm font-bold text-white">${drName}</p><p class="text-xs text-slate-400">${carInfo}</p></div><a href="tel:${t.drivers?.phone}" class="mr-auto w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white"><i class="fas fa-phone"></i></a></div>`;
-                } else { statusBadge = '<span class="bg-green-500/10 text-green-500 px-2 py-1 rounded text-[10px] font-bold">مكتملة</span>'; }
-                list.innerHTML += `<div class="glass-card p-4"><div class="flex justify-between items-start mb-2"><h3 class="font-bold text-white text-lg">${t.dropoff_location.split(',')[0]}</h3>${statusBadge}</div><p class="text-xs text-slate-400 mb-4"><i class="fas fa-map-marker-alt text-amber-500 ml-1"></i> من: ${t.pickup_location.split(',')[0]}</p><div class="flex justify-between items-center text-sm font-num"><span class="text-slate-300">${new Date(t.created_at).toLocaleDateString()}</span><span class="text-amber-500 font-bold text-lg">${t.estimated_price} EGP</span></div>${driverSection}</div>`;
-            });
-        }
-
-        async function loadWallet() {
-            const { data } = await sbClient.from('profiles').select('wallet_balance').eq('id', currentUser.id).single();
-            const bal = (data?.wallet_balance || 0).toFixed(2);
-            document.getElementById('wallet-balance-page').innerText = bal;
-            document.getElementById('header-balance').innerText = bal + ' EGP';
-        }
-
-        async function submitDeposit() {
-            const amount = document.getElementById('deposit-amount').value;
-            const ref = document.getElementById('deposit-ref').value;
-            if(!amount || !ref) return alert("أكمل البيانات");
-            await sbClient.from('transactions').insert([{user_id: currentUser.id, amount, reference_id: ref, status: 'pending'}]);
-            alert("تم إرسال الطلب للمراجعة"); loadTransactions();
-        }
-
-        async function loadTransactions() {
-            const list = document.getElementById('transactions-list');
-            const { data } = await sbClient.from('transactions').select('*').eq('user_id', currentUser.id).order('created_at', {ascending: false});
-            list.innerHTML = '';
-            if(data) {
-                data.forEach(tx => {
-                    const color = tx.status === 'approved' ? 'text-green-500' : (tx.status === 'pending' ? 'text-amber-500' : 'text-red-500');
-                    list.innerHTML += `<div class="flex justify-between items-center p-3 bg-slate-800 rounded-lg border border-slate-700"><div><p class="text-white font-bold font-num">${tx.amount} EGP</p><p class="text-[10px] text-slate-500">Ref: ${tx.reference_id}</p></div><span class="text-xs font-bold ${color}">${tx.status}</span></div>`;
-                });
-            }
-        }
-
-        async function loadUserData() {
-            const { data } = await sbClient.from('profiles').select('*').eq('id', currentUser.id).single();
-            if(data) document.getElementById('header-user-name').innerText = data.full_name || 'عميلنا العزيز';
-        }
-
+        // --- MAPS & CALCULATION ---
         function initMaps() {
             try {
                 new google.maps.places.Autocomplete(document.getElementById("pickup"));
                 new google.maps.places.Autocomplete(document.getElementById("dropoff"));
+                new google.maps.places.Autocomplete(document.getElementById("extra-point"));
+                
                 map = new google.maps.Map(document.getElementById("map"), {
                     center: { lat: 30.0444, lng: 31.2357 }, zoom: 10, disableDefaultUI: true,
                     styles: [ { "elementType": "geometry", "stylers": [{ "color": "#242f3e" }] }, { "elementType": "labels.text.stroke", "stylers": [{ "color": "#242f3e" }] }, { "elementType": "labels.text.fill", "stylers": [{ "color": "#746855" }] }, { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#38414e" }] } ]
@@ -539,24 +327,210 @@ ${tripData.type === 'round' ? `🔙 العودة: ${tripData.returnDate}` : ''}
                 directionsService = new google.maps.DirectionsService();
                 directionsRenderer = new google.maps.DirectionsRenderer();
                 directionsRenderer.setMap(map);
-            } catch (e) { console.log("Google Maps not loaded yet"); }
+            } catch (e) { console.log("Maps Error"); }
         }
 
-        async function handleGoogleLogin() { await sbClient.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } }); }
-        async function emailLogin() {
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-pass').value;
-            const { error } = await sbClient.auth.signInWithPassword({ email, password });
+        function calculateRealDistanceAndPrice() {
+            const p = document.getElementById('pickup').value;
+            const d = document.getElementById('dropoff').value;
+            const date = document.getElementById('trip-date').value;
+            const time = document.getElementById('trip-time').value;
+
+            if(!p || !d || !date || !time) return alert("أكمل البيانات");
+            
+            const btn = document.getElementById('calc-btn'); btn.innerText="جاري الحساب...";
+            document.getElementById('map-container').style.height = "200px";
+
+            const waypoints = [];
+            if(document.getElementById('opt-extra-point').checked && document.getElementById('extra-point').value) {
+                waypoints.push({location: document.getElementById('extra-point').value, stopover: true});
+            }
+
+            const service = new google.maps.DistanceMatrixService();
+            service.getDistanceMatrix({origins:[p], destinations:[d], travelMode:'DRIVING'}, (res, status) => {
+                if(status !== 'OK') { btn.innerText="حساب السعر"; return alert("خطأ خرائط"); }
+                
+                const distKm = Math.ceil(res.rows[0].elements[0].distance.value / 1000);
+                
+                // Pricing
+                const carRules = pricingRules.filter(r => r.car_type === tripData.car);
+                let rule = carRules.find(r => distKm >= r.min_km && distKm <= r.max_km);
+                if (!rule && carRules.length > 0) rule = carRules.sort((a, b) => b.max_km - a.max_km)[0]; // Max fallback
+                
+                let price = 0;
+                if(rule) price = rule.base_price + (distKm * rule.price_per_km);
+                else price = 150 + (distKm * 10); // Ultimate fallback
+
+                // Multipliers & Extras
+                let note = "";
+                const isExtraPoint = document.getElementById('opt-extra-point').checked;
+                if(isExtraPoint) { price += 100; note += " + نقطة إضافية"; } // Example extra cost
+
+                if(tripData.type === 'round-same') { 
+                    price *= 1.75; 
+                    note += " (ذهاب وعودة نفس اليوم)"; 
+                } else if(tripData.type === 'round-diff') {
+                    price *= 2; 
+                    note += " (ذهاب وعودة أيام مختلفة)"; 
+                } else {
+                    note += " (ذهاب فقط)";
+                }
+
+                tripData.price = Math.round(price);
+                tripData.dist = distKm;
+                tripData.date = date; tripData.time = time;
+                tripData.returnDate = document.getElementById('return-date').value;
+                tripData.returnTime = document.getElementById('return-time').value;
+
+                // Render Route
+                directionsService.route({origin:p, destination:d, waypoints:waypoints, travelMode:'DRIVING'}, (rs, st) => {
+                    if(st=='OK') directionsRenderer.setDirections(rs);
+                });
+
+                document.getElementById('summ-type').innerText = note;
+                document.getElementById('summ-dist').innerText = distKm + " km";
+                document.getElementById('summ-price').innerText = tripData.price + " EGP";
+                document.getElementById('details-modal').style.display = 'flex';
+                btn.innerText="حساب السعر والحجز";
+            });
+        }
+
+        async function confirmFinalBooking() {
+            const btn = document.getElementById('confirm-btn'); btn.disabled=true; btn.innerText="جاري الحجز...";
+            
+            // Validate & Update Profile
+            const name = document.getElementById('guest-name').value;
+            const phone = document.getElementById('guest-phone').value;
+            const wa = document.getElementById('guest-whatsapp').value;
+            if(!name || !phone) { btn.disabled=false; return alert("الاسم والهاتف مطلوبان"); }
+
+            await sb.from('profiles').upsert({id: user.id, full_name: name, phone: phone});
+
+            // Wallet Check
+            const walletBal = parseFloat(document.getElementById('header-balance').innerText);
+            let payStatus = 'unpaid';
+            let deduct = 0;
+            
+            if(tripData.pay === 'wallet') {
+                if(walletBal >= tripData.price) {
+                    deduct = tripData.price;
+                    payStatus = 'paid';
+                } else {
+                    alert("رصيد المحفظة غير كافي!");
+                    btn.disabled=false; return;
+                }
+            }
+
+            // Prepare Data
+            const pax = document.getElementById('pax-count').value;
+            const bags = document.getElementById('bags-count').value;
+            const child = document.getElementById('opt-child-seat').checked ? "نعم" : "لا";
+            const wheel = document.getElementById('opt-wheelchair').checked ? "نعم" : "لا";
+            
+            const adminNote = `
+نوع: ${tripData.type} | الدفع: ${tripData.pay}
+📅 ${tripData.date} - ${tripData.time}
+${tripData.type==='round-same'?'(عودة نفس اليوم) ':''} 
+👥 ${pax} | 🧳 ${bags} | 👶 ${child} | ♿ ${wheel}
+📱 واتساب: ${wa}
+            `.trim();
+
+            // Insert Trips
+            // Logic: 
+            // 1. One way -> 1 trip
+            // 2. Round Same -> 1 trip (priced 1.75)
+            // 3. Round Diff -> 2 trips (each priced 1.0, total 2.0)
+            
+            const p = document.getElementById('pickup').value;
+            const d = document.getElementById('dropoff').value;
+            
+            if(tripData.type === 'round-diff') {
+                // Split price for DB records (half each)
+                const singlePrice = tripData.price / 2;
+                
+                // Trip 1 (Going)
+                await sb.from('trips').insert([{
+                    user_id: user.id, pickup_location: p, dropoff_location: d, distance_km: tripData.dist,
+                    estimated_price: singlePrice, car_type: tripData.car, status: 'pending', payment_status: payStatus,
+                    admin_notes: adminNote + "\n(رحلة الذهاب)"
+                }]);
+                
+                // Trip 2 (Return)
+                const returnNote = ` رحلة العودة يوم ${tripData.returnDate} الساعة ${tripData.returnTime}`;
+                await sb.from('trips').insert([{
+                    user_id: user.id, pickup_location: d, dropoff_location: p, distance_km: tripData.dist,
+                    estimated_price: singlePrice, car_type: tripData.car, status: 'pending', payment_status: payStatus,
+                    admin_notes: adminNote + "\n" + returnNote
+                }]);
+            } else {
+                // Single Entry (One Way OR Round Same Day)
+                await sb.from('trips').insert([{
+                    user_id: user.id, pickup_location: p, dropoff_location: d, distance_km: tripData.dist,
+                    estimated_price: tripData.price, car_type: tripData.car, status: 'pending', payment_status: payStatus,
+                    admin_notes: adminNote
+                }]);
+            }
+
+            // Deduct Wallet
+            if(deduct > 0) {
+                await sb.from('profiles').update({wallet_balance: walletBal - deduct}).eq('id', user.id);
+            }
+
+            alert("تم الحجز بنجاح!");
+            location.reload();
+        }
+
+        async function loadTrips() {
+             const { data: trips } = await sb.from('trips').select('*, drivers:driver_id(name, phone), cars:car_id(model, brand, plate_number)').eq('user_id', user.id).order('created_at', { ascending: false });
+             document.getElementById('trips-list').innerHTML = trips.map(t=>{
+                 let statusHtml = '';
+                 if(t.status==='approved') statusHtml = `<div class="mt-2 pt-2 border-t border-slate-700 flex gap-2 items-center text-sm"><div class="bg-slate-700 w-8 h-8 rounded-full flex items-center justify-center"><i class="fas fa-user"></i></div><div><p>${t.drivers?.name}</p><p class="text-xs text-slate-400">${t.cars?.brand} (${t.cars?.plate_number})</p></div><a href="tel:${t.drivers?.phone}" class="mr-auto text-green-500"><i class="fas fa-phone"></i></a></div>`;
+                 return `
+                <div class="glass-card p-4">
+                    <div class="flex justify-between font-bold text-white mb-1">
+                        <span>${t.dropoff_location.split(',')[0]}</span>
+                        <span class="text-xs bg-slate-700 px-2 py-1 rounded text-amber-500">${t.status}</span>
+                    </div>
+                    <div class="text-xs text-slate-400">من: ${t.pickup_location.split(',')[0]}</div>
+                    <div class="text-xs text-amber-500 font-bold mt-1">${t.estimated_price} EGP</div>
+                    ${statusHtml}
+                </div>
+             `}).join('');
+        }
+        
+        async function loadWallet() {
+            const {data} = await sb.from('profiles').select('wallet_balance').eq('id', user.id).single();
+            if(data) document.getElementById('wallet-balance-page').innerText = data.wallet_balance.toFixed(2);
+            loadTransactions();
+        }
+
+        async function loadTransactions() {
+            const {data} = await sb.from('transactions').select('*').eq('user_id', user.id).order('created_at', {ascending:false});
+            document.getElementById('transactions-list').innerHTML = data.map(tx=>`
+                <div class="flex justify-between items-center p-3 bg-slate-800 rounded-lg border border-slate-700 text-xs">
+                    <div><p class="text-white font-bold">${tx.amount} EGP</p><p class="text-slate-500">Ref: ${tx.reference_id}</p></div>
+                    <span class="${tx.status==='approved'?'text-green-500':'text-amber-500'}">${tx.status}</span>
+                </div>
+            `).join('');
+        }
+
+        async function submitDeposit() {
+            const amt = document.getElementById('deposit-amount').value, ref = document.getElementById('deposit-ref').value;
+            if(!amt || !ref) return alert("أكمل البيانات");
+            await sb.from('transactions').insert([{user_id: user.id, amount: amt, reference_id: ref, status: 'pending'}]);
+            alert("تم الإرسال"); loadWallet();
+        }
+
+        async function handleGoogleLogin() { await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } }); }
+        async function emailLogin() { 
+            const {error} = await sb.auth.signInWithPassword({email:document.getElementById('login-email').value, password:document.getElementById('login-pass').value});
             if(error) alert(error.message); else location.reload();
         }
         async function emailSignUp() {
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-pass').value;
-            const { data, error } = await sbClient.auth.signUp({ email, password });
-            if(error) alert(error.message); else alert("تم التسجيل! راجع بريدك للتفعيل.");
+            const {error} = await sb.auth.signUp({email:document.getElementById('login-email').value, password:document.getElementById('login-pass').value});
+            if(error) alert(error.message); else alert("تم التسجيل");
         }
-        async function handleLogout() { await sbClient.auth.signOut(); location.reload(); }
-
+        async function handleLogout() { await sb.auth.signOut(); location.reload(); }
     </script>
 </body>
 </html>
