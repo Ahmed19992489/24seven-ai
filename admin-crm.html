@@ -307,14 +307,28 @@
             }
         }
 
-        // --- 2. Operations (Enhanced) ---
+        // --- 2. Operations (FIXED: Uses explicit relationships) ---
         async function loadOperations() {
             const list = document.getElementById('ops-table');
             list.innerHTML = '<tr><td colspan="8" class="text-center p-4">جاري التحميل...</td></tr>';
             
-            const { data: trips } = await sbClient.from('trips').select(`*, cars(brand, model), drivers(name)`).order('created_at', { ascending: false });
+            // --- التعديل الجوهري هنا: استخدام العلاقة الصحيحة ---
+            const { data: trips, error } = await sbClient
+                .from('trips')
+                .select(`
+                    *, 
+                    cars:cars!fk_trips_car(brand, model, plate_number), 
+                    drivers:drivers!fk_trips_driver(name, phone)
+                `)
+                .order('created_at', { ascending: false });
 
-            // Fetch Profiles
+            if (error) {
+                console.error(error);
+                list.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-red-500">حدث خطأ في تحميل البيانات</td></tr>';
+                return;
+            }
+
+            // Fetch Profiles manually (safer than complex joins for now)
             const userIds = trips?.map(t => t.user_id).filter(Boolean) || [];
             let profilesMap = {};
             if(userIds.length) {
@@ -327,12 +341,20 @@
 
             trips.forEach(t => {
                 const profile = profilesMap[t.user_id] || {full_name: 'عميل', phone: '-'};
-                const statusColor = t.status === 'pending' ? 'bg-amber-100 text-amber-800' : (t.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800');
+                // تحديد لون الحالة
+                let statusColor = 'bg-amber-100 text-amber-800'; // Pending
+                if(t.status === 'driver_assigned') statusColor = 'bg-blue-100 text-blue-800';
+                else if(t.status === 'approved') statusColor = 'bg-green-100 text-green-800';
+                else if(t.status === 'completed') statusColor = 'bg-slate-200 text-slate-600';
+
                 const rawNotes = t.admin_notes || '';
                 
                 let btns = '';
-                if(t.status === 'pending') btns = `<button onclick="openAssignModal('${t.id}')" class="bg-slate-900 text-white px-3 py-1 rounded text-xs">تعيين</button>`;
-                else if(t.status === 'approved') btns = `<button onclick="openCompleteModal('${t.id}', ${t.estimated_price})" class="bg-green-600 text-white px-3 py-1 rounded text-xs">إنهاء</button>`;
+                if(t.status === 'pending' || t.status === 'approved') btns = `<button onclick="openAssignModal('${t.id}')" class="bg-slate-900 text-white px-3 py-1 rounded text-xs">تعيين</button>`;
+                else if(t.status === 'driver_assigned') btns = `<button onclick="openCompleteModal('${t.id}', ${t.estimated_price})" class="bg-green-600 text-white px-3 py-1 rounded text-xs">إنهاء</button>`;
+
+                const driverName = t.drivers ? t.drivers.name : '-';
+                const carInfo = t.cars ? `${t.cars.brand} ${t.cars.plate_number}` : '-';
 
                 list.innerHTML += `
                     <tr class="border-b hover:bg-white text-xs">
@@ -349,7 +371,7 @@
                             </div>
                         </td>
                         <td class="p-4 align-top text-slate-500 font-bold">${t.pickup_location.split(',')[0]} <br>↓<br> ${t.dropoff_location.split(',')[0]}</td>
-                        <td class="p-4 align-top font-bold">${t.drivers ? t.drivers.name : '-'} <br> ${t.cars ? t.cars.brand : '-'}</td>
+                        <td class="p-4 align-top font-bold">${driverName} <br> ${carInfo}</td>
                         <td class="p-4 align-top font-bold text-green-700 text-sm">${t.estimated_price}</td>
                         <td class="p-4 align-top"><span class="px-2 py-1 rounded text-[10px] ${statusColor}">${t.status}</span></td>
                         <td class="p-4 align-top">${btns}</td>
@@ -391,7 +413,7 @@
                     category: 'رواتب',
                     related_trip_id: tripId,
                     related_driver_id: trip.driver_id,
-                    related_vault_id: vid // Paid from main vault
+                    related_vault_id: vid 
                 }]);
             }
             if(fuel > 0 && trip.car_id) {
@@ -401,7 +423,7 @@
                     category: 'تشغيل',
                     related_trip_id: tripId,
                     related_car_id: trip.car_id,
-                    related_vault_id: vid // Paid from main vault
+                    related_vault_id: vid 
                 }]);
             }
 
@@ -409,7 +431,7 @@
             loadOperations(); loadDashboard();
         }
 
-        // --- 3. Finance (UPDATED for InstaPay) ---
+        // --- 3. Finance ---
         async function loadFinance() {
             const { data: vaults } = await sbClient.from('vaults').select('*');
             const grid = document.getElementById('vaults-grid');
@@ -437,7 +459,6 @@
                 });
             }
 
-            // InstaPay Logic (Improved)
             const { data: reqs } = await sbClient.from('transactions').select('*').eq('status', 'pending');
             const reqList = document.getElementById('deposit-requests-list');
             reqList.innerHTML = '';
@@ -572,7 +593,7 @@
             alert("تم السداد"); loadDashboard(); openLedger('car', carId, '...');
         }
 
-        // --- 5. Expense Modal (Double Deduction Fix) ---
+        // --- 5. Expense Modal ---
         async function openExpenseModal(type, id) {
             document.getElementById('expense-modal').style.display = 'flex';
             document.getElementById('exp-target-type').value = type;
@@ -584,12 +605,11 @@
             const id = document.getElementById('exp-target-id').value;
             const title = document.getElementById('exp-modal-title').value;
             const amount = document.getElementById('exp-modal-amount').value;
-            const vaultId = document.getElementById('exp-modal-vault').value; // الخزنة المختارة
+            const vaultId = document.getElementById('exp-modal-vault').value;
             
             if(!title || !amount) return alert("يرجى إدخال البيانات");
 
             const mainVaultId = await getMainVaultId();
-            
             const insertData = { title, amount, category: 'يدوي', related_vault_id: vaultId };
             if(type === 'car') insertData.related_car_id = id;
             if(type === 'driver') insertData.related_driver_id = id;
@@ -597,11 +617,9 @@
             const { error } = await sbClient.from('expenses').insert([insertData]);
 
             if(!error) {
-                // 1. خصم من الرئيسية (المال الفعلي)
                 const { data: mainV } = await sbClient.from('vaults').select('balance').eq('id', mainVaultId).single();
                 await sbClient.from('vaults').update({ balance: (mainV.balance||0) - Number(amount) }).eq('id', mainVaultId);
 
-                // 2. إذا اختار خزنة فرعية (صيانة)، نخصم منها أيضاً
                 if(vaultId !== 'main' && vaultId !== mainVaultId) {
                     const { data: subV } = await sbClient.from('vaults').select('balance').eq('id', vaultId).single();
                     await sbClient.from('vaults').update({ balance: (subV.balance||0) - Number(amount) }).eq('id', vaultId);
@@ -645,7 +663,8 @@
         }
         async function confirmAssign() {
             const tid = document.getElementById('modal-trip-id').value, did = document.getElementById('modal-driver').value, cid = document.getElementById('modal-car').value, note = document.getElementById('modal-note').value;
-            await sbClient.from('trips').update({driver_id:did, car_id:cid, admin_notes:note, status:'approved'}).eq('id', tid);
+            // FIX: Using status 'driver_assigned' to match Client Code expectation
+            await sbClient.from('trips').update({driver_id:did, car_id:cid, admin_notes:note, status:'driver_assigned'}).eq('id', tid);
             document.getElementById('assign-modal').style.display = 'none'; loadOperations();
         }
         async function addCarPrompt() {
