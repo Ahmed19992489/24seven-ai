@@ -274,37 +274,59 @@
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAjFXAiKnbium5bHoR5uB4DftMB2vlpi4M&libraries=places&language=ar"></script>
     
     <script>
+        // تعريف العميل
         const sb = supabase.createClient('https://qxtlsfmfetwcflbpvwuf.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4dGxzZm1mZXR3Y2ZsYnB2d3VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0MzMzODEsImV4cCI6MjA3ODAwOTM4MX0.FFGXNfx0FDA4FmJB1gVorNigs9nRoO4q1pCj2BOMDbU');
-        let user = null, pricingRules = [], tripData = {type:'one-way', car:'sedan', pay:'cash', dist: 0, price: 0};
+        
+        let user = null;
+        let pricingRules = [];
+        let tripData = {type:'one-way', car:'sedan', pay:'cash', dist: 0, price: 0};
         let map, directionsService, directionsRenderer;
 
-        // Init Session & Realtime Setup
-        (async () => {
-            const {data} = await sb.auth.getSession();
-            if(data.session) { 
-                user = data.session.user; 
+        // ==========================================
+        // 1. نظام الدخول الذكي (تم التعديل هنا)
+        // ==========================================
+        sb.auth.onAuthStateChange(async (event, session) => {
+            console.log("Auth Event:", event);
+            
+            if (session) {
+                // حالة نجاح الدخول (سواء بإيميل أو جوجل)
+                user = session.user;
                 document.getElementById('loading-overlay').style.opacity = 0;
                 setTimeout(() => document.getElementById('loading-overlay').style.display='none', 300);
                 document.getElementById('login-screen').style.display='none'; 
+                
+                // التأكد من وجود بروفايل للمستخدم
+                await ensureProfileExists();
+                
+                // تحميل البيانات والخرائط
                 loadData(); 
                 initMaps(); 
-                
-                // === تفعيل المزامنة اللحظية (Realtime) ===
-                // هذا الكود سيستمع لأي تغيير في جدول الرحلات ويحدث الشاشة فوراً
-                sb.channel('public:trips')
-                  .on('postgres_changes', { event: '*', schema: 'public', table: 'trips', filter: 'user_id=eq.'+user.id }, (payload) => {
-                      console.log('Change received!', payload);
-                      if(!document.getElementById('page-trips').classList.contains('hidden')) loadTrips();
-                      if(payload.new.status === 'approved' || payload.new.status === 'driver_assigned') {
-                          // يمكن إضافة صوت إشعار هنا مستقبلاً
-                          // alert('تم تحديث حالة رحلتك!');
-                      }
-                  })
-                  .subscribe();
+                setupRealtime();
             } else {
+                // حالة عدم الدخول
                 document.getElementById('loading-overlay').style.display='none';
+                document.getElementById('login-screen').style.display='flex';
             }
-        })();
+        });
+
+        // دالة لضمان وجود بروفايل (لحل مشاكل جوجل)
+        async function ensureProfileExists() {
+            const { data, error } = await sb.from('profiles').select('id').eq('id', user.id).single();
+            if (!data) {
+                // إذا كان مستخدم جوجل جديد، ننشئ له بروفايل فوراً
+                await sb.from('profiles').insert([
+                    { 
+                        id: user.id, 
+                        full_name: user.user_metadata.full_name || 'عميل جوجل', 
+                        wallet_balance: 0 
+                    }
+                ]);
+            }
+        }
+
+        // ==========================================
+        // 2. دوال التشغيل الأساسية
+        // ==========================================
 
         function switchTab(id) {
             document.querySelectorAll('.page-content').forEach(e=>e.classList.add('hidden'));
@@ -321,17 +343,20 @@
             document.getElementById('btn-'+t).classList.add('active');
             document.getElementById('return-date-container').classList.toggle('hidden', t!=='round-diff');
         }
+
         function selectCar(c) {
             tripData.car = c;
             document.querySelectorAll('.car-option').forEach(e=>e.classList.remove('active'));
             document.getElementById('car-'+c).classList.add('active');
         }
+
         function selectPayment(m) {
             tripData.pay = m;
             document.querySelectorAll('.pay-opt').forEach(e=>{e.classList.remove('bg-amber-500','text-slate-900'); e.classList.add('bg-slate-900','text-white');});
             const el = document.getElementById('pay-'+m);
             el.classList.remove('bg-slate-900','text-white'); el.classList.add('bg-amber-500','text-slate-900');
         }
+
         function toggleExtraPoint() { document.getElementById('extra-point-div').classList.toggle('hidden'); }
 
         async function loadData() {
@@ -344,6 +369,14 @@
                 document.getElementById('guest-name').value = p.full_name;
                 document.getElementById('guest-phone').value = p.phone;
             }
+        }
+
+        function setupRealtime() {
+            sb.channel('public:trips')
+              .on('postgres_changes', { event: '*', schema: 'public', table: 'trips', filter: 'user_id=eq.'+user.id }, (payload) => {
+                  if(!document.getElementById('page-trips').classList.contains('hidden')) loadTrips();
+              })
+              .subscribe();
         }
 
         function initMaps() {
@@ -372,7 +405,6 @@
             
             const btn = document.getElementById('calc-btn'); btn.innerText="جاري الحساب...";
             
-            // تصحيح: استخدام ID الصحيح
             const mapDiv = document.getElementById('map');
             mapDiv.style.display = 'block'; 
             mapDiv.style.height = "200px";
@@ -384,41 +416,19 @@
 
             const service = new google.maps.DistanceMatrixService();
             service.getDistanceMatrix({origins:[p], destinations:[d], travelMode:'DRIVING'}, (res, status) => {
-                if(status !== 'OK') { 
-                    btn.innerText="حساب السعر والحجز"; 
-                    return alert("خطأ من جوجل: " + status); 
-                }
-                
+                if(status !== 'OK') { btn.innerText="حساب السعر والحجز"; return alert("خطأ من جوجل: " + status); }
                 const element = res.rows[0].elements[0];
-                if (element.status !== 'OK') {
-                    btn.innerText="حساب السعر والحجز";
-                    if(element.status === 'ZERO_RESULTS') return alert("لا يوجد طريق بري بين هاتين النقطتين.");
-                    return alert("تعذر حساب المسافة: " + element.status);
-                }
+                if (element.status !== 'OK') { btn.innerText="حساب السعر والحجز"; return alert("تعذر حساب المسافة: " + element.status); }
 
                 const distKm = Math.ceil(element.distance.value / 1000);
-                
                 const carRules = pricingRules.filter(r => r.car_type === tripData.car);
                 let rule = carRules.find(r => distKm >= r.min_km && distKm <= r.max_km);
                 if (!rule && carRules.length > 0) rule = carRules.sort((a, b) => b.max_km - a.max_km)[0]; 
                 
-                let price = 0;
-                if(rule) price = rule.base_price + (distKm * rule.price_per_km);
-                else price = 150 + (distKm * 10); 
-
-                let note = "";
-                const isExtraPoint = document.getElementById('opt-extra-point').checked;
-                if(isExtraPoint) { price += 100; note += " + نقطة إضافية"; }
-
-                if(tripData.type === 'round-same') { 
-                    price *= 1.75; 
-                    note += " (ذهاب وعودة نفس اليوم)"; 
-                } else if(tripData.type === 'round-diff') {
-                    price *= 2; 
-                    note += " (ذهاب وعودة أيام مختلفة)"; 
-                } else {
-                    note += " (ذهاب فقط)";
-                }
+                let price = rule ? rule.base_price + (distKm * rule.price_per_km) : 150 + (distKm * 10);
+                if(document.getElementById('opt-extra-point').checked) price += 100;
+                if(tripData.type === 'round-same') price *= 1.75; 
+                else if(tripData.type === 'round-diff') price *= 2; 
 
                 tripData.price = Math.round(price);
                 tripData.dist = distKm;
@@ -430,7 +440,6 @@
                     if(st=='OK') directionsRenderer.setDirections(rs);
                 });
 
-                document.getElementById('summ-type').innerText = note;
                 document.getElementById('summ-dist').innerText = distKm + " km";
                 document.getElementById('summ-price').innerText = tripData.price + " EGP";
                 document.getElementById('details-modal').style.display = 'flex';
@@ -448,45 +457,27 @@
                 else { alert("رصيد المحفظة غير كافي!"); btn.disabled=false; btn.innerText="تأكيد الحجز"; return; }
             }
 
-            const p = document.getElementById('pickup').value;
-            const d = document.getElementById('dropoff').value;
-            const pax = document.getElementById('pax-count').value;
-            const bags = document.getElementById('bags-count').value;
-            const extra = document.getElementById('opt-extra-point').checked ? "نعم" : "لا";
-            const phone = document.getElementById('guest-phone').value;
             const name = document.getElementById('guest-name').value;
-            const wa = document.getElementById('guest-whatsapp').value;
+            const phone = document.getElementById('guest-phone').value;
             
             try { await sb.from('profiles').upsert({ id: user.id, full_name: name, phone: phone }); } catch (e) {}
 
-            const note = `
-نوع: ${tripData.type} | الدفع: ${tripData.pay}
-📅 ${tripData.date} - ${tripData.time}
-👥 ركاب: ${pax} | 🧳 شنط: ${bags}
-📍 نقطة إضافية: ${extra}
-📱 هاتف: ${phone} | واتساب: ${wa}
-            `.trim();
-
+            const note = `نوع: ${tripData.type} | الدفع: ${tripData.pay}\n📅 ${tripData.date} - ${tripData.time}\n📱 ${phone}`;
             let trip1Price = tripData.type === 'round-diff' ? tripData.price / 2 : tripData.price;
             
             const { error: tripError } = await sb.from('trips').insert([{
-                user_id: user.id, pickup_location: p, dropoff_location: d,
+                user_id: user.id, pickup_location: document.getElementById('pickup').value, dropoff_location: document.getElementById('dropoff').value,
                 distance_km: tripData.dist, estimated_price: trip1Price, car_type: tripData.car,
-                status: 'pending', admin_notes: note + " (رحلة الذهاب)", payment_status: payStatus
+                status: 'pending', admin_notes: note, payment_status: payStatus
             }]);
 
-            if (tripError) {
-                alert("خطأ: " + tripError.message);
-                btn.disabled=false; btn.innerText="تأكيد الحجز";
-                return;
-            }
+            if (tripError) { alert("خطأ: " + tripError.message); btn.disabled=false; return; }
 
             if(tripData.type === 'round-diff') {
-                const note2 = note + `\n🔙 رحلة العودة: ${tripData.returnDate} - ${tripData.returnTime}`;
                 await sb.from('trips').insert([{
-                    user_id: user.id, pickup_location: d, dropoff_location: p, 
+                    user_id: user.id, pickup_location: document.getElementById('dropoff').value, dropoff_location: document.getElementById('pickup').value, 
                     distance_km: tripData.dist, estimated_price: trip1Price, car_type: tripData.car,
-                    status: 'pending', admin_notes: note2, payment_status: payStatus
+                    status: 'pending', admin_notes: note + " (عودة)", payment_status: payStatus
                 }]);
             }
 
@@ -494,96 +485,51 @@
             alert("تم الحجز بنجاح!"); location.reload();
         }
 
-        // === دالة عرض الرحلات (المحدثة بالكامل) ===
-        // === دالة عرض الرحلات (المعدلة لإظهار السائق والسيارة) ===
-        // === دالة عرض الرحلات (المعدلة لتحديد العلاقة بدقة) ===
         async function loadTrips() {
-             // التعديل هنا: نستخدم drivers:drivers!fk_trips_driver لنخبره أي علاقة يستخدم
-             const { data: trips, error } = await sb
+             const { data: trips } = await sb
                 .from('trips')
                 .select('*, drivers:drivers!fk_trips_driver(*), cars:cars!fk_trips_car(*)') 
                 .eq('user_id', user.id)
                 .order('created_at', { ascending: false });
 
-             if (error) {
-                 // سيطبع الخطأ في الكونسول إذا حدث، لكن الآن سيعمل إن شاء الله
-                 console.error("Error loading trips:", error);
-                 return;
-             }
-             
-             document.getElementById('trips-list').innerHTML = trips.map(t => {
+             document.getElementById('trips-list').innerHTML = trips ? trips.map(t => {
                 let statusClass = 'status-pending';
                 let statusText = 'قيد المراجعة';
-                let statusColor = 'text-amber-500';
-                
-                if(t.status === 'approved') { statusClass = 'status-approved'; statusText = 'مقبولة (في انتظار سائق)'; statusColor = 'text-green-500'; }
-                if(t.status === 'driver_assigned') { statusClass = 'status-driver_assigned'; statusText = 'الكابتن في الطريق'; statusColor = 'text-blue-500'; }
-                if(t.status === 'completed') { statusClass = 'status-completed'; statusText = 'مكتملة'; statusColor = 'text-slate-400'; }
+                if(t.status === 'approved') { statusClass = 'status-approved'; statusText = 'مقبولة'; }
+                if(t.status === 'driver_assigned') { statusClass = 'status-driver_assigned'; statusText = 'الكابتن في الطريق'; }
+                if(t.status === 'completed') { statusClass = 'status-completed'; statusText = 'مكتملة'; }
 
-                const dateMatch = t.admin_notes ? t.admin_notes.match(/📅 (.*?)\n/) : null;
-                const dateStr = dateMatch ? dateMatch[1] : new Date(t.created_at).toLocaleDateString();
-
-                // التحقق من وجود بيانات السائق
                 let driverHtml = '';
-                // ملاحظة: بسبب التعديل في الأعلى، البيانات ستعود داخل t.drivers كما هي
                 if(t.drivers) {
-                    const driverName = t.drivers.name || t.drivers.full_name || 'كابتن 24Seven';
-                    const driverPhone = t.drivers.phone || t.drivers.mobile || '';
-                    const carModel = t.cars ? (t.cars.model || t.cars.type) : 'سيارة فاخرة';
-                    const carPlate = t.cars ? (t.cars.plate_number || t.cars.plate) : '---';
-
                     driverHtml = `
                     <div class="mt-4 pt-3 border-t border-slate-700">
-                        <div class="flex items-center gap-3 bg-slate-800/50 p-3 rounded-xl border border-slate-600/50">
+                        <div class="flex items-center gap-3 bg-slate-800/50 p-3 rounded-xl">
                             <div class="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center text-xl">👨‍✈️</div>
                             <div class="flex-1">
-                                <p class="text-white font-bold text-sm">${driverName}</p>
-                                <div class="flex gap-2 text-[10px] text-slate-400">
-                                    <span>${carModel}</span> | <span class="font-num">${carPlate}</span>
-                                </div>
+                                <p class="text-white font-bold text-sm">${t.drivers.name || 'كابتن 24Seven'}</p>
+                                <div class="flex gap-2 text-[10px] text-slate-400"><span>${t.cars?.model || 'سيارة'}</span> | <span class="font-num">${t.cars?.plate_number || '---'}</span></div>
                             </div>
-                            <div class="flex gap-2">
-                                <a href="tel:${driverPhone}" class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center text-white hover:bg-slate-600 transition"><i class="fas fa-phone"></i></a>
-                                <a href="https://wa.me/20${driverPhone}" target="_blank" class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white hover:bg-green-500 transition"><i class="fab fa-whatsapp"></i></a>
-                            </div>
+                            <a href="tel:${t.drivers.phone}" class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center text-white"><i class="fas fa-phone"></i></a>
+                            <a href="https://wa.me/20${t.drivers.phone}" class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white"><i class="fab fa-whatsapp"></i></a>
                         </div>
                     </div>`;
-                } else if (t.status === 'approved') {
-                    driverHtml = `<div class="mt-3 text-center text-xs text-slate-500 animate-pulse">جاري تعيين أفضل كابتن لك...</div>`;
                 }
 
                 return `
                 <div class="glass-card p-4 trip-card animate-fade-in-up mb-4 border border-slate-700/50">
                     <div class="flex justify-between items-start mb-2">
                         <span class="trip-status-badge ${statusClass}">${statusText}</span>
-                        <span class="font-bold font-num ${statusColor}">${t.estimated_price} EGP</span>
+                        <span class="font-bold font-num text-amber-500">${t.estimated_price} EGP</span>
                     </div>
-                    <div class="mt-8 space-y-2">
-                        <div class="flex items-start gap-3 relative">
-                            <div class="flex flex-col items-center">
-                                <div class="w-2.5 h-2.5 rounded-full bg-green-500 shadow-lg shadow-green-500/50"></div>
-                                <div class="w-0.5 h-full bg-slate-700 my-1 min-h-[20px]"></div>
-                            </div>
-                            <p class="text-xs text-slate-300 font-bold mt-[-2px]">${t.pickup_location}</p>
-                        </div>
-                        <div class="flex items-start gap-3">
-                            <div class="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-lg shadow-amber-500/50"></div>
-                            <p class="text-xs text-slate-300 font-bold mt-[-2px]">${t.dropoff_location}</p>
-                        </div>
-                    </div>
-                    <div class="mt-3 flex items-center gap-2 text-[10px] text-slate-500 font-num">
-                        <i class="far fa-clock"></i>
-                        <span>${dateStr}</span>
-                    </div>
+                    <div class="mt-6"><p class="text-xs text-slate-300 font-bold">${t.pickup_location}</p><p class="text-xs text-slate-300 font-bold mt-2">${t.dropoff_location}</p></div>
                     ${driverHtml}
-                </div>
-                `;
-             }).join('');
+                </div>`;
+             }).join('') : '';
         }
-        
+
         async function loadWallet() {
             const {data} = await sb.from('profiles').select('wallet_balance').eq('id', user.id).single();
-            if(data) document.getElementById('wallet-balance-page').innerText = data.wallet_balance.toFixed(2);
+            if(data) document.getElementById('wallet-page-balance').innerText = data.wallet_balance.toFixed(2);
             loadTransactions();
         }
 
@@ -604,35 +550,32 @@
             alert("تم الإرسال"); loadWallet();
         }
 
-        async function handleGoogleLogin() { await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } }); }
+        async function handleGoogleLogin() { 
+            await sb.auth.signInWithOAuth({ 
+                provider: 'google', 
+                options: { redirectTo: window.location.href } 
+            }); 
+        }
         
         async function emailLogin() { 
             const {error} = await sb.auth.signInWithPassword({
                 email:document.getElementById('login-email').value, 
                 password:document.getElementById('login-pass').value
             });
-            if(error) alert(error.message); else window.location.reload();
+            if(error) alert(error.message);
         }
 
         async function emailSignUp() {
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-pass').value;
-            
-            const { data, error } = await sb.auth.signUp({
-                email: email, 
-                password: password,
-            });
+            const { data, error } = await sb.auth.signUp({ email: email, password: password });
             
             if(error) {
                 alert(error.message);
+            } else if (data.session) {
+                alert("تم إنشاء الحساب بنجاح!");
             } else {
-                if (data.session) {
-                    alert("تم إنشاء الحساب بنجاح!");
-                    await sb.from('profiles').insert([{ id: data.user.id, full_name: 'عميل جديد', wallet_balance: 0 }]);
-                    window.location.reload();
-                } else {
-                    alert("تم إرسال رابط تفعيل إلى بريدك الإلكتروني.");
-                }
+                alert("تم إرسال رابط تفعيل إلى بريدك الإلكتروني.");
             }
         }
 
@@ -642,5 +585,3 @@
             window.location.reload(); 
         }
     </script>
-</body>
-</html>
