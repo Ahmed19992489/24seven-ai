@@ -326,7 +326,22 @@
             try { new google.maps.places.Autocomplete(document.getElementById("pickup")); new google.maps.places.Autocomplete(document.getElementById("dropoff")); } catch(e){}
         }
 
-        // --- تعديل هام جداً: المحاكاة في حالة فشل الخرائط ---
+        function initMaps() {
+            try {
+                new google.maps.places.Autocomplete(document.getElementById("pickup"));
+                new google.maps.places.Autocomplete(document.getElementById("dropoff"));
+                new google.maps.places.Autocomplete(document.getElementById("extra-point"));
+                
+                map = new google.maps.Map(document.getElementById("map"), {
+                    center: { lat: 30.0444, lng: 31.2357 }, zoom: 10, disableDefaultUI: true,
+                    styles: [ { "elementType": "geometry", "stylers": [{ "color": "#242f3e" }] }, { "elementType": "labels.text.stroke", "stylers": [{ "color": "#242f3e" }] }, { "elementType": "labels.text.fill", "stylers": [{ "color": "#746855" }] }, { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#38414e" }] } ]
+                });
+                directionsService = new google.maps.DirectionsService();
+                directionsRenderer = new google.maps.DirectionsRenderer();
+                directionsRenderer.setMap(map);
+            } catch (e) { console.log("Maps Error"); }
+        }
+
         function calculateRealDistanceAndPrice() {
             const p = document.getElementById('pickup').value;
             const d = document.getElementById('dropoff').value;
@@ -336,10 +351,31 @@
             if(!p || !d || !date || !time) return alert("أكمل البيانات");
             
             const btn = document.getElementById('calc-btn'); btn.innerText="جاري الحساب...";
+            document.getElementById('map-container').style.display = 'block'; 
             document.getElementById('map-container').style.height = "200px";
 
-            // دالة لحساب السعر (مشتركة)
-            const computePrice = (distKm) => {
+            const waypoints = [];
+            if(document.getElementById('opt-extra-point').checked && document.getElementById('extra-point').value) {
+                waypoints.push({location: document.getElementById('extra-point').value, stopover: true});
+            }
+
+            const service = new google.maps.DistanceMatrixService();
+            service.getDistanceMatrix({origins:[p], destinations:[d], travelMode:'DRIVING'}, (res, status) => {
+                if(status !== 'OK') { 
+                    btn.innerText="حساب السعر والحجز"; 
+                    return alert("خطأ من جوجل: " + status + "\nتأكد من تفعيل Distance Matrix API في الكونسول."); 
+                }
+                
+                // في حالة نجاح الطلب
+                const element = res.rows[0].elements[0];
+                if (element.status !== 'OK') {
+                    btn.innerText="حساب السعر والحجز";
+                    return alert("لا يمكن حساب المسافة: " + element.status);
+                }
+
+                const distKm = Math.ceil(element.distance.value / 1000);
+                
+                // Pricing Logic
                 const carRules = pricingRules.filter(r => r.car_type === tripData.car);
                 let rule = carRules.find(r => distKm >= r.min_km && distKm <= r.max_km);
                 if (!rule && carRules.length > 0) rule = carRules.sort((a, b) => b.max_km - a.max_km)[0]; 
@@ -349,11 +385,18 @@
                 else price = 150 + (distKm * 10); 
 
                 let note = "";
-                if(document.getElementById('opt-extra-point').checked) { price += 100; note += " + نقطة إضافية"; }
+                const isExtraPoint = document.getElementById('opt-extra-point').checked;
+                if(isExtraPoint) { price += 100; note += " + نقطة إضافية"; }
 
-                if(tripData.type === 'round-same') { price *= 1.75; note += " (ذهاب وعودة نفس اليوم)"; } 
-                else if(tripData.type === 'round-diff') { price *= 2; note += " (ذهاب وعودة أيام مختلفة)"; } 
-                else { note += " (ذهاب فقط)"; }
+                if(tripData.type === 'round-same') { 
+                    price *= 1.75; 
+                    note += " (ذهاب وعودة نفس اليوم)"; 
+                } else if(tripData.type === 'round-diff') {
+                    price *= 2; 
+                    note += " (ذهاب وعودة أيام مختلفة)"; 
+                } else {
+                    note += " (ذهاب فقط)";
+                }
 
                 tripData.price = Math.round(price);
                 tripData.dist = distKm;
@@ -361,30 +404,16 @@
                 tripData.returnDate = document.getElementById('return-date').value;
                 tripData.returnTime = document.getElementById('return-time').value;
 
+                // Render Route
+                directionsService.route({origin:p, destination:d, waypoints:waypoints, travelMode:'DRIVING'}, (rs, st) => {
+                    if(st=='OK') directionsRenderer.setDirections(rs);
+                });
+
                 document.getElementById('summ-type').innerText = note;
                 document.getElementById('summ-dist').innerText = distKm + " km";
                 document.getElementById('summ-price').innerText = tripData.price + " EGP";
                 document.getElementById('details-modal').style.display = 'flex';
                 btn.innerText="حساب السعر والحجز";
-            };
-
-            const service = new google.maps.DistanceMatrixService();
-            service.getDistanceMatrix({origins:[p], destinations:[d], travelMode:'DRIVING'}, (res, status) => {
-                if(status !== 'OK') { 
-                    // --- وضع المحاكاة عند فشل الخرائط (الحل السحري) ---
-                    console.log("Map failed, using simulation");
-                    const fakeDist = 30; // مسافة افتراضية للتجربة
-                    computePrice(fakeDist);
-                    document.getElementById('summ-note').innerText += " (مسافة تقديرية - تعذر الاتصال بالخرائط)";
-                    return;
-                }
-                
-                const distKm = Math.ceil(res.rows[0].elements[0].distance.value / 1000);
-                computePrice(distKm);
-
-                directionsService.route({origin:p, destination:d, travelMode:'DRIVING'}, (rs, st) => {
-                    if(st=='OK') directionsRenderer.setDirections(rs);
-                });
             });
         }
 
@@ -407,6 +436,7 @@
             const name = document.getElementById('guest-name').value;
             const wa = document.getElementById('guest-whatsapp').value;
             
+            // تحديث البروفايل يدوياً
             try { await sb.from('profiles').upsert({ id: user.id, full_name: name, phone: phone }); } catch (e) {}
 
             const note = `
@@ -419,11 +449,17 @@
 
             let trip1Price = tripData.type === 'round-diff' ? tripData.price / 2 : tripData.price;
             
-            await sb.from('trips').insert([{
+            const { error: tripError } = await sb.from('trips').insert([{
                 user_id: user.id, pickup_location: p, dropoff_location: d,
                 distance_km: tripData.dist, estimated_price: trip1Price, car_type: tripData.car,
                 status: 'pending', admin_notes: note + " (رحلة الذهاب)", payment_status: payStatus
             }]);
+
+            if (tripError) {
+                alert("خطأ: " + tripError.message);
+                btn.disabled=false; btn.innerText="تأكيد الحجز";
+                return;
+            }
 
             if(tripData.type === 'round-diff') {
                 const note2 = note + `\n🔙 رحلة العودة: ${tripData.returnDate} - ${tripData.returnTime}`;
@@ -487,16 +523,18 @@
         async function emailSignUp() {
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-pass').value;
+            
             const { data, error } = await sb.auth.signUp({
                 email: email, 
                 password: password,
-                options: { emailRedirectTo: window.location.href }
             });
+            
             if(error) {
                 alert(error.message);
             } else {
                 if (data.session) {
                     alert("تم إنشاء الحساب بنجاح!");
+                    // حفظ البروفايل يدوياً
                     await sb.from('profiles').insert([{ id: data.user.id, full_name: 'عميل جديد', wallet_balance: 0 }]);
                     window.location.reload();
                 } else {
