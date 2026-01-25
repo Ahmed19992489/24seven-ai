@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     
-    <meta name="description" content="آراء عملاء 24Seven Limousine. قصص نجاح حقيقية، تقييمات شركات عالمية، وصور حية من أرض الواقع لخدمات النقل السياحي والليموزين.">
-    <meta name="keywords" content="reviews, feedback, limousine egypt, customer stories, 24Seven, تقييمات, آراء العملاء, ليموزين">
+    <meta name="description" content="شاهد آراء عملاء 24Seven Limousine بالفيديو والصور. قصص نجاح حقيقية لخدمات النقل السياحي، رجال الأعمال، وحفلات الزفاف في مصر.">
+    <meta name="keywords" content="reviews, feedback, video testimonials, limousine egypt, customer stories, 24Seven, تقييمات, آراء العملاء, ليموزين, فيديو">
     <meta name="author" content="Ahmed Hashem">
 
     <link rel="icon" href="images/logos/logo.png" type="image/png">
@@ -17,23 +17,22 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     
     <style>
-        /* === 1. Global Variables & Reset === */
+        /* === 1. المتغيرات والألوان === */
         :root { 
             --font-ar: 'Cairo', sans-serif; 
             --font-en: 'Outfit', sans-serif;
-            --brand-dark: #020617;      /* Slate 950 */
-            --brand-primary: #1e40af;   /* Blue 800 */
-            --brand-blue: #3b82f6;      /* Blue 500 */
-            --brand-accent: #60a5fa;    /* Blue 400 */
-            --brand-gold: #fbbf24;      /* Amber 400 */
-            --glass-bg: rgba(30, 41, 59, 0.4);
-            --glass-border: rgba(255, 255, 255, 0.08);
+            --brand-dark: #020617;      /* كحلي غامق جداً */
+            --brand-primary: #1e40af;   /* أزرق */
+            --brand-blue: #3b82f6;      /* أزرق فاتح */
+            --brand-accent: #60a5fa;    /* سماوي */
+            --brand-gold: #fbbf24;      /* ذهبي */
+            --glass-border: rgba(255, 255, 255, 0.1);
         }
 
-        /* Smooth Scrolling */
+        /* تحسين التمرير */
         html { scroll-behavior: smooth; }
 
-        /* Body Setup */
+        /* إعدادات الجسم */
         body { 
             background-color: var(--brand-dark); 
             color: white; 
@@ -41,31 +40,30 @@
             transition: font-family 0.3s ease;
         }
 
-        /* Language Modes */
+        /* الخطوط حسب اللغة */
         body.ar { font-family: var(--font-ar); direction: rtl; }
         body.en { font-family: var(--font-en); direction: ltr; }
 
-        /* Custom Scrollbar */
+        /* شريط التمرير المخصص */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #0f172a; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--brand-blue); }
 
-        /* === 2. Animations === */
+        /* === 2. الحركات (Animations) === */
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(30px); }
             to { opacity: 1; transform: translateY(0); }
         }
         .animate-fade-up { animation: fadeInUp 0.8s ease-out forwards; }
         
-        @keyframes glow {
-            0% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.2); }
-            50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.6); }
-            100% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.2); }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 10px rgba(59, 130, 246, 0.2); }
+            50% { box-shadow: 0 0 25px rgba(59, 130, 246, 0.6); }
         }
-        .glow-effect { animation: glow 3s infinite; }
+        .glow-effect { animation: pulse-glow 3s infinite; }
 
-        /* === 3. Masonry Layout Logic === */
+        /* === 3. نظام الشبكة (Masonry Layout) === */
         .masonry-grid {
             column-count: 1;
             column-gap: 1.5rem;
@@ -73,36 +71,31 @@
         @media (min-width: 640px) { .masonry-grid { column-count: 2; } }
         @media (min-width: 1024px) { .masonry-grid { column-count: 3; } }
 
-        /* Review Card Styling */
+        /* تصميم كارت التقييم */
         .review-card {
             break-inside: avoid;
             margin-bottom: 1.5rem;
-            background: #1e293b; /* Slate 800 */
+            background: #1e293b;
             border: 1px solid var(--glass-border);
             border-radius: 16px;
             overflow: hidden;
             position: relative;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            transform: translateZ(0); /* Hardware acceleration */
         }
 
         .review-card:hover {
-            transform: translateY(-8px) scale(1.01);
+            transform: translateY(-8px);
             box-shadow: 0 20px 40px -5px rgba(0, 0, 0, 0.4);
             border-color: var(--brand-blue);
-            z-index: 10;
         }
 
         .review-card img {
-            width: 100%;
-            height: auto;
-            display: block;
-            transition: transform 0.7s ease;
-            cursor: pointer;
+            width: 100%; display: block;
+            transition: transform 0.7s ease; cursor: pointer;
         }
-        .review-card:hover img { transform: scale(1.08); }
+        .review-card:hover img { transform: scale(1.05); }
 
-        /* Platform Badges */
+        /* بادجات المنصات (واتساب، فيسبوك، VIP) */
         .badge {
             position: absolute; top: 12px; right: 12px;
             padding: 4px 10px; border-radius: 99px;
@@ -116,26 +109,59 @@
         .badge.messenger { background: rgba(0, 132, 255, 0.9); color: white; }
         .badge.vip { background: linear-gradient(135deg, #FFD700, #FDB931); color: #000; }
 
-        /* === 4. Filter Buttons === */
+        /* === 4. أزرار الفلتر (Tabs) === */
         .filter-btn {
-            background: transparent;
-            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(255,255,255,0.1);
             color: #94a3b8;
-            padding: 8px 24px;
-            border-radius: 99px;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.3s;
-            cursor: pointer;
+            padding: 10px 28px;
+            border-radius: 12px;
+            font-size: 14px; font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer; position: relative; overflow: hidden;
         }
-        .filter-btn:hover, .filter-btn.active {
+        
+        .filter-btn:hover {
+            background: rgba(59, 130, 246, 0.1);
+            color: white; border-color: var(--brand-blue);
+        }
+
+        /* حالة الزر النشط */
+        .filter-btn.active {
             background: var(--brand-blue);
             color: white;
             border-color: var(--brand-blue);
-            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+            transform: translateY(-2px);
         }
 
-        /* === 5. Lightbox Modal (عارض الصور) === */
+        /* === 5. مشغل الفيديو (Video Player) === */
+        .video-wrapper {
+            position: relative; border-radius: 16px; overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: #000; aspect-ratio: 16/9;
+        }
+        .video-wrapper video {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+        /* زر التشغيل المخصص */
+        .play-overlay {
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.3); transition: 0.3s;
+            cursor: pointer;
+        }
+        .play-btn-icon {
+            width: 60px; height: 60px; background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(5px); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            border: 1px solid rgba(255,255,255,0.5);
+            transition: 0.3s;
+        }
+        .video-wrapper:hover .play-btn-icon { transform: scale(1.1); background: var(--brand-blue); border-color: var(--brand-blue); }
+        .video-wrapper.playing .play-overlay { opacity: 0; pointer-events: none; }
+
+        /* === 6. عارض الصور (Lightbox) === */
         .lightbox {
             display: none; position: fixed; z-index: 9999;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -157,7 +183,7 @@
         }
         .close-lightbox:hover { color: var(--brand-blue); transform: rotate(90deg); }
 
-        /* === 6. CTA Section === */
+        /* === 7. قسم الدعوة للحجز (CTA) === */
         .cta-section {
             background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
             border: 1px solid rgba(255,255,255,0.05);
@@ -169,7 +195,7 @@
             pointer-events: none;
         }
 
-        /* Floating Actions */
+        /* الأزرار العائمة */
         .floating-actions { position: fixed; bottom: 30px; right: 30px; display: flex; flex-direction: column-reverse; gap: 15px; z-index: 100; }
         .action-btn { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 26px; box-shadow: 0 8px 20px rgba(0,0,0,0.3); transition: 0.3s; cursor: pointer; text-decoration: none; border: 2px solid rgba(255,255,255,0.1); }
         .action-btn:hover { transform: scale(1.1); }
@@ -191,9 +217,10 @@
             </a>
 
             <div class="flex items-center gap-6">
-                <a href="home.html" class="text-slate-300 hover:text-white text-sm font-bold flex items-center gap-2 transition">
+                <a href="home.html" class="text-slate-300 hover:text-white text-sm font-bold flex items-center gap-2 transition hover:text-blue-400">
                     <i class="fas fa-home"></i> <span data-key="nav_back">الرئيسية</span>
                 </a>
+                
                 <button onclick="toggleLang()" class="border border-slate-600 px-4 py-1.5 rounded-full text-xs font-bold text-slate-300 hover:bg-slate-800 transition flex items-center gap-2">
                     <i class="fas fa-globe"></i> <span id="lang-btn-text">English</span>
                 </button>
@@ -201,7 +228,7 @@
         </div>
     </nav>
 
-    <header class="pt-32 pb-16 px-6 text-center bg-gradient-to-b from-[#020617] via-[#0f172a] to-[#020617] relative">
+    <header class="pt-32 pb-10 px-6 text-center bg-gradient-to-b from-[#020617] via-[#0f172a] to-[#020617] relative">
         <div class="absolute top-20 left-10 w-32 h-32 bg-blue-600/10 rounded-full blur-3xl"></div>
         <div class="absolute top-20 right-10 w-32 h-32 bg-purple-600/10 rounded-full blur-3xl"></div>
 
@@ -221,26 +248,28 @@
             </p>
 
             <div class="flex justify-center gap-8 mb-12">
-                <div class="flex flex-col items-center gap-2 group cursor-pointer">
-                    <div class="w-12 h-12 rounded-full bg-[#1877F2]/10 flex items-center justify-center group-hover:bg-[#1877F2] transition duration-300">
+                <a href="https://www.facebook.com/Sevenlimousin/" target="_blank" class="flex flex-col items-center gap-2 group cursor-pointer transition transform hover:-translate-y-1">
+                    <div class="w-12 h-12 rounded-full bg-[#1877F2]/10 flex items-center justify-center group-hover:bg-[#1877F2] transition duration-300 border border-transparent group-hover:border-[#1877F2]">
                         <i class="fab fa-facebook-f text-[#1877F2] text-xl group-hover:text-white"></i>
                     </div>
-                    <span class="text-xs text-slate-500">24Seven Limousine</span>
-                </div>
-                <div class="flex flex-col items-center gap-2 group cursor-pointer">
+                    <span class="text-xs text-slate-500 group-hover:text-[#1877F2]">Facebook</span>
+                </a>
+
+                <a href="https://www.instagram.com/24sevenlimousine/" target="_blank" class="flex flex-col items-center gap-2 group cursor-pointer transition transform hover:-translate-y-1">
                     <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-yellow-400 to-purple-600 p-[1px]">
                         <div class="w-full h-full bg-[#020617] rounded-full flex items-center justify-center group-hover:bg-transparent transition">
                             <i class="fab fa-instagram text-white text-xl"></i>
                         </div>
                     </div>
-                    <span class="text-xs text-slate-500">@24Seven</span>
-                </div>
-                <div class="flex flex-col items-center gap-2 group cursor-pointer">
-                    <div class="w-12 h-12 rounded-full bg-[#25D366]/10 flex items-center justify-center group-hover:bg-[#25D366] transition duration-300">
+                    <span class="text-xs text-slate-500 group-hover:text-pink-500">Instagram</span>
+                </a>
+
+                <a href="https://wa.me/201121748885" target="_blank" class="flex flex-col items-center gap-2 group cursor-pointer transition transform hover:-translate-y-1">
+                    <div class="w-12 h-12 rounded-full bg-[#25D366]/10 flex items-center justify-center group-hover:bg-[#25D366] transition duration-300 border border-transparent group-hover:border-[#25D366]">
                         <i class="fab fa-whatsapp text-[#25D366] text-xl group-hover:text-white"></i>
                     </div>
-                    <span class="text-xs text-slate-500">Verified</span>
-                </div>
+                    <span class="text-xs text-slate-500 group-hover:text-[#25D366]">WhatsApp</span>
+                </a>
             </div>
         </div>
 
@@ -254,105 +283,121 @@
 
     <div class="container mx-auto px-6 pb-24">
         
-        <div class="mb-16">
-            <h3 class="text-2xl font-bold mb-8 flex items-center gap-3">
+        <div class="mb-16 filter-item" data-category="video">
+            <h3 class="text-2xl font-bold mb-8 flex items-center gap-3 text-white">
                 <i class="fas fa-play-circle text-blue-500"></i>
                 <span data-key="video_title">آراء بالفيديو</span>
             </h3>
+            
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="relative rounded-2xl overflow-hidden aspect-video group cursor-pointer border border-slate-700">
-                    <img src="https://images.unsplash.com/photo-1557804506-669a67965ba0?q=80&w=600" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
-                    <div class="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/20 transition">
-                        <div class="w-14 h-14 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/50 group-hover:scale-110 transition">
-                            <i class="fas fa-play text-white ml-1"></i>
+                <div class="video-wrapper group">
+                    <video id="vid1" poster="https://images.pexels.com/photos/1181438/pexels-photo-1181438.jpeg?auto=compress&cs=tinysrgb&w=600" preload="none">
+                        <source src="https://player.vimeo.com/external/371433846.sd.mp4?s=236da2f3c0fd273d2c6d9a064f3ae35579b2bbdf&profile_id=164&oauth2_token_id=57447761" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                    <div class="play-overlay" onclick="playVideo('vid1', this)">
+                        <div class="play-btn-icon">
+                            <i class="fas fa-play text-white ml-1 text-xl"></i>
                         </div>
                     </div>
-                    <div class="absolute bottom-4 right-4 text-white text-sm font-bold">رحلة الأقصر وأسوان</div>
+                    <div class="absolute bottom-4 right-4 bg-black/50 px-3 py-1 rounded text-white text-xs font-bold backdrop-blur-md">مؤتمر شركات</div>
                 </div>
-                <div class="relative rounded-2xl overflow-hidden aspect-video group cursor-pointer border border-slate-700">
-                    <img src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=600" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
-                    <div class="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/20 transition">
-                        <div class="w-14 h-14 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/50 group-hover:scale-110 transition">
-                            <i class="fas fa-play text-white ml-1"></i>
+
+                <div class="video-wrapper group">
+                    <video id="vid2" poster="https://images.pexels.com/photos/16342810/pexels-photo-16342810/free-photo-of-white-vintage-car.jpeg?auto=compress&cs=tinysrgb&w=600" preload="none">
+                        <source src="https://player.vimeo.com/external/498675122.sd.mp4?s=123456789&profile_id=164" type="video/mp4"> 
+                        <source src="https://videos.pexels.com/video-files/3125959/3125959-sd_640_360_25fps.mp4" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                    <div class="play-overlay" onclick="playVideo('vid2', this)">
+                        <div class="play-btn-icon">
+                            <i class="fas fa-play text-white ml-1 text-xl"></i>
                         </div>
                     </div>
-                    <div class="absolute bottom-4 right-4 text-white text-sm font-bold">مؤتمر Elsewedy</div>
+                    <div class="absolute bottom-4 right-4 bg-black/50 px-3 py-1 rounded text-white text-xs font-bold backdrop-blur-md">زفاف الإسكندرية</div>
                 </div>
-                 <div class="relative rounded-2xl overflow-hidden aspect-video group cursor-pointer border border-slate-700">
-                    <img src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=600" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
-                    <div class="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/20 transition">
-                        <div class="w-14 h-14 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/50 group-hover:scale-110 transition">
-                            <i class="fas fa-play text-white ml-1"></i>
+
+                 <div class="video-wrapper group">
+                    <video id="vid3" poster="https://images.pexels.com/photos/1252500/pexels-photo-1252500.jpeg?auto=compress&cs=tinysrgb&w=600" preload="none">
+                        <source src="https://videos.pexels.com/video-files/5049494/5049494-sd_640_360_25fps.mp4" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                    <div class="play-overlay" onclick="playVideo('vid3', this)">
+                        <div class="play-btn-icon">
+                            <i class="fas fa-play text-white ml-1 text-xl"></i>
                         </div>
                     </div>
-                    <div class="absolute bottom-4 right-4 text-white text-sm font-bold">زفاف الإسكندرية</div>
+                    <div class="absolute bottom-4 right-4 bg-black/50 px-3 py-1 rounded text-white text-xs font-bold backdrop-blur-md">استقبال مطار القاهرة</div>
                 </div>
             </div>
         </div>
 
-        <h3 class="text-2xl font-bold mb-8 flex items-center gap-3">
+        <h3 class="text-2xl font-bold mb-8 flex items-center gap-3 text-white">
             <i class="fas fa-camera text-blue-500"></i>
             <span data-key="img_title">من محادثات العملاء</span>
         </h3>
         
         <div class="masonry-grid" id="reviewsGrid">
             
-            <div class="review-card group" data-category="corporate">
+            <div class="review-card group filter-item" data-category="corporate">
                 <div class="badge vip">VIP Partner</div>
                 <img src="images/reviews/review1.jpg" onclick="openLightbox(this)" 
-                     onerror="this.src='https://placehold.co/400x500/1e293b/3b82f6?text=Parkville+Contract&font=roboto'">
-                <div class="p-4 bg-slate-900">
+                     onerror="this.src='https://placehold.co/400x500/1e293b/3b82f6?text=Parkville+Pharma&font=roboto'">
+                <div class="p-4 bg-slate-900 border-t border-slate-800">
                     <p class="text-sm text-slate-300">"تعامل راقي جداً والتزام بالمواعيد مع وفد الأطباء الأجانب. شكراً أ/ أحمد."</p>
                     <p class="text-xs text-blue-400 mt-2 font-bold">- Parkville Pharma</p>
                 </div>
             </div>
 
-            <div class="review-card group" data-category="wedding">
+            <div class="review-card group filter-item" data-category="wedding">
                 <div class="badge whatsapp"><i class="fab fa-whatsapp"></i></div>
                 <img src="images/reviews/review2.jpg" onclick="openLightbox(this)" 
-                     onerror="this.src='https://placehold.co/400x300/1e293b/ec4899?text=Wedding+Day&font=roboto'">
-                 <div class="p-4 bg-slate-900">
+                     onerror="this.src='https://placehold.co/400x300/1e293b/ec4899?text=Wedding+Feedback&font=roboto'">
+                 <div class="p-4 bg-slate-900 border-t border-slate-800">
                     <p class="text-sm text-slate-300">"العربية كانت تحفة والسواق ذوق جداً. شكراً إنكم كملتوا فرحتنا."</p>
                 </div>
             </div>
 
-            <div class="review-card group" data-category="airport">
+            <div class="review-card group filter-item" data-category="airport">
                 <div class="badge messenger"><i class="fab fa-facebook-messenger"></i></div>
                 <img src="images/reviews/review3.jpg" onclick="openLightbox(this)" 
-                     onerror="this.src='https://placehold.co/400x600/1e293b/22c55e?text=Airport+Pickup&font=roboto'">
+                     onerror="this.src='https://placehold.co/400x600/1e293b/22c55e?text=Airport+Review&font=roboto'">
             </div>
 
-            <div class="review-card group" data-category="corporate">
+            <div class="review-card group filter-item" data-category="corporate">
                 <div class="badge vip">Business</div>
                 <img src="images/reviews/review4.jpg" onclick="openLightbox(this)" 
-                     onerror="this.src='https://placehold.co/400x400/1e293b/3b82f6?text=Elsewedy+Trip&font=roboto'">
+                     onerror="this.src='https://placehold.co/400x400/1e293b/3b82f6?text=Elsewedy+Electric&font=roboto'">
+                <div class="p-4 bg-slate-900 border-t border-slate-800">
+                    <p class="text-sm text-slate-300">"خدمة ممتازة في انتقالات المؤتمر السنوي."</p>
+                </div>
             </div>
 
-            <div class="review-card group" data-category="airport">
+            <div class="review-card group filter-item" data-category="airport">
                 <div class="badge whatsapp"><i class="fab fa-whatsapp"></i></div>
                 <img src="images/reviews/review5.jpg" onclick="openLightbox(this)" 
                      onerror="this.src='https://placehold.co/400x350/1e293b/22c55e?text=Cairo+Arrival&font=roboto'">
             </div>
 
-            <div class="review-card group" data-category="wedding">
+            <div class="review-card group filter-item" data-category="wedding">
                 <div class="badge whatsapp"><i class="fab fa-whatsapp"></i></div>
                 <img src="images/reviews/review6.jpg" onclick="openLightbox(this)" 
-                     onerror="this.src='https://placehold.co/400x550/1e293b/ec4899?text=Limo+Stretch&font=roboto'">
+                     onerror="this.src='https://placehold.co/400x550/1e293b/ec4899?text=Limo+Wedding&font=roboto'">
             </div>
 
-             <div class="review-card group" data-category="all">
+             <div class="review-card group filter-item" data-category="all">
                 <div class="badge messenger"><i class="fab fa-facebook-messenger"></i></div>
                 <img src="images/reviews/review7.jpg" onclick="openLightbox(this)" 
                      onerror="this.src='https://placehold.co/400x450/1e293b/cbd5e1?text=Happy+Client&font=roboto'">
             </div>
 
-             <div class="review-card group" data-category="corporate">
+             <div class="review-card group filter-item" data-category="corporate">
                 <div class="badge vip">Event</div>
                 <img src="images/reviews/review8.jpg" onclick="openLightbox(this)" 
                      onerror="this.src='https://placehold.co/400x300/1e293b/3b82f6?text=Conference+Logistics&font=roboto'">
             </div>
 
-             <div class="review-card group" data-category="airport">
+             <div class="review-card group filter-item" data-category="airport">
                 <div class="badge whatsapp"><i class="fab fa-whatsapp"></i></div>
                 <img src="images/reviews/review9.jpg" onclick="openLightbox(this)" 
                      onerror="this.src='https://placehold.co/400x500/1e293b/22c55e?text=Sharm+Transfer&font=roboto'">
@@ -399,10 +444,10 @@
                 <img src="images/logos/logo.png" class="h-10 mx-auto opacity-80" alt="Logo">
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-10 max-w-4xl mx-auto text-slate-400">
-                <a href="home.html" class="hover:text-blue-500 transition">Home</a>
-                <a href="about.html" class="hover:text-blue-500 transition">About Us</a>
-                <a href="limousine.html" class="hover:text-blue-500 transition">Booking</a>
-                <a href="reviews.html" class="text-blue-500 font-bold">Reviews</a>
+                <a href="home.html" class="hover:text-blue-500 transition">الرئيسية</a>
+                <a href="about.html" class="hover:text-blue-500 transition">من نحن</a>
+                <a href="limousine.html" class="hover:text-blue-500 transition">الحجز</a>
+                <a href="reviews.html" class="text-blue-500 font-bold">التقييمات</a>
             </div>
             <p class="text-slate-600 border-t border-slate-900 pt-6">
                 &copy; 2026 24Seven Limousine. All rights reserved. <br>
@@ -429,46 +474,73 @@
     </div>
 
     <script>
-        // --- 1. Filter Logic ---
+        // --- 1. تشغيل الفيديو (Video Play Logic) ---
+        function playVideo(id, overlay) {
+            const video = document.getElementById(id);
+            if (video.paused) {
+                video.play();
+                overlay.style.opacity = '0'; // إخفاء زر التشغيل
+                overlay.style.pointerEvents = 'none';
+            } else {
+                video.pause();
+                overlay.style.opacity = '1';
+                overlay.style.pointerEvents = 'auto';
+            }
+            
+            // عند انتهاء الفيديو، أعد زر التشغيل
+            video.onended = function() {
+                overlay.style.opacity = '1';
+                overlay.style.pointerEvents = 'auto';
+                video.load(); // إعادة تعيين الفيديو للصورة المصغرة
+            };
+        }
+
+        // --- 2. فلترة الصور (Filter Logic) ---
         function filterReviews(category) {
-            // Update buttons style
+            // تحديث شكل الأزرار
             document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
 
-            // Filter elements
-            const items = document.querySelectorAll('.review-card');
+            // تصفية العناصر (الصور)
+            const items = document.querySelectorAll('.filter-item');
             items.forEach(item => {
+                // إذا كان "الكل"، نعرض الجميع ما عدا قسم الفيديو لأنه ثابت
+                // أو إذا تطابق القسم المختار
                 if (category === 'all' || item.getAttribute('data-category') === category) {
                     item.style.display = 'block';
-                    // Re-trigger animation
+                    // إعادة تشغيل حركة الظهور
                     item.style.opacity = '0';
-                    setTimeout(() => item.style.opacity = '1', 50);
+                    item.style.transform = 'translateY(20px)';
+                    setTimeout(() => {
+                        item.style.opacity = '1';
+                        item.style.transform = 'translateY(0)';
+                    }, 50);
                 } else {
                     item.style.display = 'none';
                 }
             });
         }
 
-        // --- 2. Lightbox Logic ---
+        // --- 3. عارض الصور (Lightbox) ---
         function openLightbox(img) {
             const lightbox = document.getElementById('lightbox');
             const lightboxImg = document.getElementById('lightbox-img');
             lightboxImg.src = img.src;
             lightbox.classList.add('active');
-            document.body.style.overflow = 'hidden'; // Prevent scrolling
+            document.body.style.overflow = 'hidden'; // منع التمرير في الخلفية
         }
 
         function closeLightbox() {
             document.getElementById('lightbox').classList.remove('active');
-            document.body.style.overflow = 'auto'; // Restore scrolling
+            document.body.style.overflow = 'auto'; // إعادة التمرير
         }
 
-        // Close on Esc key
+        // إغلاق عند الضغط على ESC
         document.addEventListener('keydown', function(event) {
             if (event.key === "Escape") closeLightbox();
         });
 
-        // --- 3. Translation Logic ---
+        // --- 4. تغيير اللغة (Translation) ---
         const translations = {
             ar: {
                 nav_back: "الرئيسية",
@@ -506,13 +578,13 @@
             document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
             document.getElementById('lang-btn-text').innerText = currentLang === 'ar' ? 'English' : 'العربية';
             
-            // Adjust icons direction
+            // عكس اتجاه الأسهم
             const arrows = document.querySelectorAll('.fa-arrow-left');
             arrows.forEach(arrow => {
                 arrow.className = currentLang === 'ar' ? 'fas fa-arrow-left rtl:rotate-0 ltr:rotate-180 transition-transform' : 'fas fa-arrow-right rtl:rotate-0 ltr:rotate-180 transition-transform';
             });
 
-            // Update text
+            // تحديث النصوص
             document.querySelectorAll('[data-key]').forEach(el => {
                 const key = el.getAttribute('data-key');
                 if(translations[currentLang][key]) {
