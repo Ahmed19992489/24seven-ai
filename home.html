@@ -25,9 +25,8 @@
         }
         
         /* إعدادات اللغة */
-        body { background-color: var(--brand-dark); color: white; overflow-x: hidden; }
-        html[lang="ar"] body { font-family: var(--font-ar); }
-        html[lang="en"] body { font-family: var(--font-en); }
+        body { background-color: var(--brand-dark); color: white; overflow-x: hidden; font-family: var(--font-ar); }
+        body.en-mode { font-family: var(--font-en); direction: ltr; }
 
         /* === تصميم الهيرو المائل (Slanted Hero) === */
         .hero-section {
@@ -36,42 +35,29 @@
             display: flex;
             align-items: center;
             overflow: hidden;
-            padding-top: 80px; /* للنافبار */
+            padding-top: 80px; 
         }
 
         /* الخلفية الزرقاء المائلة */
         .hero-bg {
-            position: absolute;
-            top: 0;
-            right: 0; /* في العربي تكون يمين */
-            width: 55%; /* تغطي نصف الشاشة تقريباً */
-            height: 100%;
+            position: absolute; top: 0; right: 0; width: 60%; height: 100%;
             background: linear-gradient(135deg, #1e3a8a 0%, #172554 100%);
-            transform: skewX(-12deg); /* الميل */
-            transform-origin: top;
-            z-index: 1;
+            transform: skewX(-12deg); transform-origin: top; z-index: 1;
             border-left: 4px solid rgba(255,255,255,0.1);
             box-shadow: -20px 0 60px rgba(0,0,0,0.5);
         }
-
         /* تعديل الميل في الإنجليزي */
-        html[lang="en"] .hero-bg {
-            right: auto; left: 0;
-            transform: skewX(12deg);
+        body.en-mode .hero-bg {
+            right: auto; left: 0; transform: skewX(12deg);
             border-left: none; border-right: 4px solid rgba(255,255,255,0.1);
         }
 
-        /* المحتوى فوق الخلفية */
-        .hero-content {
-            position: relative;
-            z-index: 10;
-            width: 100%;
-        }
+        /* المحتوى */
+        .hero-content { position: relative; z-index: 10; width: 100%; }
 
         /* تحسين السلايدر */
         .swiper-slide img {
-            width: 100%;
-            border-radius: 24px;
+            width: 100%; border-radius: 24px;
             box-shadow: 0 30px 60px rgba(0,0,0,0.5);
             border: 1px solid rgba(255,255,255,0.1);
             transition: transform 0.5s;
@@ -80,13 +66,9 @@
 
         /* === Trust Bar === */
         .trust-bar img {
-            height: 50px;
-            width: auto;
-            filter: grayscale(100%) opacity(0.8);
-            transition: 0.3s;
-            background: rgba(255,255,255,0.05);
-            padding: 5px 15px;
-            border-radius: 8px;
+            height: 50px; width: auto;
+            filter: grayscale(100%) opacity(0.8); transition: 0.3s;
+            background: rgba(255,255,255,0.05); padding: 5px 15px; border-radius: 8px;
         }
         .trust-bar img:hover { filter: grayscale(0) opacity(1); transform: scale(1.1); background: rgba(255,255,255,0.1); }
 
@@ -94,9 +76,7 @@
         .stat-card {
             background: rgba(30, 41, 59, 0.6);
             border: 1px solid rgba(255,255,255,0.1);
-            padding: 2rem;
-            border-radius: 1.5rem;
-            transition: 0.3s;
+            padding: 2rem; border-radius: 1.5rem; transition: 0.3s;
         }
         .stat-card:hover { transform: translateY(-5px); border-color: #3b82f6; }
 
@@ -113,10 +93,10 @@
         .floating-actions { position: fixed; bottom: 30px; right: 30px; display: flex; flex-direction: column-reverse; gap: 15px; z-index: 100; }
         .action-btn { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 26px; box-shadow: 0 8px 20px rgba(0,0,0,0.3); transition: 0.3s; cursor: pointer; text-decoration: none; border: 2px solid rgba(255,255,255,0.1); }
         .action-btn:hover { transform: scale(1.1); }
-        html[lang="en"] .floating-actions { right: auto; left: 30px; }
+        body.en-mode .floating-actions { right: auto; left: 30px; }
     </style>
 </head>
-<body>
+<body class="ar-mode">
 
     <nav class="fixed w-full z-50 bg-[#020617]/95 backdrop-blur-md border-b border-blue-900/30">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
@@ -142,9 +122,9 @@
 
     <section id="home" class="hero-section">
         <div class="hero-bg"></div>
-        
         <div class="container mx-auto px-6 hero-content">
             <div class="grid lg:grid-cols-2 gap-12 items-center">
+                
                 <div class="order-2 lg:order-1 relative z-10 p-4">
                     <div class="inline-block px-4 py-2 bg-blue-900/40 border border-blue-500/30 rounded-full text-blue-300 text-xs font-bold mb-6">
                         <i class="fas fa-star text-yellow-400 mr-2"></i> <span data-key="hero_badge">الخيار الأول للشركات</span>
@@ -169,15 +149,9 @@
                 <div class="order-1 lg:order-2 relative z-10">
                     <div class="swiper fleet-slider">
                         <div class="swiper-wrapper">
-                            <div class="swiper-slide">
-                                <img src="images/fleet/sedan-group.jpg" onerror="this.src='https://via.placeholder.com/800x500/0f172a/3b82f6?text=Sedan+Fleet'" alt="Sedan">
-                            </div>
-                            <div class="swiper-slide">
-                                <img src="images/fleet/suv-group.jpg" onerror="this.src='https://via.placeholder.com/800x500/0f172a/3b82f6?text=SUV+Fleet'" alt="SUV">
-                            </div>
-                            <div class="swiper-slide">
-                                <img src="images/fleet/van-group.jpg" onerror="this.src='https://via.placeholder.com/800x500/0f172a/3b82f6?text=Van+Fleet'" alt="Van">
-                            </div>
+                            <div class="swiper-slide"><img src="images/fleet/sedan-group.jpg" onerror="this.src='https://via.placeholder.com/800x500/0f172a/3b82f6?text=Sedan+Fleet'" alt="Sedan"></div>
+                            <div class="swiper-slide"><img src="images/fleet/suv-group.jpg" onerror="this.src='https://via.placeholder.com/800x500/0f172a/3b82f6?text=SUV+Fleet'" alt="SUV"></div>
+                            <div class="swiper-slide"><img src="images/fleet/van-group.jpg" onerror="this.src='https://via.placeholder.com/800x500/0f172a/3b82f6?text=Van+Fleet'" alt="Van"></div>
                         </div>
                     </div>
                 </div>
@@ -204,19 +178,19 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center" id="stats-container">
                 
                 <a href="about.html" class="stat-card group">
-                    <div class="text-5xl font-black text-white mb-2 group-hover:text-blue-400 transition" id="stat-founded">0</div>
+                    <div class="text-5xl font-black text-white mb-2 group-hover:text-blue-400 transition" id="stat-founded">2022</div>
                     <h3 class="text-blue-400 font-bold mb-2" data-key="stat_1_t">عام التأسيس</h3>
                     <p class="text-xs text-slate-400" data-key="stat_1_d">انطلاقة قوية في السوق المصري.</p>
                 </a>
 
                 <a href="reviews.html" class="stat-card group">
-                    <div class="text-5xl font-black text-white mb-2"><span id="stat-trips">0</span>+</div>
+                    <div class="text-5xl font-black text-white mb-2"><span id="stat-trips">12000</span>+</div>
                     <h3 class="text-blue-400 font-bold mb-2" data-key="stat_2_t">رحلة ناجحة</h3>
                     <p class="text-xs text-slate-400" data-key="stat_2_d">ثقة الآلاف من العملاء.</p>
                 </a>
 
                 <a href="reviews.html" class="stat-card group">
-                    <div class="text-5xl font-black text-white mb-2"><span id="stat-rating">0</span>%</div>
+                    <div class="text-5xl font-black text-white mb-2"><span id="stat-rating">98</span>%</div>
                     <h3 class="text-blue-400 font-bold mb-2" data-key="stat_3_t">نسبة الرضا</h3>
                     <p class="text-xs text-slate-400" data-key="stat_3_d">جودة وخدمة لا يعلى عليها.</p>
                 </a>
@@ -332,8 +306,8 @@
         function closeWeddingModal() { document.getElementById('weddingModal').classList.remove('active'); }
         window.onclick = function(event) { if (event.target == document.getElementById('weddingModal')) closeWeddingModal(); }
 
-        // --- FIX: Improved Counter Animation Logic ---
-        function startCounters() {
+        // --- FIXED: Immediate Counter Logic (No Scroll Dependency) ---
+        function runCounters() {
             const counters = [
                 { id: 'stat-founded', target: 2022 },
                 { id: 'stat-trips', target: 12000 },
@@ -346,8 +320,10 @@
                 
                 let count = 0;
                 const target = item.target;
-                const duration = 2000; // 2 seconds
-                const increment = Math.ceil(target / (duration / 20));
+                // Start from close to target for visual effect without waiting too long
+                if (target > 1000) count = target - 200; 
+                
+                const increment = Math.ceil((target - count) / 50); 
 
                 const timer = setInterval(() => {
                     count += increment;
@@ -357,18 +333,19 @@
                     } else {
                         el.innerText = count;
                     }
-                }, 20);
+                }, 30);
             });
         }
-        // Start counters immediately on load to ensure they appear
-        window.addEventListener('load', startCounters);
+        // Run immediately
+        setTimeout(runCounters, 100);
 
-        // === Fix: Language Toggle ===
+        // --- FIXED: Language Toggle Logic ---
         const translations = {
             ar: {
                 nav_home: "الرئيسية", nav_services: "الخدمات", nav_reviews: "آراء العملاء", nav_invest: "استثمار",
                 btn_book: "احجز الآن", hero_badge: "الخيار الأول للشركات", hero_t1: "مفهوم جديد", hero_t2: "للرفاهية العالمية",
-                hero_desc: "أسطول 2025 المتكامل. نقدم تجربة تنقل استثنائية.", btn_book_now: "احجز سيارتك", btn_services: "خدماتنا",
+                hero_desc: "أسطول 2025 المتكامل. نقدم تجربة تنقل استثنائية للمطارات، الشركات، وحفلات الزفاف. دقة في المواعيد واحترافية تفوق التوقعات.",
+                btn_book_now: "احجز سيارتك", btn_services: "خدماتنا",
                 partners_title: "شركاء النجاح", stat_1_t: "عام التأسيس", stat_1_d: "بداية المسيرة في مصر.",
                 stat_2_t: "رحلة ناجحة", stat_2_d: "ثقة الآلاف من العملاء.", stat_3_t: "نسبة الرضا", stat_3_d: "جودة لا يعلى عليها.",
                 srv_title: "خدماتنا", srv_1_t: "المطارات", srv_1_d: "توصيل واستقبال VIP.", btn_book_trip: "احجز الآن",
@@ -390,12 +367,25 @@
         };
 
         function toggleLang() {
-            const html = document.documentElement;
-            const currentLang = html.getAttribute('lang') === 'ar' ? 'en' : 'ar';
-            html.setAttribute('lang', currentLang);
-            html.setAttribute('dir', currentLang === 'ar' ? 'rtl' : 'ltr');
-            document.getElementById('lang-btn').innerText = currentLang === 'ar' ? 'EN' : 'AR';
+            const body = document.body;
+            const currentLang = document.documentElement.getAttribute('lang') === 'ar' ? 'en' : 'ar';
+            
+            // Toggle HTML attributes
+            document.documentElement.setAttribute('lang', currentLang);
+            document.documentElement.setAttribute('dir', currentLang === 'ar' ? 'rtl' : 'ltr');
+            
+            // Toggle CSS classes for direction
+            if(currentLang === 'en') {
+                body.classList.add('en-mode');
+                body.classList.remove('ar-mode');
+                document.getElementById('lang-btn').innerText = 'AR';
+            } else {
+                body.classList.add('ar-mode');
+                body.classList.remove('en-mode');
+                document.getElementById('lang-btn').innerText = 'EN';
+            }
 
+            // Update text content
             document.querySelectorAll('[data-key]').forEach(el => {
                 const key = el.getAttribute('data-key');
                 if (translations[currentLang][key]) {
