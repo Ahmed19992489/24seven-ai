@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>استثمر مع 24Seven | شريك نجاح</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Cairo', sans-serif; background-color: #0f172a; color: white; }
+        .input-field { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 12px; width: 100%; color: white; outline: none; margin-bottom: 15px; }
+        .input-field:focus { border-color: #f59e0b; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 bg-[url('https://images.unsplash.com/photo-1562511993-9c4c7c22c5f9?q=80&w=1920')] bg-cover bg-center relative">
+    
+    <div class="absolute inset-0 bg-slate-900/90"></div>
+
+    <div class="relative z-10 w-full max-w-2xl bg-slate-800/80 backdrop-blur-xl p-8 rounded-2xl border border-slate-700 shadow-2xl">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold mb-2">انضم لأسطول 24Seven</h1>
+            <p class="text-slate-400">استثمر سيارتك معنا وحقق عائداً شهرياً مضموناً</p>
+        </div>
+
+        <div id="invest-form">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input type="text" id="owner-name" placeholder="الاسم بالكامل" class="input-field">
+                <input type="tel" id="owner-phone" placeholder="رقم الهاتف / واتساب" class="input-field">
+            </div>
+
+            <h3 class="text-sm font-bold text-amber-500 mb-3 mt-2">بيانات السيارة</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input type="text" id="car-brand" placeholder="نوع السيارة (مثال: تويوتا)" class="input-field">
+                <input type="text" id="car-model" placeholder="الموديل (مثال: كورولا)" class="input-field">
+                <input type="number" id="car-year" placeholder="سنة الصنع" class="input-field">
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input type="text" id="car-gov" placeholder="المحافظة" class="input-field">
+                <input type="number" id="expected-rent" placeholder="الإيجار الشهري المتوقع" class="input-field">
+            </div>
+
+            <div class="flex items-center gap-3 mb-6 bg-slate-700/50 p-3 rounded-lg border border-slate-600">
+                <input type="checkbox" id="has-driver" class="w-5 h-5 accent-amber-500">
+                <label for="has-driver" class="cursor-pointer select-none">السيارة متوفرة بسائق؟</label>
+            </div>
+
+            <button onclick="submitInvestment()" id="btn-submit" class="w-full bg-amber-500 text-slate-900 font-bold py-3 rounded-xl hover:bg-amber-400 transition">
+                إرسال طلب الانضمام
+            </button>
+        </div>
+        
+        <a href="home.html" class="block text-center ...">العودة للرئيسية</a>
+    </div>
+
+    <script>
+        const sb = supabase.createClient('https://qxtlsfmfetwcflbpvwuf.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4dGxzZm1mZXR3Y2ZsYnB2d3VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0MzMzODEsImV4cCI6MjA3ODAwOTM4MX0.FFGXNfx0FDA4FmJB1gVorNigs9nRoO4q1pCj2BOMDbU');
+
+        async function submitInvestment() {
+            const btn = document.getElementById('btn-submit');
+            btn.disabled = true; btn.innerText = "جاري الإرسال...";
+
+            const data = {
+                owner_name: document.getElementById('owner-name').value,
+                phone: document.getElementById('owner-phone').value,
+                car_brand: document.getElementById('car-brand').value,
+                car_model: document.getElementById('car-model').value,
+                car_year: document.getElementById('car-year').value,
+                governorate: document.getElementById('car-gov').value,
+                expected_rent: document.getElementById('expected-rent').value,
+                has_driver: document.getElementById('has-driver').checked
+            };
+
+            if(!data.owner_name || !data.phone) {
+                alert("يرجى كتابة الاسم ورقم الهاتف");
+                btn.disabled = false; btn.innerText = "إرسال طلب الانضمام";
+                return;
+            }
+
+            const { error } = await sb.from('investments').insert([data]);
+
+            if(error) {
+                alert("حدث خطأ: " + error.message);
+                btn.disabled = false; btn.innerText = "إرسال طلب الانضمام";
+            } else {
+                alert("تم استلام طلبك بنجاح! سيتواصل معك قسم إدارة الأسطول قريباً.");
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
