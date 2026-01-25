@@ -193,6 +193,14 @@
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAjFXAiKnbium5bHoR5uB4DftMB2vlpi4M&libraries=places&language=ar"></script>
     
     <script>
+        // ==========================================
+        // 🛠️ هام جداً: كود إصلاح الهاش المزدوج (Fix Double Hash)
+        // ==========================================
+        if (window.location.hash && window.location.hash.startsWith('##')) {
+            window.location.hash = window.location.hash.substring(1);
+        }
+
+        // تعريف العميل
         const sb = supabase.createClient('https://qxtlsfmfetwcflbpvwuf.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4dGxzZm1mZXR3Y2ZsYnB2d3VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0MzMzODEsImV4cCI6MjA3ODAwOTM4MX0.FFGXNfx0FDA4FmJB1gVorNigs9nRoO4q1pCj2BOMDbU');
         
         let user = null;
@@ -200,36 +208,56 @@
         let tripData = {type:'one-way', car:'sedan', pay:'cash', dist: 0, price: 0};
         let map, directionsService, directionsRenderer;
 
-        // --- نظام الدخول المحسن (Robust Login) ---
+        // ==========================================
+        // 1. نظام الدخول الذكي
+        // ==========================================
+        
         async function checkSession() {
+            // محاولة التقاط الجلسة من الرابط
             const { data: { session } } = await sb.auth.getSession();
+            
             if (session) {
-                console.log("✅ Session found");
+                console.log("✅ تم العثور على جلسة:", session.user.email);
                 handleUserSignedIn(session);
             } else {
+                // مراقبة التغيرات (للدخول الجديد)
                 sb.auth.onAuthStateChange((event, session) => {
-                    if (event === 'SIGNED_IN' && session) handleUserSignedIn(session);
-                    else if (event === 'SIGNED_OUT') showLoginScreen();
+                    console.log("🔔 Auth Event:", event);
+                    if (event === 'SIGNED_IN' && session) {
+                        handleUserSignedIn(session);
+                    } else if (event === 'SIGNED_OUT') {
+                        showLoginScreen();
+                    }
                 });
-                showLoginScreen();
+                // إذا لم توجد جلسة حالياً، اعرض شاشة الدخول
+                if (!window.location.hash.includes('access_token')) {
+                    showLoginScreen();
+                }
             }
         }
 
+        // دالة تشغيل الموقع عند نجاح الدخول
         async function handleUserSignedIn(session) {
             user = session.user;
+            
+            // إخفاء شاشة الدخول فوراً
             document.getElementById('login-screen').style.display='none'; 
             document.getElementById('loading-overlay').style.display = 'flex';
 
-            try { await ensureProfileExists(); } catch(e) { console.error("Profile Error:", e); }
-            try { await loadData(); } catch(e) { console.error("Data Load Error:", e); }
-            
-            initMaps(); 
-            setupRealtime();
-            
-            setTimeout(() => {
-                document.getElementById('loading-overlay').style.opacity = 0;
-                setTimeout(() => document.getElementById('loading-overlay').style.display='none', 300);
-            }, 500);
+            try {
+                await ensureProfileExists();
+                await loadData(); 
+                initMaps(); 
+                setupRealtime();
+                
+                // إخفاء التحميل وإظهار الموقع
+                setTimeout(() => {
+                    document.getElementById('loading-overlay').style.opacity = 0;
+                    setTimeout(() => document.getElementById('loading-overlay').style.display='none', 300);
+                }, 500);
+            } catch (err) {
+                console.error("Error init:", err);
+            }
         }
 
         function showLoginScreen() {
@@ -237,15 +265,19 @@
             document.getElementById('login-screen').style.display='flex';
         }
 
+        // تشغيل الفحص عند فتح الصفحة
         checkSession();
+
+        // ==========================================
+        // باقي الدوال (كما هي)
+        // ==========================================
 
         async function ensureProfileExists() {
             const { data, error } = await sb.from('profiles').select('id').eq('id', user.id).single();
             if (!data) {
-                // محاولة إنشاء بروفايل جديد
                 await sb.from('profiles').insert([{ 
                     id: user.id, 
-                    full_name: user.user_metadata.full_name || 'عميل جديد', 
+                    full_name: user.user_metadata.full_name || 'عميل جوجل', 
                     wallet_balance: 0 
                 }]);
             }
@@ -284,15 +316,13 @@
 
         async function loadData() {
             const {data} = await sb.from('pricing_tiers').select('*'); if(data) pricingRules=data;
-            const {data:p, error} = await sb.from('profiles').select('*').eq('id', user.id).single();
+            const {data:p} = await sb.from('profiles').select('*').eq('id', user.id).single();
             if(p) {
                 document.getElementById('header-user-name').innerText = p.full_name;
                 document.getElementById('header-balance').innerText = p.wallet_balance;
                 document.getElementById('wallet-page-balance').innerText = p.wallet_balance;
                 document.getElementById('guest-name').value = p.full_name;
                 document.getElementById('guest-phone').value = p.phone;
-            } else if(error) {
-                console.log("Load profile error:", error);
             }
         }
 
@@ -317,7 +347,7 @@
                 directionsService = new google.maps.DirectionsService();
                 directionsRenderer = new google.maps.DirectionsRenderer();
                 directionsRenderer.setMap(map);
-            } catch (e) { console.log("Maps Error", e); }
+            } catch (e) { console.log("Maps Error"); }
         }
 
         function calculateRealDistanceAndPrice() {
@@ -330,7 +360,6 @@
             
             const btn = document.getElementById('calc-btn'); btn.innerText="جاري الحساب...";
             
-            // تأكد من ظهور عنصر الخريطة
             const mapDiv = document.getElementById('map');
             mapDiv.style.display = 'block'; 
             mapDiv.style.height = "200px";
@@ -362,12 +391,10 @@
                 tripData.returnDate = document.getElementById('return-date').value;
                 tripData.returnTime = document.getElementById('return-time').value;
 
-                // رسم المسار
                 directionsService.route({origin:p, destination:d, waypoints:waypoints, travelMode:'DRIVING'}, (rs, st) => {
                     if(st=='OK') {
-                         directionsRenderer.setDirections(rs);
-                         // تحديث حجم الخريطة لتظهر بشكل صحيح
-                         google.maps.event.trigger(map, 'resize');
+                        directionsRenderer.setDirections(rs);
+                        google.maps.event.trigger(map, 'resize');
                     }
                 });
 
@@ -417,7 +444,6 @@
         }
 
         async function loadTrips() {
-             // استخدام الاستعلام الآمن
              const { data: trips, error } = await sb
                 .from('trips')
                 .select('*, drivers:drivers!fk_trips_driver(*), cars:cars!fk_trips_car(*)') 
@@ -425,13 +451,10 @@
                 .order('created_at', { ascending: false });
 
              if(error) {
-                 console.error("Error loading trips:", error);
-                 // محاولة تحميل الرحلات بدون تفاصيل السائق إذا فشل الربط
                  const { data: simpleTrips } = await sb.from('trips').select('*').eq('user_id', user.id);
                  if(simpleTrips) renderTrips(simpleTrips);
                  return;
              }
-
              renderTrips(trips);
         }
 
@@ -446,7 +469,6 @@
                 if(t.status === 'completed') { statusClass = 'status-completed'; statusText = 'مكتملة'; statusColor = 'text-slate-400'; }
 
                 let driverHtml = '';
-                // التحقق من وجود كائن السائق
                 if(t.drivers && t.drivers.name) {
                     driverHtml = `
                     <div class="mt-4 pt-3 border-t border-slate-700">
@@ -471,7 +493,7 @@
                     <div class="mt-6"><p class="text-xs text-slate-300 font-bold">${t.pickup_location}</p><p class="text-xs text-slate-300 font-bold mt-2">${t.dropoff_location}</p></div>
                     ${driverHtml}
                 </div>`;
-             }).join('') : '<p class="text-center text-slate-500">لا توجد رحلات سابقة</p>';
+             }).join('') : '';
         }
 
         async function loadWallet() {
