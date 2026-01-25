@@ -5,12 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     
-    <meta name="description" content="24Seven Limousine - خدمات ليموزين الشركات، الزفاف، والمطارات. أسطول 2025.">
+    <meta name="description" content="24Seven Limousine - الشركة الرائدة في خدمات الليموزين والنقل السياحي في مصر.">
     <meta property="og:title" content="24Seven Limousine">
-    <meta property="og:image" content="https://24seven-ai.com/images/logos/logo.png">
-    <meta property="og:url" content="https://24seven-ai.com">
-    <meta property="og:type" content="website">
-
+    <meta property="og:image" content="images/logos/logo.png">
     <link rel="icon" href="images/logos/logo.png" type="image/png">
     <title>24Seven Limousine | الرفاهية بلمسة عالمية</title>
     
@@ -29,33 +26,53 @@
         body { background-color: var(--brand-dark); color: white; font-family: var(--font-ar); overflow-x: hidden; }
         body.en { font-family: var(--font-en); direction: ltr; }
 
-        /* === 1. Hero Slanted Design (التصميم المائل) === */
-        .hero-wrapper { 
-            position: relative; min-height: 100vh; overflow: hidden; 
-            display: flex; align-items: center; 
-            background-color: #0f172a;
+        /* === 1. Hero Slanted Design (التصميم المائل القديم المفضل) === */
+        .hero-section {
+            position: relative;
+            padding-top: 8rem;
+            padding-bottom: 10rem; /* مساحة للصورة المتداخلة */
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+            /* القص المائل من الأسفل */
+            clip-path: polygon(0 0, 100% 0, 100% 85%, 0 100%);
+            z-index: 1;
         }
         
-        /* الشكل المائل الخلفي */
-        .hero-skew {
-            position: absolute; top: 0; right: -15%; width: 65%; height: 100%;
-            background: linear-gradient(135deg, #1e3a8a 0%, #172554 100%);
-            transform: skewX(-15deg);
-            z-index: 1;
-            border-left: 2px solid rgba(255,255,255,0.05);
-            box-shadow: -20px 0 50px rgba(0,0,0,0.5);
+        /* حاوية السلايدر المتداخلة */
+        .hero-slider-container {
+            margin-top: -8rem; /* سحب السلايدر للأعلى ليتداخل */
+            position: relative;
+            z-index: 10;
+            padding-bottom: 4rem;
         }
 
-        /* === 2. Stats Cards (كروت الإحصائيات) === */
+        /* تنسيق صور السلايدر */
+        .swiper-slide img {
+            width: 100%;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transform: scale(0.95);
+            transition: transform 0.5s;
+        }
+        .swiper-slide-active img { transform: scale(1); border-color: #3b82f6; }
+
+        /* === 2. Stats Cards (كروت الأرقام) === */
         .stat-card {
-            background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px); transition: 0.4s; cursor: pointer;
-            position: relative; overflow: hidden;
+            background: rgba(30, 41, 59, 0.4); 
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px); 
+            transition: 0.4s; 
+            cursor: pointer;
+            padding: 2rem;
+            border-radius: 1rem;
         }
-        .stat-card:hover { transform: translateY(-10px); border-color: #3b82f6; background: rgba(30, 41, 59, 0.8); }
-        .stat-card:hover i { transform: translateX(-5px); color: #3b82f6; }
+        .stat-card:hover { 
+            transform: translateY(-10px); 
+            border-color: #3b82f6; 
+            background: rgba(30, 41, 59, 0.8); 
+        }
 
-        /* === 3. Wedding Modal (نافذة الزفاف) === */
+        /* === 3. Wedding Modal === */
         .modal {
             display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%;
             overflow: auto; background-color: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
@@ -64,19 +81,15 @@
         .modal.active { display: flex; animation: fadeIn 0.3s; }
         @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
 
-        /* === Swiper 3D Effect === */
-        .swiper-slide img { 
-            width: 100%; border-radius: 20px; 
-            box-shadow: 20px 20px 60px rgba(0,0,0,0.6); 
-            /* تأثير الميل للصور */
-            transform: perspective(1000px) rotateY(-5deg); 
-            transition: 0.5s;
-            border: 1px solid rgba(255,255,255,0.1);
+        /* === Trust Bar (اللوجوهات) === */
+        .trust-bar img {
+            height: 50px;
+            width: auto;
+            filter: grayscale(100%) opacity(0.7);
+            transition: 0.3s;
+            object-fit: contain;
         }
-        .swiper-slide-active img { 
-            transform: perspective(1000px) rotateY(0deg) scale(1.05); 
-            z-index: 10; border-color: #3b82f6; 
-        }
+        .trust-bar img:hover { filter: grayscale(0) opacity(1); transform: scale(1.1); }
 
         /* === Floating Actions === */
         .floating-actions { position: fixed; bottom: 30px; right: 30px; display: flex; flex-direction: column-reverse; gap: 15px; z-index: 100; }
@@ -109,11 +122,9 @@
         </div>
     </nav>
 
-    <section id="home" class="hero-wrapper pt-20">
-        <div class="hero-skew"></div>
-        
-        <div class="container mx-auto px-6 relative z-10 grid lg:grid-cols-2 gap-12 items-center">
-            <div class="order-2 lg:order-1 animate-fade-in-up">
+    <section id="home" class="hero-section">
+        <div class="container mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center h-full">
+            <div class="animate-fade-in-up">
                 <div class="inline-block px-4 py-2 bg-blue-900/40 border border-blue-500/30 rounded-full text-blue-300 text-xs font-bold mb-6">
                     <i class="fas fa-star text-yellow-400 mr-2"></i> <span data-key="hero_badge">الخيار الأول للشركات</span>
                 </div>
@@ -133,57 +144,61 @@
                     </a>
                 </div>
             </div>
-
-            <div class="order-1 lg:order-2">
-                <div class="swiper fleet-slider pb-12">
-                    <div class="swiper-wrapper">
-                        <div class="swiper-slide">
-                            <img src="images/fleet/sedan-group.jpg" onerror="this.src='https://via.placeholder.com/800x500/0f172a/3b82f6?text=Sedan+Fleet'" alt="Sedan">
-                        </div>
-                        <div class="swiper-slide">
-                            <img src="images/fleet/suv-group.jpg" onerror="this.src='https://via.placeholder.com/800x500/0f172a/3b82f6?text=SUV+Fleet'" alt="SUV">
-                        </div>
-                        <div class="swiper-slide">
-                            <img src="images/fleet/van-group.jpg" onerror="this.src='https://via.placeholder.com/800x500/0f172a/3b82f6?text=Van+Fleet'" alt="Van">
-                        </div>
-                    </div>
-                    <div class="swiper-pagination"></div>
-                </div>
-            </div>
+            <div></div> 
         </div>
     </section>
 
-    <div class="bg-slate-950 py-8 border-y border-slate-800">
-        <div class="container mx-auto px-6 flex justify-center flex-wrap gap-12 opacity-70 hover:opacity-100 transition duration-500">
-            <img src="images/logos/parkville.png" class="h-10 grayscale hover:grayscale-0 transition" onerror="this.style.display='none'">
-            <img src="images/logos/elsewedy.png" class="h-8 grayscale hover:grayscale-0 transition" onerror="this.style.display='none'">
-            <img src="images/logos/advocure.png" class="h-10 grayscale hover:grayscale-0 transition" onerror="this.style.display='none'">
-            <img src="images/logos/alahly.png" class="h-12 grayscale hover:grayscale-0 transition" onerror="this.style.display='none'">
-            <img src="images/logos/57357.png" class="h-10 grayscale hover:grayscale-0 transition" onerror="this.style.display='none'">
-            <img src="images/logos/brazil.png" class="h-10 grayscale hover:grayscale-0 transition" onerror="this.style.display='none'">
+    <div class="container mx-auto px-6 hero-slider-container">
+        <div class="swiper fleet-slider">
+            <div class="swiper-wrapper">
+                <div class="swiper-slide">
+                    <img src="images/fleet/sedan-group.jpg" onerror="this.src='https://via.placeholder.com/1200x600/0f172a/3b82f6?text=Sedan+Fleet+2025'" alt="Sedan">
+                </div>
+                <div class="swiper-slide">
+                    <img src="images/fleet/suv-group.jpg" onerror="this.src='https://via.placeholder.com/1200x600/0f172a/3b82f6?text=SUV+Fleet+2025'" alt="SUV">
+                </div>
+                <div class="swiper-slide">
+                    <img src="images/fleet/van-group.jpg" onerror="this.src='https://via.placeholder.com/1200x600/0f172a/3b82f6?text=Van+Fleet+2025'" alt="Van">
+                </div>
+            </div>
+            <div class="swiper-pagination"></div>
         </div>
     </div>
 
-    <section class="py-24 relative">
+    <div class="bg-slate-950 py-10 border-y border-slate-800">
+        <div class="container mx-auto px-6 text-center mb-8">
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]" data-key="partners_title">شركاء النجاح</p>
+        </div>
+        <div class="container mx-auto px-6 flex justify-center flex-wrap gap-12 trust-bar">
+            <img src="images/logos/parkville.png" onerror="this.style.display='none'">
+            <img src="images/logos/elsewedy.png" onerror="this.style.display='none'">
+            <img src="images/logos/advocure.png" onerror="this.style.display='none'">
+            <img src="images/logos/alahly.png" onerror="this.style.display='none'">
+            <img src="images/logos/57357.png" onerror="this.style.display='none'">
+            <img src="images/logos/brazil.png" onerror="this.style.display='none'">
+        </div>
+    </div>
+
+    <section class="py-24" id="stats-section">
         <div class="container mx-auto px-6">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
                 
-                <a href="about.html" class="stat-card p-8 rounded-2xl block group">
-                    <div class="text-4xl font-black text-white mb-2 group-hover:text-blue-400 transition">2022</div>
+                <a href="about.html" class="stat-card group">
+                    <div class="text-4xl font-black text-white mb-2 group-hover:text-blue-400 transition stat-number" data-target="2022">0</div>
                     <h3 class="text-blue-400 font-bold mb-3" data-key="stat_1_t">عام التأسيس</h3>
-                    <p class="text-xs text-slate-400 leading-relaxed" data-key="stat_1_d">انطلاق مسيرتنا في السوق المصري برؤية عالمية لتغيير مفهوم النقل. اضغط لمعرفة قصتنا ورؤيتنا المستقبلية.</p>
+                    <p class="text-xs text-slate-400 leading-relaxed" data-key="stat_1_d">انطلاق مسيرتنا في السوق المصري برؤية عالمية لتغيير مفهوم النقل. اضغط لمعرفة قصتنا.</p>
                 </a>
 
-                <a href="reviews.html" class="stat-card p-8 rounded-2xl block group">
+                <a href="reviews.html" class="stat-card group">
                     <div class="text-4xl font-black text-white mb-2"><span class="stat-number" data-target="12000">0</span>+</div>
                     <h3 class="text-blue-400 font-bold mb-3" data-key="stat_2_t">رحلة ناجحة</h3>
-                    <p class="text-xs text-slate-400 leading-relaxed" data-key="stat_2_d">ثقة عملائنا هي رأس مالنا. نفذنا آلاف الرحلات للمطارات والمؤتمرات بدقة تامة. شاهد التقييمات وآراء العملاء.</p>
+                    <p class="text-xs text-slate-400 leading-relaxed" data-key="stat_2_d">ثقة عملائنا هي رأس مالنا. نفذنا آلاف الرحلات للمطارات والمؤتمرات بدقة تامة. شاهد التقييمات.</p>
                 </a>
 
-                <a href="reviews.html" class="stat-card p-8 rounded-2xl block group">
+                <a href="reviews.html" class="stat-card group">
                     <div class="text-4xl font-black text-white mb-2"><span class="stat-number" data-target="98">0</span>%</div>
                     <h3 class="text-blue-400 font-bold mb-3" data-key="stat_3_t">نسبة رضاء العملاء</h3>
-                    <p class="text-xs text-slate-400 leading-relaxed" data-key="stat_3_d">نلتزم بأعلى معايير الجودة، النظافة، والتعقيم. تقييمات حقيقية من عملاء ومؤسسات كبرى تعاملت معنا.</p>
+                    <p class="text-xs text-slate-400 leading-relaxed" data-key="stat_3_d">نلتزم بأعلى معايير الجودة والنظافة. تقييمات حقيقية من عملاء ومؤسسات كبرى.</p>
                 </a>
 
             </div>
@@ -192,10 +207,9 @@
 
     <section id="services" class="py-24 bg-slate-950">
         <div class="container mx-auto px-6">
-            <h2 class="text-4xl font-black text-center mb-16">خدماتنا <span class="text-blue-500">المتخصصة</span></h2>
+            <h2 class="text-4xl font-black text-center mb-16" data-key="srv_title">خدماتنا <span class="text-blue-500">المتخصصة</span></h2>
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                
                 <div class="bg-slate-900 p-8 rounded-2xl border border-slate-800 hover:border-blue-500 transition group">
                     <i class="fas fa-plane-departure text-4xl text-blue-500 mb-6 group-hover:scale-110 transition"></i>
                     <h3 class="text-xl font-bold text-white mb-4" data-key="srv_1_t">المطارات والسياحة</h3>
@@ -209,7 +223,7 @@
                     <i class="fas fa-building text-4xl text-blue-400 mb-6 group-hover:scale-110 transition"></i>
                     <h3 class="text-xl font-bold text-white mb-4" data-key="srv_2_t">الشركات والمؤتمرات</h3>
                     <p class="text-slate-400 text-sm mb-6" data-key="srv_2_d">عقود سنوية، فواتير ضريبية، وتنظيم انتقالات المؤتمرات. أرسل لنا احتياجات شركتك وسنرد بعرض سعر رسمي.</p>
-                    <a href="mailto:info@24seven-ai.com?subject=طلب عرض سعر شركة&body=مرحباً، نرغب في الاستفسار عن خدمات نقل الموظفين/المؤتمرات." class="text-blue-400 text-sm font-bold flex items-center gap-2 hover:gap-4 transition">
+                    <a href="mailto:info@24seven-ai.com?subject=طلب عرض سعر شركة" class="text-blue-400 text-sm font-bold flex items-center gap-2 hover:gap-4 transition">
                         <span data-key="btn_quote">طلب عرض سعر (Email)</span> <i class="fas fa-envelope"></i>
                     </a>
                 </div>
@@ -222,7 +236,6 @@
                         <span data-key="btn_wedding">صمم باقة زفافك</span> <i class="fas fa-calendar-heart"></i>
                     </button>
                 </div>
-
             </div>
         </div>
     </section>
@@ -230,41 +243,28 @@
     <div id="weddingModal" class="modal">
         <div class="bg-slate-900 border border-slate-700 w-full max-w-lg p-8 rounded-2xl relative shadow-2xl mx-4">
             <button onclick="closeWeddingModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl"><i class="fas fa-times"></i></button>
-            
             <div class="text-center mb-6">
                 <i class="fas fa-ring text-3xl text-pink-500 mb-2"></i>
                 <h3 class="text-2xl font-bold text-white" data-key="modal_title">طلب عرض سعر زفاف</h3>
                 <p class="text-slate-400 text-sm" data-key="modal_desc">املأ البيانات وسنتواصل معك بأفضل الباقات المتاحة</p>
             </div>
-
             <form action="https://formspree.io/f/xzddpdga" method="POST" class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
-                    <input type="text" name="الاسم" placeholder="الاسم" class="bg-slate-800 border border-slate-700 text-white rounded-lg p-3 w-full focus:border-pink-500 outline-none" required>
-                    <input type="tel" name="الهاتف" placeholder="رقم الهاتف" class="bg-slate-800 border border-slate-700 text-white rounded-lg p-3 w-full focus:border-pink-500 outline-none" required>
+                    <input type="text" name="الاسم" placeholder="الاسم" class="bg-slate-800 border border-slate-700 text-white rounded-lg p-3 w-full outline-none" required>
+                    <input type="tel" name="الهاتف" placeholder="رقم الهاتف" class="bg-slate-800 border border-slate-700 text-white rounded-lg p-3 w-full outline-none" required>
                 </div>
-                
                 <div class="grid grid-cols-2 gap-4">
                     <input type="date" name="تاريخ_الزفاف" class="bg-slate-800 border border-slate-700 text-slate-400 rounded-lg p-3 w-full outline-none" required>
-                    <input type="number" name="عدد_الساعات" placeholder="عدد الساعات المطلوبة" class="bg-slate-800 border border-slate-700 text-white rounded-lg p-3 w-full outline-none">
+                    <input type="number" name="عدد_الساعات" placeholder="عدد الساعات" class="bg-slate-800 border border-slate-700 text-white rounded-lg p-3 w-full outline-none">
                 </div>
-
-                <input type="text" name="خط_السير" placeholder="خط السير (مثال: من السيوف إلى القاعة..)" class="bg-slate-800 border border-slate-700 text-white rounded-lg p-3 w-full outline-none">
-                
+                <input type="text" name="خط_السير" placeholder="خط السير" class="bg-slate-800 border border-slate-700 text-white rounded-lg p-3 w-full outline-none">
                 <select name="نوع_السيارة" class="bg-slate-800 border border-slate-700 text-slate-300 rounded-lg p-3 w-full outline-none">
-                    <option value="" disabled selected>نوع السيارة المفضل</option>
-                    <option value="سيدان حديثة">سيدان حديثة (تويوتا/النترا)</option>
-                    <option value="مرسيدس">مرسيدس (S-Class / E-Class)</option>
-                    <option value="ليموزين طويل">ليموزين طويل (Stretch)</option>
-                    <option value="كابورليه">كابورليه (مكشوفة)</option>
+                    <option value="سيدان حديثة">سيدان حديثة</option>
+                    <option value="مرسيدس">مرسيدس</option>
+                    <option value="ليموزين طويل">ليموزين طويل</option>
+                    <option value="كابورليه">كابورليه</option>
                 </select>
-
-                <input type="text" name="الميزانية" placeholder="الميزانية التقريبية (اختياري)" class="bg-slate-800 border border-slate-700 text-white rounded-lg p-3 w-full outline-none">
-
-                <input type="hidden" name="_subject" value="💍 طلب زفاف جديد - 24Seven">
-                
-                <button type="submit" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 rounded-lg transition shadow-lg shadow-pink-600/30" data-key="btn_send">
-                    إرسال طلب العرض
-                </button>
+                <button type="submit" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 rounded-lg transition shadow-lg" data-key="btn_send">إرسال طلب العرض</button>
             </form>
         </div>
     </div>
@@ -310,22 +310,23 @@
 
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"></script>
     <script>
-        // Swiper Config
+        // Swiper
         new Swiper('.fleet-slider', {
-            slidesPerView: 1, spaceBetween: 20, loop: true,
+            slidesPerView: 1, spaceBetween: 30, loop: true,
             autoplay: { delay: 3000 },
-            pagination: { el: '.swiper-pagination', clickable: true },
-            effect: 'coverflow', coverflowEffect: { rotate: 50, stretch: 0, depth: 100, modifier: 1, slideShadows: true }
+            breakpoints: {
+                640: { slidesPerView: 2 },
+                1024: { slidesPerView: 3 }
+            },
+            pagination: { el: '.swiper-pagination', clickable: true }
         });
 
-        // Wedding Modal Logic
+        // Wedding Modal
         function openWeddingModal() { document.getElementById('weddingModal').classList.add('active'); }
         function closeWeddingModal() { document.getElementById('weddingModal').classList.remove('active'); }
-        window.onclick = function(event) {
-            if (event.target == document.getElementById('weddingModal')) closeWeddingModal();
-        }
+        window.onclick = function(event) { if (event.target == document.getElementById('weddingModal')) closeWeddingModal(); }
 
-        // Stats Counter Animation
+        // Stats Counter Animation (Fixed)
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -333,24 +334,24 @@
                     counters.forEach(counter => {
                         const target = +counter.getAttribute('data-target');
                         let count = 0;
-                        const inc = target / 50; 
+                        const inc = Math.ceil(target / 50); 
                         const updateCount = () => {
                             count += inc;
                             if (count < target) {
-                                counter.innerText = Math.ceil(count);
-                                setTimeout(updateCount, 30);
+                                counter.innerText = count;
+                                setTimeout(updateCount, 40);
                             } else {
                                 counter.innerText = target;
                             }
                         };
                         updateCount();
-                        counter.classList.remove('stat-number');
+                        counter.classList.remove('stat-number'); // Prevent re-animation
                     });
                 }
             });
-        }, { threshold: 0.5 });
+        }, { threshold: 0.1 });
         
-        const statsSection = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-3'); 
+        const statsSection = document.getElementById('stats-section');
         if(statsSection) observer.observe(statsSection);
 
         // Language System
@@ -359,10 +360,10 @@
                 nav_home: "الرئيسية", nav_services: "الخدمات", nav_reviews: "آراء العملاء", nav_invest: "استثمار", btn_book: "احجز الآن",
                 hero_badge: "الخيار الأول للشركات", hero_t1: "مفهوم جديد", hero_t2: "للرفاهية العالمية",
                 hero_desc: "أسطول 2025 المتكامل. نقدم تجربة تنقل استثنائية للمطارات، الشركات، وحفلات الزفاف. دقة في المواعيد واحترافية تفوق التوقعات.",
-                btn_book_now: "احجز سيارتك", btn_services: "خدماتنا",
-                stat_1_t: "عام التأسيس", stat_1_d: "انطلاق مسيرتنا في السوق المصري برؤية عالمية لتغيير مفهوم النقل.",
-                stat_2_t: "رحلة ناجحة", stat_2_d: "ثقة عملائنا هي رأس مالنا. نفذنا آلاف الرحلات للمطارات والمؤتمرات.",
-                stat_3_t: "نسبة رضاء العملاء", stat_3_d: "نلتزم بأعلى معايير الجودة والنظافة. تقييمات حقيقية من عملاء ومؤسسات.",
+                btn_book_now: "احجز سيارتك", btn_services: "خدماتنا", partners_title: "شركاء النجاح",
+                stat_1_t: "عام التأسيس", stat_1_d: "انطلاق مسيرتنا في السوق المصري برؤية عالمية لتغيير مفهوم النقل. اضغط لمعرفة قصتنا.",
+                stat_2_t: "رحلة ناجحة", stat_2_d: "ثقة عملائنا هي رأس مالنا. نفذنا آلاف الرحلات للمطارات والمؤتمرات بدقة تامة.",
+                stat_3_t: "نسبة رضاء العملاء", stat_3_d: "نلتزم بأعلى معايير الجودة والنظافة. تقييمات حقيقية من عملاء ومؤسسات كبرى.",
                 srv_title: "خدماتنا", srv_1_t: "المطارات والسياحة", srv_1_d: "استقبال VIP من داخل المطار وتوصيل لجميع المحافظات.",
                 btn_book_trip: "احجز رحلتك الآن", srv_2_t: "الشركات والمؤتمرات", srv_2_d: "عقود سنوية، فواتير ضريبية، وتنظيم انتقالات المؤتمرات.",
                 btn_quote: "طلب عرض سعر", srv_3_t: "الزفاف والمناسبات", srv_3_d: "سيارات زفاف حديثة وكلاسيكية لليلة العمر.",
@@ -372,14 +373,14 @@
                 nav_home: "Home", nav_services: "Services", nav_reviews: "Reviews", nav_invest: "Invest", btn_book: "Book Now",
                 hero_badge: "#1 Choice for Corporates", hero_t1: "New Concept", hero_t2: "Of Global Luxury",
                 hero_desc: "Integrated 2025 Fleet. Exceptional transport experience for Airports, Corporates, and Weddings.",
-                btn_book_now: "Book Your Car", btn_services: "Our Services",
+                btn_book_now: "Book Your Car", btn_services: "Our Services", partners_title: "Success Partners",
                 stat_1_t: "Founded", stat_1_d: "Starting our journey in the Egyptian market with a global vision.",
                 stat_2_t: "Success Trips", stat_2_d: "Client trust is our asset. Thousands of trips executed for airports and conferences.",
-                stat_3_t: "Client Satisfaction", stat_3_d: "Committed to highest quality and hygiene standards. Real reviews from major clients.",
+                stat_3_t: "Client Satisfaction", stat_3_d: "Committed to highest quality standards. Real reviews from major clients.",
                 srv_title: "Our Services", srv_1_t: "Airports & Tourism", srv_1_d: "VIP meet & greet inside airports and transfer to all governorates.",
                 btn_book_trip: "Book Trip Now", srv_2_t: "Corporate & Events", srv_2_d: "Annual contracts, tax invoices, and conference logistics.",
                 btn_quote: "Request Quote", srv_3_t: "Weddings & Events", srv_3_d: "Modern and classic wedding cars for your special night.",
-                btn_wedding: "Customize Wedding Package", modal_title: "Wedding Quote Request", modal_desc: "Fill details and we will contact you", btn_send: "Send Request"
+                btn_wedding: "Customize Package", modal_title: "Wedding Quote Request", modal_desc: "Fill details and we will contact you", btn_send: "Send Request"
             }
         };
 
