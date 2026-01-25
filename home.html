@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     
-    <meta name="description" content="24Seven Limousine - الشركة الرائدة في خدمات الليموزين والنقل السياحي في مصر.">
+    <meta name="description" content="24Seven Limousine - الشركة الرائدة في خدمات الليموزين والنقل السياحي في مصر. أسطول حديث 2025.">
     <meta property="og:title" content="24Seven Limousine">
     <meta property="og:image" content="images/logos/logo.png">
     <link rel="icon" href="images/logos/logo.png" type="image/png">
@@ -26,35 +26,36 @@
         body { background-color: var(--brand-dark); color: white; font-family: var(--font-ar); overflow-x: hidden; }
         body.en { font-family: var(--font-en); direction: ltr; }
 
-        /* === 1. Hero Slanted Design (التصميم المائل القديم المفضل) === */
+        /* === 1. Hero Slanted Design (التصميم المائل المتداخل) === */
         .hero-section {
             position: relative;
+            /* زيادة البادينج السفلي لإعطاء مساحة للتداخل */
             padding-top: 8rem;
-            padding-bottom: 10rem; /* مساحة للصورة المتداخلة */
-            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+            padding-bottom: 12rem; 
+            background: linear-gradient(135deg, #0f172a 0%, #172554 100%);
             /* القص المائل من الأسفل */
             clip-path: polygon(0 0, 100% 0, 100% 85%, 0 100%);
             z-index: 1;
         }
         
-        /* حاوية السلايدر المتداخلة */
-        .hero-slider-container {
-            margin-top: -8rem; /* سحب السلايدر للأعلى ليتداخل */
+        /* حاوية السلايدر المتداخلة (Overlapping Container) */
+        .slider-overlap {
+            margin-top: -10rem; /* سحب السلايدر للأعلى ليتداخل مع الخلفية المائلة */
             position: relative;
             z-index: 10;
             padding-bottom: 4rem;
         }
 
-        /* تنسيق صور السلايدر */
+        /* تنسيق صور السلايدر لتبدو احترافية */
         .swiper-slide img {
             width: 100%;
-            border-radius: 20px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            height: auto;
+            max-height: 500px; /* تحديد أقصى ارتفاع */
+            object-fit: cover;
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6); /* ظل قوي للعمق */
             border: 1px solid rgba(255, 255, 255, 0.1);
-            transform: scale(0.95);
-            transition: transform 0.5s;
         }
-        .swiper-slide-active img { transform: scale(1); border-color: #3b82f6; }
 
         /* === 2. Stats Cards (كروت الأرقام) === */
         .stat-card {
@@ -83,11 +84,14 @@
 
         /* === Trust Bar (اللوجوهات) === */
         .trust-bar img {
-            height: 50px;
+            height: 60px;
             width: auto;
             filter: grayscale(100%) opacity(0.7);
             transition: 0.3s;
             object-fit: contain;
+            background: white; /* خلفية بيضاء صغيرة للوجو ليكون واضحاً */
+            padding: 5px;
+            border-radius: 8px;
         }
         .trust-bar img:hover { filter: grayscale(0) opacity(1); transform: scale(1.1); }
 
@@ -103,7 +107,7 @@
     <nav class="fixed w-full z-50 bg-[#020617]/90 backdrop-blur-md border-b border-blue-900/30">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
             <a href="home.html" class="flex items-center gap-3">
-                <img src="images/logos/logo.png" alt="24Seven" class="h-12 drop-shadow-lg">
+                <img src="images/logos/logo.png" alt="24Seven" class="h-14 drop-shadow-lg">
             </a>
             <div class="hidden lg:flex items-center gap-8 text-sm font-bold text-slate-300">
                 <a href="#home" class="hover:text-blue-400 transition" data-key="nav_home">الرئيسية</a>
@@ -148,17 +152,17 @@
         </div>
     </section>
 
-    <div class="container mx-auto px-6 hero-slider-container">
+    <div class="container mx-auto px-6 slider-overlap">
         <div class="swiper fleet-slider">
             <div class="swiper-wrapper">
                 <div class="swiper-slide">
-                    <img src="images/fleet/sedan-group.jpg" onerror="this.src='https://via.placeholder.com/1200x600/0f172a/3b82f6?text=Sedan+Fleet+2025'" alt="Sedan">
+                    <img src="images/fleet/sedan-group.jpg" onerror="this.src='https://via.placeholder.com/1200x600/0f172a/3b82f6?text=Sedan+Fleet+2025'" alt="Sedan Fleet">
                 </div>
                 <div class="swiper-slide">
-                    <img src="images/fleet/suv-group.jpg" onerror="this.src='https://via.placeholder.com/1200x600/0f172a/3b82f6?text=SUV+Fleet+2025'" alt="SUV">
+                    <img src="images/fleet/suv-group.jpg" onerror="this.src='https://via.placeholder.com/1200x600/0f172a/3b82f6?text=SUV+Fleet+2025'" alt="SUV Fleet">
                 </div>
                 <div class="swiper-slide">
-                    <img src="images/fleet/van-group.jpg" onerror="this.src='https://via.placeholder.com/1200x600/0f172a/3b82f6?text=Van+Fleet+2025'" alt="Van">
+                    <img src="images/fleet/van-group.jpg" onerror="this.src='https://via.placeholder.com/1200x600/0f172a/3b82f6?text=Van+Fleet+2025'" alt="Van Fleet">
                 </div>
             </div>
             <div class="swiper-pagination"></div>
@@ -184,19 +188,19 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
                 
                 <a href="about.html" class="stat-card group">
-                    <div class="text-4xl font-black text-white mb-2 group-hover:text-blue-400 transition stat-number" data-target="2022">0</div>
+                    <div class="text-4xl font-black text-white mb-2 group-hover:text-blue-400 transition counter-anim" data-target="2022">0</div>
                     <h3 class="text-blue-400 font-bold mb-3" data-key="stat_1_t">عام التأسيس</h3>
-                    <p class="text-xs text-slate-400 leading-relaxed" data-key="stat_1_d">انطلاق مسيرتنا في السوق المصري برؤية عالمية لتغيير مفهوم النقل. اضغط لمعرفة قصتنا.</p>
+                    <p class="text-xs text-slate-400 leading-relaxed" data-key="stat_1_d">انطلاق مسيرتنا في السوق المصري برؤية عالمية لتغيير مفهوم النقل.</p>
                 </a>
 
                 <a href="reviews.html" class="stat-card group">
-                    <div class="text-4xl font-black text-white mb-2"><span class="stat-number" data-target="12000">0</span>+</div>
+                    <div class="text-4xl font-black text-white mb-2"><span class="counter-anim" data-target="12000">0</span>+</div>
                     <h3 class="text-blue-400 font-bold mb-3" data-key="stat_2_t">رحلة ناجحة</h3>
-                    <p class="text-xs text-slate-400 leading-relaxed" data-key="stat_2_d">ثقة عملائنا هي رأس مالنا. نفذنا آلاف الرحلات للمطارات والمؤتمرات بدقة تامة. شاهد التقييمات.</p>
+                    <p class="text-xs text-slate-400 leading-relaxed" data-key="stat_2_d">ثقة عملائنا هي رأس مالنا. نفذنا آلاف الرحلات للمطارات والمؤتمرات بدقة تامة.</p>
                 </a>
 
                 <a href="reviews.html" class="stat-card group">
-                    <div class="text-4xl font-black text-white mb-2"><span class="stat-number" data-target="98">0</span>%</div>
+                    <div class="text-4xl font-black text-white mb-2"><span class="counter-anim" data-target="98">0</span>%</div>
                     <h3 class="text-blue-400 font-bold mb-3" data-key="stat_3_t">نسبة رضاء العملاء</h3>
                     <p class="text-xs text-slate-400 leading-relaxed" data-key="stat_3_d">نلتزم بأعلى معايير الجودة والنظافة. تقييمات حقيقية من عملاء ومؤسسات كبرى.</p>
                 </a>
@@ -272,7 +276,7 @@
     <footer class="bg-slate-950 pt-16 pb-8 border-t border-slate-900 text-sm">
         <div class="container mx-auto px-6 grid md:grid-cols-3 gap-12 text-center md:text-right">
             <div>
-                <img src="images/logos/logo.png" class="h-10 mb-4 mx-auto md:mx-0">
+                <img src="images/logos/logo.png" class="h-10 mb-4 mx-auto md:mx-0" alt="24Seven Logo">
                 <p class="text-slate-400 mb-4">شركة مسجلة رسمياً. خدمات نقل سياحي وليموزين بأعلى معايير الأمان.</p>
                 <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 text-xs text-slate-300 font-mono">
                     <p>رقم ضريبي: <span class="text-white font-bold">849-934-698</span></p>
@@ -312,7 +316,7 @@
     <script>
         // Swiper
         new Swiper('.fleet-slider', {
-            slidesPerView: 1, spaceBetween: 30, loop: true,
+            slidesPerView: 1, spaceBetween: 20, loop: true,
             autoplay: { delay: 3000 },
             breakpoints: {
                 640: { slidesPerView: 2 },
@@ -326,33 +330,29 @@
         function closeWeddingModal() { document.getElementById('weddingModal').classList.remove('active'); }
         window.onclick = function(event) { if (event.target == document.getElementById('weddingModal')) closeWeddingModal(); }
 
-        // Stats Counter Animation (Fixed)
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const counters = entry.target.querySelectorAll('.stat-number');
-                    counters.forEach(counter => {
-                        const target = +counter.getAttribute('data-target');
-                        let count = 0;
-                        const inc = Math.ceil(target / 50); 
-                        const updateCount = () => {
-                            count += inc;
-                            if (count < target) {
-                                counter.innerText = count;
-                                setTimeout(updateCount, 40);
-                            } else {
-                                counter.innerText = target;
-                            }
-                        };
-                        updateCount();
-                        counter.classList.remove('stat-number'); // Prevent re-animation
-                    });
-                }
+        // --- FIX: Improved Counter Animation Logic ---
+        function runCounters() {
+            const counters = document.querySelectorAll('.counter-anim');
+            counters.forEach(counter => {
+                const target = +counter.getAttribute('data-target');
+                const duration = 2000; // Animation duration in ms
+                const step = target / (duration / 20); 
+                
+                let current = 0;
+                const timer = setInterval(() => {
+                    current += step;
+                    if (current >= target) {
+                        counter.innerText = target; // Ensure exact final number
+                        clearInterval(timer);
+                    } else {
+                        counter.innerText = Math.ceil(current);
+                    }
+                }, 20);
             });
-        }, { threshold: 0.1 });
+        }
         
-        const statsSection = document.getElementById('stats-section');
-        if(statsSection) observer.observe(statsSection);
+        // Trigger counters on load (simpler and safer than IntersectionObserver for now)
+        setTimeout(runCounters, 500); 
 
         // Language System
         const translations = {
