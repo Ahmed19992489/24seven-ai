@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="24Seven Limousine - الشركة الرائدة في خدمات الليموزين والنقل السياحي في مصر. خدمات رجال الأعمال، المؤتمرات، النقل من وإلى المطارات (القاهرة، برج العرب، شرم الشيخ، الغردقة).">
-    <meta name="keywords" content="ليموزين, ليموزين مطار القاهرة, ليموزين مطار برج العرب, ليموزين شرم الشيخ, ليموزين الغردقة, نقل سياحي, تأجير سيارات بالسائق, خدمات رجال أعمال, 24Seven">
-    <title>24Seven Limousine | الرفاهية بلمسة عالمية</title>
+    <meta name="description" content="24Seven Limousine - الشركة الرائدة في خدمات الليموزين والنقل السياحي في مصر. أسطول حديث 2023-2025 (تويوتا، كيا، ميتسوبيشي، هيونداي). خدمات رجال الأعمال، المؤتمرات، والمطارات.">
+    <meta name="keywords" content="ليموزين القاهرة, ليموزين مطار برج العرب, ايجار سيارات بالسائق, تويوتا هايس للايجار, ليموزين شركات, نقل مؤتمرات, 24Seven">
+    <title>24Seven Limousine | شريكك الموثوق في كل رحلة</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Outfit:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
     
     <style>
         /* إعدادات الخطوط واللغات */
@@ -17,300 +18,374 @@
         body.ar { font-family: var(--font-ar); direction: rtl; }
         body.en { font-family: var(--font-en); direction: ltr; }
         
-        /* ألوان البراند (مشتقة من اللوجو الأزرق) */
+        /* ألوان البراند (الأزرق المؤسسي) */
         :root {
-            --brand-blue: #2563eb; /* أزرق ملكي */
-            --brand-sky: #3b82f6;  /* سماوي */
-            --brand-dark: #0f172a; /* كحلي غامق */
-            --accent-gold: #f59e0b; /* ذهبي للفخامة */
+            --brand-primary: #0056b3; /* أزرق داكن قوي */
+            --brand-light: #3b82f6;   /* أزرق سماوي مشرق */
+            --brand-dark: #020617;    /* كحلي ليلي */
         }
 
         body { background-color: var(--brand-dark); color: white; overflow-x: hidden; scroll-behavior: smooth; }
 
-        /* Hero Section Gradient */
-        .hero-bg { 
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(37, 99, 235, 0.1) 100%), 
-                        url('https://images.unsplash.com/photo-1552519507-da3b142c6e3d?q=80&w=1920'); 
-            background-size: cover; background-position: center; background-attachment: fixed;
+        /* خلفية الهيرو */
+        .hero-section { 
+            position: relative; min-height: 95vh; display: flex; align-items: center;
+            background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.15), transparent 50%),
+                        linear-gradient(to bottom, #020617, #0f172a);
         }
+        .hero-pattern { position: absolute; inset: 0; background-image: url('https://www.transparenttextures.com/patterns/carbon-fibre.png'); opacity: 0.05; }
 
-        /* نصوص متدرجة (أزرق في سماوي) */
-        .brand-text-gradient {
-            background: linear-gradient(to right, #60a5fa, #ffffff);
+        /* نصوص متدرجة */
+        .blue-gradient-text {
+            background: linear-gradient(to right, var(--brand-light), #ffffff);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
 
-        /* الكروت */
-        .service-card {
-            background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(59, 130, 246, 0.1); 
-            backdrop-filter: blur(10px); transition: all 0.3s ease;
+        /* كروت الخدمات المحسنة (UX) */
+        .service-card-ux {
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9));
+            border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 24px; overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); position: relative;
         }
-        .service-card:hover { 
-            transform: translateY(-10px); 
-            border-color: var(--brand-sky); 
-            box-shadow: 0 10px 30px rgba(37, 99, 235, 0.15); 
+        .service-card-ux::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
+            background: linear-gradient(to right, var(--brand-primary), var(--brand-light));
+            transform: scaleX(0); transform-origin: left; transition: transform 0.4s ease;
         }
+        .service-card-ux:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0, 86, 179, 0.15); border-color: var(--brand-light); }
+        .service-card-ux:hover::before { transform: scaleX(1); }
 
-        /* شريط الشركاء المتحرك */
-        .partners-track { display: flex; gap: 4rem; animation: scroll 20s linear infinite; }
-        @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+        /* شريط الشركاء (لوجوهات) */
+        .partners-track img { max-height: 50px; filter: grayscale(100%) opacity(0.7); transition: 0.4s; }
+        .partners-track img:hover { filter: grayscale(0%) opacity(1); transform: scale(1.05); }
 
         /* الأزرار العائمة */
         .floating-actions { position: fixed; bottom: 30px; right: 30px; display: flex; flex-direction: column-reverse; gap: 15px; z-index: 100; }
-        .action-btn { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 28px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: 0.3s; cursor: pointer; text-decoration: none; }
-        .action-btn:hover { transform: scale(1.1); }
+        .action-btn { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 26px; box-shadow: 0 8px 20px rgba(0,0,0,0.3); transition: 0.3s; cursor: pointer; text-decoration: none; border: 2px solid rgba(255,255,255,0.1); }
+        .action-btn:hover { transform: scale(1.1) rotate(5deg); }
         body.en .floating-actions { right: auto; left: 30px; }
+
+        /* تخصيص Swiper Slider */
+        .swiper-slide img { width: 100%; height: auto; object-fit: contain; filter: drop-shadow(0 20px 30px rgba(0,0,0,0.5)); }
     </style>
 </head>
 <body class="ar">
 
-    <nav class="fixed w-full z-50 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 transition-all duration-300">
+    <nav class="fixed w-full z-50 bg-[#020617]/90 backdrop-blur-xl border-b border-blue-900/30 transition-all duration-300">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
             <a href="home.html" class="flex items-center gap-3 group">
                 <div class="text-2xl font-black italic tracking-tighter">
-                    <span class="text-blue-500 text-3xl">24</span><span class="text-white">Seven</span>
-                    <span class="block text-[8px] text-slate-400 font-normal tracking-widest uppercase not-italic pl-1">Global Limousine</span>
+                    <span class="text-blue-600 text-4xl">24</span><span class="text-white">Seven</span>
+                    <span class="block text-[9px] text-blue-300 font-bold tracking-[0.2em] uppercase not-italic pl-1">Corporate Limousine</span>
                 </div>
             </a>
 
-            <div class="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-300">
-                <a href="#home" class="hover:text-blue-400 transition" data-key="nav_home">الرئيسية</a>
-                <a href="#services" class="hover:text-blue-400 transition" data-key="nav_services">خدماتنا</a>
-                <a href="#fleet" class="hover:text-blue-400 transition" data-key="nav_fleet">الأسطول</a>
-                <a href="reviews.html" class="hover:text-blue-400 transition" data-key="nav_reviews">آراء العملاء</a>
-                <a href="invest.html" class="text-blue-400 hover:text-blue-300 font-bold" data-key="nav_invest">استثمار السيارات</a>
+            <div class="hidden lg:flex items-center gap-10 text-sm font-bold text-slate-300">
+                <a href="#home" class="hover:text-blue-400 transition relative after:absolute after:bottom-[-5px] after:left-0 after:w-0 after:h-[2px] after:bg-blue-500 after:transition-all hover:after:w-full" data-key="nav_home">الرئيسية</a>
+                <a href="#services" class="hover:text-blue-400 transition relative after:absolute after:bottom-[-5px] after:left-0 after:w-0 after:h-[2px] after:bg-blue-500 after:transition-all hover:after:w-full" data-key="nav_services">قطاعات الأعمال</a>
+                <a href="reviews.html" class="hover:text-blue-400 transition relative after:absolute after:bottom-[-5px] after:left-0 after:w-0 after:h-[2px] after:bg-blue-500 after:transition-all hover:after:w-full" data-key="nav_reviews">قصص النجاح</a>
+                <a href="about.html" class="hover:text-blue-400 transition relative after:absolute after:bottom-[-5px] after:left-0 after:w-0 after:h-[2px] after:bg-blue-500 after:transition-all hover:after:w-full" data-key="nav_about">من نحن</a>
             </div>
 
-            <div class="flex items-center gap-3">
-                <button onclick="toggleLang()" class="border border-slate-600 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-slate-800 transition flex items-center gap-2">
-                    <i class="fas fa-globe text-blue-500"></i> <span id="lang-text">English</span>
+            <div class="flex items-center gap-4">
+                <button onclick="toggleLang()" class="border-2 border-blue-900/50 px-4 py-2 rounded-full text-xs font-bold hover:bg-blue-900/30 transition flex items-center gap-2 text-blue-300">
+                    <i class="fas fa-globe"></i> <span id="lang-text">English</span>
                 </button>
-                <a href="limousine.html" class="bg-blue-600 text-white px-6 py-2.5 rounded-full font-bold text-sm hover:bg-blue-500 transition shadow-lg shadow-blue-600/20 flex items-center gap-2">
-                    <i class="fas fa-car-side"></i> <span data-key="btn_book">احجز الآن</span>
+                <a href="limousine.html" class="bg-gradient-to-r from-blue-700 to-blue-500 text-white px-8 py-3 rounded-full font-bold text-sm hover:shadow-lg hover:shadow-blue-600/30 transition flex items-center gap-3 transform hover:-translate-y-1">
+                    <i class="fas fa-briefcase"></i> <span data-key="btn_book">احجز الآن</span>
                 </a>
             </div>
         </div>
     </nav>
 
-    <section id="home" class="hero-bg min-h-screen flex items-center relative overflow-hidden">
-        <div class="container mx-auto px-6 grid md:grid-cols-2 items-center gap-10 pt-20">
+    <section id="home" class="hero-section overflow-hidden pt-24">
+        <div class="hero-pattern"></div>
+        <div class="container mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center relative z-10">
             
-            <div class="animate-fade-in-up z-10">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-bold mb-6">
-                    <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-                    <span>الخيار الأول للشركات العالمية في مصر</span>
+            <div class="animate-fade-in-up order-2 lg:order-1 text-center lg:text-right">
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-900/30 border border-blue-500/30 text-blue-300 text-sm font-bold mb-8">
+                    <i class="fas fa-certificate"></i>
+                    <span>شريك النقل الرسمي لكبرى المؤسسات</span>
                 </div>
                 
-                <h1 class="text-5xl md:text-7xl font-black mb-6 leading-tight">
-                    <span data-key="hero_t1">تنقل بثقة..</span> <br>
-                    <span class="brand-text-gradient" data-key="hero_t2">بمعايير عالمية</span>
+                <h1 class="text-5xl lg:text-7xl font-black mb-6 leading-tight">
+                    <span data-key="hero_t1">الرفاهية..</span> <br>
+                    <span class="blue-gradient-text" data-key="hero_t2">بمفهوم مؤسسي</span>
                 </h1>
                 
-                <p class="text-lg text-slate-300 mb-8 leading-relaxed max-w-xl" data-key="hero_desc">
-                    منذ 2022، ونحن نقود مفهوم النقل الفاخر. أكثر من 12,000 رحلة ناجحة لشركات عملاقة (Parkville, Elsewedy) وشخصيات هامة. دقة، أمان، ورفاهية تليق بك.
+                <p class="text-xl text-slate-300 mb-10 leading-relaxed max-w-2xl mx-auto lg:mx-0" data-key="hero_desc">
+                    نقدم حلول تنقل متكاملة تليق بمكانة شركتك وضيوفك. أسطول حديث (2023-2025) وسائقون محترفون لضمان تجربة سلسة، آمنة، وفي الوقت المحدد دائماً.
                 </p>
 
-                <div class="flex flex-wrap gap-4">
-                    <a href="limousine.html" class="bg-blue-600 text-white px-8 py-4 rounded-xl font-bold hover:bg-blue-500 transition shadow-xl shadow-blue-600/20 flex items-center gap-2">
-                        <span data-key="btn_book_now">احجز سيارتك</span> <i class="fas fa-arrow-left"></i>
+                <div class="flex flex-wrap gap-4 justify-center lg:justify-start">
+                    <a href="limousine.html" class="bg-blue-600 text-white px-10 py-5 rounded-xl font-bold text-lg hover:bg-blue-700 transition shadow-2xl shadow-blue-700/20 flex items-center gap-3">
+                        <span data-key="btn_book_now">ابدأ رحلتك الآن</span> <i class="fas fa-arrow-left"></i>
                     </a>
-                    <a href="https://wa.me/201121748885" class="bg-slate-800 text-white border border-slate-700 px-8 py-4 rounded-xl font-bold hover:bg-slate-700 transition flex items-center gap-2">
-                        <i class="fab fa-whatsapp text-green-500 text-xl"></i> <span data-key="btn_whatsapp">تواصل واتساب</span>
+                    <a href="#services" class="bg-transparent text-white border-2 border-slate-700 px-10 py-5 rounded-xl font-bold text-lg hover:bg-slate-800/50 transition flex items-center gap-3">
+                        <i class="fas fa-th-large"></i> <span data-key="btn_explore">خدماتنا</span>
                     </a>
                 </div>
             </div>
 
-            <div class="hidden md:block relative z-10">
-                <img src="https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?q=80&w=800" class="rounded-3xl shadow-2xl border-4 border-slate-800/50 transform rotate-2 hover:rotate-0 transition duration-500">
-                <div class="absolute -bottom-6 -left-6 bg-slate-900/90 backdrop-blur-md p-5 rounded-2xl border border-blue-500/30 shadow-xl">
-                    <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white text-xl"><i class="fas fa-shield-alt"></i></div>
-                        <div>
-                            <p class="text-2xl font-bold text-white">98%</p>
-                            <p class="text-xs text-slate-400">نسبة رضاء العملاء</p>
+            <div class="order-1 lg:order-2 relative">
+                 <div class="swiper fleet-slider rounded-3xl overflow-visible">
+                    <div class="swiper-wrapper">
+                        <div class="swiper-slide">
+                            <img src="https://i.imgur.com/8X9W0qK.png" alt="Luxury Sedan Fleet (Corolla, Cerato, Elantra)">
+                            <div class="text-center mt-4"><p class="text-blue-300 font-bold">أسطول السيدان الحديث (2023+)</p></div>
+                        </div>
+                        <div class="swiper-slide">
+                            <img src="https://i.imgur.com/4Y7L8sB.png" alt="SUV Fleet (Xpander, Rush, Ertiga)">
+                            <div class="text-center mt-4"><p class="text-blue-300 font-bold">سيارات SUV العائلية والواسعة</p></div>
+                        </div>
+                         <div class="swiper-slide">
+                            <img src="https://i.imgur.com/0Z3R5yD.png" alt="Van Fleet (Hiace, H1)">
+                            <div class="text-center mt-4"><p class="text-blue-300 font-bold">فان سياحي للوفود والمجموعات</p></div>
+                        </div>
+                    </div>
+                    <div class="swiper-pagination !bottom-0"></div>
+                </div>
+                <div class="absolute inset-0 bg-blue-600/20 blur-[100px] -z-10 rounded-full pointer-events-none"></div>
+            </div>
+        </div>
+    </section>
+
+    <div class="bg-[#020617] border-y border-blue-900/30 py-8 overflow-hidden">
+        <div class="container mx-auto px-6 mb-6 text-center">
+            <p class="text-sm font-bold text-blue-400 uppercase tracking-[0.2em]" data-key="partners_title">شركاء النجاح والثقة</p>
+        </div>
+        
+        <div class="flex justify-center items-center flex-wrap gap-12 md:gap-20 px-6">
+            <img src="images/logos/parkville-logo.png" alt="Parkville" class="h-12 md:h-16 grayscale hover:grayscale-0 transition opacity-70 hover:opacity-100 cursor-pointer" title="Parkville Pharmaceuticals">
+            <img src="images/logos/elsewedy-logo.png" alt="Elsewedy Electric" class="h-10 md:h-14 grayscale hover:grayscale-0 transition opacity-70 hover:opacity-100 cursor-pointer" title="Elsewedy Electric">
+            <img src="images/logos/advocure-logo.png" alt="AdvoCure" class="h-12 md:h-16 grayscale hover:grayscale-0 transition opacity-70 hover:opacity-100 cursor-pointer" title="AdvoCure Pharma">
+            <img src="images/logos/alahly-logo.png" alt="Al Ahly SC" class="h-14 md:h-20 grayscale hover:grayscale-0 transition opacity-70 hover:opacity-100 cursor-pointer" title="النادي الأهلي">
+            </div>
+    </div>
+
+    <section class="py-20 bg-slate-950 relative overflow-hidden">
+        <div class="container mx-auto px-6 relative z-10">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                <a href="about.html" class="group p-6 rounded-2xl hover:bg-blue-900/20 transition duration-300">
+                    <h3 class="text-5xl font-black text-white mb-2 group-hover:text-blue-400 transition">2022</h3>
+                    <p class="text-blue-300 text-sm font-bold flex items-center justify-center gap-2">بداية المسيرة <i class="fas fa-arrow-left opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
+                </a>
+                <div class="p-6">
+                    <h3 class="text-5xl font-black text-white mb-2">+12K</h3>
+                    <p class="text-blue-300 text-sm font-bold">رحلة تم تنفيذها بنجاح</p>
+                </div>
+                <a href="reviews.html" class="group p-6 rounded-2xl hover:bg-blue-900/20 transition duration-300">
+                    <h3 class="text-5xl font-black text-white mb-2 group-hover:text-blue-400 transition">99%</h3>
+                    <p class="text-blue-300 text-sm font-bold flex items-center justify-center gap-2">نسبة رضا العملاء <i class="fas fa-arrow-left opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
+                </a>
+                <div class="p-6">
+                    <h3 class="text-5xl font-black text-white mb-2">VIP</h3>
+                    <p class="text-blue-300 text-sm font-bold">خدمة خاصة للأطباء والمدراء</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="services" class="py-24 bg-[#020617]">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-20">
+                <h2 class="text-4xl md:text-6xl font-black mb-6" data-key="srv_title">حلول تنقل <span class="text-blue-500">مخصصة</span></h2>
+                <p class="text-slate-400 max-w-2xl mx-auto text-lg" data-key="srv_desc">نصمم خدماتنا لتناسب احتياجات كل قطاع بدقة، مع التركيز على الاحترافية والكفاءة.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+                <div class="service-card-ux p-10 group">
+                    <div class="w-20 h-20 bg-blue-900/50 rounded-3xl flex items-center justify-center mb-8 group-hover:bg-blue-600 transition duration-500 shadow-lg shadow-blue-900/30">
+                        <i class="fas fa-plane-arrival text-4xl text-blue-400 group-hover:text-white"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4" data-key="srv_1_t">المطارات والنقل السياحي</h3>
+                    <p class="text-slate-400 mb-8 leading-relaxed" data-key="srv_1_d">
+                        خدمة استقبال VIP من داخل المطار. نغطي جميع مطارات مصر (القاهرة، برج العرب، شرم الشيخ) وسفر للمحافظات بأسطول مريح وحقائب واسعة.
+                    </p>
+                    <ul class="text-sm text-slate-300 space-y-3 mb-8">
+                        <li><i class="fas fa-check-circle text-blue-500 mr-2"></i> متابعة لحظية لموعد الطائرة</li>
+                        <li><i class="fas fa-check-circle text-blue-500 mr-2"></i> استقبال باللوحات داخل الصالة</li>
+                    </ul>
+                    <a href="limousine.html" class="inline-flex items-center gap-2 text-blue-400 font-bold hover:text-white transition group-hover:gap-4">
+                        <span data-key="btn_details">تفاصيل الباقة</span> <i class="fas fa-arrow-left"></i>
+                    </a>
+                </div>
+
+                <div class="service-card-ux p-10 group relative transform md:-translate-y-6 z-10 border-blue-500/50 shadow-2xl shadow-blue-900/20 bg-gradient-to-b from-blue-900/20 to-[#0f172a]">
+                    <div class="absolute top-0 right-0 bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-bl-2xl rounded-tr-2xl">الأكثر طلباً</div>
+                    <div class="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center mb-8 shadow-lg shadow-blue-600/30">
+                        <i class="fas fa-building text-4xl text-white"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4" data-key="srv_2_t">الشركات والمؤتمرات</h3>
+                    <p class="text-slate-400 mb-8 leading-relaxed" data-key="srv_2_d">
+                        الشريك الاستراتيجي لإدارة تنقلات شركتك. عقود سنوية، تنظيم لوجستي للمؤتمرات الكبرى، واستقبال الوفود الأجنبية بسيارات فاخرة.
+                    </p>
+                     <ul class="text-sm text-slate-300 space-y-3 mb-8">
+                        <li><i class="fas fa-check-circle text-blue-500 mr-2"></i> فواتير ضريبية رسمية</li>
+                        <li><i class="fas fa-check-circle text-blue-500 mr-2"></i> منسق حركة خاص لشركتك</li>
+                    </ul>
+                    <a href="limousine.html" class="inline-flex items-center gap-2 text-blue-400 font-bold hover:text-white transition group-hover:gap-4">
+                        <span data-key="btn_details">طلب عرض سعر شركات</span> <i class="fas fa-arrow-left"></i>
+                    </a>
+                </div>
+
+                <div class="service-card-ux p-10 group">
+                    <div class="w-20 h-20 bg-blue-900/50 rounded-3xl flex items-center justify-center mb-8 group-hover:bg-blue-600 transition duration-500 shadow-lg shadow-blue-900/30">
+                        <i class="fas fa-gem text-4xl text-blue-400 group-hover:text-white"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4" data-key="srv_3_t">المناسبات الخاصة والزفاف</h3>
+                    <p class="text-slate-400 mb-8 leading-relaxed" data-key="srv_3_d">
+                        أضف لمسة من الفخامة لمناسبتك. سيارات زفاف حديثة وكلاسيكية، وخدمات نقل ضيوف الـ VIP للحفلات والمناسبات الرسمية.
+                    </p>
+                     <ul class="text-sm text-slate-300 space-y-3 mb-8">
+                        <li><i class="fas fa-check-circle text-blue-500 mr-2"></i> سائقون بزي رسمي كامل</li>
+                        <li><i class="fas fa-check-circle text-blue-500 mr-2"></i> سيارات معقمة ومجهزة</li>
+                    </ul>
+                    <a href="limousine.html" class="inline-flex items-center gap-2 text-blue-400 font-bold hover:text-white transition group-hover:gap-4">
+                        <span data-key="btn_details">باقات المناسبات</span> <i class="fas fa-arrow-left"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-24 bg-[#020617] relative overflow-hidden">
+        <div class="absolute inset-0 bg-blue-900/20 skew-y-3 transform origin-top-right"></div>
+        <div class="container mx-auto px-6 relative z-10">
+            <div class="bg-gradient-to-r from-blue-700 to-blue-900 rounded-[40px] p-12 md:p-20 text-center shadow-2xl border border-blue-500/30 relative overflow-hidden">
+                <div class="absolute -top-24 -left-24 w-96 h-96 bg-blue-500 opacity-20 rounded-full blur-3xl mix-blend-overlay"></div>
+                <div class="absolute -bottom-24 -right-24 w-96 h-96 bg-blue-300 opacity-20 rounded-full blur-3xl mix-blend-overlay"></div>
+                
+                <h2 class="text-4xl md:text-5xl font-black text-white mb-8 leading-tight" data-key="invest_t">استثمر في أسطول النقل الأول</h2>
+                <p class="text-blue-100 text-xl mb-12 max-w-3xl mx-auto leading-relaxed" data-key="invest_d">
+                    هل تمتلك سيارة حديثة (موديل 2023 فما فوق)؟ انضم لشركاء نجاح 24Seven وحقق عائداً استثمارياً مضموناً بعقود رسمية وشفافة.
+                </p>
+                
+                <div class="flex flex-col md:flex-row justify-center gap-6">
+                    <a href="invest.html" class="bg-white text-blue-700 px-10 py-5 rounded-full font-bold text-xl hover:bg-blue-50 transition shadow-xl hover:shadow-white/20 flex items-center justify-center gap-3">
+                        <i class="fas fa-handshake"></i> <span data-key="btn_invest">سجل كشريك الآن</span>
+                    </a>
+                    <a href="https://wa.me/201121748885" class="bg-transparent border-2 border-white text-white px-10 py-5 rounded-full font-bold text-xl hover:bg-white/10 transition flex items-center justify-center gap-3">
+                        <i class="fab fa-whatsapp"></i> <span>استفسار واتساب</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-[#010409] pt-20 pb-10 border-t border-blue-900/50 text-sm relative">
+        <div class="container mx-auto px-6 relative z-10">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-12 mb-16">
+                
+                <div class="md:col-span-5">
+                    <a href="#" class="text-3xl font-black italic text-white block mb-6">
+                        <span class="text-blue-600">24</span>Seven
+                        <span class="block text-xs text-slate-500 font-normal not-italic mt-1">للنقل السياحي والليموزين</span>
+                    </a>
+                    <p class="text-slate-400 leading-relaxed mb-8 text-base max-w-md">
+                        شركة مصرية رائدة مسجلة رسمياً، متخصصة في تقديم حلول النقل الفاخر لقطاع الأعمال والأفراد بأعلى معايير الجودة والأمان.
+                    </p>
+                    
+                    <div class="bg-slate-900/80 p-6 rounded-2xl border border-blue-900/50 shadow-inner">
+                        <h5 class="text-blue-400 font-bold mb-4 flex items-center gap-2 text-base">
+                            <i class="fas fa-balance-scale"></i> البيانات القانونية والترخيص
+                        </h5>
+                        <div class="space-y-3 text-slate-300 font-mono text-sm">
+                            <p class="flex justify-between border-b border-slate-800 pb-2">
+                                <span>رقم التسجيل الضريبي:</span> <span class="text-white font-bold">849-934-698</span>
+                            </p>
+                            <p class="flex justify-between border-b border-slate-800 pb-2">
+                                <span>رقم السجل التجاري:</span> <span class="text-white font-bold">123456</span> </p>
+                            <p class="flex justify-between pt-1">
+                                <span>المأمورية التابعة:</span> <span class="text-white">المنتزه أول - الإسكندرية</span>
+                            </p>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </section>
 
-    <div class="bg-slate-900 border-y border-slate-800 py-6 overflow-hidden">
-        <div class="container mx-auto px-6 mb-4 text-center">
-            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest" data-key="partners_title">نفخر بخدمة كبرى الكيانات</p>
-        </div>
-        <div class="flex justify-center flex-wrap gap-8 md:gap-16 opacity-60 grayscale hover:grayscale-0 transition duration-500">
-            <span class="text-xl font-bold text-white">AdvoCure Pharma</span>
-            <span class="text-xl font-bold text-white">Parkville</span>
-            <span class="text-xl font-bold text-white">ELSEWEDY ELECTRIC</span>
-            <span class="text-xl font-bold text-white">Al Ahly SC</span>
-            <span class="text-xl font-bold text-white">Hospital 57357</span>
-            <span class="text-xl font-bold text-white">Embassy of Brazil</span>
-        </div>
-    </div>
-
-    <section id="services" class="py-20 bg-slate-950">
-        <div class="container mx-auto px-6">
-            <div class="text-center mb-16">
-                <h2 class="text-3xl md:text-5xl font-black mb-4" data-key="srv_title">خدمات تناسب <span class="text-blue-500">مكانتك</span></h2>
-                <p class="text-slate-400 max-w-2xl mx-auto" data-key="srv_desc">حلول نقل متكاملة تغطي كافة احتياجات الأفراد والشركات في جميع أنحاء الجمهورية.</p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div class="service-card p-8 rounded-2xl group">
-                    <div class="w-14 h-14 bg-blue-900/30 rounded-xl flex items-center justify-center mb-6 group-hover:bg-blue-600 transition duration-300">
-                        <i class="fas fa-plane-departure text-2xl text-blue-400 group-hover:text-white"></i>
-                    </div>
-                    <h3 class="text-xl font-bold mb-3" data-key="srv_1_t">استقبال وتوديع المطارات</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed" data-key="srv_1_d">تغطية شاملة لمطار القاهرة، برج العرب، شرم الشيخ، والغردقة. نتابع رحلتك وننتظرك باللوحة قبل موعد وصولك.</p>
-                </div>
-
-                <div class="service-card p-8 rounded-2xl group">
-                    <div class="w-14 h-14 bg-blue-900/30 rounded-xl flex items-center justify-center mb-6 group-hover:bg-blue-600 transition duration-300">
-                        <i class="fas fa-briefcase text-2xl text-blue-400 group-hover:text-white"></i>
-                    </div>
-                    <h3 class="text-xl font-bold mb-3" data-key="srv_2_t">خدمات الشركات والمؤتمرات</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed" data-key="srv_2_d">تعاقدات شهرية وسنوية، تنظيم انتقالات المؤتمرات والوفود الرسمية بأسطول فاخر وفواتير ضريبية معتمدة.</p>
-                </div>
-
-                <div class="service-card p-8 rounded-2xl group">
-                    <div class="w-14 h-14 bg-blue-900/30 rounded-xl flex items-center justify-center mb-6 group-hover:bg-blue-600 transition duration-300">
-                        <i class="fas fa-glass-cheers text-2xl text-blue-400 group-hover:text-white"></i>
-                    </div>
-                    <h3 class="text-xl font-bold mb-3" data-key="srv_3_t">زفاف ومناسبات خاصة</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed" data-key="srv_3_d">اجعل ليلة العمر مميزة مع أحدث سيارات الزفاف الليموزين والسيارات الكلاسيكية، مع سائقين بزي رسمي.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section class="py-20 bg-gradient-to-r from-blue-900 to-slate-900 relative overflow-hidden">
-        <div class="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
-        <div class="container mx-auto px-6 relative z-10 text-center">
-            <h2 class="text-3xl font-bold mb-12">أرقام تحكي قصة نجاح 24Seven</h2>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
-                <div>
-                    <h3 class="text-4xl md:text-5xl font-black text-white mb-2">2022</h3>
-                    <p class="text-blue-300 text-sm font-bold">سنة التأسيس</p>
-                </div>
-                <div>
-                    <h3 class="text-4xl md:text-5xl font-black text-white mb-2">+12K</h3>
-                    <p class="text-blue-300 text-sm font-bold">رحلة ناجحة</p>
-                </div>
-                <div>
-                    <h3 class="text-4xl md:text-5xl font-black text-white mb-2">98%</h3>
-                    <p class="text-blue-300 text-sm font-bold">نسبة رضاء العملاء</p>
-                </div>
-                <div>
-                    <h3 class="text-4xl md:text-5xl font-black text-white mb-2">24/7</h3>
-                    <p class="text-blue-300 text-sm font-bold">دعم فني متواصل</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section class="py-20 bg-slate-900">
-        <div class="container mx-auto px-6">
-            <div class="bg-blue-600 rounded-3xl p-10 md:p-16 text-center shadow-2xl relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2"></div>
-                
-                <h2 class="text-3xl md:text-4xl font-bold text-white mb-6" data-key="invest_t">هل تمتلك سيارة حديثة؟</h2>
-                <p class="text-blue-100 text-lg mb-8 max-w-2xl mx-auto" data-key="invest_d">حول سيارتك إلى أصل استثماري رابح. انضم لأسطول 24Seven وتمتع بدخل شهري ممتاز وعقود شفافة.</p>
-                
-                <a href="invest.html" class="inline-block bg-white text-blue-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-slate-100 transition shadow-lg">
-                    <span data-key="btn_invest">سجل سيارتك الآن</span>
-                </a>
-            </div>
-        </div>
-    </section>
-
-    <footer class="bg-slate-950 pt-16 pb-8 border-t border-slate-800 text-sm">
-        <div class="container mx-auto px-6">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
-                <div class="col-span-1 md:col-span-2">
-                    <a href="#" class="text-2xl font-black italic text-white block mb-4">
-                        <span class="text-blue-500">24</span>Seven
-                    </a>
-                    <p class="text-slate-400 leading-relaxed mb-6 max-w-sm">
-                        شركة مسجلة رسمياً تعمل في مجال النقل السياحي والليموزين. نلتزم بأعلى معايير الجودة والأمان لعملائنا في مصر.
-                    </p>
-                    <div class="bg-slate-900 p-4 rounded-lg border border-slate-800 inline-block">
-                        <p class="text-slate-500 font-bold mb-1"><i class="fas fa-file-contract mr-2"></i> بيانات التسجيل:</p>
-                        <p class="text-slate-300 font-mono">سجل تجاري: [رقم السجل]</p>
-                        <p class="text-slate-300 font-mono">بطاقة ضريبية: [رقم البطاقة]</p>
-                        <p class="text-slate-300">المقر الرئيسي: الإسكندرية، السيوف، أبراج اللوتس</p>
-                    </div>
-                </div>
-
-                <div>
-                    <h4 class="font-bold text-white mb-4">روابط سريعة</h4>
-                    <ul class="space-y-2 text-slate-400">
-                        <li><a href="limousine.html" class="hover:text-blue-500">حجز رحلة</a></li>
-                        <li><a href="invest.html" class="hover:text-blue-500">انضم كشريك (استثمار)</a></li>
-                        <li><a href="reviews.html" class="hover:text-blue-500">آراء العملاء</a></li>
-                        <li><a href="#services" class="hover:text-blue-500">خدمات الشركات</a></li>
+                <div class="md:col-span-3 md:px-8">
+                    <h4 class="font-bold text-white text-lg mb-6">روابط سريعة</h4>
+                    <ul class="space-y-4 text-slate-400 text-base">
+                        <li><a href="limousine.html" class="hover:text-blue-500 transition flex items-center gap-2"><i class="fas fa-chevron-left text-xs text-blue-800"></i> حجز رحلة جديدة</a></li>
+                        <li><a href="#services" class="hover:text-blue-500 transition flex items-center gap-2"><i class="fas fa-chevron-left text-xs text-blue-800"></i> خدمات الشركات</a></li>
+                        <li><a href="invest.html" class="hover:text-blue-500 transition flex items-center gap-2"><i class="fas fa-chevron-left text-xs text-blue-800"></i> علاقات المستثمرين</a></li>
+                        <li><a href="reviews.html" class="hover:text-blue-500 transition flex items-center gap-2"><i class="fas fa-chevron-left text-xs text-blue-800"></i> قصص نجاح العملاء</a></li>
+                        <li><a href="about.html" class="hover:text-blue-500 transition flex items-center gap-2"><i class="fas fa-chevron-left text-xs text-blue-800"></i> من نحن</a></li>
                     </ul>
                 </div>
 
-                <div>
-                    <h4 class="font-bold text-white mb-4">تغطية الخدمات</h4>
-                    <div class="flex flex-wrap gap-2">
-                        <span class="bg-slate-900 text-slate-500 px-2 py-1 rounded text-xs">ليموزين مطار القاهرة</span>
-                        <span class="bg-slate-900 text-slate-500 px-2 py-1 rounded text-xs">ليموزين برج العرب</span>
-                        <span class="bg-slate-900 text-slate-500 px-2 py-1 rounded text-xs">ليموزين شرم الشيخ</span>
-                        <span class="bg-slate-900 text-slate-500 px-2 py-1 rounded text-xs">ليموزين الغردقة</span>
-                        <span class="bg-slate-900 text-slate-500 px-2 py-1 rounded text-xs">نقل سياحي</span>
-                        <span class="bg-slate-900 text-slate-500 px-2 py-1 rounded text-xs">إيجار سيارات بالسائق</span>
+                <div class="md:col-span-4">
+                    <h4 class="font-bold text-white text-lg mb-6">تغطية الخدمات (SEO)</h4>
+                    <p class="text-slate-400 mb-4">نقدم خدماتنا في جميع أنحاء جمهورية مصر العربية، مع تركيز خاص على:</p>
+                    <div class="flex flex-wrap gap-3">
+                        <span class="bg-blue-900/30 text-blue-300 px-4 py-2 rounded-lg text-sm border border-blue-800/50 hover:bg-blue-800/50 transition cursor-default">ليموزين مطار القاهرة</span>
+                        <span class="bg-blue-900/30 text-blue-300 px-4 py-2 rounded-lg text-sm border border-blue-800/50 hover:bg-blue-800/50 transition cursor-default">مطار برج العرب</span>
+                        <span class="bg-blue-900/30 text-blue-300 px-4 py-2 rounded-lg text-sm border border-blue-800/50 hover:bg-blue-800/50 transition cursor-default">ليموزين شرم الشيخ</span>
+                        <span class="bg-blue-900/30 text-blue-300 px-4 py-2 rounded-lg text-sm border border-blue-800/50 hover:bg-blue-800/50 transition cursor-default">ليموزين الغردقة</span>
+                        <span class="bg-blue-900/30 text-blue-300 px-4 py-2 rounded-lg text-sm border border-blue-800/50 hover:bg-blue-800/50 transition cursor-default">نقل مؤتمرات</span>
+                        <span class="bg-blue-900/30 text-blue-300 px-4 py-2 rounded-lg text-sm border border-blue-800/50 hover:bg-blue-800/50 transition cursor-default">سياحة علاجية</span>
+                        <span class="bg-blue-900/30 text-blue-300 px-4 py-2 rounded-lg text-sm border border-blue-800/50 hover:bg-blue-800/50 transition cursor-default">تأجير ميكروباص سياحي</span>
+                        <span class="bg-blue-900/30 text-blue-300 px-4 py-2 rounded-lg text-sm border border-blue-800/50 hover:bg-blue-800/50 transition cursor-default">سيارات زفاف</span>
                     </div>
                 </div>
             </div>
             
-            <div class="border-t border-slate-900 pt-8 text-center text-slate-600">
-                <p>&copy; 2026 24Seven Limousine. All rights reserved.</p>
+            <div class="border-t border-blue-900/30 pt-8 flex flex-col md:flex-row justify-between items-center text-slate-500 gap-4">
+                <p>&copy; 2026 24Seven Limousine. جميع الحقوق محفوظة.</p>
+                <div class="flex gap-6 text-lg">
+                    <a href="#" class="hover:text-blue-500 transition"><i class="fab fa-facebook"></i></a>
+                    <a href="#" class="hover:text-blue-500 transition"><i class="fab fa-instagram"></i></a>
+                    <a href="#" class="hover:text-blue-500 transition"><i class="fab fa-linkedin"></i></a>
+                </div>
             </div>
         </div>
     </footer>
 
     <div class="floating-actions">
-        <a href="https://wa.me/201121748885" target="_blank" class="action-btn bg-green-500 hover:bg-green-600" title="WhatsApp">
+        <a href="https://wa.me/201121748885" target="_blank" class="action-btn bg-[#25D366] hover:bg-[#128C7E] border-green-400/30" title="WhatsApp">
             <i class="fab fa-whatsapp"></i>
         </a>
-        <a href="https://m.me/Sevenlimousin" target="_blank" class="action-btn bg-blue-600 hover:bg-blue-700" title="Messenger">
+        <a href="https://m.me/Sevenlimousin" target="_blank" class="action-btn bg-[#0084FF] hover:bg-[#0063B2] border-blue-400/30" title="Messenger">
             <i class="fab fa-facebook-messenger"></i>
         </a>
-        <a href="limousine.html" class="action-btn bg-blue-500 hover:bg-blue-400 text-slate-900 font-bold" title="Book Now">
+        <a href="limousine.html" class="action-btn bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white border-blue-500/50" title="Book Now">
             <i class="fas fa-calendar-alt"></i>
         </a>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"></script>
     <script>
-        // سكربت اللغة
+        const swiper = new Swiper('.fleet-slider', {
+            slidesPerView: 1, spaceBetween: 20, loop: true,
+            autoplay: { delay: 3500, disableOnInteraction: false },
+            pagination: { el: '.swiper-pagination', clickable: true },
+            effect: 'fade', fadeEffect: { crossFade: true }
+        });
+
         const translations = {
             ar: {
-                nav_home: "الرئيسية", nav_services: "خدماتنا", nav_fleet: "الأسطول", nav_reviews: "آراء العملاء", nav_invest: "استثمار السيارات",
-                btn_book: "احجز الآن",
-                hero_t1: "تنقل بثقة..", hero_t2: "بمعايير عالمية",
-                hero_desc: "منذ 2022، ونحن نقود مفهوم النقل الفاخر. أكثر من 12,000 رحلة ناجحة لشركات عملاقة وشخصيات هامة.",
-                btn_book_now: "احجز سيارتك", btn_whatsapp: "تواصل واتساب",
-                partners_title: "نفخر بخدمة كبرى الكيانات",
-                srv_title: "خدمات تناسب مكانتك", srv_desc: "حلول نقل متكاملة تغطي كافة احتياجات الأفراد والشركات.",
-                srv_1_t: "استقبال وتوديع المطارات", srv_1_d: "تغطية شاملة لمطار القاهرة، برج العرب، وشرم الشيخ.",
-                srv_2_t: "خدمات الشركات والمؤتمرات", srv_2_d: "تعاقدات شهرية وسنوية، وتنظيم انتقالات الوفود الرسمية.",
-                srv_3_t: "زفاف ومناسبات خاصة", srv_3_d: "اجعل ليلة العمر مميزة مع أحدث سيارات الزفاف.",
-                invest_t: "هل تمتلك سيارة حديثة؟", invest_d: "حول سيارتك إلى أصل استثماري رابح مع 24Seven.", btn_invest: "سجل سيارتك الآن"
+                nav_home: "الرئيسية", nav_services: "قطاعات الأعمال", nav_fleet: "الأسطول", nav_reviews: "قصص النجاح", nav_invest: "استثمار السيارات", nav_about: "من نحن",
+                btn_book: "احجز الآن", hero_t1: "انطلق نحو", hero_t2: "وجهتك بفخامة",
+                hero_desc: "خدمات ليموزين متكاملة للمطارات، الشركات، والمناسبات. أسطول متنوع يشمل (تويوتا، كيا، ميتسوبيشي، هيونداي).",
+                btn_book_now: "عرض الأسعار والحجز", btn_whatsapp: "تواصل معنا",
+                partners_title: "شركاء النجاح",
+                srv_title: "خدمات", srv_desc: "اختر الخدمة التي تناسب احتياجاتك",
+                srv_1_t: "المطارات والسياحة", srv_1_d: "تغطية شاملة لمطارات مصر واستقبال باللوحات.",
+                srv_2_t: "الشركات والمؤتمرات", srv_2_d: "عقود سنوية للشركات وتنظيم المؤتمرات بفواتير رسمية.",
+                srv_3_t: "الزفاف والمناسبات", srv_3_d: "سيارات زفاف حديثة وخدمات VIP للمناسبات.",
+                invest_t: "استثمر في أسطول النقل الأول", invest_d: "هل تمتلك سيارة حديثة؟ انضم لشركاء نجاح 24Seven.", btn_invest: "سجل كشريك الآن"
             },
             en: {
-                nav_home: "Home", nav_services: "Services", nav_fleet: "Fleet", nav_reviews: "Reviews", nav_invest: "Invest Your Car",
-                btn_book: "Book Now",
-                hero_t1: "Travel with Confidence..", hero_t2: "Global Standards",
-                hero_desc: "Since 2022, leading luxury transport. Over 12,000 successful trips for global corporations and VIPs.",
-                btn_book_now: "Book Your Car", btn_whatsapp: "WhatsApp Us",
-                partners_title: "Proud to Serve Global Entities",
-                srv_title: "Services Beffiting You", srv_desc: "Integrated transport solutions for individuals and corporations.",
-                srv_1_t: "Airport Transfers", srv_1_d: "Full coverage for Cairo, Borg El Arab, and Sharm El Sheikh airports.",
-                srv_2_t: "Corporate & Conferences", srv_2_d: "Monthly contracts and delegation transport organization.",
-                srv_3_t: "Weddings & Events", srv_3_d: "Make your special night memorable with our luxury fleet.",
-                invest_t: "Own a Modern Car?", invest_d: "Turn your car into a profitable asset with 24Seven.", btn_invest: "Register Now"
+                nav_home: "Home", nav_services: "Services", nav_fleet: "Fleet", nav_reviews: "Success Stories", nav_invest: "Investors", nav_about: "About Us",
+                btn_book: "Book Now", hero_t1: "Travel with", hero_t2: "Global Luxury",
+                hero_desc: "Integrated limousine services for airports, corporate, and events. Diverse fleet (Toyota, Kia, Mitsubishi, Hyundai).",
+                btn_book_now: "Check Rates & Book", btn_whatsapp: "Contact Us",
+                partners_title: "Success Partners",
+                srv_title: "Specialized", srv_desc: "Choose the service that fits your needs",
+                srv_1_t: "Airports & Tourism", srv_1_d: "Full coverage for Egypt airports with meet & greet service.",
+                srv_2_t: "Corporate & Events", srv_2_d: "Annual contracts for companies and conference organization.",
+                srv_3_t: "Weddings & Occasions", srv_3_d: "Modern wedding cars and VIP event services.",
+                invest_t: "Invest with Us", invest_d: "Own a modern car? Join 24Seven partners now.", btn_invest: "Register Now"
             }
         };
 
@@ -319,11 +394,8 @@
             currentLang = currentLang === 'ar' ? 'en' : 'ar';
             document.body.className = currentLang;
             document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
-            document.getElementById('lang-text').innerText = currentLang === 'ar' ? 'English' : 'العربية';
+            document.getElementById('lang-text').innerText = currentLang === 'ar' ? 'EN' : 'AR';
             
-            const arrow = document.querySelector('.fa-arrow-left');
-            if(arrow) arrow.className = currentLang === 'ar' ? 'fas fa-arrow-left' : 'fas fa-arrow-right';
-
             document.querySelectorAll('[data-key]').forEach(el => {
                 el.innerText = translations[currentLang][el.getAttribute('data-key')];
             });

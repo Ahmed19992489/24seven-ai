@@ -21,7 +21,7 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="24Seven Sales Intelligence Platform",
     description="Professional SaaS Platform.",
-    version="2.5.0"
+    version="2.6.0"
 )
 
 # --- 2. إعدادات CORS (السماح بالاتصال من أي مكان) ---
@@ -50,7 +50,7 @@ upload_path = static_path / "uploads"
 os.makedirs(upload_path, exist_ok=True) 
 app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 
-# ب) إعداد مجلد images (لصور السيارات والتقييمات) ✅
+# ب) إعداد مجلد images (لصور السيارات واللوجوهات) ✅
 images_path = BASE_DIR / "images"
 os.makedirs(images_path, exist_ok=True) 
 app.mount("/images", StaticFiles(directory=str(images_path)), name="images")
@@ -69,22 +69,22 @@ app.include_router(chat.router, prefix="/chat", tags=["Customer Support Chat"])
 #  نظام التوجيه والواجهات (Frontend Routing)
 # ==========================================
 
-# 1. الصفحة الرئيسية (Landing Page) - تم التحديث لفتح home.html ✅
+# 1. الصفحة الرئيسية (Landing Page) ✅
 @app.get("/")
 async def read_root():
-    # الأولوية الآن لصفحة الهوم الجديدة
+    # الأولوية لصفحة الهوم الجديدة
     file_path = BASE_DIR / "home.html"
     if file_path.exists():
         return FileResponse(file_path)
     
-    # حل احتياطي: لو لم يجد home.html يبحث عن index.html
+    # حل احتياطي
     fallback = BASE_DIR / "index.html"
     if fallback.exists():
         return FileResponse(fallback)
         
     return HTMLResponse("<h1>Error: home.html not found! Please check GitHub files.</h1>")
 
-# مسار مباشر لصفحة home.html ✅
+# مسار مباشر لصفحة home.html
 @app.get("/home.html")
 async def read_home_page():
     file_path = BASE_DIR / "home.html"
@@ -92,7 +92,15 @@ async def read_home_page():
         return FileResponse(file_path)
     return HTMLResponse("<h1>Error: home.html not found!</h1>", status_code=404)
 
-# 2. صفحة الاستثمار (الجديدة) ✅
+# 2. صفحة من نحن (الجديدة - تمت الإضافة) ✅
+@app.get("/about.html")
+async def read_about_page():
+    file_path = BASE_DIR / "about.html"
+    if file_path.exists():
+        return FileResponse(file_path)
+    return HTMLResponse("<h1>Error: about.html not found!</h1>", status_code=404)
+
+# 3. صفحة الاستثمار ✅
 @app.get("/invest.html")
 async def read_invest_page():
     file_path = BASE_DIR / "invest.html"
@@ -100,7 +108,7 @@ async def read_invest_page():
         return FileResponse(file_path)
     return HTMLResponse("<h1>Error: invest.html not found!</h1>", status_code=404)
 
-# 3. صفحة آراء العملاء (الجديدة - تمت الإضافة) ✅
+# 4. صفحة آراء العملاء ✅
 @app.get("/reviews.html")
 async def read_reviews_page():
     file_path = BASE_DIR / "reviews.html"
@@ -108,7 +116,7 @@ async def read_reviews_page():
         return FileResponse(file_path)
     return HTMLResponse("<h1>Error: reviews.html not found!</h1>", status_code=404)
 
-# 4. صفحة حجز الليموزين (للعملاء)
+# 5. صفحة حجز الليموزين (للعملاء) ✅
 @app.get("/limousine.html")
 async def read_limousine_page():
     file_path = BASE_DIR / "limousine.html"
@@ -121,7 +129,7 @@ async def read_limousine_page():
 async def read_limousine_clean():
     return await read_limousine_page()
 
-# 5. لوحة تحكم الأدمن (ERP System)
+# 6. لوحة تحكم الأدمن (ERP System) ✅
 @app.get("/admin-panel")
 async def read_admin_panel():
     file_path = BASE_DIR / "admin-crm.html"
@@ -129,7 +137,7 @@ async def read_admin_panel():
         return FileResponse(file_path)
     return HTMLResponse("<h1>Error: admin-crm.html not found! Please make sure you uploaded the file.</h1>", status_code=404)
 
-# 6. صفحة المشاريع (إضافية)
+# 7. صفحة المشاريع (إضافية)
 @app.get("/projects.html")
 async def read_projects_page():
     file_path = BASE_DIR / "projects.html"
@@ -137,7 +145,7 @@ async def read_projects_page():
         return FileResponse(file_path)
     return HTMLResponse("<h1>Error: projects.html not found!</h1>")
 
-# 7. صفحة العروض (Web Design)
+# 8. صفحة العروض (Web Design)
 @app.get("/web-design")
 async def read_web_design_page():
     file_path = BASE_DIR / "web_design.html"
@@ -145,7 +153,7 @@ async def read_web_design_page():
         return FileResponse(file_path)
     return HTMLResponse("<h1>Error: web_design.html not found!</h1>")
 
-# 8. صفحة الأداة القديمة (اختياري)
+# 9. صفحة الأداة القديمة (اختياري)
 @app.get("/dashboard")
 async def read_app_dashboard():
     file_path = BASE_DIR / "dashboard.html"
