@@ -5,18 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     
-    <meta name="description" content="24Seven Limousine - الشركة الرائدة في خدمات الليموزين والنقل السياحي في مصر. أسطول 2025 لخدمة الشركات، رجال الأعمال، وحفلات الزفاف.">
-    <meta name="keywords" content="ليموزين, ايجار سيارات, زفاف, مطار القاهرة, ليموزين شرم الشيخ, 24Seven, نقل سياحي">
-    <meta name="author" content="24Seven Team">
+    <meta name="description" content="24Seven Limousine - Luxury Transport Services in Egypt.">
+    <meta name="keywords" content="Limousine, Car Rental, Wedding, Cairo Airport, 24Seven">
+    <meta name="author" content="Ahmed Hashem">
     
-    <meta property="og:title" content="24Seven Limousine | الرفاهية بلمسة عالمية">
-    <meta property="og:description" content="تجربة نقل فاخرة تليق بك. أسطول حديث وخدمة 24/7.">
+    <meta property="og:title" content="24Seven Limousine">
     <meta property="og:image" content="images/logos/logo.png">
-    <meta property="og:url" content="https://24seven-ai.com">
     <meta property="og:type" content="website">
 
     <link rel="icon" href="images/logos/logo.png" type="image/png">
-    <title>24Seven Limousine | الرفاهية بلمسة عالمية</title>
+    <title>24Seven Limousine | Luxury Transport</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -28,19 +26,22 @@
         :root { 
             --font-ar: 'Cairo', sans-serif; 
             --font-en: 'Outfit', sans-serif;
-            --brand-dark: #020617; /* كحلي غامق جداً */
-            --brand-blue: #2563eb; /* أزرق أساسي */
-            --brand-accent: #3b82f6; /* أزرق فاتح */
-            --brand-gold: #fbbf24; /* ذهبي للتميز */
+            --brand-dark: #020617; 
+            --brand-blue: #2563eb; 
+            --brand-accent: #3b82f6; 
+            --brand-gold: #fbbf24; 
         }
         
         /* الأساسيات */
         body { background-color: var(--brand-dark); color: white; overflow-x: hidden; font-family: var(--font-ar); transition: font-family 0.3s ease; }
         
-        /* وضع اللغة الإنجليزية */
+        /* وضع اللغة الإنجليزية - تغيير الخط والاتجاه */
         body.en-mode { font-family: var(--font-en); direction: ltr; }
 
-        /* === 1. Navbar & Mobile Menu === */
+        /* تعديلات خاصة بالاتجاه للأيقونات */
+        body.en-mode .fa-arrow-left { transform: rotate(180deg); }
+
+        /* === Navbar & Mobile Menu === */
         .nav-link { position: relative; font-weight: 700; transition: color 0.3s; }
         .nav-link::after {
             content: ''; position: absolute; bottom: -5px; left: 0; width: 0; height: 2px;
@@ -48,7 +49,6 @@
         }
         .nav-link:hover::after { width: 100%; }
         
-        /* القائمة الجانبية للموبايل */
         .mobile-menu {
             position: fixed; top: 0; right: -100%; width: 80%; max-width: 300px; height: 100%;
             background: rgba(2, 6, 23, 0.98); backdrop-filter: blur(10px);
@@ -57,8 +57,11 @@
             display: flex; flex-direction: column; padding: 2rem;
         }
         .mobile-menu.active { right: 0; }
+        
+        /* عكس القائمة في الإنجليزي */
         body.en-mode .mobile-menu { right: auto; left: -100%; border-left: none; border-right: 1px solid rgba(255,255,255,0.1); }
         body.en-mode .mobile-menu.active { left: 0; }
+        
         .overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.5); z-index: 1999;
@@ -66,33 +69,27 @@
         }
         .overlay.active { opacity: 1; visibility: visible; }
 
-        /* === 2. Hero Slanted Design (التصميم المائل المتداخل) === */
+        /* === Hero Slanted Design === */
         .hero-section {
             position: relative; min-height: 95vh; display: flex; align-items: center;
             padding-top: 100px; overflow: hidden;
         }
-        
-        /* الخلفية الزرقاء المائلة */
         .hero-bg-shape {
             position: absolute; top: 0; right: 0; width: 65%; height: 100%;
             background: linear-gradient(135deg, #1e3a8a 0%, #172554 100%);
             transform: skewX(-12deg); transform-origin: top; z-index: 1;
             border-left: 4px solid rgba(255,255,255,0.05);
             box-shadow: -20px 0 80px rgba(0,0,0,0.6);
+            transition: all 0.5s ease;
         }
+        /* عكس الخلفية المائلة في الإنجليزي */
         body.en-mode .hero-bg-shape {
             right: auto; left: 0; transform: skewX(12deg);
             border-left: none; border-right: 4px solid rgba(255,255,255,0.05);
         }
 
-        /* المحتوى */
         .hero-content { position: relative; z-index: 10; width: 100%; }
 
-        /* السلايدر المتداخل */
-        .hero-slider-wrapper {
-            position: relative; z-index: 20;
-            margin-top: 2rem;
-        }
         .swiper-slide img {
             width: 100%; border-radius: 20px;
             box-shadow: 0 30px 60px rgba(0,0,0,0.5);
@@ -101,7 +98,7 @@
         }
         .swiper-slide-active img { transform: scale(1.05); border-color: var(--brand-accent); }
 
-        /* === 3. Stats & Cards === */
+        /* === Cards === */
         .stat-card {
             background: rgba(30, 41, 59, 0.5); 
             border: 1px solid rgba(255,255,255,0.1);
@@ -109,14 +106,7 @@
             transition: all 0.3s ease; position: relative; overflow: hidden;
         }
         .stat-card:hover { transform: translateY(-10px); border-color: var(--brand-blue); background: rgba(30, 41, 59, 0.8); }
-        .stat-card::after {
-            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
-            background: linear-gradient(to right, var(--brand-blue), var(--brand-accent));
-            transform: scaleX(0); transition: 0.3s; transform-origin: left;
-        }
-        .stat-card:hover::after { transform: scaleX(1); }
 
-        /* === 4. Services Grid === */
         .service-card {
             background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(59, 130, 246, 0.1);
             border-radius: 1.5rem; padding: 2rem; transition: 0.4s;
@@ -129,9 +119,9 @@
             font-size: 2rem; color: var(--brand-blue); margin-bottom: 1.5rem;
             transition: 0.3s;
         }
-        .service-card:hover .icon-box { background: var(--brand-blue); color: white; transform: rotateY(360deg); }
+        .service-card:hover .icon-box { background: var(--brand-blue); color: white; }
 
-        /* === 5. Modal (نافذة الزفاف) === */
+        /* === Modal === */
         .modal {
             display: none; position: fixed; z-index: 3000; left: 0; top: 0; width: 100%; height: 100%;
             overflow: auto; background-color: rgba(0,0,0,0.9); backdrop-filter: blur(8px);
@@ -146,11 +136,10 @@
         }
         .modal.active .modal-content { transform: scale(1); }
 
-        /* === 6. Floating Actions === */
         .floating-actions { position: fixed; bottom: 30px; right: 30px; display: flex; flex-direction: column-reverse; gap: 15px; z-index: 2500; }
+        body.en-mode .floating-actions { right: auto; left: 30px; }
         .action-btn { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); transition: 0.3s; cursor: pointer; text-decoration: none; border: 2px solid rgba(255,255,255,0.1); }
         .action-btn:hover { transform: scale(1.1); }
-        body.en-mode .floating-actions { right: auto; left: 30px; }
     </style>
 </head>
 <body class="ar-mode">
@@ -163,7 +152,7 @@
             </button>
 
             <a href="home.html" class="flex items-center gap-3">
-                <img src="images/logos/logo.png" alt="24Seven Logo" class="h-12 md:h-14 drop-shadow-lg">
+                <img src="images/logos/logo.png" onerror="this.src='https://placehold.co/150x50?text=24Seven'" alt="24Seven Logo" class="h-12 md:h-14 drop-shadow-lg">
             </a>
 
             <div class="hidden lg:flex items-center gap-8 text-sm font-bold text-slate-300">
@@ -171,14 +160,14 @@
                 <a href="#services" class="nav-link hover:text-white" data-key="nav_services">الخدمات</a>
                 <a href="reviews.html" class="nav-link hover:text-white" data-key="nav_reviews">آراء العملاء</a>
                 <a href="about.html" class="nav-link hover:text-white" data-key="nav_about">من نحن</a>
-                <a href="invest.html" class="px-4 py-2 border border-blue-500/50 rounded-lg text-blue-400 hover:bg-blue-500/10 transition" data-key="nav_invest">
-                    <i class="fas fa-chart-line mr-2"></i> استثمار
+                <a href="invest.html" class="px-4 py-2 border border-blue-500/50 rounded-lg text-blue-400 hover:bg-blue-500/10 transition flex items-center gap-2">
+                    <i class="fas fa-chart-line"></i> <span data-key="nav_invest">استثمار</span>
                 </a>
             </div>
 
             <div class="flex items-center gap-4">
-                <button onclick="toggleLang()" class="text-xs font-bold border border-slate-600 px-3 py-1.5 rounded-full text-slate-300 hover:bg-slate-800 transition flex items-center gap-2">
-                    <i class="fas fa-globe"></i> <span id="lang-text">EN</span>
+                <button onclick="toggleLang()" class="text-xs font-bold border border-slate-600 px-3 py-1.5 rounded-full text-slate-300 hover:bg-slate-800 transition flex items-center gap-2 cursor-pointer">
+                    <i class="fas fa-globe"></i> <span id="lang-text">English</span>
                 </button>
                 <a href="limousine.html" class="hidden md:flex bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-lg shadow-blue-600/20 transition transform hover:-translate-y-1 items-center gap-2">
                     <i class="fas fa-calendar-check"></i> <span data-key="btn_book">احجز الآن</span>
@@ -190,7 +179,7 @@
     <div class="overlay" onclick="toggleMenu()"></div>
     <div class="mobile-menu" id="mobileMenu">
         <div class="flex justify-between items-center mb-8">
-            <img src="images/logos/logo.png" class="h-10" alt="Logo">
+            <span class="text-xl font-bold text-white">24Seven</span>
             <button onclick="toggleMenu()" class="text-slate-400 text-2xl"><i class="fas fa-times"></i></button>
         </div>
         <div class="flex flex-col gap-6 text-lg font-bold text-slate-300">
@@ -226,13 +215,10 @@
 
                     <div class="flex flex-wrap gap-4">
                         <a href="limousine.html" class="bg-blue-600 text-white px-8 py-4 rounded-xl font-bold shadow-lg shadow-blue-600/30 hover:bg-blue-700 transition flex items-center gap-2">
-                            <span data-key="btn_book_now">احجز سيارتك</span> <i class="fas fa-arrow-left rtl:rotate-0 ltr:rotate-180"></i>
+                            <span data-key="btn_book_now">احجز سيارتك</span> <i class="fas fa-arrow-left"></i>
                         </a>
-                        <a href="about.html" class="border border-slate-600 text-white px-8 py-4 rounded-xl font-bold hover:bg-slate-800 transition" data-key="btn_about">
+                        <a href="about.html" class="border border-slate-600 text-white px-8 py-4 rounded-xl font-bold hover:bg-slate-800 transition" data-key="nav_about">
                             من نحن
-                        </a>
-                        <a href="reviews.html" class="border border-slate-600 text-white px-8 py-4 rounded-xl font-bold hover:bg-slate-800 transition" data-key="nav_reviews">
-                            التقييمات
                         </a>
                     </div>
                 </div>
@@ -241,13 +227,13 @@
                     <div class="swiper fleet-slider">
                         <div class="swiper-wrapper">
                             <div class="swiper-slide">
-                                <img src="images/fleet/sedan-group.jpg" onerror="this.src='https://via.placeholder.com/800x500/0f172a/3b82f6?text=Luxury+Sedan'" alt="Sedan Fleet">
+                                <img src="images/fleet/sedan-group.jpg" onerror="this.src='https://placehold.co/800x500/1e293b/3b82f6?text=Luxury+Sedan'" alt="Sedan Fleet">
                             </div>
                             <div class="swiper-slide">
-                                <img src="images/fleet/suv-group.jpg" onerror="this.src='https://via.placeholder.com/800x500/0f172a/3b82f6?text=Family+SUV'" alt="SUV Fleet">
+                                <img src="images/fleet/suv-group.jpg" onerror="this.src='https://placehold.co/800x500/1e293b/3b82f6?text=Family+SUV'" alt="SUV Fleet">
                             </div>
                             <div class="swiper-slide">
-                                <img src="images/fleet/van-group.jpg" onerror="this.src='https://via.placeholder.com/800x500/0f172a/3b82f6?text=Tourist+Van'" alt="Van Fleet">
+                                <img src="images/fleet/van-group.jpg" onerror="this.src='https://placehold.co/800x500/1e293b/3b82f6?text=Tourist+Van'" alt="Van Fleet">
                             </div>
                         </div>
                     </div>
@@ -256,41 +242,27 @@
         </div>
     </section>
 
-    <div class="bg-slate-950 py-10 border-y border-slate-800">
-        <div class="container mx-auto px-6 text-center mb-8">
-            <p class="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]" data-key="partners_title">شركاء النجاح والثقة</p>
-        </div>
-        <div class="container mx-auto px-6 flex justify-center flex-wrap gap-8 md:gap-16 trust-bar">
-            <img src="images/logos/parkville.png" onerror="this.style.display='none'">
-            <img src="images/logos/elsewedy.png" onerror="this.style.display='none'">
-            <img src="images/logos/advocure.png" onerror="this.style.display='none'">
-            <img src="images/logos/alahly.png" onerror="this.style.display='none'">
-            <img src="images/logos/57357.png" onerror="this.style.display='none'">
-            <img src="images/logos/brazil.png" onerror="this.style.display='none'">
-        </div>
-    </div>
-
     <section class="py-24 bg-[#020617] relative">
         <div class="container mx-auto px-6">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center" id="stats-container">
                 
-                <a href="about.html" class="stat-card group block">
+                <div class="stat-card group block">
                     <div class="text-5xl font-black text-white mb-2 group-hover:text-blue-400 transition" id="stat-founded">2022</div>
                     <h3 class="text-blue-400 font-bold mb-2" data-key="stat_1_t">عام التأسيس</h3>
                     <p class="text-xs text-slate-400" data-key="stat_1_d">انطلاق مسيرتنا في السوق المصري برؤية عالمية لتغيير مفهوم النقل.</p>
-                </a>
+                </div>
 
-                <a href="reviews.html" class="stat-card group block">
+                <div class="stat-card group block">
                     <div class="text-5xl font-black text-white mb-2"><span id="stat-trips">12000</span>+</div>
                     <h3 class="text-blue-400 font-bold mb-2" data-key="stat_2_t">رحلة ناجحة</h3>
                     <p class="text-xs text-slate-400" data-key="stat_2_d">ثقة الآلاف من العملاء. نفذنا آلاف الرحلات للمطارات والمؤتمرات.</p>
-                </a>
+                </div>
 
-                <a href="reviews.html" class="stat-card group block">
+                <div class="stat-card group block">
                     <div class="text-5xl font-black text-white mb-2"><span id="stat-rating">98</span>%</div>
                     <h3 class="text-blue-400 font-bold mb-2" data-key="stat_3_t">نسبة رضاء العملاء</h3>
                     <p class="text-xs text-slate-400" data-key="stat_3_d">نلتزم بأعلى معايير الجودة والنظافة. تقييمات حقيقية من عملاء كبار.</p>
-                </a>
+                </div>
 
             </div>
         </div>
@@ -299,7 +271,7 @@
     <section id="services" class="py-24 bg-slate-950">
         <div class="container mx-auto px-6">
             <div class="text-center mb-16">
-                <h2 class="text-4xl font-black mb-4" data-key="srv_title">خدماتنا <span class="text-blue-500">المتخصصة</span></h2>
+                <h2 class="text-4xl font-black mb-4"><span data-key="srv_title_1">خدماتنا</span> <span class="text-blue-500" data-key="srv_title_2">المتخصصة</span></h2>
                 <p class="text-slate-400" data-key="srv_subtitle">حلول نقل متكاملة تغطي كافة احتياجات الأفراد والشركات</p>
             </div>
             
@@ -309,7 +281,7 @@
                     <h3 class="text-2xl font-bold text-white mb-4" data-key="srv_1_t">المطارات والسياحة</h3>
                     <p class="text-slate-400 text-sm mb-6 leading-relaxed" data-key="srv_1_d">استقبال VIP من داخل المطار وتوصيل لجميع المحافظات. نتابع رحلتك وننتظرك مجاناً.</p>
                     <a href="limousine.html" class="text-blue-500 font-bold flex items-center gap-2 hover:gap-4 transition">
-                        <span data-key="btn_book_trip">احجز رحلتك الآن</span> <i class="fas fa-arrow-left rtl:rotate-0 ltr:rotate-180"></i>
+                        <span data-key="btn_book_trip">احجز رحلتك الآن</span> <i class="fas fa-arrow-left"></i>
                     </a>
                 </div>
 
@@ -317,7 +289,7 @@
                     <div class="icon-box"><i class="fas fa-building"></i></div>
                     <h3 class="text-2xl font-bold text-white mb-4" data-key="srv_2_t">الشركات والمؤتمرات</h3>
                     <p class="text-slate-400 text-sm mb-6 leading-relaxed" data-key="srv_2_d">عقود سنوية، فواتير ضريبية، وتنظيم انتقالات المؤتمرات. أرسل لنا احتياجات شركتك.</p>
-                    <a href="mailto:info@24seven-ai.com?subject=طلب عرض سعر شركة" class="text-blue-500 font-bold flex items-center gap-2 hover:gap-4 transition">
+                    <a href="mailto:info@24seven-ai.com" class="text-blue-500 font-bold flex items-center gap-2 hover:gap-4 transition">
                         <span data-key="btn_quote">طلب عرض سعر (Email)</span> <i class="fas fa-envelope"></i>
                     </a>
                 </div>
@@ -344,29 +316,26 @@
                 <p class="text-slate-400 text-sm mt-2" data-key="modal_desc">املأ البيانات وسنتواصل معك بأفضل الباقات المتاحة</p>
             </div>
 
-            <form action="https://formspree.io/f/xzddpdga" method="POST" class="space-y-4">
+            <form class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
-                    <input type="text" name="الاسم" placeholder="الاسم" class="bg-slate-800 border border-slate-700 text-white rounded-lg p-3 w-full outline-none focus:border-blue-500" required>
-                    <input type="tel" name="الهاتف" placeholder="رقم الهاتف" class="bg-slate-800 border border-slate-700 text-white rounded-lg p-3 w-full outline-none focus:border-blue-500" required>
+                    <input type="text" data-key="ph_name" placeholder="الاسم" class="bg-slate-800 border border-slate-700 text-white rounded-lg p-3 w-full outline-none focus:border-blue-500">
+                    <input type="tel" data-key="ph_phone" placeholder="رقم الهاتف" class="bg-slate-800 border border-slate-700 text-white rounded-lg p-3 w-full outline-none focus:border-blue-500">
                 </div>
                 
                 <div class="grid grid-cols-2 gap-4">
-                    <input type="date" name="تاريخ_الزفاف" class="bg-slate-800 border border-slate-700 text-slate-400 rounded-lg p-3 w-full outline-none focus:border-blue-500" required>
-                    <input type="number" name="عدد_الساعات" placeholder="عدد الساعات" class="bg-slate-800 border border-slate-700 text-white rounded-lg p-3 w-full outline-none focus:border-blue-500">
+                    <input type="date" class="bg-slate-800 border border-slate-700 text-slate-400 rounded-lg p-3 w-full outline-none focus:border-blue-500">
+                    <input type="number" data-key="ph_hours" placeholder="عدد الساعات" class="bg-slate-800 border border-slate-700 text-white rounded-lg p-3 w-full outline-none focus:border-blue-500">
                 </div>
 
-                <input type="text" name="خط_السير" placeholder="خط السير (مثال: من السيوف إلى القاعة..)" class="bg-slate-800 border border-slate-700 text-white rounded-lg p-3 w-full outline-none focus:border-blue-500">
+                <input type="text" data-key="ph_route" placeholder="خط السير (مثال: من السيوف إلى القاعة..)" class="bg-slate-800 border border-slate-700 text-white rounded-lg p-3 w-full outline-none focus:border-blue-500">
                 
-                <select name="نوع_السيارة" class="bg-slate-800 border border-slate-700 text-slate-300 rounded-lg p-3 w-full outline-none focus:border-blue-500">
-                    <option value="" disabled selected>اختر نوع السيارة</option>
-                    <option value="سيدان حديثة">سيدان حديثة (تويوتا/النترا)</option>
-                    <option value="مرسيدس">مرسيدس (S-Class / E-Class)</option>
-                    <option value="ليموزين طويل">ليموزين طويل (Stretch)</option>
-                    <option value="كابورليه">كابورليه (مكشوفة)</option>
+                <select class="bg-slate-800 border border-slate-700 text-slate-300 rounded-lg p-3 w-full outline-none focus:border-blue-500">
+                    <option value="" disabled selected data-key="opt_select_car">اختر نوع السيارة</option>
+                    <option value="sedan" data-key="opt_sedan">سيدان حديثة (تويوتا/النترا)</option>
+                    <option value="mercedes" data-key="opt_mercedes">مرسيدس (S-Class / E-Class)</option>
+                    <option value="limo" data-key="opt_limo">ليموزين طويل (Stretch)</option>
                 </select>
 
-                <input type="hidden" name="_subject" value="💍 طلب زفاف جديد - 24Seven">
-                
                 <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition shadow-lg" data-key="btn_send">
                     إرسال طلب العرض
                 </button>
@@ -377,28 +346,24 @@
     <footer class="bg-slate-950 pt-16 pb-8 border-t border-slate-900 text-sm">
         <div class="container mx-auto px-6 grid md:grid-cols-3 gap-12 text-center md:text-start">
             <div>
-                <img src="images/logos/logo.png" class="h-10 mb-4 mx-auto md:mx-0" alt="Logo">
+                <img src="images/logos/logo.png" onerror="this.style.display='none'" class="h-10 mb-4 mx-auto md:mx-0" alt="Logo">
+                <h3 class="text-white font-bold text-xl mb-2">24Seven</h3>
                 <p class="text-slate-400 mb-4" data-key="footer_desc">شركة مسجلة رسمياً. خدمات نقل سياحي وليموزين بأعلى معايير الأمان.</p>
-                <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 text-xs text-slate-300 font-mono">
-                    <p>Tax ID: <span class="text-white font-bold">849-934-698</span></p>
-                    <p>CR No: <span class="text-white font-bold">123456</span></p>
-                </div>
             </div>
             <div>
                 <h4 class="text-white font-bold mb-4 text-lg" data-key="footer_branches">فروعنا</h4>
                 <ul class="space-y-3 text-slate-400">
                     <li data-key="branch_alex">الإسكندرية: السيوف، أبراج اللوتس</li>
                     <li data-key="branch_cairo">القاهرة: مساكن شيراتون</li>
-                    <li data-key="branch_hurghada">الغردقة: الدهار</li>
                     <li data-key="branch_sharm">شرم الشيخ: خليج نعمة</li>
                 </ul>
             </div>
             <div>
                 <h4 class="text-white font-bold mb-4 text-lg" data-key="footer_contact">تواصل معنا</h4>
                 <div class="flex justify-center md:justify-start gap-6 text-2xl">
-                    <a href="https://www.facebook.com/Sevenlimousin/" target="_blank" class="text-blue-600 hover:text-blue-400"><i class="fab fa-facebook"></i></a>
-                    <a href="https://www.instagram.com/24sevenlimousine/" target="_blank" class="text-pink-600 hover:text-pink-400"><i class="fab fa-instagram"></i></a>
-                    <a href="https://wa.me/201121748885" target="_blank" class="text-green-500 hover:text-green-400"><i class="fab fa-whatsapp"></i></a>
+                    <a href="#" class="text-blue-600"><i class="fab fa-facebook"></i></a>
+                    <a href="#" class="text-pink-600"><i class="fab fa-instagram"></i></a>
+                    <a href="#" class="text-green-500"><i class="fab fa-whatsapp"></i></a>
                 </div>
             </div>
         </div>
@@ -409,149 +374,146 @@
 
     <div class="floating-actions">
         <a href="https://wa.me/201121748885" target="_blank" class="action-btn bg-[#25D366] hover:bg-[#128C7E]" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>
-        <a href="https://m.me/Sevenlimousin" target="_blank" class="action-btn bg-[#0084FF] hover:bg-[#0063B2]" title="Messenger"><i class="fab fa-facebook-messenger"></i></a>
         <a href="limousine.html" class="action-btn bg-blue-600 hover:bg-blue-700 text-white" title="Book"><i class="fas fa-calendar-alt"></i></a>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     <script>
-        // 1. Mobile Menu
+        // --- 1. UI Interaction Functions ---
         function toggleMenu() {
-            const menu = document.getElementById('mobileMenu');
-            const overlay = document.querySelector('.overlay');
-            menu.classList.toggle('active');
-            overlay.classList.toggle('active');
+            document.getElementById('mobileMenu').classList.toggle('active');
+            document.querySelector('.overlay').classList.toggle('active');
         }
 
-        // 2. Swiper Slider
+        function openModal() { document.getElementById('weddingModal').classList.add('active'); }
+        function closeModal() { document.getElementById('weddingModal').classList.remove('active'); }
+        
+        window.onclick = function(event) {
+            if (event.target == document.getElementById('weddingModal')) closeModal();
+        }
+
+        // --- 2. Sliders ---
         const swiper = new Swiper('.fleet-slider', {
             slidesPerView: 1, spaceBetween: 20, loop: true,
             autoplay: { delay: 3000 },
             breakpoints: {
                 640: { slidesPerView: 2 },
                 1024: { slidesPerView: 3 }
-            },
-            pagination: { el: '.swiper-pagination', clickable: true }
+            }
         });
 
-        // 3. Modal Logic
-        function openModal() { document.getElementById('weddingModal').classList.add('active'); }
-        function closeModal() { document.getElementById('weddingModal').classList.remove('active'); }
-        window.onclick = function(event) { if (event.target == document.getElementById('weddingModal')) closeModal(); }
-
-        // 4. Fixed Counters (Immediate Execution)
-        function runCounters() {
+        // --- 3. Counters ---
+        window.addEventListener('load', () => {
             const counters = [
                 { id: 'stat-founded', target: 2022 },
                 { id: 'stat-trips', target: 12000 },
                 { id: 'stat-rating', target: 98 }
             ];
-
             counters.forEach(item => {
                 const el = document.getElementById(item.id);
-                if(el) {
-                    let count = 0;
-                    const target = item.target;
-                    // Start closer for founded year
-                    if(target > 2000) count = 2000; 
-                    if(target > 10000) count = 11000;
-
-                    const inc = Math.ceil((target - count) / 100); 
-
-                    const timer = setInterval(() => {
-                        count += inc;
-                        if (count >= target) {
-                            el.innerText = target;
-                            clearInterval(timer);
-                        } else {
-                            el.innerText = count;
-                        }
-                    }, 20);
-                }
+                if(!el) return;
+                let count = item.target > 2000 ? 2000 : 0;
+                if(item.target > 10000) count = 11000;
+                const inc = Math.ceil((item.target - count) / 50);
+                const timer = setInterval(() => {
+                    count += inc;
+                    if(count >= item.target) {
+                        el.innerText = item.target; clearInterval(timer);
+                    } else { el.innerText = count; }
+                }, 30);
             });
-        }
-        // Run immediately on load
-        window.addEventListener('load', runCounters);
+        });
 
-        // 5. Complete Translation System
+        // --- 4. Translation Logic (Fixed) ---
         const translations = {
             ar: {
-                nav_home: "الرئيسية", nav_services: "الخدمات", nav_reviews: "آراء العملاء", nav_about: "من نحن", nav_invest: "استثمار السيارات",
-                btn_book: "احجز الآن", hero_badge: "الخيار الأول للشركات", hero_t1: "مفهوم جديد", hero_t2: "للرفاهية العالمية",
-                hero_desc: "أسطول 2025 المتكامل. نقدم تجربة تنقل استثنائية للمطارات، الشركات، وحفلات الزفاف. دقة في المواعيد واحترافية تفوق التوقعات.",
-                btn_book_now: "احجز سيارتك", btn_about: "من نحن", 
-                partners_title: "شركاء النجاح والثقة",
-                stat_1_t: "عام التأسيس", stat_1_d: "انطلاق مسيرتنا في السوق المصري.",
-                stat_2_t: "رحلة ناجحة", stat_2_d: "ثقة الآلاف من العملاء.",
-                stat_3_t: "نسبة رضاء العملاء", stat_3_d: "نلتزم بأعلى معايير الجودة.",
-                srv_title: "خدماتنا المتخصصة", srv_subtitle: "حلول نقل متكاملة تغطي كافة احتياجات الأفراد والشركات",
+                nav_home: "الرئيسية", nav_services: "الخدمات", nav_reviews: "آراء العملاء", nav_about: "من نحن", nav_invest: "استثمار",
+                btn_book: "احجز الآن",
+                hero_badge: "الخيار الأول للشركات الكبرى",
+                hero_t1: "مفهوم جديد", hero_t2: "للرفاهية العالمية",
+                hero_desc: "نقدم حلول تنقل متكاملة تليق بمكانة شركتك وضيوفك. أسطول 2025 وسائقون محترفون لضمان تجربة سلسة، آمنة، وفي الوقت المحدد.",
+                btn_book_now: "احجز سيارتك",
+                stat_1_t: "عام التأسيس", stat_1_d: "انطلاق مسيرتنا في السوق المصري برؤية عالمية.",
+                stat_2_t: "رحلة ناجحة", stat_2_d: "ثقة الآلاف من العملاء. نفذنا آلاف الرحلات.",
+                stat_3_t: "نسبة رضاء العملاء", stat_3_d: "نلتزم بأعلى معايير الجودة والنظافة.",
+                srv_title_1: "خدماتنا", srv_title_2: "المتخصصة", srv_subtitle: "حلول نقل متكاملة تغطي كافة احتياجات الأفراد والشركات",
                 srv_1_t: "المطارات والسياحة", srv_1_d: "استقبال VIP من داخل المطار وتوصيل لجميع المحافظات.",
                 btn_book_trip: "احجز رحلتك الآن",
                 srv_2_t: "الشركات والمؤتمرات", srv_2_d: "عقود سنوية، فواتير ضريبية، وتنظيم انتقالات المؤتمرات.",
-                btn_quote: "طلب عرض سعر (Email)",
+                btn_quote: "طلب عرض سعر",
                 srv_3_t: "الزفاف والمناسبات", srv_3_d: "سيارات زفاف حديثة وكلاسيكية لليلة العمر.",
                 btn_wedding: "صمم باقة زفافك",
-                modal_title: "طلب عرض سعر زفاف", modal_desc: "املأ البيانات وسنتواصل معك", btn_send: "إرسال طلب العرض",
+                modal_title: "طلب عرض سعر زفاف", modal_desc: "املأ البيانات وسنتواصل معك بأفضل الباقات المتاحة",
+                ph_name: "الاسم", ph_phone: "رقم الهاتف", ph_hours: "عدد الساعات", ph_route: "خط السير (مثال: من السيوف إلى القاعة..)",
+                opt_select_car: "اختر نوع السيارة", opt_sedan: "سيدان حديثة", opt_mercedes: "مرسيدس", opt_limo: "ليموزين طويل",
+                btn_send: "إرسال طلب العرض",
                 footer_desc: "شركة مسجلة رسمياً. خدمات نقل سياحي وليموزين بأعلى معايير الأمان.",
                 footer_branches: "فروعنا", footer_contact: "تواصل معنا",
-                branch_alex: "الإسكندرية: السيوف، أبراج اللوتس", branch_cairo: "القاهرة: مساكن شيراتون",
-                branch_hurghada: "الغردقة: الدهار", branch_sharm: "شرم الشيخ: خليج نعمة"
+                branch_alex: "الإسكندرية: السيوف، أبراج اللوتس", branch_cairo: "القاهرة: مساكن شيراتون", branch_sharm: "شرم الشيخ: خليج نعمة"
             },
             en: {
-                nav_home: "Home", nav_services: "Services", nav_reviews: "Reviews", nav_about: "About Us", nav_invest: "Car Investment",
-                btn_book: "Book Now", hero_badge: "#1 Choice for Corporates", hero_t1: "New Concept", hero_t2: "Of Global Luxury",
-                hero_desc: "Integrated 2025 Fleet. Exceptional transport experience for Airports, Corporates, and Weddings. Punctuality and professionalism beyond expectations.",
-                btn_book_now: "Book Your Car", btn_about: "About Us",
-                partners_title: "Partners of Success & Trust",
-                stat_1_t: "Founded", stat_1_d: "Starting our journey in the Egyptian market.",
-                stat_2_t: "Successful Trips", stat_2_d: "Trusted by thousands of clients.",
-                stat_3_t: "Customer Satisfaction", stat_3_d: "Committed to highest quality standards.",
-                srv_title: "Our Specialized Services", srv_subtitle: "Integrated transport solutions for individuals and companies",
-                srv_1_t: "Airports & Tourism", srv_1_d: "VIP meet & greet inside airports and transfer to all governorates.",
+                nav_home: "Home", nav_services: "Services", nav_reviews: "Reviews", nav_about: "About Us", nav_invest: "Investment",
+                btn_book: "Book Now",
+                hero_badge: "#1 Choice for Corporates",
+                hero_t1: "New Concept", hero_t2: "Of Global Luxury",
+                hero_desc: "Integrated transport solutions befitting your company and guests. 2025 Fleet and professional drivers ensuring a smooth, safe, and punctual experience.",
+                btn_book_now: "Book Your Car",
+                stat_1_t: "Founded", stat_1_d: "Launched in the Egyptian market with a global vision.",
+                stat_2_t: "Successful Trips", stat_2_d: "Trusted by thousands. Completed thousands of trips.",
+                stat_3_t: "Customer Satisfaction", stat_3_d: "Committed to the highest standards of quality and hygiene.",
+                srv_title_1: "Our Specialized", srv_title_2: "Services", srv_subtitle: "Integrated transport solutions for individuals and companies",
+                srv_1_t: "Airports & Tourism", srv_1_d: "VIP meet & greet inside the airport and transfer to all governorates.",
                 btn_book_trip: "Book Trip Now",
                 srv_2_t: "Corporate & Events", srv_2_d: "Annual contracts, tax invoices, and conference logistics.",
-                btn_quote: "Request Quote (Email)",
-                srv_3_t: "Weddings & Events", srv_3_d: "Modern and classic wedding cars for your special night.",
-                btn_wedding: "Customize Wedding Package",
-                modal_title: "Wedding Quote Request", modal_desc: "Fill details and we will contact you", btn_send: "Send Request",
+                btn_quote: "Request Quote",
+                srv_3_t: "Weddings & Occasions", srv_3_d: "Modern and classic wedding cars for your special night.",
+                btn_wedding: "Customize Wedding Pkg",
+                modal_title: "Wedding Quote Request", modal_desc: "Fill details and we will contact you with best offers",
+                ph_name: "Name", ph_phone: "Phone Number", ph_hours: "Number of Hours", ph_route: "Route (e.g., From Seyouf to Hall...)",
+                opt_select_car: "Select Car Type", opt_sedan: "Modern Sedan", opt_mercedes: "Mercedes", opt_limo: "Stretch Limousine",
+                btn_send: "Send Request",
                 footer_desc: "Officially registered company. Tourism transport and limousine services with highest safety standards.",
                 footer_branches: "Our Branches", footer_contact: "Contact Us",
-                branch_alex: "Alexandria: El-Seyouf, Lotus Towers", branch_cairo: "Cairo: Sheraton Residences",
-                branch_hurghada: "Hurghada: El-Dahar", branch_sharm: "Sharm El-Sheikh: Naama Bay"
+                branch_alex: "Alexandria: El-Seyouf, Lotus Towers", branch_cairo: "Cairo: Sheraton Residences", branch_sharm: "Sharm El-Sheikh: Naama Bay"
             }
         };
 
         function toggleLang() {
+            const html = document.documentElement;
             const body = document.body;
-            const currentLang = document.documentElement.getAttribute('lang') === 'ar' ? 'en' : 'ar';
+            const langText = document.getElementById('lang-text');
             
-            // 1. Toggle HTML attributes
-            document.documentElement.setAttribute('lang', currentLang);
-            document.documentElement.setAttribute('dir', currentLang === 'ar' ? 'rtl' : 'ltr');
+            // Check current language
+            const isAr = html.getAttribute('lang') === 'ar';
+            const targetLang = isAr ? 'en' : 'ar';
+            const dict = translations[targetLang];
+
+            // 1. Swap HTML Attributes
+            html.setAttribute('lang', targetLang);
+            html.setAttribute('dir', targetLang === 'ar' ? 'rtl' : 'ltr');
             
-            // 2. Toggle CSS classes
-            if(currentLang === 'en') {
+            // 2. Toggle CSS Classes (Fonts & Direction)
+            if (targetLang === 'en') {
                 body.classList.add('en-mode');
-                document.getElementById('lang-btn').innerText = 'AR';
+                body.classList.remove('ar-mode');
+                langText.innerText = 'العربية';
             } else {
                 body.classList.remove('en-mode');
-                document.getElementById('lang-btn').innerText = 'EN';
+                body.classList.add('ar-mode');
+                langText.innerText = 'English';
             }
 
-            // 3. Update ALL Text Content based on data-key
-            const elements = document.querySelectorAll('[data-key]');
-            elements.forEach(el => {
+            // 3. Update Text Content
+            document.querySelectorAll('[data-key]').forEach(el => {
                 const key = el.getAttribute('data-key');
-                if (translations[currentLang] && translations[currentLang][key]) {
-                    // Handle input placeholders specifically
-                    if(el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
-                        el.placeholder = translations[currentLang][key];
-                    } else {
-                        // For normal text elements
-                        // Preserve icons if any (simple approach: replace text node only)
-                        // For simplicity in this robust version, we replace innerHTML carefully or just text
-                        // Since keys map to full text, innerText is safer.
-                        el.innerText = translations[currentLang][key];
+                if (dict[key]) {
+                    // Handle Input Placeholders
+                    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                        el.placeholder = dict[key];
+                    } 
+                    // Handle Standard Text
+                    else {
+                        el.innerText = dict[key];
                     }
                 }
             });
