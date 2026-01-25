@@ -3,137 +3,202 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>24Seven Limousine | الرفاهية في كل رحلة</title>
+    <title>24Seven Limousine | Global Luxury Transport</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Outfit:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Outfit:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Cairo', sans-serif; background-color: #0f172a; color: white; scroll-behavior: smooth; }
-        .font-num { font-family: 'Outfit', sans-serif; }
-        .hero-bg { background: linear-gradient(rgba(15, 23, 42, 0.8), #0f172a), url('https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?q=80&w=1920&auto=format&fit=crop'); background-size: cover; background-position: center; background-attachment: fixed; }
-        .gold-text { background: linear-gradient(to right, #f59e0b, #fbbf24); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .stat-card { background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); transition: 0.3s; }
-        .stat-card:hover { transform: translateY(-5px); border-color: #f59e0b; }
-        .client-logo { filter: grayscale(100%) brightness(200%); opacity: 0.6; transition: 0.3s; }
-        .client-logo:hover { filter: grayscale(0%) brightness(100%); opacity: 1; }
-        /* الماسنجر العائم */
-        .messenger-float { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: #0084ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,132,255,0.4); z-index: 100; transition: 0.3s; cursor: pointer; }
-        .messenger-float:hover { transform: scale(1.1); }
-        .messenger-float i { color: white; font-size: 32px; }
+        /* إعدادات الخطوط واللغات */
+        :root { --font-ar: 'Cairo', sans-serif; --font-en: 'Outfit', sans-serif; }
+        body.ar { font-family: var(--font-ar); direction: rtl; }
+        body.en { font-family: var(--font-en); direction: ltr; }
+        
+        /* الخلفيات والتصميم */
+        body { background-color: #0f172a; color: white; overflow-x: hidden; }
+        .hero-section { 
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0.7) 100%), 
+                        url('https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?q=80&w=1920');
+            background-size: cover; background-position: center; background-attachment: fixed;
+            min-height: 100vh; display: flex; align-items: center;
+        }
+        .luxury-text { background: linear-gradient(to right, #f59e0b, #fbbf24, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-size: 200%; animation: shine 3s infinite; }
+        @keyframes shine { to { background-position: 200% center; } }
+        
+        /* البطاقات */
+        .glass-card { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .glass-card:hover { transform: translateY(-10px); border-color: #f59e0b; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+        
+        /* أزرار التواصل العائمة */
+        .chat-widget { position: fixed; bottom: 30px; right: 30px; z-index: 100; display: flex; flex-col-reverse; gap: 15px; flex-direction: column-reverse; align-items: center; }
+        .chat-btn { width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5); cursor: pointer; transition: 0.3s; color: white; font-size: 24px; opacity: 0; transform: translateY(20px); pointer-events: none; }
+        .chat-btn.active { opacity: 1; transform: translateY(0); pointer-events: all; }
+        .main-fab { width: 65px; height: 65px; background: #f59e0b; color: #0f172a; font-size: 28px; z-index: 101; opacity: 1; pointer-events: all; transform: none; }
+        .main-fab:hover { transform: scale(1.1) rotate(90deg); }
+        
+        /* للغة الإنجليزية - عكس مكان الزر */
+        body.en .chat-widget { right: auto; left: 30px; }
     </style>
 </head>
-<body>
-
-    <nav class="fixed w-full z-50 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
+<body class="ar"> <nav class="fixed w-full z-50 transition-all duration-300 bg-slate-900/80 backdrop-blur-md border-b border-slate-800" id="navbar">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-2">
-                <div class="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-600 rounded-xl flex items-center justify-center font-black text-slate-900 text-xl">24</div>
-                <h1 class="text-2xl font-bold">Seven <span class="text-xs block text-slate-400 font-normal">Limousine</span></h1>
-            </div>
-            <div class="hidden md:flex gap-8 text-sm font-bold text-slate-300">
-                <a href="#about" class="hover:text-amber-500 transition">عن الشركة</a>
-                <a href="#stats" class="hover:text-amber-500 transition">إنجازاتنا</a>
-                <a href="#clients" class="hover:text-amber-500 transition">عملاؤنا</a>
-                <a href="invest.html" class="text-amber-500 hover:text-amber-400 transition">استثمر سيارتك</a>
-            </div>
-            <a href="limousine.html" class="bg-amber-500 text-slate-900 px-6 py-2 rounded-full font-bold hover:bg-amber-400 transition shadow-lg shadow-amber-500/20">
-                احجز رحلتك الآن
+            <a href="home.html" class="flex items-center gap-2 group">
+                <div class="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-600 rounded-lg flex items-center justify-center font-black text-slate-900 text-xl group-hover:scale-110 transition">24</div>
+                <div>
+                    <h1 class="text-xl font-bold leading-none">Seven</h1>
+                    <span class="text-[10px] text-slate-400 tracking-widest uppercase">Global Limousine</span>
+                </div>
             </a>
+
+            <div class="hidden md:flex items-center gap-8 text-sm font-semibold">
+                <a href="#home" class="nav-link hover:text-amber-500 transition" data-key="nav_home">الرئيسية</a>
+                <a href="reviews.html" class="nav-link hover:text-amber-500 transition" data-key="nav_reviews">آراء العملاء</a>
+                <a href="#fleet" class="nav-link hover:text-amber-500 transition" data-key="nav_fleet">الأسطول</a>
+                <a href="invest.html" class="nav-link text-amber-500 hover:text-amber-400" data-key="nav_invest">استثمار السيارات</a>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <button onclick="toggleLang()" class="flex items-center gap-1 text-xs font-bold border border-slate-600 px-3 py-1.5 rounded-full hover:bg-slate-800 transition">
+                    <i class="fas fa-globe text-amber-500"></i> <span id="lang-text">English</span>
+                </button>
+                <a href="limousine.html" class="bg-amber-500 text-slate-900 px-5 py-2 rounded-lg font-bold text-sm hover:bg-amber-400 transition shadow-lg shadow-amber-500/20" data-key="btn_book">
+                    حجز رحلة
+                </a>
+            </div>
         </div>
     </nav>
 
-    <header class="hero-bg min-h-screen flex items-center justify-center text-center px-4 relative">
-        <div class="max-w-4xl relative z-10 animate-fade-in-up">
-            <p class="text-amber-500 font-bold tracking-widest mb-4">SINCE 2022</p>
-            <h1 class="text-5xl md:text-7xl font-black mb-6 leading-tight">
-                رفاهية التنقل <br> <span class="gold-text">بمفهوم عالمي</span>
-            </h1>
-            <p class="text-lg text-slate-300 mb-10 max-w-2xl mx-auto leading-relaxed">
-                الخيار الأول للشركات الكبرى، المؤتمرات، والشخصيات الهامة. نقدم لك أسطولاً من الفخامة، وخدمة تليق بمكانتك.
-            </p>
-            <div class="flex flex-col md:flex-row gap-4 justify-center">
-                <a href="limousine.html" class="bg-amber-500 text-slate-900 px-8 py-4 rounded-xl font-bold text-lg hover:bg-amber-400 transition shadow-xl shadow-amber-500/20">
-                    <i class="fas fa-car-side mr-2"></i> احجز سيارتك
-                </a>
-                <a href="invest.html" class="bg-transparent border border-slate-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-slate-800 transition">
-                    <i class="fas fa-chart-line mr-2"></i> استثمار السيارات
-                </a>
+    <section id="home" class="hero-section">
+        <div class="container mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
+            <div class="animate-fade-in-up">
+                <div class="inline-block px-4 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-500 text-xs font-bold mb-6 tracking-wider">
+                    EST. 2022 | +12,000 TRIPS
+                </div>
+                <h1 class="text-5xl md:text-7xl font-black mb-6 leading-tight">
+                    <span data-key="hero_title_1">مفهوم جديد</span> <br> 
+                    <span class="luxury-text" data-key="hero_title_2">للرفاهية العالمية</span>
+                </h1>
+                <p class="text-lg text-slate-300 mb-8 leading-relaxed max-w-lg" data-key="hero_desc">
+                    الخيار الأول للشركات العالمية (Parkville, Elsewedy) والشخصيات الهامة. نقدم تجربة تنقل فاخرة تليق بمكانتك، مع التزام تام بالمواعيد.
+                </p>
+                <div class="flex gap-4">
+                    <a href="limousine.html" class="bg-amber-500 text-slate-900 px-8 py-4 rounded-xl font-bold hover:bg-amber-400 transition flex items-center gap-2">
+                        <i class="fas fa-calendar-check"></i> <span data-key="btn_book_now">احجز الآن</span>
+                    </a>
+                    <a href="#about" class="border border-slate-600 px-8 py-4 rounded-xl font-bold hover:bg-slate-800 transition">
+                        <span data-key="btn_explore">اكتشف المزيد</span>
+                    </a>
+                </div>
             </div>
-        </div>
-    </header>
-
-    <section id="stats" class="py-20 bg-slate-900">
-        <div class="container mx-auto px-6">
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <div class="stat-card p-6 rounded-2xl text-center">
-                    <i class="fas fa-route text-3xl text-amber-500 mb-3"></i>
-                    <h3 class="text-4xl font-black font-num mb-1">+12,340</h3>
-                    <p class="text-slate-400 text-sm">رحلة ناجحة</p>
-                </div>
-                <div class="stat-card p-6 rounded-2xl text-center">
-                    <i class="fas fa-smile text-3xl text-amber-500 mb-3"></i>
-                    <h3 class="text-4xl font-black font-num mb-1">98%</h3>
-                    <p class="text-slate-400 text-sm">نسبة رضاء العملاء</p>
-                </div>
-                <div class="stat-card p-6 rounded-2xl text-center">
-                    <i class="fas fa-calendar-check text-3xl text-amber-500 mb-3"></i>
-                    <h3 class="text-4xl font-black font-num mb-1">2022</h3>
-                    <p class="text-slate-400 text-sm">سنة التأسيس</p>
-                </div>
-                <div class="stat-card p-6 rounded-2xl text-center">
-                    <i class="fas fa-handshake text-3xl text-amber-500 mb-3"></i>
-                    <h3 class="text-4xl font-black font-num mb-1">+50</h3>
-                    <p class="text-slate-400 text-sm">شريك نجاح</p>
+            <div class="hidden md:block relative">
+                <div class="absolute -inset-4 bg-amber-500/20 rounded-full blur-3xl"></div>
+                <img src="https://via.placeholder.com/600x400/1e293b/ffffff?text=Premium+Fleet+Image" class="relative rounded-2xl shadow-2xl border border-slate-700 transform rotate-2 hover:rotate-0 transition duration-500">
+                
+                <div class="absolute -bottom-10 -right-10 bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-xl max-w-xs animate-bounce-slow">
+                    <div class="flex text-amber-500 mb-2"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+                    <p class="text-xs text-slate-300 mb-2">"خدمة ممتازة، السائق وصل قبل الموعد والسيارة كانت معقمة جداً. شكراً 24Seven"</p>
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-[10px]">A</div>
+                        <span class="text-xs font-bold text-white">Ahmed Ali</span>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <section id="clients" class="py-20 bg-slate-800">
-        <div class="container mx-auto px-6 text-center">
-            <h2 class="text-3xl font-bold mb-12">شركاء النجاح</h2>
-            <div class="flex flex-wrap justify-center gap-12 items-center opacity-80">
-                <div class="client-logo text-xl font-bold font-num text-slate-300">AdvoCure Pharma</div>
-                <div class="client-logo text-xl font-bold font-num text-slate-300">Parkville Cosmetics</div>
-                <div class="client-logo text-xl font-bold font-num text-slate-300">ELSEWEDY ELECTRIC</div>
-                <div class="client-logo text-xl font-bold text-slate-300">النادي الأهلي المصري</div>
-                <div class="client-logo text-xl font-bold text-slate-300">مستشفى 57357</div>
-                <div class="client-logo text-xl font-bold text-slate-300">سفارة البرازيل</div>
-            </div>
-            <p class="mt-8 text-slate-500 text-sm">وخدمات مؤتمرات وتنظيم حفلات الزفاف لكبار الشخصيات.</p>
+    <div class="chat-widget" id="chatWidget">
+        <div class="chat-btn main-fab" onclick="toggleChatMenu()">
+            <i class="fas fa-comments"></i>
         </div>
-    </section>
-
-    <section class="py-20 bg-slate-900">
-        <div class="container mx-auto px-6">
-            <h2 class="text-3xl font-bold mb-12 text-center">لماذا 24Seven؟</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div class="p-6 bg-slate-800 rounded-2xl border border-slate-700">
-                    <div class="w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center mb-4"><i class="fas fa-shield-alt text-amber-500 text-xl"></i></div>
-                    <h3 class="text-xl font-bold mb-2">أمان وموثوقية</h3>
-                    <p class="text-slate-400 text-sm">سيارات حديثة معقمة وسائقين محترفين تم اختيارهم بعناية فائقة لضمان أمان عائلتك.</p>
-                </div>
-                <div class="p-6 bg-slate-800 rounded-2xl border border-slate-700">
-                    <div class="w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center mb-4"><i class="fas fa-clock text-amber-500 text-xl"></i></div>
-                    <h3 class="text-xl font-bold mb-2">دقة في المواعيد</h3>
-                    <p class="text-slate-400 text-sm">نحن نقدر وقتك. نصل قبل الموعد المحدد دائماً، بنسبة التزام 100%.</p>
-                </div>
-                <div class="p-6 bg-slate-800 rounded-2xl border border-slate-700">
-                    <div class="w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center mb-4"><i class="fas fa-gem text-amber-500 text-xl"></i></div>
-                    <h3 class="text-xl font-bold mb-2">رفاهية مطلقة</h3>
-                    <p class="text-slate-400 text-sm">أسطول متنوع من أحدث السيارات (Sedan, SUV, Van) لتناسب جميع احتياجاتك ومناسباتك.</p>
-                </div>
-            </div>
+        
+        <a href="https://wa.me/201121748885" target="_blank" class="chat-btn bg-green-500 hover:bg-green-600" title="WhatsApp">
+            <i class="fab fa-whatsapp"></i>
+        </a>
+        <a href="https://m.me/YOUR_PAGE_ID" target="_blank" class="chat-btn bg-blue-600 hover:bg-blue-700" title="Messenger">
+            <i class="fab fa-facebook-messenger"></i>
+        </a>
+        <div onclick="openLiveChat()" class="chat-btn bg-amber-500 hover:bg-amber-600 text-slate-900" title="Live Chat">
+            <i class="fas fa-headset"></i>
         </div>
-    </section>
+    </div>
 
-    <footer class="bg-slate-950 py-10 border-t border-slate-800 text-center">
-        <p class="text-slate-500 text-sm">© 2026 24Seven Limousine. All rights reserved.</p>
-    </footer>
+    <div id="live-chat-modal" class="fixed bottom-24 right-8 w-80 bg-white rounded-2xl shadow-2xl z-50 hidden overflow-hidden border border-slate-200">
+        <div class="bg-slate-900 p-4 text-white flex justify-between items-center">
+            <h3 class="font-bold text-sm"><i class="fas fa-headset mr-2"></i>دعم العملاء</h3>
+            <button onclick="document.getElementById('live-chat-modal').classList.add('hidden')" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="h-64 bg-slate-50 p-4 overflow-y-auto text-sm text-slate-800" id="chat-messages">
+            <div class="bg-blue-100 p-2 rounded-lg rounded-tl-none mb-2 w-fit">أهلاً بك في 24Seven، كيف يمكننا مساعدتك اليوم؟</div>
+        </div>
+        <div class="p-3 border-t bg-white flex gap-2">
+            <input type="text" id="chat-input" placeholder="اكتب رسالتك..." class="flex-1 bg-slate-100 border-none rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none text-slate-800">
+            <button onclick="sendChatMessage()" class="bg-amber-500 text-white w-10 rounded-lg hover:bg-amber-600"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
 
-    <a href="https://m.me/YOUR_FACEBOOK_PAGE_NAME" target="_blank" class="messenger-float">
-        <i class="fab fa-facebook-messenger"></i>
-    </a>
+    <script>
+        // === 1. الترجمة الفورية ===
+        const translations = {
+            ar: {
+                nav_home: "الرئيسية", nav_reviews: "آراء العملاء", nav_fleet: "الأسطول", nav_invest: "استثمار السيارات",
+                btn_book: "حجز رحلة", hero_title_1: "مفهوم جديد", hero_title_2: "للرفاهية العالمية",
+                hero_desc: "الخيار الأول للشركات العالمية والشخصيات الهامة. نقدم تجربة تنقل فاخرة تليق بمكانتك.",
+                btn_book_now: "احجز الآن", btn_explore: "اكتشف المزيد"
+            },
+            en: {
+                nav_home: "Home", nav_reviews: "Reviews", nav_fleet: "Fleet", nav_invest: "Invest Your Car",
+                btn_book: "Book Trip", hero_title_1: "New Concept", hero_title_2: "Global Luxury",
+                hero_desc: "The #1 choice for global companies and VIPs. We offer a luxury transport experience that suits your status.",
+                btn_book_now: "Book Now", btn_explore: "Explore More"
+            }
+        };
 
+        let currentLang = 'ar';
+
+        function toggleLang() {
+            currentLang = currentLang === 'ar' ? 'en' : 'ar';
+            document.body.className = currentLang;
+            document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+            document.getElementById('lang-text').innerText = currentLang === 'ar' ? 'English' : 'العربية';
+            
+            // تحديث النصوص
+            document.querySelectorAll('[data-key]').forEach(el => {
+                el.innerText = translations[currentLang][el.getAttribute('data-key')];
+            });
+        }
+
+        // === 2. ودجت الدردشة العائم ===
+        function toggleChatMenu() {
+            const btns = document.querySelectorAll('.chat-btn:not(.main-fab)');
+            btns.forEach(btn => btn.classList.toggle('active'));
+            document.querySelector('.main-fab i').classList.toggle('fa-times');
+            document.querySelector('.main-fab i').classList.toggle('fa-comments');
+        }
+
+        function openLiveChat() {
+            document.getElementById('live-chat-modal').classList.remove('hidden');
+            toggleChatMenu(); // إغلاق القائمة
+        }
+
+        // === 3. نظام الدردشة المباشرة (محاكاة) ===
+        // هنا سنربط لاحقاً بـ Supabase Realtime للرد الفعلي
+        function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const msg = input.value;
+            if(!msg) return;
+            
+            const chatBox = document.getElementById('chat-messages');
+            
+            // رسالة العميل
+            chatBox.innerHTML += `<div class="bg-amber-100 p-2 rounded-lg rounded-tr-none mb-2 w-fit mr-auto ml-0 text-right">${msg}</div>`;
+            input.value = '';
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // رد تلقائي (مؤقت)
+            setTimeout(() => {
+                chatBox.innerHTML += `<div class="bg-blue-100 p-2 rounded-lg rounded-tl-none mb-2 w-fit">شكراً لتواصلك. سيقوم أحد موظفي خدمة العملاء بالرد عليك فوراً.</div>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }, 1000);
+        }
+    </script>
 </body>
 </html>

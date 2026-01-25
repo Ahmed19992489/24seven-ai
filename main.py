@@ -50,7 +50,7 @@ upload_path = static_path / "uploads"
 os.makedirs(upload_path, exist_ok=True) 
 app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 
-# ب) إعداد مجلد images (لصور السيارات)
+# ب) إعداد مجلد images (لصور السيارات والتقييمات) ✅
 images_path = BASE_DIR / "images"
 os.makedirs(images_path, exist_ok=True) 
 app.mount("/images", StaticFiles(directory=str(images_path)), name="images")
@@ -92,7 +92,7 @@ async def read_home_page():
         return FileResponse(file_path)
     return HTMLResponse("<h1>Error: home.html not found!</h1>", status_code=404)
 
-# 2. صفحة الاستثمار (جديدة) ✅
+# 2. صفحة الاستثمار (الجديدة) ✅
 @app.get("/invest.html")
 async def read_invest_page():
     file_path = BASE_DIR / "invest.html"
@@ -100,7 +100,15 @@ async def read_invest_page():
         return FileResponse(file_path)
     return HTMLResponse("<h1>Error: invest.html not found!</h1>", status_code=404)
 
-# 3. صفحة حجز الليموزين (للعملاء)
+# 3. صفحة آراء العملاء (الجديدة - تمت الإضافة) ✅
+@app.get("/reviews.html")
+async def read_reviews_page():
+    file_path = BASE_DIR / "reviews.html"
+    if file_path.exists():
+        return FileResponse(file_path)
+    return HTMLResponse("<h1>Error: reviews.html not found!</h1>", status_code=404)
+
+# 4. صفحة حجز الليموزين (للعملاء)
 @app.get("/limousine.html")
 async def read_limousine_page():
     file_path = BASE_DIR / "limousine.html"
@@ -113,7 +121,7 @@ async def read_limousine_page():
 async def read_limousine_clean():
     return await read_limousine_page()
 
-# 4. لوحة تحكم الأدمن (ERP System)
+# 5. لوحة تحكم الأدمن (ERP System)
 @app.get("/admin-panel")
 async def read_admin_panel():
     file_path = BASE_DIR / "admin-crm.html"
@@ -121,7 +129,7 @@ async def read_admin_panel():
         return FileResponse(file_path)
     return HTMLResponse("<h1>Error: admin-crm.html not found! Please make sure you uploaded the file.</h1>", status_code=404)
 
-# 5. صفحة المشاريع (إضافية)
+# 6. صفحة المشاريع (إضافية)
 @app.get("/projects.html")
 async def read_projects_page():
     file_path = BASE_DIR / "projects.html"
@@ -129,7 +137,7 @@ async def read_projects_page():
         return FileResponse(file_path)
     return HTMLResponse("<h1>Error: projects.html not found!</h1>")
 
-# 6. صفحة العروض (Web Design)
+# 7. صفحة العروض (Web Design)
 @app.get("/web-design")
 async def read_web_design_page():
     file_path = BASE_DIR / "web_design.html"
@@ -137,7 +145,7 @@ async def read_web_design_page():
         return FileResponse(file_path)
     return HTMLResponse("<h1>Error: web_design.html not found!</h1>")
 
-# 7. صفحة الأداة القديمة (اختياري)
+# 8. صفحة الأداة القديمة (اختياري)
 @app.get("/dashboard")
 async def read_app_dashboard():
     file_path = BASE_DIR / "dashboard.html"

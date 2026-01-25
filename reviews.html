@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>آراء العملاء | 24Seven Limousine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Outfit:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* إعدادات اللغات */
+        :root { --font-ar: 'Cairo', sans-serif; --font-en: 'Outfit', sans-serif; }
+        body.ar { font-family: var(--font-ar); direction: rtl; }
+        body.en { font-family: var(--font-en); direction: ltr; }
+
+        /* الخلفية المظلمة الفاخرة */
+        body { background-color: #0f172a; color: white; overflow-x: hidden; }
+        
+        /* تنسيق شبكة الصور (Masonry) */
+        .masonry-grid { column-count: 1; gap: 1.5rem; }
+        @media (min-width: 640px) { .masonry-grid { column-count: 2; } }
+        @media (min-width: 1024px) { .masonry-grid { column-count: 3; } }
+        
+        /* كارت التقييم */
+        .review-card { 
+            break-inside: avoid; 
+            margin-bottom: 1.5rem; 
+            background: #1e293b; 
+            border-radius: 16px; 
+            overflow: hidden; 
+            border: 1px solid #334155; 
+            transition: all 0.4s ease;
+            position: relative;
+        }
+        .review-card:hover { transform: translateY(-5px); border-color: #f59e0b; box-shadow: 0 10px 30px rgba(245, 158, 11, 0.15); }
+        
+        /* تأثيرات النصوص الذهبية */
+        .gold-text { color: #f59e0b; }
+        
+        /* الأزرار العائمة */
+        .floating-actions { position: fixed; bottom: 30px; right: 30px; display: flex; flex-direction: column-reverse; gap: 15px; z-index: 100; }
+        .action-btn { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 28px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: 0.3s; cursor: pointer; text-decoration: none; }
+        .action-btn:hover { transform: scale(1.1); }
+        
+        /* عكس مكان الأزرار في الإنجليزي */
+        body.en .floating-actions { right: auto; left: 30px; }
+
+        /* زر الحجز العريض أسفل الشاشة للموبايل */
+        .sticky-cta {
+            position: fixed; bottom: 0; left: 0; right: 0; 
+            background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px);
+            padding: 15px; border-top: 1px solid #334155; z-index: 90;
+            display: flex; justify-content: center;
+            transform: translateY(100%); transition: 0.5s;
+        }
+        .sticky-cta.show { transform: translateY(0); }
+    </style>
+</head>
+<body class="ar">
+
+    <nav class="fixed w-full z-50 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="home.html" class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-600 rounded-lg flex items-center justify-center font-black text-slate-900 text-lg">24</div>
+                <h1 class="text-xl font-bold">Seven</h1>
+            </a>
+            <div class="flex gap-4">
+                <button onclick="toggleLang()" class="border border-slate-600 px-3 py-1 rounded-full text-xs hover:bg-slate-800 transition flex items-center gap-1">
+                    <i class="fas fa-globe text-amber-500"></i> <span id="lang-btn-text">English</span>
+                </button>
+                <a href="home.html" class="text-slate-300 hover:text-white text-sm font-bold flex items-center gap-1">
+                    <i class="fas fa-home"></i> <span data-key="nav_back">الرئيسية</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="pt-32 pb-12 px-6 text-center bg-gradient-to-b from-slate-900 to-[#0f172a]">
+        <h1 class="text-4xl md:text-6xl font-black mb-4 leading-tight">
+            <span data-key="header_1">قصص نجاح</span> <br>
+            <span class="gold-text" data-key="header_2">نكتبها كل يوم</span>
+        </h1>
+        <p class="text-slate-400 max-w-2xl mx-auto text-lg mb-8" data-key="header_desc">
+            أكثر من 12,000 عميل، وعشرات الشركات العالمية (Parkville, Elsewedy) وضعوا ثقتهم فينا. هذه ليست مجرد آراء، هذا هو معيار الجودة الذي نعدك به.
+        </p>
+        
+        <div class="flex justify-center gap-6 text-slate-500 text-2xl">
+            <i class="fab fa-google hover:text-white transition" title="Google Reviews"></i>
+            <i class="fab fa-facebook hover:text-blue-500 transition" title="Facebook Reviews"></i>
+            <i class="fab fa-whatsapp hover:text-green-500 transition" title="WhatsApp Feedback"></i>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-6 pb-32">
+        <div class="masonry-grid">
+            
+            <div class="review-card group">
+                <div class="absolute top-3 right-3 bg-green-500/90 text-white text-[10px] px-2 py-1 rounded-full backdrop-blur-sm z-10">WhatsApp</div>
+                <img src="images/reviews/review1.jpg" class="w-full object-cover group-hover:scale-105 transition duration-700" 
+                     onerror="this.src='https://via.placeholder.com/400x500/1e293b/cbd5e1?text=Feedback+1'">
+            </div>
+
+            <div class="review-card group">
+                <div class="absolute top-3 right-3 bg-blue-600/90 text-white text-[10px] px-2 py-1 rounded-full backdrop-blur-sm z-10">Messenger</div>
+                <img src="images/reviews/review2.jpg" class="w-full object-cover group-hover:scale-105 transition duration-700" 
+                     onerror="this.src='https://via.placeholder.com/400x400/1e293b/cbd5e1?text=Feedback+2'">
+            </div>
+
+            <div class="review-card group">
+                <div class="absolute top-3 right-3 bg-green-500/90 text-white text-[10px] px-2 py-1 rounded-full backdrop-blur-sm z-10">WhatsApp</div>
+                <img src="images/reviews/review3.jpg" class="w-full object-cover group-hover:scale-105 transition duration-700" 
+                     onerror="this.src='https://via.placeholder.com/400x600/1e293b/cbd5e1?text=Feedback+3'">
+            </div>
+
+            <div class="review-card group">
+                <div class="absolute top-3 right-3 bg-amber-500/90 text-slate-900 font-bold text-[10px] px-2 py-1 rounded-full backdrop-blur-sm z-10">VIP Client</div>
+                <img src="images/reviews/review4.jpg" class="w-full object-cover group-hover:scale-105 transition duration-700" 
+                     onerror="this.src='https://via.placeholder.com/400x450/1e293b/cbd5e1?text=Feedback+4'">
+            </div>
+
+            <div class="review-card group">
+                <img src="images/reviews/review5.jpg" class="w-full object-cover group-hover:scale-105 transition duration-700" 
+                     onerror="this.src='https://via.placeholder.com/400x350/1e293b/cbd5e1?text=Feedback+5'">
+            </div>
+
+            <div class="review-card group">
+                <img src="images/reviews/review6.jpg" class="w-full object-cover group-hover:scale-105 transition duration-700" 
+                     onerror="this.src='https://via.placeholder.com/400x550/1e293b/cbd5e1?text=Feedback+6'">
+            </div>
+
+            <div class="review-card group">
+                <img src="images/reviews/review7.jpg" class="w-full object-cover group-hover:scale-105 transition duration-700" 
+                     onerror="this.src='https://via.placeholder.com/400x400/1e293b/cbd5e1?text=Feedback+7'">
+            </div>
+
+            <div class="review-card group">
+                <img src="images/reviews/review8.jpg" class="w-full object-cover group-hover:scale-105 transition duration-700" 
+                     onerror="this.src='https://via.placeholder.com/400x500/1e293b/cbd5e1?text=Feedback+8'">
+            </div>
+
+        </div>
+
+        <div class="text-center mt-12 bg-slate-800 p-8 rounded-2xl border border-slate-700">
+            <h2 class="text-2xl font-bold mb-4" data-key="cta_title">لا تكتفِ بالمشاهدة فقط</h2>
+            <p class="text-slate-400 mb-6" data-key="cta_desc">انضم إلى النخبة واستمتع بتجربة تنقل تليق بك وبضيوفك.</p>
+            <a href="limousine.html" class="inline-block bg-gradient-to-r from-amber-500 to-orange-600 text-slate-900 font-bold px-10 py-4 rounded-xl text-lg hover:shadow-lg hover:shadow-amber-500/20 transition transform hover:-translate-y-1">
+                <span data-key="btn_book_now">احجز رحلتك الآن</span> <i class="fas fa-arrow-left mr-2"></i>
+            </a>
+        </div>
+    </div>
+
+    <div class="floating-actions">
+        <a href="https://wa.me/201121748885?text=مرحباً،%20أرغب%20في%20الاستفسار%20عن%20حجز%20ليموزين" target="_blank" class="action-btn bg-green-500 hover:bg-green-600" title="WhatsApp">
+            <i class="fab fa-whatsapp"></i>
+        </a>
+        <a href="https://m.me/Sevenlimousin" target="_blank" class="action-btn bg-blue-600 hover:bg-blue-700" title="Messenger">
+            <i class="fab fa-facebook-messenger"></i>
+        </a>
+            <i class="fab fa-facebook-messenger"></i>
+        </a>
+        <a href="limousine.html" class="action-btn bg-amber-500 hover:bg-amber-600 text-slate-900" title="Book Now">
+            <i class="fas fa-calendar-check"></i>
+        </a>
+    </div>
+
+    <div class="sticky-cta md:hidden" id="stickyCta">
+        <a href="limousine.html" class="bg-amber-500 text-slate-900 w-full text-center py-3 rounded-xl font-bold shadow-lg">
+            <span data-key="btn_book_now">احجز رحلتك الآن</span>
+        </a>
+    </div>
+
+    <script>
+        // === 1. Multi-Language Logic ===
+        const translations = {
+            ar: {
+                nav_back: "الرئيسية",
+                header_1: "قصص نجاح",
+                header_2: "نكتبها كل يوم",
+                header_desc: "أكثر من 12,000 عميل، وعشرات الشركات العالمية (Parkville, Elsewedy) وضعوا ثقتهم فينا. هذه ليست مجرد آراء، هذا هو معيار الجودة الذي نعدك به.",
+                cta_title: "لا تكتفِ بالمشاهدة فقط",
+                cta_desc: "انضم إلى النخبة واستمتع بتجربة تنقل تليق بك وبضيوفك.",
+                btn_book_now: "احجز رحلتك الآن"
+            },
+            en: {
+                nav_back: "Home",
+                header_1: "Success Stories",
+                header_2: "Written Every Day",
+                header_desc: "Over 12,000 clients and global corporations (Parkville, Elsewedy) trust us. These aren't just reviews; this is the quality standard we promise you.",
+                cta_title: "Don't Just Watch",
+                cta_desc: "Join the elite and enjoy a transport experience that befits you and your guests.",
+                btn_book_now: "Book Your Trip Now"
+            }
+        };
+
+        let currentLang = 'ar';
+
+        function toggleLang() {
+            currentLang = currentLang === 'ar' ? 'en' : 'ar';
+            document.body.className = currentLang;
+            document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+            document.getElementById('lang-btn-text').innerText = currentLang === 'ar' ? 'English' : 'العربية';
+            
+            // عكس اتجاه السهم في الزر
+            const arrow = document.querySelector('.fa-arrow-left');
+            if(arrow) arrow.className = currentLang === 'ar' ? 'fas fa-arrow-left mr-2' : 'fas fa-arrow-right ml-2';
+
+            // تحديث النصوص
+            document.querySelectorAll('[data-key]').forEach(el => {
+                el.innerText = translations[currentLang][el.getAttribute('data-key')];
+            });
+        }
+
+        // === 2. Show Sticky CTA on Scroll ===
+        window.addEventListener('scroll', () => {
+            const cta = document.getElementById('stickyCta');
+            if (window.scrollY > 300) {
+                cta.classList.add('show');
+            } else {
+                cta.classList.remove('show');
+            }
+        });
+    </script>
+</body>
+</html>
