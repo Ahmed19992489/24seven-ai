@@ -3,193 +3,498 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>آراء العملاء | 24Seven Limousine</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
+    <meta name="description" content="آراء عملاء 24Seven Limousine. قصص نجاح حقيقية، تقييمات شركات عالمية، وصور حية من أرض الواقع لخدمات النقل السياحي والليموزين.">
+    <meta name="keywords" content="reviews, feedback, limousine egypt, customer stories, 24Seven, تقييمات, آراء العملاء, ليموزين">
+    <meta name="author" content="Ahmed Hashem">
+
+    <link rel="icon" href="images/logos/logo.png" type="image/png">
+    <title>قصص النجاح | 24Seven Limousine</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Outfit:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     
     <style>
-        /* إعدادات اللغات */
-        :root { --font-ar: 'Cairo', sans-serif; --font-en: 'Outfit', sans-serif; }
+        /* === 1. Global Variables & Reset === */
+        :root { 
+            --font-ar: 'Cairo', sans-serif; 
+            --font-en: 'Outfit', sans-serif;
+            --brand-dark: #020617;      /* Slate 950 */
+            --brand-primary: #1e40af;   /* Blue 800 */
+            --brand-blue: #3b82f6;      /* Blue 500 */
+            --brand-accent: #60a5fa;    /* Blue 400 */
+            --brand-gold: #fbbf24;      /* Amber 400 */
+            --glass-bg: rgba(30, 41, 59, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.08);
+        }
+
+        /* Smooth Scrolling */
+        html { scroll-behavior: smooth; }
+
+        /* Body Setup */
+        body { 
+            background-color: var(--brand-dark); 
+            color: white; 
+            overflow-x: hidden; 
+            transition: font-family 0.3s ease;
+        }
+
+        /* Language Modes */
         body.ar { font-family: var(--font-ar); direction: rtl; }
         body.en { font-family: var(--font-en); direction: ltr; }
 
-        /* الخلفية المظلمة الفاخرة */
-        body { background-color: #0f172a; color: white; overflow-x: hidden; }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--brand-blue); }
+
+        /* === 2. Animations === */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-up { animation: fadeInUp 0.8s ease-out forwards; }
         
-        /* تنسيق شبكة الصور (Masonry) */
-        .masonry-grid { column-count: 1; gap: 1.5rem; }
+        @keyframes glow {
+            0% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.2); }
+            50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.6); }
+            100% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.2); }
+        }
+        .glow-effect { animation: glow 3s infinite; }
+
+        /* === 3. Masonry Layout Logic === */
+        .masonry-grid {
+            column-count: 1;
+            column-gap: 1.5rem;
+        }
         @media (min-width: 640px) { .masonry-grid { column-count: 2; } }
         @media (min-width: 1024px) { .masonry-grid { column-count: 3; } }
-        
-        /* كارت التقييم */
-        .review-card { 
-            break-inside: avoid; 
-            margin-bottom: 1.5rem; 
-            background: #1e293b; 
-            border-radius: 16px; 
-            overflow: hidden; 
-            border: 1px solid #334155; 
-            transition: all 0.4s ease;
+
+        /* Review Card Styling */
+        .review-card {
+            break-inside: avoid;
+            margin-bottom: 1.5rem;
+            background: #1e293b; /* Slate 800 */
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            overflow: hidden;
             position: relative;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateZ(0); /* Hardware acceleration */
         }
-        .review-card:hover { transform: translateY(-5px); border-color: #f59e0b; box-shadow: 0 10px 30px rgba(245, 158, 11, 0.15); }
+
+        .review-card:hover {
+            transform: translateY(-8px) scale(1.01);
+            box-shadow: 0 20px 40px -5px rgba(0, 0, 0, 0.4);
+            border-color: var(--brand-blue);
+            z-index: 10;
+        }
+
+        .review-card img {
+            width: 100%;
+            height: auto;
+            display: block;
+            transition: transform 0.7s ease;
+            cursor: pointer;
+        }
+        .review-card:hover img { transform: scale(1.08); }
+
+        /* Platform Badges */
+        .badge {
+            position: absolute; top: 12px; right: 12px;
+            padding: 4px 10px; border-radius: 99px;
+            font-size: 10px; font-weight: 800; text-transform: uppercase;
+            letter-spacing: 0.5px; z-index: 10;
+            backdrop-filter: blur(4px); box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+        body.en .badge { right: auto; left: 12px; }
         
-        /* تأثيرات النصوص الذهبية */
-        .gold-text { color: #f59e0b; }
-        
-        /* الأزرار العائمة */
+        .badge.whatsapp { background: rgba(37, 211, 102, 0.9); color: white; }
+        .badge.messenger { background: rgba(0, 132, 255, 0.9); color: white; }
+        .badge.vip { background: linear-gradient(135deg, #FFD700, #FDB931); color: #000; }
+
+        /* === 4. Filter Buttons === */
+        .filter-btn {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #94a3b8;
+            padding: 8px 24px;
+            border-radius: 99px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .filter-btn:hover, .filter-btn.active {
+            background: var(--brand-blue);
+            color: white;
+            border-color: var(--brand-blue);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+        }
+
+        /* === 5. Lightbox Modal (عارض الصور) === */
+        .lightbox {
+            display: none; position: fixed; z-index: 9999;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .lightbox.active { display: flex; opacity: 1; }
+        .lightbox-img {
+            max-width: 90%; max-height: 90vh;
+            border-radius: 8px; box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            transform: scale(0.9); transition: transform 0.3s;
+        }
+        .lightbox.active .lightbox-img { transform: scale(1); }
+        .close-lightbox {
+            position: absolute; top: 30px; right: 30px;
+            color: white; font-size: 40px; cursor: pointer;
+            transition: 0.3s;
+        }
+        .close-lightbox:hover { color: var(--brand-blue); transform: rotate(90deg); }
+
+        /* === 6. CTA Section === */
+        .cta-section {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border: 1px solid rgba(255,255,255,0.05);
+            position: relative; overflow: hidden;
+        }
+        .cta-section::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 80% 20%, rgba(59,130,246,0.15), transparent 50%);
+            pointer-events: none;
+        }
+
+        /* Floating Actions */
         .floating-actions { position: fixed; bottom: 30px; right: 30px; display: flex; flex-direction: column-reverse; gap: 15px; z-index: 100; }
-        .action-btn { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 28px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: 0.3s; cursor: pointer; text-decoration: none; }
+        .action-btn { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 26px; box-shadow: 0 8px 20px rgba(0,0,0,0.3); transition: 0.3s; cursor: pointer; text-decoration: none; border: 2px solid rgba(255,255,255,0.1); }
         .action-btn:hover { transform: scale(1.1); }
-        
-        /* عكس مكان الأزرار في الإنجليزي */
         body.en .floating-actions { right: auto; left: 30px; }
 
-        /* زر الحجز العريض أسفل الشاشة للموبايل */
-        .sticky-cta {
-            position: fixed; bottom: 0; left: 0; right: 0; 
-            background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px);
-            padding: 15px; border-top: 1px solid #334155; z-index: 90;
-            display: flex; justify-content: center;
-            transform: translateY(100%); transition: 0.5s;
-        }
-        .sticky-cta.show { transform: translateY(0); }
     </style>
 </head>
 <body class="ar">
 
-    <nav class="fixed w-full z-50 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
+    <nav class="fixed w-full z-50 bg-[#020617]/90 backdrop-blur-xl border-b border-blue-900/20 transition-all duration-300">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <a href="home.html" class="flex items-center gap-2">
-                <div class="w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-600 rounded-lg flex items-center justify-center font-black text-slate-900 text-lg">24</div>
-                <h1 class="text-xl font-bold">Seven</h1>
+            
+            <a href="home.html" class="flex items-center gap-3 group">
+                <img src="images/logos/logo.png" onerror="this.src='https://via.placeholder.com/150x50/0f172a/3b82f6?text=24Seven'" alt="24Seven Logo" class="h-10 md:h-12 drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]"> 
+                <div class="hidden md:block">
+                    <span class="text-xl font-bold text-white block leading-none">24Seven</span>
+                    <span class="text-[9px] text-blue-400 font-bold tracking-widest uppercase">Global Limousine</span>
+                </div>
             </a>
-            <div class="flex gap-4">
-                <button onclick="toggleLang()" class="border border-slate-600 px-3 py-1 rounded-full text-xs hover:bg-slate-800 transition flex items-center gap-1">
-                    <i class="fas fa-globe text-amber-500"></i> <span id="lang-btn-text">English</span>
-                </button>
-                <a href="home.html" class="text-slate-300 hover:text-white text-sm font-bold flex items-center gap-1">
+
+            <div class="flex items-center gap-6">
+                <a href="home.html" class="text-slate-300 hover:text-white text-sm font-bold flex items-center gap-2 transition">
                     <i class="fas fa-home"></i> <span data-key="nav_back">الرئيسية</span>
                 </a>
+                <button onclick="toggleLang()" class="border border-slate-600 px-4 py-1.5 rounded-full text-xs font-bold text-slate-300 hover:bg-slate-800 transition flex items-center gap-2">
+                    <i class="fas fa-globe"></i> <span id="lang-btn-text">English</span>
+                </button>
             </div>
         </div>
     </nav>
 
-    <div class="pt-32 pb-12 px-6 text-center bg-gradient-to-b from-slate-900 to-[#0f172a]">
-        <h1 class="text-4xl md:text-6xl font-black mb-4 leading-tight">
-            <span data-key="header_1">قصص نجاح</span> <br>
-            <span class="gold-text" data-key="header_2">نكتبها كل يوم</span>
-        </h1>
-        <p class="text-slate-400 max-w-2xl mx-auto text-lg mb-8" data-key="header_desc">
-            أكثر من 12,000 عميل، وعشرات الشركات العالمية (Parkville, Elsewedy) وضعوا ثقتهم فينا. هذه ليست مجرد آراء، هذا هو معيار الجودة الذي نعدك به.
-        </p>
+    <header class="pt-32 pb-16 px-6 text-center bg-gradient-to-b from-[#020617] via-[#0f172a] to-[#020617] relative">
+        <div class="absolute top-20 left-10 w-32 h-32 bg-blue-600/10 rounded-full blur-3xl"></div>
+        <div class="absolute top-20 right-10 w-32 h-32 bg-purple-600/10 rounded-full blur-3xl"></div>
+
+        <div class="relative z-10 animate-fade-up">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-900/30 border border-blue-500/20 rounded-full text-blue-300 text-xs font-bold mb-6">
+                <i class="fas fa-star text-yellow-400"></i>
+                <span data-key="header_badge">موثوق به من قبل +12,000 عميل</span>
+            </div>
+            
+            <h1 class="text-4xl md:text-6xl font-black mb-6 leading-tight">
+                <span data-key="header_1">شركاء</span> 
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-white" data-key="header_2">النجاح</span>
+            </h1>
+            
+            <p class="text-slate-400 max-w-2xl mx-auto text-lg mb-10 leading-relaxed" data-key="header_desc">
+                من الشركات العالمية الكبرى إلى العرسان في ليلة العمر. هذه القصص ليست مجرد كلمات، بل هي توثيق لالتزامنا بالجودة، الأمان، والرفاهية.
+            </p>
+
+            <div class="flex justify-center gap-8 mb-12">
+                <div class="flex flex-col items-center gap-2 group cursor-pointer">
+                    <div class="w-12 h-12 rounded-full bg-[#1877F2]/10 flex items-center justify-center group-hover:bg-[#1877F2] transition duration-300">
+                        <i class="fab fa-facebook-f text-[#1877F2] text-xl group-hover:text-white"></i>
+                    </div>
+                    <span class="text-xs text-slate-500">24Seven Limousine</span>
+                </div>
+                <div class="flex flex-col items-center gap-2 group cursor-pointer">
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-yellow-400 to-purple-600 p-[1px]">
+                        <div class="w-full h-full bg-[#020617] rounded-full flex items-center justify-center group-hover:bg-transparent transition">
+                            <i class="fab fa-instagram text-white text-xl"></i>
+                        </div>
+                    </div>
+                    <span class="text-xs text-slate-500">@24Seven</span>
+                </div>
+                <div class="flex flex-col items-center gap-2 group cursor-pointer">
+                    <div class="w-12 h-12 rounded-full bg-[#25D366]/10 flex items-center justify-center group-hover:bg-[#25D366] transition duration-300">
+                        <i class="fab fa-whatsapp text-[#25D366] text-xl group-hover:text-white"></i>
+                    </div>
+                    <span class="text-xs text-slate-500">Verified</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap justify-center gap-3 relative z-20">
+            <button class="filter-btn active" onclick="filterReviews('all')" data-key="filter_all">الكل</button>
+            <button class="filter-btn" onclick="filterReviews('corporate')" data-key="filter_corp">شركات</button>
+            <button class="filter-btn" onclick="filterReviews('wedding')" data-key="filter_wedding">زفاف</button>
+            <button class="filter-btn" onclick="filterReviews('airport')" data-key="filter_airport">مطار</button>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-6 pb-24">
         
-        <div class="flex justify-center gap-6 text-slate-500 text-2xl">
-            <i class="fab fa-google hover:text-white transition" title="Google Reviews"></i>
-            <i class="fab fa-facebook hover:text-blue-500 transition" title="Facebook Reviews"></i>
-            <i class="fab fa-whatsapp hover:text-green-500 transition" title="WhatsApp Feedback"></i>
+        <div class="mb-16">
+            <h3 class="text-2xl font-bold mb-8 flex items-center gap-3">
+                <i class="fas fa-play-circle text-blue-500"></i>
+                <span data-key="video_title">آراء بالفيديو</span>
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="relative rounded-2xl overflow-hidden aspect-video group cursor-pointer border border-slate-700">
+                    <img src="https://images.unsplash.com/photo-1557804506-669a67965ba0?q=80&w=600" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                    <div class="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/20 transition">
+                        <div class="w-14 h-14 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/50 group-hover:scale-110 transition">
+                            <i class="fas fa-play text-white ml-1"></i>
+                        </div>
+                    </div>
+                    <div class="absolute bottom-4 right-4 text-white text-sm font-bold">رحلة الأقصر وأسوان</div>
+                </div>
+                <div class="relative rounded-2xl overflow-hidden aspect-video group cursor-pointer border border-slate-700">
+                    <img src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=600" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                    <div class="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/20 transition">
+                        <div class="w-14 h-14 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/50 group-hover:scale-110 transition">
+                            <i class="fas fa-play text-white ml-1"></i>
+                        </div>
+                    </div>
+                    <div class="absolute bottom-4 right-4 text-white text-sm font-bold">مؤتمر Elsewedy</div>
+                </div>
+                 <div class="relative rounded-2xl overflow-hidden aspect-video group cursor-pointer border border-slate-700">
+                    <img src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=600" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                    <div class="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/20 transition">
+                        <div class="w-14 h-14 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/50 group-hover:scale-110 transition">
+                            <i class="fas fa-play text-white ml-1"></i>
+                        </div>
+                    </div>
+                    <div class="absolute bottom-4 right-4 text-white text-sm font-bold">زفاف الإسكندرية</div>
+                </div>
+            </div>
+        </div>
+
+        <h3 class="text-2xl font-bold mb-8 flex items-center gap-3">
+            <i class="fas fa-camera text-blue-500"></i>
+            <span data-key="img_title">من محادثات العملاء</span>
+        </h3>
+        
+        <div class="masonry-grid" id="reviewsGrid">
+            
+            <div class="review-card group" data-category="corporate">
+                <div class="badge vip">VIP Partner</div>
+                <img src="images/reviews/review1.jpg" onclick="openLightbox(this)" 
+                     onerror="this.src='https://placehold.co/400x500/1e293b/3b82f6?text=Parkville+Contract&font=roboto'">
+                <div class="p-4 bg-slate-900">
+                    <p class="text-sm text-slate-300">"تعامل راقي جداً والتزام بالمواعيد مع وفد الأطباء الأجانب. شكراً أ/ أحمد."</p>
+                    <p class="text-xs text-blue-400 mt-2 font-bold">- Parkville Pharma</p>
+                </div>
+            </div>
+
+            <div class="review-card group" data-category="wedding">
+                <div class="badge whatsapp"><i class="fab fa-whatsapp"></i></div>
+                <img src="images/reviews/review2.jpg" onclick="openLightbox(this)" 
+                     onerror="this.src='https://placehold.co/400x300/1e293b/ec4899?text=Wedding+Day&font=roboto'">
+                 <div class="p-4 bg-slate-900">
+                    <p class="text-sm text-slate-300">"العربية كانت تحفة والسواق ذوق جداً. شكراً إنكم كملتوا فرحتنا."</p>
+                </div>
+            </div>
+
+            <div class="review-card group" data-category="airport">
+                <div class="badge messenger"><i class="fab fa-facebook-messenger"></i></div>
+                <img src="images/reviews/review3.jpg" onclick="openLightbox(this)" 
+                     onerror="this.src='https://placehold.co/400x600/1e293b/22c55e?text=Airport+Pickup&font=roboto'">
+            </div>
+
+            <div class="review-card group" data-category="corporate">
+                <div class="badge vip">Business</div>
+                <img src="images/reviews/review4.jpg" onclick="openLightbox(this)" 
+                     onerror="this.src='https://placehold.co/400x400/1e293b/3b82f6?text=Elsewedy+Trip&font=roboto'">
+            </div>
+
+            <div class="review-card group" data-category="airport">
+                <div class="badge whatsapp"><i class="fab fa-whatsapp"></i></div>
+                <img src="images/reviews/review5.jpg" onclick="openLightbox(this)" 
+                     onerror="this.src='https://placehold.co/400x350/1e293b/22c55e?text=Cairo+Arrival&font=roboto'">
+            </div>
+
+            <div class="review-card group" data-category="wedding">
+                <div class="badge whatsapp"><i class="fab fa-whatsapp"></i></div>
+                <img src="images/reviews/review6.jpg" onclick="openLightbox(this)" 
+                     onerror="this.src='https://placehold.co/400x550/1e293b/ec4899?text=Limo+Stretch&font=roboto'">
+            </div>
+
+             <div class="review-card group" data-category="all">
+                <div class="badge messenger"><i class="fab fa-facebook-messenger"></i></div>
+                <img src="images/reviews/review7.jpg" onclick="openLightbox(this)" 
+                     onerror="this.src='https://placehold.co/400x450/1e293b/cbd5e1?text=Happy+Client&font=roboto'">
+            </div>
+
+             <div class="review-card group" data-category="corporate">
+                <div class="badge vip">Event</div>
+                <img src="images/reviews/review8.jpg" onclick="openLightbox(this)" 
+                     onerror="this.src='https://placehold.co/400x300/1e293b/3b82f6?text=Conference+Logistics&font=roboto'">
+            </div>
+
+             <div class="review-card group" data-category="airport">
+                <div class="badge whatsapp"><i class="fab fa-whatsapp"></i></div>
+                <img src="images/reviews/review9.jpg" onclick="openLightbox(this)" 
+                     onerror="this.src='https://placehold.co/400x500/1e293b/22c55e?text=Sharm+Transfer&font=roboto'">
+            </div>
+
         </div>
     </div>
 
-    <div class="container mx-auto px-6 pb-32">
-        <div class="masonry-grid">
+    <div class="container mx-auto px-6 mb-24">
+        <div class="cta-section rounded-3xl p-10 md:p-16 text-center shadow-2xl animate-fade-up">
+            <div class="inline-block p-4 rounded-full bg-blue-500/10 mb-6 glow-effect">
+                <i class="fas fa-crown text-4xl text-yellow-400"></i>
+            </div>
             
-            <div class="review-card group">
-                <div class="absolute top-3 right-3 bg-green-500/90 text-white text-[10px] px-2 py-1 rounded-full backdrop-blur-sm z-10">WhatsApp</div>
-                <img src="images/reviews/review1.jpg" class="w-full object-cover group-hover:scale-105 transition duration-700" 
-                     onerror="this.src='https://via.placeholder.com/400x500/1e293b/cbd5e1?text=Feedback+1'">
+            <h2 class="text-3xl md:text-5xl font-black mb-6 text-white leading-tight" data-key="cta_title">
+                لا تكتفِ بالمشاهدة فقط
+            </h2>
+            
+            <p class="text-slate-300 mb-10 text-lg md:text-xl max-w-3xl mx-auto leading-relaxed" data-key="cta_desc">
+                انضم إلى نخبة عملائنا واستمتع بتجربة تنقل تليق بمكانتك. نحن هنا لخدمتك 24 ساعة في اليوم، 7 أيام في الأسبوع.
+            </p>
+            
+            <div class="flex flex-col md:flex-row justify-center gap-4">
+                <a href="limousine.html" class="inline-flex justify-center items-center gap-3 bg-gradient-to-r from-blue-600 to-blue-800 text-white font-bold px-10 py-5 rounded-xl text-lg shadow-lg shadow-blue-600/30 hover:shadow-blue-600/50 transition transform hover:-translate-y-1">
+                    <span data-key="btn_book_now">احجز رحلتك الآن</span> 
+                    <i class="fas fa-arrow-left rtl:rotate-0 ltr:rotate-180 transition-transform"></i>
+                </a>
+                <a href="https://wa.me/201121748885" target="_blank" class="inline-flex justify-center items-center gap-3 bg-transparent border border-white/20 text-white font-bold px-10 py-5 rounded-xl text-lg hover:bg-white/10 transition">
+                    <i class="fab fa-whatsapp text-green-400"></i>
+                    <span data-key="btn_whatsapp">تحدث معنا</span>
+                </a>
             </div>
 
-            <div class="review-card group">
-                <div class="absolute top-3 right-3 bg-blue-600/90 text-white text-[10px] px-2 py-1 rounded-full backdrop-blur-sm z-10">Messenger</div>
-                <img src="images/reviews/review2.jpg" class="w-full object-cover group-hover:scale-105 transition duration-700" 
-                     onerror="this.src='https://via.placeholder.com/400x400/1e293b/cbd5e1?text=Feedback+2'">
+            <div class="mt-8 flex justify-center items-center gap-2 text-sm text-slate-500">
+                <i class="fas fa-check-circle text-green-500"></i>
+                <span data-key="cta_note">حجز فوري بدون مصاريف خفية</span>
             </div>
-
-            <div class="review-card group">
-                <div class="absolute top-3 right-3 bg-green-500/90 text-white text-[10px] px-2 py-1 rounded-full backdrop-blur-sm z-10">WhatsApp</div>
-                <img src="images/reviews/review3.jpg" class="w-full object-cover group-hover:scale-105 transition duration-700" 
-                     onerror="this.src='https://via.placeholder.com/400x600/1e293b/cbd5e1?text=Feedback+3'">
-            </div>
-
-            <div class="review-card group">
-                <div class="absolute top-3 right-3 bg-amber-500/90 text-slate-900 font-bold text-[10px] px-2 py-1 rounded-full backdrop-blur-sm z-10">VIP Client</div>
-                <img src="images/reviews/review4.jpg" class="w-full object-cover group-hover:scale-105 transition duration-700" 
-                     onerror="this.src='https://via.placeholder.com/400x450/1e293b/cbd5e1?text=Feedback+4'">
-            </div>
-
-            <div class="review-card group">
-                <img src="images/reviews/review5.jpg" class="w-full object-cover group-hover:scale-105 transition duration-700" 
-                     onerror="this.src='https://via.placeholder.com/400x350/1e293b/cbd5e1?text=Feedback+5'">
-            </div>
-
-            <div class="review-card group">
-                <img src="images/reviews/review6.jpg" class="w-full object-cover group-hover:scale-105 transition duration-700" 
-                     onerror="this.src='https://via.placeholder.com/400x550/1e293b/cbd5e1?text=Feedback+6'">
-            </div>
-
-            <div class="review-card group">
-                <img src="images/reviews/review7.jpg" class="w-full object-cover group-hover:scale-105 transition duration-700" 
-                     onerror="this.src='https://via.placeholder.com/400x400/1e293b/cbd5e1?text=Feedback+7'">
-            </div>
-
-            <div class="review-card group">
-                <img src="images/reviews/review8.jpg" class="w-full object-cover group-hover:scale-105 transition duration-700" 
-                     onerror="this.src='https://via.placeholder.com/400x500/1e293b/cbd5e1?text=Feedback+8'">
-            </div>
-
         </div>
+    </div>
 
-        <div class="text-center mt-12 bg-slate-800 p-8 rounded-2xl border border-slate-700">
-            <h2 class="text-2xl font-bold mb-4" data-key="cta_title">لا تكتفِ بالمشاهدة فقط</h2>
-            <p class="text-slate-400 mb-6" data-key="cta_desc">انضم إلى النخبة واستمتع بتجربة تنقل تليق بك وبضيوفك.</p>
-            <a href="limousine.html" class="inline-block bg-gradient-to-r from-amber-500 to-orange-600 text-slate-900 font-bold px-10 py-4 rounded-xl text-lg hover:shadow-lg hover:shadow-amber-500/20 transition transform hover:-translate-y-1">
-                <span data-key="btn_book_now">احجز رحلتك الآن</span> <i class="fas fa-arrow-left mr-2"></i>
-            </a>
+    <footer class="bg-[#010409] pt-16 pb-8 border-t border-slate-800 text-sm">
+        <div class="container mx-auto px-6 text-center">
+            <div class="mb-6">
+                <img src="images/logos/logo.png" class="h-10 mx-auto opacity-80" alt="Logo">
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-10 max-w-4xl mx-auto text-slate-400">
+                <a href="home.html" class="hover:text-blue-500 transition">Home</a>
+                <a href="about.html" class="hover:text-blue-500 transition">About Us</a>
+                <a href="limousine.html" class="hover:text-blue-500 transition">Booking</a>
+                <a href="reviews.html" class="text-blue-500 font-bold">Reviews</a>
+            </div>
+            <p class="text-slate-600 border-t border-slate-900 pt-6">
+                &copy; 2026 24Seven Limousine. All rights reserved. <br>
+                <span class="text-[10px] text-slate-800">Developed by 24Seven AI</span>
+            </p>
         </div>
+    </footer>
+
+    <div id="lightbox" class="lightbox" onclick="closeLightbox()">
+        <span class="close-lightbox">&times;</span>
+        <img class="lightbox-img" id="lightbox-img" src="" onclick="event.stopPropagation()">
     </div>
 
     <div class="floating-actions">
-        <a href="https://wa.me/201121748885?text=مرحباً،%20أرغب%20في%20الاستفسار%20عن%20حجز%20ليموزين" target="_blank" class="action-btn bg-green-500 hover:bg-green-600" title="WhatsApp">
+        <a href="https://wa.me/201121748885" target="_blank" class="action-btn bg-[#25D366] hover:bg-[#128C7E]" title="WhatsApp">
             <i class="fab fa-whatsapp"></i>
         </a>
-        <a href="https://m.me/Sevenlimousin" target="_blank" class="action-btn bg-blue-600 hover:bg-blue-700" title="Messenger">
+        <a href="https://m.me/Sevenlimousin" target="_blank" class="action-btn bg-[#0084FF] hover:bg-[#0063B2]" title="Messenger">
             <i class="fab fa-facebook-messenger"></i>
         </a>
-            <i class="fab fa-facebook-messenger"></i>
-        </a>
-        <a href="limousine.html" class="action-btn bg-amber-500 hover:bg-amber-600 text-slate-900" title="Book Now">
-            <i class="fas fa-calendar-check"></i>
-        </a>
-    </div>
-
-    <div class="sticky-cta md:hidden" id="stickyCta">
-        <a href="limousine.html" class="bg-amber-500 text-slate-900 w-full text-center py-3 rounded-xl font-bold shadow-lg">
-            <span data-key="btn_book_now">احجز رحلتك الآن</span>
+        <a href="limousine.html" class="action-btn bg-gradient-to-r from-blue-600 to-blue-800 text-white" title="Book Now">
+            <i class="fas fa-calendar-alt"></i>
         </a>
     </div>
 
     <script>
-        // === 1. Multi-Language Logic ===
+        // --- 1. Filter Logic ---
+        function filterReviews(category) {
+            // Update buttons style
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Filter elements
+            const items = document.querySelectorAll('.review-card');
+            items.forEach(item => {
+                if (category === 'all' || item.getAttribute('data-category') === category) {
+                    item.style.display = 'block';
+                    // Re-trigger animation
+                    item.style.opacity = '0';
+                    setTimeout(() => item.style.opacity = '1', 50);
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        // --- 2. Lightbox Logic ---
+        function openLightbox(img) {
+            const lightbox = document.getElementById('lightbox');
+            const lightboxImg = document.getElementById('lightbox-img');
+            lightboxImg.src = img.src;
+            lightbox.classList.add('active');
+            document.body.style.overflow = 'hidden'; // Prevent scrolling
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox').classList.remove('active');
+            document.body.style.overflow = 'auto'; // Restore scrolling
+        }
+
+        // Close on Esc key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === "Escape") closeLightbox();
+        });
+
+        // --- 3. Translation Logic ---
         const translations = {
             ar: {
                 nav_back: "الرئيسية",
-                header_1: "قصص نجاح",
-                header_2: "نكتبها كل يوم",
-                header_desc: "أكثر من 12,000 عميل، وعشرات الشركات العالمية (Parkville, Elsewedy) وضعوا ثقتهم فينا. هذه ليست مجرد آراء، هذا هو معيار الجودة الذي نعدك به.",
+                header_badge: "موثوق به من قبل +12,000 عميل",
+                header_1: "شركاء",
+                header_2: "النجاح",
+                header_desc: "من الشركات العالمية الكبرى إلى العرسان في ليلة العمر. هذه القصص ليست مجرد كلمات، بل هي توثيق لالتزامنا بالجودة، الأمان، والرفاهية.",
+                filter_all: "الكل", filter_corp: "شركات", filter_wedding: "زفاف", filter_airport: "مطار",
+                video_title: "آراء بالفيديو", img_title: "من محادثات العملاء",
                 cta_title: "لا تكتفِ بالمشاهدة فقط",
-                cta_desc: "انضم إلى النخبة واستمتع بتجربة تنقل تليق بك وبضيوفك.",
-                btn_book_now: "احجز رحلتك الآن"
+                cta_desc: "انضم إلى نخبة عملائنا واستمتع بتجربة تنقل تليق بمكانتك. نحن هنا لخدمتك 24 ساعة في اليوم، 7 أيام في الأسبوع.",
+                btn_book_now: "احجز رحلتك الآن", btn_whatsapp: "تحدث معنا",
+                cta_note: "حجز فوري بدون مصاريف خفية"
             },
             en: {
                 nav_back: "Home",
-                header_1: "Success Stories",
-                header_2: "Written Every Day",
-                header_desc: "Over 12,000 clients and global corporations (Parkville, Elsewedy) trust us. These aren't just reviews; this is the quality standard we promise you.",
+                header_badge: "Trusted by +12,000 Clients",
+                header_1: "Partners of",
+                header_2: "Success",
+                header_desc: "From global corporations to newlyweds. These stories are not just words, but a documentation of our commitment to quality, safety, and luxury.",
+                filter_all: "All", filter_corp: "Corporate", filter_wedding: "Wedding", filter_airport: "Airport",
+                video_title: "Video Testimonials", img_title: "Client Feedback",
                 cta_title: "Don't Just Watch",
-                cta_desc: "Join the elite and enjoy a transport experience that befits you and your guests.",
-                btn_book_now: "Book Your Trip Now"
+                cta_desc: "Join our elite clients and enjoy a transport experience that suits your status. We are here to serve you 24/7.",
+                btn_book_now: "Book Trip Now", btn_whatsapp: "Chat With Us",
+                cta_note: "Instant booking, no hidden fees"
             }
         };
 
@@ -201,25 +506,20 @@
             document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
             document.getElementById('lang-btn-text').innerText = currentLang === 'ar' ? 'English' : 'العربية';
             
-            // عكس اتجاه السهم في الزر
-            const arrow = document.querySelector('.fa-arrow-left');
-            if(arrow) arrow.className = currentLang === 'ar' ? 'fas fa-arrow-left mr-2' : 'fas fa-arrow-right ml-2';
+            // Adjust icons direction
+            const arrows = document.querySelectorAll('.fa-arrow-left');
+            arrows.forEach(arrow => {
+                arrow.className = currentLang === 'ar' ? 'fas fa-arrow-left rtl:rotate-0 ltr:rotate-180 transition-transform' : 'fas fa-arrow-right rtl:rotate-0 ltr:rotate-180 transition-transform';
+            });
 
-            // تحديث النصوص
+            // Update text
             document.querySelectorAll('[data-key]').forEach(el => {
-                el.innerText = translations[currentLang][el.getAttribute('data-key')];
+                const key = el.getAttribute('data-key');
+                if(translations[currentLang][key]) {
+                    el.innerText = translations[currentLang][key];
+                }
             });
         }
-
-        // === 2. Show Sticky CTA on Scroll ===
-        window.addEventListener('scroll', () => {
-            const cta = document.getElementById('stickyCta');
-            if (window.scrollY > 300) {
-                cta.classList.add('show');
-            } else {
-                cta.classList.remove('show');
-            }
-        });
     </script>
 </body>
 </html>
