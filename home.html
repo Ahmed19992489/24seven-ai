@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     
-    <meta name="description" content="24Seven Limousine - خدمات ليموزين الشركات، الزفاف، والمطارات. أسطول 2025.">
+    <meta name="description" content="24Seven Limousine - الشركة الرائدة في خدمات الليموزين والنقل السياحي في مصر. أسطول حديث 2025.">
     <meta property="og:title" content="24Seven Limousine">
     <meta property="og:image" content="images/logos/logo.png">
     <link rel="icon" href="images/logos/logo.png" type="image/png">
@@ -269,17 +269,21 @@
             </div>
             <form action="https://formspree.io/f/xzddpdga" method="POST" class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
-                    <input type="text" name="Name" placeholder="الاسم" class="bg-slate-800 border border-slate-700 text-white rounded p-3 w-full" required>
-                    <input type="tel" name="Phone" placeholder="رقم الهاتف" class="bg-slate-800 border border-slate-700 text-white rounded p-3 w-full" required>
+                    <input type="text" name="الاسم" placeholder="الاسم" class="bg-slate-800 border border-slate-700 text-white rounded-lg p-3 w-full outline-none" required>
+                    <input type="tel" name="الهاتف" placeholder="رقم الهاتف" class="bg-slate-800 border border-slate-700 text-white rounded-lg p-3 w-full outline-none" required>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
-                    <input type="date" name="Date" class="bg-slate-800 border border-slate-700 text-slate-400 rounded p-3 w-full" required>
-                    <input type="number" name="Hours" placeholder="عدد الساعات" class="bg-slate-800 border border-slate-700 text-white rounded p-3 w-full">
+                    <input type="date" name="تاريخ_الزفاف" class="bg-slate-800 border border-slate-700 text-slate-400 rounded-lg p-3 w-full outline-none" required>
+                    <input type="number" name="عدد_الساعات" placeholder="عدد الساعات" class="bg-slate-800 border border-slate-700 text-white rounded-lg p-3 w-full outline-none">
                 </div>
-                <select name="CarType" class="bg-slate-800 border border-slate-700 text-slate-300 rounded p-3 w-full">
-                    <option>سيدان حديثة</option><option>مرسيدس</option><option>ليموزين طويل</option><option>كابورليه</option>
+                <input type="text" name="خط_السير" placeholder="خط السير" class="bg-slate-800 border border-slate-700 text-white rounded-lg p-3 w-full outline-none">
+                <select name="نوع_السيارة" class="bg-slate-800 border border-slate-700 text-slate-300 rounded-lg p-3 w-full outline-none">
+                    <option value="سيدان حديثة">سيدان حديثة</option>
+                    <option value="مرسيدس">مرسيدس</option>
+                    <option value="ليموزين طويل">ليموزين طويل</option>
+                    <option value="كابورليه">كابورليه</option>
                 </select>
-                <button type="submit" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 rounded transition" data-key="btn_send">إرسال</button>
+                <button type="submit" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 rounded-lg transition shadow-lg" data-key="btn_send">إرسال طلب العرض</button>
             </form>
         </div>
     </div>
@@ -305,20 +309,30 @@
     </footer>
 
     <div class="floating-actions">
-        <a href="https://wa.me/201121748885" target="_blank" class="action-btn bg-[#25D366] hover:bg-[#128C7E]"><i class="fab fa-whatsapp"></i></a>
-        <a href="limousine.html" class="action-btn bg-blue-600 hover:bg-blue-700 text-white"><i class="fas fa-calendar-alt"></i></a>
+        <a href="https://wa.me/201121748885" target="_blank" class="action-btn bg-[#25D366] hover:bg-[#128C7E]" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+        <a href="https://m.me/Sevenlimousin" target="_blank" class="action-btn bg-[#0084FF] hover:bg-[#0063B2]" title="Messenger"><i class="fab fa-facebook-messenger"></i></a>
+        <a href="limousine.html" class="action-btn bg-blue-600 hover:bg-blue-700 text-white" title="Book"><i class="fas fa-calendar-alt"></i></a>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"></script>
     <script>
         // Swiper
         new Swiper('.fleet-slider', {
-            slidesPerView: 1, spaceBetween: 20, loop: true, autoplay: { delay: 3000 },
-            pagination: { el: '.swiper-pagination', clickable: true },
-            effect: 'coverflow', coverflowEffect: { rotate: 50, stretch: 0, depth: 100, modifier: 1, slideShadows: true }
+            slidesPerView: 1, spaceBetween: 20, loop: true,
+            autoplay: { delay: 3000 },
+            breakpoints: {
+                640: { slidesPerView: 2 },
+                1024: { slidesPerView: 3 }
+            },
+            pagination: { el: '.swiper-pagination', clickable: true }
         });
 
-        // === Fix: Counters Logic ===
+        // Wedding Modal
+        function openWeddingModal() { document.getElementById('weddingModal').classList.add('active'); }
+        function closeWeddingModal() { document.getElementById('weddingModal').classList.remove('active'); }
+        window.onclick = function(event) { if (event.target == document.getElementById('weddingModal')) closeWeddingModal(); }
+
+        // --- FIX: Improved Counter Animation Logic ---
         function startCounters() {
             const counters = [
                 { id: 'stat-founded', target: 2022 },
