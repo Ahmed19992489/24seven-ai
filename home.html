@@ -39,7 +39,7 @@
         body.en-mode { font-family: var(--font-en); direction: ltr; }
         body.en-mode .fa-arrow-left { transform: rotate(180deg); }
 
-        /* === 1. Navbar & Mobile Menu Logic === */
+        /* === 1. القوائم (Navbar & Mobile Menu) === */
         
         /* إخفاء القائمة العادية في الموبايل */
         @media (max-width: 1024px) {
@@ -50,7 +50,7 @@
             .mobile-trigger { display: none !important; }
         }
 
-        /* قائمة الموبايل الجانبية */
+        /* قائمة الموبايل الجانبية (Glassmorphism) */
         .mobile-menu {
             position: fixed; top: 0; right: -100%; width: 85%; max-width: 300px; height: 100%;
             background: rgba(2, 6, 23, 0.95); /* خلفية شفافة */
@@ -66,7 +66,7 @@
         body.en-mode .mobile-menu { right: auto; left: -100%; border-left: none; border-right: 1px solid rgba(255,255,255,0.1); }
         body.en-mode .mobile-menu.active { left: 0; }
 
-        /* طبقة التعتيم الخلفية */
+        /* التراكب الخلفي (Overlay) */
         .overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.7); z-index: 2999;
@@ -74,7 +74,7 @@
         }
         .overlay.active { opacity: 1; visibility: visible; }
 
-        /* روابط قائمة الموبايل */
+        /* روابط الموبايل */
         .mobile-link {
             font-size: 1.1rem; font-weight: 700; color: #cbd5e1;
             padding: 15px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
@@ -83,9 +83,9 @@
         .mobile-link:hover { color: var(--brand-blue); padding-right: 10px; transition: 0.3s; }
         body.en-mode .mobile-link:hover { padding-right: 0; padding-left: 10px; }
 
-        /* === 2. Hero Section === */
+        /* === 2. قسم الهيرو (Hero Section) === */
         .hero-section {
-            position: relative; min-height: 95vh; display: flex; align-items: center;
+            position: relative; min-height: 100vh; display: flex; align-items: center;
             padding-top: 80px; overflow: hidden;
         }
         .hero-bg-shape {
@@ -104,7 +104,7 @@
             .hero-content h1 { font-size: 2.5rem; } 
         }
 
-        /* === 3. Cards & Slider === */
+        /* === 3. الكروت والسلايدر === */
         .swiper-slide img {
             width: 100%; border-radius: 20px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.5);
@@ -135,7 +135,7 @@
         }
         .service-card:hover .icon-box { background: var(--brand-blue); color: white; }
 
-        /* === 4. Modal === */
+        /* === 4. النافذة المنبثقة (Modal) === */
         .modal {
             display: none; position: fixed; z-index: 4000; left: 0; top: 0; width: 100%; height: 100%;
             overflow: auto; background-color: rgba(0,0,0,0.95); backdrop-filter: blur(5px);
@@ -149,10 +149,12 @@
         }
         .modal.active .modal-content { transform: scale(1); }
 
-        /* === 5. Floating Actions === */
+        /* === 5. الأزرار العائمة === */
         .floating-actions { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column-reverse; gap: 12px; z-index: 2500; }
-        .action-btn { width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); transition: 0.3s; cursor: pointer; text-decoration: none; border: 2px solid rgba(255,255,255,0.1); }
-        .action-btn:hover { transform: scale(1.1); }
+        .action-btn { width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); transition: 0.3s; cursor: pointer; text-decoration: none; border: 2px solid rgba(255,255,255,0.1); background-color: rgba(0,0,0,0.5); backdrop-filter: blur(5px); }
+        .action-btn.whatsapp { background-color: #25D366; border: none; }
+        .action-btn.messenger { background-color: #0084FF; border: none; }
+        .action-btn.book { background-color: var(--brand-blue); border: none; }
         body.en-mode .floating-actions { right: auto; left: 20px; }
     </style>
 </head>
@@ -166,11 +168,11 @@
             </button>
 
             <a href="home.html" class="flex items-center gap-3">
-                <img src="images/logos/logo.png" onerror="this.src='https://via.placeholder.com/150x50/0f172a/3b82f6?text=24Seven'" alt="24Seven Logo" class="h-10 md:h-12 drop-shadow-lg">
+                <img src="images/logos/logo.png" onerror="this.src='https://placehold.co/150x50/0f172a/3b82f6?text=24Seven'" alt="24Seven Logo" class="h-10 md:h-12 drop-shadow-lg">
             </a>
 
             <div class="desktop-nav flex items-center gap-8 text-sm font-bold text-slate-300">
-                <a href="#home" class="nav-link hover:text-white" data-key="nav_home">الرئيسية</a>
+                <a href="home.html" class="nav-link hover:text-white" data-key="nav_home">الرئيسية</a>
                 <a href="#services" class="nav-link hover:text-white" data-key="nav_services">الخدمات</a>
                 <a href="reviews.html" class="nav-link hover:text-white" data-key="nav_reviews">آراء العملاء</a>
                 <a href="about.html" class="nav-link hover:text-white" data-key="nav_about">من نحن</a>
@@ -197,7 +199,7 @@
             <button onclick="toggleMenu()" class="text-slate-400 text-2xl hover:text-white"><i class="fas fa-times"></i></button>
         </div>
         <div class="flex flex-col gap-2 text-lg font-bold text-slate-300">
-            <a href="#home" onclick="toggleMenu()" class="mobile-link"><span data-key="nav_home">الرئيسية</span> <i class="fas fa-chevron-left text-xs opacity-50"></i></a>
+            <a href="home.html" class="mobile-link"><span data-key="nav_home">الرئيسية</span> <i class="fas fa-chevron-left text-xs opacity-50"></i></a>
             <a href="#services" onclick="toggleMenu()" class="mobile-link"><span data-key="nav_services">الخدمات</span> <i class="fas fa-chevron-left text-xs opacity-50"></i></a>
             <a href="reviews.html" class="mobile-link"><span data-key="nav_reviews">آراء العملاء</span> <i class="fas fa-chevron-left text-xs opacity-50"></i></a>
             <a href="about.html" class="mobile-link"><span data-key="nav_about">من نحن</span> <i class="fas fa-chevron-left text-xs opacity-50"></i></a>
@@ -370,9 +372,9 @@
     </footer>
 
     <div class="floating-actions">
-        <a href="https://wa.me/201121748885" target="_blank" class="action-btn bg-[#25D366] hover:bg-[#128C7E]" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>
-        <a href="https://m.me/Sevenlimousin" target="_blank" class="action-btn bg-[#0084FF] hover:bg-[#0063B2]" title="Messenger"><i class="fab fa-facebook-messenger"></i></a>
-        <a href="limousine.html" class="action-btn bg-blue-600 hover:bg-blue-700 text-white" title="Book"><i class="fas fa-calendar-alt"></i></a>
+        <a href="https://wa.me/201121748885" target="_blank" class="action-btn whatsapp"><i class="fab fa-whatsapp"></i></a>
+        <a href="https://m.me/Sevenlimousin" target="_blank" class="action-btn messenger"><i class="fab fa-facebook-messenger"></i></a>
+        <a href="limousine.html" class="action-btn book"><i class="fas fa-calendar-alt"></i></a>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
