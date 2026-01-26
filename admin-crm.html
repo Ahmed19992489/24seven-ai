@@ -429,6 +429,14 @@
             document.querySelectorAll('.sidebar-item').forEach(e => e.classList.remove('active'));
             document.getElementById(`nav-${pageId}`).classList.add('active');
 
+            // Close sidebar on mobile after selecting a page
+            if (window.innerWidth <= 768) {
+                const sidebar = document.querySelector('.sidebar');
+                const overlay = document.querySelector('.sidebar-overlay');
+                sidebar.classList.remove('open');
+                overlay.classList.remove('show');
+            }
+
             if (pageId === 'dashboard') loadDashboard();
             if (pageId === 'operations') loadOperations();
             if (pageId === 'crm') loadCRM();
