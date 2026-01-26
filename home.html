@@ -97,11 +97,22 @@
         }
         body.en-mode .hero-bg-shape { right: auto; left: 0; transform: skewX(12deg); border-left: none; border-right: 4px solid rgba(255,255,255,0.05); }
 
-        /* تعديلات الموبايل للـ Hero */
+        /* === تعديلات الموبايل الحاسمة (Fix Mobile Layout) === */
         @media (max-width: 1023px) {
-            .hero-section { padding-top: 100px; min-height: auto; padding-bottom: 60px; }
-            .hero-bg-shape { width: 100%; transform: none; opacity: 0.4; } 
-            .hero-content h1 { font-size: 2.5rem; } 
+            .hero-section { 
+                padding-top: 120px; /* مساحة كافية للنافبار */
+                min-height: auto; /* السماح للمحتوى بالتمدد */
+                padding-bottom: 60px; 
+                display: block; /* إلغاء التوسيط العمودي الإجباري */
+            }
+            .hero-bg-shape { 
+                width: 100%; 
+                transform: none; /* إلغاء الميلان في الموبايل */
+                opacity: 0.4; /* تخفيف الخلفية لظهور النص */
+                height: 100%;
+            } 
+            .hero-content h1 { font-size: 2.5rem; line-height: 1.2; } 
+            .hero-content { text-align: center; }
         }
 
         /* === 3. الكروت والسلايدر === */
@@ -172,7 +183,7 @@
             </a>
 
             <div class="desktop-nav flex items-center gap-8 text-sm font-bold text-slate-300">
-                <a href="home.html" class="nav-link hover:text-white" data-key="nav_home">الرئيسية</a>
+                <a href="#home" class="nav-link hover:text-white" data-key="nav_home">الرئيسية</a>
                 <a href="#services" class="nav-link hover:text-white" data-key="nav_services">الخدمات</a>
                 <a href="reviews.html" class="nav-link hover:text-white" data-key="nav_reviews">آراء العملاء</a>
                 <a href="about.html" class="nav-link hover:text-white" data-key="nav_about">من نحن</a>
@@ -199,7 +210,7 @@
             <button onclick="toggleMenu()" class="text-slate-400 text-2xl hover:text-white"><i class="fas fa-times"></i></button>
         </div>
         <div class="flex flex-col gap-2 text-lg font-bold text-slate-300">
-            <a href="home.html" class="mobile-link"><span data-key="nav_home">الرئيسية</span> <i class="fas fa-chevron-left text-xs opacity-50"></i></a>
+            <a href="#home" onclick="toggleMenu()" class="mobile-link"><span data-key="nav_home">الرئيسية</span> <i class="fas fa-chevron-left text-xs opacity-50"></i></a>
             <a href="#services" onclick="toggleMenu()" class="mobile-link"><span data-key="nav_services">الخدمات</span> <i class="fas fa-chevron-left text-xs opacity-50"></i></a>
             <a href="reviews.html" class="mobile-link"><span data-key="nav_reviews">آراء العملاء</span> <i class="fas fa-chevron-left text-xs opacity-50"></i></a>
             <a href="about.html" class="mobile-link"><span data-key="nav_about">من نحن</span> <i class="fas fa-chevron-left text-xs opacity-50"></i></a>
@@ -423,7 +434,7 @@
                 nav_home: "الرئيسية", nav_services: "الخدمات", nav_reviews: "آراء العملاء", nav_about: "من نحن", nav_invest: "استثمار",
                 btn_book: "احجز الآن", hero_badge: "الخيار الأول للشركات الكبرى",
                 hero_t1: "مفهوم جديد", hero_t2: "للرفاهية العالمية",
-                hero_desc: "نقدم حلول تنقل متكاملة تليق بمكانة شركتك وضيوفك. أسطول 2025 وسائقون محترفون.",
+                hero_desc: "نقدم حلول تنقل متكاملة تليق بمكانة شركتك وضيوفك. أسطول 2025 وسائقون محترفون لضمان تجربة سلسة، آمنة، وفي الوقت المحدد.",
                 btn_book_now: "احجز سيارتك", btn_about: "من نحن",
                 stat_1_t: "عام التأسيس", stat_1_d: "انطلاق مسيرتنا في السوق المصري.",
                 stat_2_t: "رحلة ناجحة", stat_2_d: "ثقة الآلاف من العملاء.",
