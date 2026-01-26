@@ -53,7 +53,7 @@
         /* قائمة الموبايل الجانبية (Glassmorphism) */
         .mobile-menu {
             position: fixed; top: 0; right: -100%; width: 85%; max-width: 300px; height: 100%;
-            background: rgba(2, 6, 23, 0.95); /* خلفية شفافة */
+            background: rgba(2, 6, 23, 0.95);
             backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
             z-index: 3000; transition: right 0.4s cubic-bezier(0.77, 0, 0.175, 1);
             border-left: 1px solid rgba(255,255,255,0.1);
@@ -87,32 +87,55 @@
         .hero-section {
             position: relative; min-height: 100vh; display: flex; align-items: center;
             padding-top: 80px; overflow: hidden;
+            z-index: 1; /* التأكد من أن القسم نفسه لديه طبقة */
         }
         .hero-bg-shape {
             position: absolute; top: 0; right: 0; width: 65%; height: 100%;
             background: linear-gradient(135deg, #1e3a8a 0%, #172554 100%);
-            transform: skewX(-12deg); transform-origin: top; z-index: 1;
+            transform: skewX(-12deg); transform-origin: top; z-index: -1; /* تغيير Z-index ليكون خلف المحتوى */
             border-left: 4px solid rgba(255,255,255,0.05);
             box-shadow: -20px 0 80px rgba(0,0,0,0.6);
         }
+        
+        /* إضافة هامة: ضمان ظهور المحتوى فوق الخلفية */
+        .hero-content {
+            position: relative;
+            z-index: 10;
+        }
+
         body.en-mode .hero-bg-shape { right: auto; left: 0; transform: skewX(12deg); border-left: none; border-right: 4px solid rgba(255,255,255,0.05); }
+
+        /* === تعريف الأنيميشن المفقود (هام للظهور) === */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up {
+            animation: fadeInUp 0.8s ease-out forwards;
+        }
 
         /* === تعديلات الموبايل الحاسمة (Fix Mobile Layout) === */
         @media (max-width: 1023px) {
             .hero-section { 
-                padding-top: 120px; /* مساحة كافية للنافبار */
-                min-height: auto; /* السماح للمحتوى بالتمدد */
+                padding-top: 140px; /* زيادة المساحة لتجنب تغطية النافبار */
+                min-height: auto; 
                 padding-bottom: 60px; 
-                display: block; /* إلغاء التوسيط العمودي الإجباري */
+                display: block; 
             }
             .hero-bg-shape { 
                 width: 100%; 
-                transform: none; /* إلغاء الميلان في الموبايل */
-                opacity: 0.4; /* تخفيف الخلفية لظهور النص */
+                transform: none; 
+                opacity: 0.3; /* تقليل الشفافية قليلاً لضمان قراءة النص */
                 height: 100%;
+                left: 0; right: 0;
             } 
-            .hero-content h1 { font-size: 2.5rem; line-height: 1.2; } 
+            .hero-content h1 { font-size: 2.5rem; line-height: 1.3; } 
             .hero-content { text-align: center; }
+            
+            /* إصلاح ترتيب العناصر في الموبايل */
+            .hero-slider-wrapper {
+                margin-top: 3rem;
+            }
         }
 
         /* === 3. الكروت والسلايدر === */
@@ -223,8 +246,8 @@
     <section id="home" class="hero-section">
         <div class="hero-bg-shape"></div>
         
-        <div class="container mx-auto px-6 hero-content">
-            <div class="grid lg:grid-cols-2 gap-16 items-center">
+        <div class="container mx-auto px-6 hero-content relative z-10">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
                 
                 <div class="order-2 lg:order-1 relative z-10 animate-fade-in-up text-center lg:text-right">
                     <div class="inline-flex items-center gap-2 px-4 py-2 bg-blue-900/30 border border-blue-500/30 rounded-full text-blue-300 text-xs font-bold mb-6 backdrop-blur-md">
