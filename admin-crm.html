@@ -325,19 +325,32 @@
 
         <div id="page-pricing" class="page-section hidden">
             <div class="glass-panel p-6 max-w-2xl mx-auto">
-                <h3 class="font-bold mb-4">شرائح التسعير</h3>
+                <h3 class="font-bold mb-2">شرائح التسعير</h3>
+                <p class="text-xs text-slate-500 mb-4 bg-blue-50 p-3 rounded-lg border border-blue-200">
+                    <i class="fas fa-info-circle text-blue-500 ml-1"></i>
+                    <b>نظام تسعير تدريجي:</b> الشرائح تطبق بالتتابع. مثلاً: أول 50 كم بسعر 35/كم، ثم من 51 إلى 200 كم
+                    بسعر 7/كم.
+                    سعر الفتح يُحسب مرة واحدة من أول شريحة فقط. أي مسافة بعد آخر شريحة تستخدم سعر آخر شريحة.
+                </p>
                 <div id="pricing-list" class="space-y-2 mb-6"></div>
                 <h4 class="font-bold text-sm mb-2 mt-6 pt-4 border-t">إضافة شريحة</h4>
                 <div class="grid grid-cols-2 md:grid-cols-5 gap-2 items-end">
-                    <select id="rule-type" class="input-std col-span-2 md:col-span-1">
-                        <option value="sedan">Sedan</option>
-                        <option value="suv">SUV</option>
-                        <option value="van">Van</option>
-                    </select>
-                    <input type="number" id="rule-min" placeholder="من كم" class="input-std">
-                    <input type="number" id="rule-max" placeholder="إلى كم" class="input-std">
-                    <input type="number" id="rule-base" placeholder="فتح" class="input-std">
-                    <input type="number" id="rule-km" placeholder="سعر الكيلو" class="input-std">
+                    <div class="col-span-2 md:col-span-1">
+                        <label class="text-[10px] text-slate-500 font-bold">نوع السيارة</label>
+                        <select id="rule-type" class="input-std">
+                            <option value="sedan">Sedan</option>
+                            <option value="suv">SUV</option>
+                            <option value="van">Van</option>
+                        </select>
+                    </div>
+                    <div><label class="text-[10px] text-slate-500 font-bold">من (كم)</label><input type="number"
+                            id="rule-min" placeholder="0" class="input-std"></div>
+                    <div><label class="text-[10px] text-slate-500 font-bold">إلى (كم)</label><input type="number"
+                            id="rule-max" placeholder="50" class="input-std"></div>
+                    <div><label class="text-[10px] text-slate-500 font-bold">سعر الفتح</label><input type="number"
+                            id="rule-base" placeholder="50" class="input-std"></div>
+                    <div><label class="text-[10px] text-slate-500 font-bold">سعر الكيلو</label><input type="number"
+                            id="rule-km" placeholder="35" class="input-std"></div>
                 </div>
                 <button onclick="addPricingTier()"
                     class="w-full mt-4 bg-slate-900 text-white py-2 rounded-lg font-bold">حفظ</button>
