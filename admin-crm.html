@@ -244,7 +244,7 @@
 
         <div id="page-finance" class="page-section hidden">
             <h2 class="text-2xl font-bold mb-6">المالية</h2>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" id="vaults-grid"></div>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-8" id="vaults-grid"></div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div class="glass-panel p-6">
@@ -384,21 +384,51 @@
     <div id="complete-modal"
         class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[9000] backdrop-blur-sm p-4">
         <div
-            class="bg-white p-6 rounded-2xl w-full max-w-[400px] shadow-2xl border-t-4 border-green-600 max-h-[90vh] overflow-y-auto">
-            <h3 class="text-xl font-bold mb-4 text-green-700 border-b pb-3">تصفية وإنهاء</h3>
+            class="bg-white p-6 rounded-2xl w-full max-w-[450px] shadow-2xl border-t-4 border-green-600 max-h-[90vh] overflow-y-auto">
+            <h3 class="text-xl font-bold mb-4 text-green-700 border-b pb-3">تصفية وإنهاء الرحلة</h3>
             <input type="hidden" id="comp-trip-id">
-            <div class="space-y-4">
-                <div><label class="text-xs font-bold text-slate-500">الإيراد</label><input type="number" id="comp-price"
-                        class="input-std font-bold text-green-600" placeholder="0"></div>
-                <div class="flex gap-2">
-                    <div class="flex-1"><label class="text-xs font-bold text-slate-500">يومية</label><input
-                            type="number" id="comp-wage" class="input-std font-bold text-red-600" value="0"></div>
-                    <div class="flex-1"><label class="text-xs font-bold text-slate-500">بنزين</label><input
-                            type="number" id="comp-fuel" class="input-std font-bold text-amber-600" value="0"></div>
+            <input type="hidden" id="comp-dist-km" value="0">
+            <div class="space-y-3">
+                <div><label class="text-xs font-bold text-green-600">💰 إيراد الرحلة</label><input type="number"
+                        id="comp-price" class="input-std font-bold text-green-600 text-lg" placeholder="0"
+                        oninput="updateCompSummary()"></div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="text-xs font-bold text-slate-500">يومية الكابتن</label><input type="number"
+                            id="comp-wage" class="input-std font-bold text-blue-600" value="0"
+                            oninput="updateCompSummary()"></div>
+                    <div><label class="text-xs font-bold text-slate-500">بنزين</label><input type="number"
+                            id="comp-fuel" class="input-std font-bold text-amber-600" value="0"
+                            oninput="updateCompSummary()"></div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="text-xs font-bold text-slate-500">كروت / رسوم</label><input type="number"
+                            id="comp-tolls" class="input-std font-bold text-orange-600" value="0"
+                            oninput="updateCompSummary()"></div>
+                    <div><label class="text-xs font-bold text-slate-500">عمولة</label><input type="number"
+                            id="comp-commission" class="input-std font-bold text-purple-600" value="0"
+                            oninput="updateCompSummary()"></div>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-lg border">
+                    <label class="text-xs font-bold text-red-500">🔧 صيانة (تلقائي: المسافة × 0.6)</label>
+                    <p id="comp-maintenance-display" class="font-bold text-red-600 mt-1">0 EGP</p>
+                </div>
+                <div class="bg-green-50 p-3 rounded-lg border border-green-200 text-xs space-y-1" id="comp-summary">
+                    <p class="font-bold text-green-800 text-sm mb-2">📊 التوزيع:</p>
+                    <div class="flex justify-between"><span>🔵 خزنة السواقين (يومية):</span><span id="sum-wage"
+                            class="font-bold">0</span></div>
+                    <div class="flex justify-between"><span>🔴 خزنة الصيانة:</span><span id="sum-maint"
+                            class="font-bold">0</span></div>
+                    <div class="flex justify-between"><span>🟣 خزنة العمولات:</span><span id="sum-comm"
+                            class="font-bold">0</span></div>
+                    <div class="flex justify-between"><span>⛽ بنزين + كروت (مصروف):</span><span id="sum-ops"
+                            class="font-bold">0</span></div>
+                    <div class="flex justify-between border-t pt-1 mt-1"><span class="font-bold text-green-800">🟡 خزنة
+                            السيارة (متبقي):</span><span id="sum-car" class="font-bold text-green-700">0</span></div>
                 </div>
                 <div class="flex gap-2 pt-2">
                     <button onclick="confirmComplete()"
-                        class="flex-1 bg-green-600 text-white py-2.5 rounded-lg font-bold hover:bg-green-700">تأكيد</button>
+                        class="flex-1 bg-green-600 text-white py-2.5 rounded-lg font-bold hover:bg-green-700">تأكيد
+                        الإنهاء</button>
                     <button onclick="document.getElementById('complete-modal').style.display='none'"
                         class="flex-1 bg-slate-200 text-slate-700 py-2.5 rounded-lg font-bold">إلغاء</button>
                 </div>
@@ -617,7 +647,7 @@
                 const carInfo = t.cars ? `${t.cars.brand}` : '-';
                 let btns = '';
                 if (t.status === 'pending' || t.status === 'approved') btns = `<button onclick="openAssignModal('${t.id}')" class="bg-slate-900 text-white px-2 py-1 rounded text-xs">تعيين</button>`;
-                else if (t.status === 'driver_assigned') btns = `<button onclick="openCompleteModal('${t.id}', ${t.estimated_price})" class="bg-green-600 text-white px-2 py-1 rounded text-xs">إنهاء</button>`;
+                else if (t.status === 'driver_assigned') btns = `<button onclick="openCompleteModal('${t.id}', ${t.estimated_price}, ${t.distance_km || 0})" class="bg-green-600 text-white px-2 py-1 rounded text-xs">إنهاء</button>`;
 
                 list.innerHTML += `
                     <tr class="border-b hover:bg-white text-xs">
@@ -634,12 +664,35 @@
             });
         }
 
-        function openCompleteModal(tripId, price) {
+        function openCompleteModal(tripId, price, distKm) {
             document.getElementById('comp-trip-id').value = tripId;
             document.getElementById('comp-price').value = price;
+            document.getElementById('comp-dist-km').value = distKm || 0;
             document.getElementById('comp-wage').value = 0;
             document.getElementById('comp-fuel').value = 0;
+            document.getElementById('comp-tolls').value = 0;
+            document.getElementById('comp-commission').value = 0;
+            const maint = Math.round((distKm || 0) * 0.6);
+            document.getElementById('comp-maintenance-display').innerText = maint + ' EGP (' + (distKm || 0) + ' km × 0.6)';
             document.getElementById('complete-modal').style.display = 'flex';
+            updateCompSummary();
+        }
+
+        function updateCompSummary() {
+            const price = Number(document.getElementById('comp-price').value) || 0;
+            const wage = Number(document.getElementById('comp-wage').value) || 0;
+            const fuel = Number(document.getElementById('comp-fuel').value) || 0;
+            const tolls = Number(document.getElementById('comp-tolls').value) || 0;
+            const commission = Number(document.getElementById('comp-commission').value) || 0;
+            const distKm = Number(document.getElementById('comp-dist-km').value) || 0;
+            const maint = Math.round(distKm * 0.6);
+            const carNet = price - wage - fuel - tolls - commission - maint;
+            document.getElementById('sum-wage').innerText = wage + ' EGP';
+            document.getElementById('sum-maint').innerText = maint + ' EGP';
+            document.getElementById('sum-comm').innerText = commission + ' EGP';
+            document.getElementById('sum-ops').innerText = (fuel + tolls) + ' EGP';
+            document.getElementById('sum-car').innerText = carNet + ' EGP';
+            document.getElementById('sum-car').className = 'font-bold ' + (carNet >= 0 ? 'text-green-700' : 'text-red-600');
         }
 
         async function confirmComplete() {
@@ -647,7 +700,12 @@
             const price = Number(document.getElementById('comp-price').value);
             const wage = Number(document.getElementById('comp-wage').value);
             const fuel = Number(document.getElementById('comp-fuel').value);
-            const netProfit = price - wage - fuel;
+            const tolls = Number(document.getElementById('comp-tolls').value);
+            const commission = Number(document.getElementById('comp-commission').value);
+            const distKm = Number(document.getElementById('comp-dist-km').value);
+            const maint = Math.round(distKm * 0.6);
+            const carNet = price - wage - fuel - tolls - commission - maint;
+
             if (!confirm('تأكيد الإنهاء؟')) return;
             await sbClient.from('trips').update({ status: 'completed', final_price: price, driver_wage: wage }).eq('id', tripId);
             const { data: trip } = await sbClient.from('trips').select('driver_id, car_id').eq('id', tripId).single();
@@ -655,26 +713,33 @@
 
             // 1. يومية الكابتن → خزنة السواقين
             if (wage > 0) {
-                const driversVaultId = await getVaultIdByName('خزنة السواقين');
-                if (driversVaultId) {
-                    const { data: dv } = await sbClient.from('vaults').select('balance').eq('id', driversVaultId).single();
-                    await sbClient.from('vaults').update({ balance: (dv.balance || 0) + wage }).eq('id', driversVaultId);
-                }
-                if (trip.driver_id) await sbClient.from('expenses').insert([{ title: `يومية #${tripLabel}`, amount: wage, category: 'رواتب', related_trip_id: tripId, related_driver_id: trip.driver_id, related_vault_id: driversVaultId }]);
+                const vid = await getVaultIdByName('خزنة السواقين');
+                if (vid) { const { data: v } = await sbClient.from('vaults').select('balance').eq('id', vid).single(); await sbClient.from('vaults').update({ balance: (v.balance || 0) + wage }).eq('id', vid); }
+                if (trip.driver_id) await sbClient.from('expenses').insert([{ title: `يومية #${tripLabel}`, amount: wage, category: 'رواتب', related_trip_id: tripId, related_driver_id: trip.driver_id }]);
             }
 
-            // 2. بنزين/كروت → مصروف (يسجل بس)
-            if (fuel > 0 && trip.car_id) {
-                await sbClient.from('expenses').insert([{ title: `بنزين #${tripLabel}`, amount: fuel, category: 'تشغيل', related_trip_id: tripId, related_car_id: trip.car_id }]);
+            // 2. صيانة (km × 0.6) → خزنة الصيانة
+            if (maint > 0) {
+                const vid = await getVaultIdByName('خزنة الصيانة');
+                if (vid) { const { data: v } = await sbClient.from('vaults').select('balance').eq('id', vid).single(); await sbClient.from('vaults').update({ balance: (v.balance || 0) + maint }).eq('id', vid); }
+                if (trip.car_id) await sbClient.from('expenses').insert([{ title: `صيانة ${distKm}km #${tripLabel}`, amount: maint, category: 'صيانة', related_trip_id: tripId, related_car_id: trip.car_id }]);
             }
 
-            // 3. صافي الربح → خزنة رواتب السيارات
-            if (netProfit > 0) {
-                const carsVaultId = await getVaultIdByName('خزنة رواتب السيارات');
-                if (carsVaultId) {
-                    const { data: cv } = await sbClient.from('vaults').select('balance').eq('id', carsVaultId).single();
-                    await sbClient.from('vaults').update({ balance: (cv.balance || 0) + netProfit }).eq('id', carsVaultId);
-                }
+            // 3. عمولة → خزنة العمولات
+            if (commission > 0) {
+                const vid = await getVaultIdByName('خزنة العمولات');
+                if (vid) { const { data: v } = await sbClient.from('vaults').select('balance').eq('id', vid).single(); await sbClient.from('vaults').update({ balance: (v.balance || 0) + commission }).eq('id', vid); }
+                await sbClient.from('expenses').insert([{ title: `عمولة #${tripLabel}`, amount: commission, category: 'عمولات', related_trip_id: tripId }]);
+            }
+
+            // 4. بنزين + كروت → مصروف تشغيل (سجل فقط)
+            if (fuel > 0 && trip.car_id) await sbClient.from('expenses').insert([{ title: `بنزين #${tripLabel}`, amount: fuel, category: 'تشغيل', related_trip_id: tripId, related_car_id: trip.car_id }]);
+            if (tolls > 0 && trip.car_id) await sbClient.from('expenses').insert([{ title: `كروت #${tripLabel}`, amount: tolls, category: 'تشغيل', related_trip_id: tripId, related_car_id: trip.car_id }]);
+
+            // 5. المتبقي → خزنة رواتب السيارات
+            if (carNet > 0) {
+                const vid = await getVaultIdByName('خزنة رواتب السيارات');
+                if (vid) { const { data: v } = await sbClient.from('vaults').select('balance').eq('id', vid).single(); await sbClient.from('vaults').update({ balance: (v.balance || 0) + carNet }).eq('id', vid); }
             }
 
             document.getElementById('complete-modal').style.display = 'none';
@@ -699,7 +764,7 @@
                 // عرض الخزينة الرئيسية أولاً بلون مميز
                 grid.innerHTML += `<div class="glass-panel p-5 border-l-4 border-green-500 bg-green-50"><p class="text-xs font-bold text-green-700 uppercase"><i class="fas fa-university ml-1"></i> الخزينة الرئيسية (إجمالي)</p><h3 class="text-3xl font-black mt-1 text-green-800">${mainTotal} <span class="text-sm font-normal">EGP</span></h3></div>`;
                 // عرض الخزائن الفرعية
-                const vaultColors = { 'خزنة السواقين': 'blue', 'خزنة رواتب السيارات': 'amber', 'خزنة الصيانة': 'red' };
+                const vaultColors = { 'خزنة السواقين': 'blue', 'خزنة رواتب السيارات': 'amber', 'خزنة الصيانة': 'red', 'خزنة العمولات': 'purple' };
                 subVaults.forEach(v => {
                     const color = vaultColors[v.name] || 'slate';
                     grid.innerHTML += `<div class="glass-panel p-5 border-l-4 border-${color}-500"><p class="text-xs font-bold text-slate-500 uppercase">${v.name}</p><h3 class="text-2xl font-black mt-1">${v.balance} <span class="text-sm font-normal">EGP</span></h3></div>`;
