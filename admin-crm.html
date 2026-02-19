@@ -905,9 +905,15 @@
             const reason = document.getElementById('drv-deduct-reason').value;
             const amount = Number(document.getElementById('drv-deduct-amount').value);
             if (!reason || !amount || amount <= 0) return alert('أدخل السبب والمبلغ');
-            await sbClient.from('expenses').insert([{ title: `${deductType}: ${reason}`, amount, category: deductType, related_driver_id: driverId }]);
-            alert(`تم تسجيل ${deductType} بمبلغ ${amount} EGP`);
-            openLedger('driver', driverId, driverName);
+            // خصم من خزنة السواقين
+            const vid = await getVaultIdByName('خزنة السواقين');
+            if (vid) {
+                const { data: v } = await sbClient.from('vaults').select('balance').eq('id', vid).single();
+                await sbClient.from('vaults').update({ balance: (v.balance || 0) - amount }).eq('id', vid);
+            }
+            await sbClient.from('expenses').insert([{ title: `${deductType}: ${reason}`, amount, category: deductType, related_driver_id: driverId, related_vault_id: vid }]);
+            alert(`تم تسجيل ${deductType} بمبلغ ${amount} EGP وتم الخصم من خزنة السواقين`);
+            loadFinance(); openLedger('driver', driverId, driverName);
         }
 
         async function settleDriver(driverId, driverName, netAmount) {
