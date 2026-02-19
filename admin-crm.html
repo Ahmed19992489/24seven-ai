@@ -836,11 +836,12 @@
 
         async function payCarSalary(carId, amount) {
             if (!confirm(`سداد ${amount}؟`)) return;
-            const vid = await getMainVaultId();
-            await sbClient.from('expenses').insert([{ title: 'راتب شهري', amount: amount, category: 'رواتب سيارات', related_car_id: carId }]);
+            const vid = await getVaultIdByName('خزنة رواتب السيارات');
+            if (!vid) { alert('خزنة رواتب السيارات غير موجودة'); return; }
+            await sbClient.from('expenses').insert([{ title: 'قسط/راتب شهري', amount: amount, category: 'رواتب سيارات', related_car_id: carId, related_vault_id: vid }]);
             const { data: v } = await sbClient.from('vaults').select('balance').eq('id', vid).single();
             await sbClient.from('vaults').update({ balance: (v.balance || 0) - amount }).eq('id', vid);
-            alert("تم السداد"); openLedger('car', carId, '...');
+            alert("تم السداد ✅ تم الخصم من خزنة رواتب السيارات"); loadFinance(); openLedger('car', carId, '...');
         }
 
         async function openExpenseModal(type, id) { document.getElementById('expense-modal').style.display = 'flex'; document.getElementById('exp-target-type').value = type; document.getElementById('exp-target-id').value = id; }
