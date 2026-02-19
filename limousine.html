@@ -635,7 +635,7 @@
                 if (element.status !== 'OK') { btn.innerText = "حساب السعر والحجز"; return alert("تعذر حساب المسافة: " + element.status); }
 
                 const distKm = Math.ceil(element.distance.value / 1000);
-                const carRules = pricingRules.filter(r => r.car_type === tripData.car);
+                const carRules = pricingRules.filter(r => r.car_type === tripData.car).sort((a, b) => (a.max_km - a.min_km) - (b.max_km - b.min_km));
                 let rule = carRules.find(r => distKm >= r.min_km && distKm <= r.max_km);
                 if (!rule && carRules.length > 0) rule = carRules.sort((a, b) => b.max_km - a.max_km)[0];
 
