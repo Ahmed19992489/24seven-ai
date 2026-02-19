@@ -60,8 +60,15 @@
             width: 6px;
             height: 6px;
         }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
 
         /* --- إصلاحات الموبايل الهامة --- */
         .table-responsive {
@@ -70,7 +77,7 @@
             width: 100%;
             display: block;
         }
-        
+
         @media (max-width: 768px) {
             .sidebar {
                 position: fixed;
@@ -81,8 +88,10 @@
                 z-index: 5000;
                 transition: right 0.3s ease-in-out;
             }
-            
-            .sidebar.active { right: 0; }
+
+            .sidebar.active {
+                right: 0;
+            }
 
             .overlay {
                 display: none;
@@ -91,11 +100,14 @@
                 left: 0;
                 width: 100%;
                 height: 100%;
-                background: rgba(0,0,0,0.5);
+                background: rgba(0, 0, 0, 0.5);
                 z-index: 4000;
                 backdrop-filter: blur(2px);
             }
-            .overlay.active { display: block; }
+
+            .overlay.active {
+                display: block;
+            }
 
             main {
                 padding-top: 80px !important;
@@ -107,18 +119,24 @@
 
 <body class="flex h-screen overflow-hidden text-slate-800 bg-[#f8fafc]">
 
-    <div class="md:hidden fixed top-0 left-0 right-0 h-16 bg-slate-900 text-white flex items-center justify-between px-4 z-[3000] shadow-lg">
-        <h1 class="text-lg font-black">24<span class="text-amber-500">Seven</span> <span class="text-[10px] font-normal text-slate-400">ERP</span></h1>
-        <button onclick="toggleSidebar()" class="text-2xl w-10 h-10 flex items-center justify-center rounded hover:bg-slate-800 focus:outline-none">
+    <div
+        class="md:hidden fixed top-0 left-0 right-0 h-16 bg-slate-900 text-white flex items-center justify-between px-4 z-[3000] shadow-lg">
+        <h1 class="text-lg font-black">24<span class="text-amber-500">Seven</span> <span
+                class="text-[10px] font-normal text-slate-400">ERP</span></h1>
+        <button onclick="toggleSidebar()"
+            class="text-2xl w-10 h-10 flex items-center justify-center rounded hover:bg-slate-800 focus:outline-none">
             <i class="fas fa-bars"></i>
         </button>
     </div>
 
     <div id="sidebar-overlay" class="overlay" onclick="toggleSidebar()"></div>
 
-    <aside id="sidebar" class="sidebar w-64 bg-white border-l border-slate-200 flex flex-col shadow-xl shrink-0 md:relative md:right-0">
-        <div class="h-16 flex items-center justify-center border-b border-slate-100 bg-slate-900 text-white hidden md:flex">
-            <h1 class="text-xl font-black">24<span class="text-amber-500">Seven</span> <span class="text-[10px] font-normal text-slate-400">ERP</span></h1>
+    <aside id="sidebar"
+        class="sidebar w-64 bg-white border-l border-slate-200 flex flex-col shadow-xl shrink-0 md:relative md:right-0">
+        <div
+            class="h-16 flex items-center justify-center border-b border-slate-100 bg-slate-900 text-white hidden md:flex">
+            <h1 class="text-xl font-black">24<span class="text-amber-500">Seven</span> <span
+                    class="text-[10px] font-normal text-slate-400">ERP</span></h1>
         </div>
 
         <div class="md:hidden p-4 flex justify-end">
@@ -126,12 +144,14 @@
         </div>
 
         <nav class="flex-1 p-2 space-y-1 overflow-y-auto">
-            <div onclick="showPage('dashboard')" id="nav-dashboard" class="sidebar-item active p-3 rounded-lg flex items-center gap-3">
+            <div onclick="showPage('dashboard')" id="nav-dashboard"
+                class="sidebar-item active p-3 rounded-lg flex items-center gap-3">
                 <i class="fas fa-chart-line w-5 text-center text-blue-600"></i> لوحة القيادة
             </div>
 
             <p class="text-[10px] font-bold text-slate-400 mt-4 mb-1 px-3">إدارة العمليات</p>
-            <div onclick="showPage('operations')" id="nav-operations" class="sidebar-item p-3 rounded-lg flex items-center gap-3">
+            <div onclick="showPage('operations')" id="nav-operations"
+                class="sidebar-item p-3 rounded-lg flex items-center gap-3">
                 <i class="fas fa-satellite-dish w-5 text-center text-amber-600"></i> غرفة العمليات
             </div>
             <div onclick="showPage('crm')" id="nav-crm" class="sidebar-item p-3 rounded-lg flex items-center gap-3">
@@ -139,7 +159,8 @@
             </div>
 
             <p class="text-[10px] font-bold text-slate-400 mt-4 mb-1 px-3">المالية والموارد</p>
-            <div onclick="showPage('finance')" id="nav-finance" class="sidebar-item p-3 rounded-lg flex items-center gap-3">
+            <div onclick="showPage('finance')" id="nav-finance"
+                class="sidebar-item p-3 rounded-lg flex items-center gap-3">
                 <i class="fas fa-wallet w-5 text-center text-green-600"></i> الخزينة والمحافظ
             </div>
             <div onclick="showPage('fleet')" id="nav-fleet" class="sidebar-item p-3 rounded-lg flex items-center gap-3">
@@ -147,7 +168,8 @@
             </div>
 
             <p class="text-[10px] font-bold text-slate-400 mt-4 mb-1 px-3">الإعدادات</p>
-            <div onclick="showPage('pricing')" id="nav-pricing" class="sidebar-item p-3 rounded-lg flex items-center gap-3">
+            <div onclick="showPage('pricing')" id="nav-pricing"
+                class="sidebar-item p-3 rounded-lg flex items-center gap-3">
                 <i class="fas fa-tags w-5 text-center text-gray-600"></i> التسعير
             </div>
         </nav>
@@ -175,7 +197,7 @@
                     <h3 class="text-3xl font-black mt-2 text-purple-600 dir-ltr" id="kpi-cars-salary">0 EGP</h3>
                 </div>
             </div>
-            
+
             <div class="glass-panel p-6 mb-8">
                 <h3 class="font-bold mb-4">أداء الأسبوع</h3>
                 <div class="w-full h-64">
@@ -188,15 +210,17 @@
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                 <h2 class="text-2xl font-bold">غرفة العمليات</h2>
                 <div class="flex gap-2 w-full md:w-auto">
-                    <button onclick="loadOperations()" class="bg-white border px-4 py-2 rounded-lg hover:bg-slate-100 font-bold text-sm flex-1 md:flex-none">
+                    <button onclick="loadOperations()"
+                        class="bg-white border px-4 py-2 rounded-lg hover:bg-slate-100 font-bold text-sm flex-1 md:flex-none">
                         <i class="fas fa-sync-alt mr-2"></i> تحديث
                     </button>
-                    <button onclick="document.getElementById('manual-trip-modal').style.display='flex'" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-bold text-sm flex-1 md:flex-none shadow-lg">
+                    <button onclick="document.getElementById('manual-trip-modal').style.display='flex'"
+                        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-bold text-sm flex-1 md:flex-none shadow-lg">
                         <i class="fas fa-plus mr-2"></i> حجز يدوي
                     </button>
                 </div>
             </div>
-            
+
             <div class="glass-panel overflow-hidden">
                 <div class="table-responsive">
                     <table class="w-full text-right text-sm whitespace-nowrap">
@@ -242,7 +266,8 @@
                                 <option value="main">الرئيسية</option>
                             </select>
                         </div>
-                        <button onclick="addGeneralExpense()" class="w-full bg-red-600 text-white py-2 rounded-lg font-bold hover:bg-red-700 btn-action">تسجيل</button>
+                        <button onclick="addGeneralExpense()"
+                            class="w-full bg-red-600 text-white py-2 rounded-lg font-bold hover:bg-red-700 btn-action">تسجيل</button>
                     </div>
                 </div>
             </div>
@@ -255,19 +280,22 @@
                     <div class="mb-6">
                         <div class="flex justify-between items-center mb-2 px-1">
                             <h4 class="font-bold text-slate-600 text-xs uppercase">السيارات</h4>
-                            <button onclick="addCarPrompt()" class="text-[10px] bg-slate-200 px-2 py-1 rounded">إضافة</button>
+                            <button onclick="addCarPrompt()"
+                                class="text-[10px] bg-slate-200 px-2 py-1 rounded">إضافة</button>
                         </div>
                         <div id="fleet-cars-list" class="space-y-2"></div>
                     </div>
                     <div>
                         <div class="flex justify-between items-center mb-2 px-1">
                             <h4 class="font-bold text-slate-600 text-xs uppercase">الكباتن</h4>
-                            <button onclick="addDriverPrompt()" class="text-[10px] bg-slate-200 px-2 py-1 rounded">إضافة</button>
+                            <button onclick="addDriverPrompt()"
+                                class="text-[10px] bg-slate-200 px-2 py-1 rounded">إضافة</button>
                         </div>
                         <div id="fleet-drivers-list" class="space-y-2"></div>
                     </div>
                 </div>
-                <div class="glass-panel p-6 col-span-1 lg:col-span-3 overflow-y-auto bg-slate-50 relative min-h-[300px]" id="ledger-view">
+                <div class="glass-panel p-6 col-span-1 lg:col-span-3 overflow-y-auto bg-slate-50 relative min-h-[300px]"
+                    id="ledger-view">
                     <div class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 opacity-50">
                         <i class="fas fa-folder-open text-6xl mb-4"></i>
                         <p>اختر عنصراً لعرض الملف المالي</p>
@@ -311,64 +339,88 @@
                     <input type="number" id="rule-base" placeholder="فتح" class="input-std">
                     <input type="number" id="rule-km" placeholder="سعر الكيلو" class="input-std">
                 </div>
-                <button onclick="addPricingTier()" class="w-full mt-4 bg-slate-900 text-white py-2 rounded-lg font-bold">حفظ</button>
+                <button onclick="addPricingTier()"
+                    class="w-full mt-4 bg-slate-900 text-white py-2 rounded-lg font-bold">حفظ</button>
             </div>
         </div>
 
     </main>
 
-    <div id="assign-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[9000] backdrop-blur-sm p-4">
+    <div id="assign-modal"
+        class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[9000] backdrop-blur-sm p-4">
         <div class="bg-white p-6 rounded-2xl w-full max-w-[500px] shadow-2xl max-h-[90vh] overflow-y-auto">
             <h3 class="text-xl font-bold mb-4 border-b pb-3">تعيين كابتن</h3>
             <input type="hidden" id="modal-trip-id">
             <div class="space-y-4">
-                <div><label class="text-xs font-bold text-slate-500">الكابتن</label><select id="modal-driver" class="input-std"></select></div>
-                <div><label class="text-xs font-bold text-slate-500">السيارة</label><select id="modal-car" class="input-std"></select></div>
-                <div><label class="text-xs font-bold text-slate-500">ملاحظات</label><textarea id="modal-note" class="input-std h-20"></textarea></div>
+                <div><label class="text-xs font-bold text-slate-500">الكابتن</label><select id="modal-driver"
+                        class="input-std"></select></div>
+                <div><label class="text-xs font-bold text-slate-500">السيارة</label><select id="modal-car"
+                        class="input-std"></select></div>
+                <div><label class="text-xs font-bold text-slate-500">ملاحظات</label><textarea id="modal-note"
+                        class="input-std h-20"></textarea></div>
                 <div class="flex gap-2 pt-2">
-                    <button onclick="confirmAssign()" class="flex-1 bg-slate-900 text-white py-2.5 rounded-lg font-bold">تأكيد</button>
-                    <button onclick="document.getElementById('assign-modal').style.display='none'" class="flex-1 bg-slate-200 text-slate-700 py-2.5 rounded-lg font-bold">إلغاء</button>
+                    <button onclick="confirmAssign()"
+                        class="flex-1 bg-slate-900 text-white py-2.5 rounded-lg font-bold">تأكيد</button>
+                    <button onclick="document.getElementById('assign-modal').style.display='none'"
+                        class="flex-1 bg-slate-200 text-slate-700 py-2.5 rounded-lg font-bold">إلغاء</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="complete-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[9000] backdrop-blur-sm p-4">
-        <div class="bg-white p-6 rounded-2xl w-full max-w-[400px] shadow-2xl border-t-4 border-green-600 max-h-[90vh] overflow-y-auto">
+    <div id="complete-modal"
+        class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[9000] backdrop-blur-sm p-4">
+        <div
+            class="bg-white p-6 rounded-2xl w-full max-w-[400px] shadow-2xl border-t-4 border-green-600 max-h-[90vh] overflow-y-auto">
             <h3 class="text-xl font-bold mb-4 text-green-700 border-b pb-3">تصفية وإنهاء</h3>
             <input type="hidden" id="comp-trip-id">
             <div class="space-y-4">
-                <div><label class="text-xs font-bold text-slate-500">الإيراد</label><input type="number" id="comp-price" class="input-std font-bold text-green-600" placeholder="0"></div>
+                <div><label class="text-xs font-bold text-slate-500">الإيراد</label><input type="number" id="comp-price"
+                        class="input-std font-bold text-green-600" placeholder="0"></div>
                 <div class="flex gap-2">
-                    <div class="flex-1"><label class="text-xs font-bold text-slate-500">يومية</label><input type="number" id="comp-wage" class="input-std font-bold text-red-600" value="0"></div>
-                    <div class="flex-1"><label class="text-xs font-bold text-slate-500">بنزين</label><input type="number" id="comp-fuel" class="input-std font-bold text-amber-600" value="0"></div>
+                    <div class="flex-1"><label class="text-xs font-bold text-slate-500">يومية</label><input
+                            type="number" id="comp-wage" class="input-std font-bold text-red-600" value="0"></div>
+                    <div class="flex-1"><label class="text-xs font-bold text-slate-500">بنزين</label><input
+                            type="number" id="comp-fuel" class="input-std font-bold text-amber-600" value="0"></div>
                 </div>
                 <div class="flex gap-2 pt-2">
-                    <button onclick="confirmComplete()" class="flex-1 bg-green-600 text-white py-2.5 rounded-lg font-bold hover:bg-green-700">تأكيد</button>
-                    <button onclick="document.getElementById('complete-modal').style.display='none'" class="flex-1 bg-slate-200 text-slate-700 py-2.5 rounded-lg font-bold">إلغاء</button>
+                    <button onclick="confirmComplete()"
+                        class="flex-1 bg-green-600 text-white py-2.5 rounded-lg font-bold hover:bg-green-700">تأكيد</button>
+                    <button onclick="document.getElementById('complete-modal').style.display='none'"
+                        class="flex-1 bg-slate-200 text-slate-700 py-2.5 rounded-lg font-bold">إلغاء</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="expense-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[9000] backdrop-blur-sm p-4">
+    <div id="expense-modal"
+        class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[9000] backdrop-blur-sm p-4">
         <div class="bg-white p-6 rounded-2xl w-full max-w-[500px] shadow-2xl max-h-[90vh] overflow-y-auto">
             <h3 class="text-xl font-bold mb-4 border-b pb-3 text-red-600">تسجيل حركة</h3>
             <input type="hidden" id="exp-target-id"> <input type="hidden" id="exp-target-type">
             <div class="space-y-4">
-                <div><label class="text-xs font-bold text-slate-500">البيان</label><input type="text" id="exp-modal-title" class="input-std"></div>
-                <div><label class="text-xs font-bold text-slate-500">المبلغ</label><input type="number" id="exp-modal-amount" class="input-std"></div>
-                <div><label class="text-xs font-bold text-slate-500">الخزنة</label><select id="exp-modal-vault" class="input-std bg-slate-50"><option value="main">الرئيسية</option></select></div>
+                <div><label class="text-xs font-bold text-slate-500">البيان</label><input type="text"
+                        id="exp-modal-title" class="input-std"></div>
+                <div><label class="text-xs font-bold text-slate-500">المبلغ</label><input type="number"
+                        id="exp-modal-amount" class="input-std"></div>
+                <div><label class="text-xs font-bold text-slate-500">الخزنة</label><select id="exp-modal-vault"
+                        class="input-std bg-slate-50">
+                        <option value="main">الرئيسية</option>
+                    </select></div>
                 <div class="flex gap-2 pt-2">
-                    <button onclick="confirmExpense()" class="flex-1 bg-red-600 text-white py-2.5 rounded-lg font-bold hover:bg-red-700">تأكيد</button>
-                    <button onclick="document.getElementById('expense-modal').style.display='none'" class="flex-1 bg-slate-200 text-slate-700 py-2.5 rounded-lg font-bold">إلغاء</button>
+                    <button onclick="confirmExpense()"
+                        class="flex-1 bg-red-600 text-white py-2.5 rounded-lg font-bold hover:bg-red-700">تأكيد</button>
+                    <button onclick="document.getElementById('expense-modal').style.display='none'"
+                        class="flex-1 bg-slate-200 text-slate-700 py-2.5 rounded-lg font-bold">إلغاء</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="manual-trip-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[9000] backdrop-blur-sm p-4">
-        <div class="bg-white p-6 rounded-2xl w-full max-w-[500px] shadow-2xl max-h-[90vh] overflow-y-auto border-t-4 border-blue-600">
+    <div id="manual-trip-modal"
+        class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[9000] backdrop-blur-sm p-4">
+        <div
+            class="bg-white p-6 rounded-2xl w-full max-w-[500px] shadow-2xl max-h-[90vh] overflow-y-auto border-t-4 border-blue-600">
             <h3 class="text-xl font-bold mb-4 border-b pb-3 text-blue-800">تسجيل حجز هاتفي</h3>
             <div class="space-y-3">
                 <div class="grid grid-cols-2 gap-2">
@@ -381,7 +433,7 @@
                         <input type="tel" id="manual-phone" class="input-std" placeholder="01xxxxxxxxx">
                     </div>
                 </div>
-                
+
                 <div>
                     <label class="text-xs font-bold text-slate-500">نوع العميل</label>
                     <select id="manual-client-type" class="input-std">
@@ -444,25 +496,28 @@
 
                 <div>
                     <label class="text-xs font-bold text-slate-500">السعر المتفق عليه</label>
-                    <input type="number" id="manual-price" class="input-std text-green-700 font-bold" placeholder="0.00">
+                    <input type="number" id="manual-price" class="input-std text-green-700 font-bold"
+                        placeholder="0.00">
                 </div>
-                
+
                 <div>
                     <label class="text-xs font-bold text-slate-500">ملاحظات</label>
                     <textarea id="manual-notes" class="input-std h-16"></textarea>
                 </div>
 
                 <div class="flex gap-2 pt-4">
-                    <button onclick="submitManualTrip()" class="flex-1 bg-blue-600 text-white py-2.5 rounded-lg font-bold hover:bg-blue-700">حفظ</button>
-                    <button onclick="document.getElementById('manual-trip-modal').style.display='none'" class="flex-1 bg-slate-200 text-slate-700 py-2.5 rounded-lg font-bold">إلغاء</button>
+                    <button onclick="submitManualTrip()"
+                        class="flex-1 bg-blue-600 text-white py-2.5 rounded-lg font-bold hover:bg-blue-700">حفظ</button>
+                    <button onclick="document.getElementById('manual-trip-modal').style.display='none'"
+                        class="flex-1 bg-slate-200 text-slate-700 py-2.5 rounded-lg font-bold">إلغاء</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        const supabaseUrl = 'https://qxtlsfmfetwcflbpvwuf.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4dGxzZm1mZXR3Y2ZsYnB2d3VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0MzMzODEsImV4cCI6MjA3ODAwOTM4MX0.FFGXNfx0FDA4FmJB1gVorNigs9nRoO4q1pCj2BOMDbU';
+        const supabaseUrl = 'https://wtjwzqvmwnbvjxnmweqq.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY';
         const sbClient = supabase.createClient(supabaseUrl, supabaseKey);
 
         showPage('dashboard');
@@ -510,7 +565,7 @@
             list.innerHTML = '<tr><td colspan="8" class="text-center p-4">جاري التحميل...</td></tr>';
             const { data: trips, error } = await sbClient.from('trips').select(`*, cars:cars!fk_trips_car(brand, model, plate_number), drivers:drivers!fk_trips_driver(name, phone)`).order('created_at', { ascending: false });
             if (error) { list.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-red-500">حدث خطأ</td></tr>'; return; }
-            
+
             const userIds = trips?.map(t => t.user_id).filter(Boolean) || [];
             let profilesMap = {};
             if (userIds.length) {
@@ -523,24 +578,24 @@
 
             trips.forEach(t => {
                 const profile = profilesMap[t.user_id] || { full_name: 'عميل', phone: '-' };
-                
+
                 // البحث عن الاسم والرقم في admin_notes إذا كانت الحقول غير موجودة
                 let displayName = profile.full_name || 'عميل';
                 let displayPhone = profile.phone || '-';
-                
+
                 // محاولة استخراج البيانات من admin_notes إذا كان الحجز يدوياً
                 if (t.admin_notes && t.admin_notes.includes('حجز هاتفي')) {
                     const nameMatch = t.admin_notes.match(/العميل: (.*?)\n/);
                     const phoneMatch = t.admin_notes.match(/رقم: (.*?)\n/);
-                    if(nameMatch) displayName = nameMatch[1];
-                    if(phoneMatch) displayPhone = phoneMatch[1];
+                    if (nameMatch) displayName = nameMatch[1];
+                    if (phoneMatch) displayPhone = phoneMatch[1];
                 }
 
                 // إذا وجدت الأعمدة الجديدة في الداتابيز استخدمها
                 if (t.manual_client_name) displayName = t.manual_client_name;
                 if (t.client_phone) displayPhone = t.client_phone;
 
-                let statusColor = 'bg-amber-100 text-amber-800'; 
+                let statusColor = 'bg-amber-100 text-amber-800';
                 if (t.status === 'driver_assigned') statusColor = 'bg-blue-100 text-blue-800';
                 else if (t.status === 'approved') statusColor = 'bg-green-100 text-green-800';
                 else if (t.status === 'completed') statusColor = 'bg-slate-200 text-slate-600';
@@ -586,8 +641,8 @@
             const { data: v } = await sbClient.from('vaults').select('balance').eq('id', vid).single();
             await sbClient.from('vaults').update({ balance: (v.balance || 0) + netToVault }).eq('id', vid);
             const { data: trip } = await sbClient.from('trips').select('driver_id, car_id').eq('id', tripId).single();
-            if (wage > 0 && trip.driver_id) await sbClient.from('expenses').insert([{ title: `يومية #${tripId.slice(0,4)}`, amount: wage, category: 'رواتب', related_trip_id: tripId, related_driver_id: trip.driver_id, related_vault_id: vid }]);
-            if (fuel > 0 && trip.car_id) await sbClient.from('expenses').insert([{ title: `بنزين #${tripId.slice(0,4)}`, amount: fuel, category: 'تشغيل', related_trip_id: tripId, related_car_id: trip.car_id, related_vault_id: vid }]);
+            if (wage > 0 && trip.driver_id) await sbClient.from('expenses').insert([{ title: `يومية #${tripId.slice(0, 4)}`, amount: wage, category: 'رواتب', related_trip_id: tripId, related_driver_id: trip.driver_id, related_vault_id: vid }]);
+            if (fuel > 0 && trip.car_id) await sbClient.from('expenses').insert([{ title: `بنزين #${tripId.slice(0, 4)}`, amount: fuel, category: 'تشغيل', related_trip_id: tripId, related_car_id: trip.car_id, related_vault_id: vid }]);
             document.getElementById('complete-modal').style.display = 'none';
             loadOperations(); loadDashboard();
         }
@@ -708,7 +763,7 @@
             const time = document.getElementById('manual-time').value;
             const price = document.getElementById('manual-price').value;
             const notes = document.getElementById('manual-notes').value;
-            
+
             // الحقول الجديدة
             const clientType = document.getElementById('manual-client-type').value;
             const carType = document.getElementById('manual-car-type').value;
@@ -749,14 +804,14 @@
                 // 5. نجاح
                 alert("✅ تم تسجيل الحجز بنجاح");
                 document.getElementById('manual-trip-modal').style.display = 'none';
-                
+
                 // تفريغ الحقول الأساسية
                 document.getElementById('manual-name').value = '';
                 document.getElementById('manual-phone').value = '';
                 document.getElementById('manual-pickup').value = '';
                 document.getElementById('manual-dropoff').value = '';
                 document.getElementById('manual-price').value = '';
-                
+
                 loadOperations();
                 loadDashboard();
 
@@ -767,4 +822,5 @@
         }
     </script>
 </body>
+
 </html>
