@@ -244,7 +244,7 @@
 
         <div id="page-finance" class="page-section hidden">
             <h2 class="text-2xl font-bold mb-6">المالية</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" id="vaults-grid"></div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" id="vaults-grid"></div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div class="glass-panel p-6">
@@ -647,17 +647,38 @@
             const price = Number(document.getElementById('comp-price').value);
             const wage = Number(document.getElementById('comp-wage').value);
             const fuel = Number(document.getElementById('comp-fuel').value);
-            const netToVault = price - wage - fuel;
+            const netProfit = price - wage - fuel;
             if (!confirm('تأكيد الإنهاء؟')) return;
             await sbClient.from('trips').update({ status: 'completed', final_price: price, driver_wage: wage }).eq('id', tripId);
-            const vid = await getMainVaultId();
-            const { data: v } = await sbClient.from('vaults').select('balance').eq('id', vid).single();
-            await sbClient.from('vaults').update({ balance: (v.balance || 0) + netToVault }).eq('id', vid);
             const { data: trip } = await sbClient.from('trips').select('driver_id, car_id').eq('id', tripId).single();
-            if (wage > 0 && trip.driver_id) await sbClient.from('expenses').insert([{ title: `يومية #${tripId.slice(0, 4)}`, amount: wage, category: 'رواتب', related_trip_id: tripId, related_driver_id: trip.driver_id, related_vault_id: vid }]);
-            if (fuel > 0 && trip.car_id) await sbClient.from('expenses').insert([{ title: `بنزين #${tripId.slice(0, 4)}`, amount: fuel, category: 'تشغيل', related_trip_id: tripId, related_car_id: trip.car_id, related_vault_id: vid }]);
+            const tripLabel = String(tripId).slice(0, 6);
+
+            // 1. يومية الكابتن → خزنة السواقين
+            if (wage > 0) {
+                const driversVaultId = await getVaultIdByName('خزنة السواقين');
+                if (driversVaultId) {
+                    const { data: dv } = await sbClient.from('vaults').select('balance').eq('id', driversVaultId).single();
+                    await sbClient.from('vaults').update({ balance: (dv.balance || 0) + wage }).eq('id', driversVaultId);
+                }
+                if (trip.driver_id) await sbClient.from('expenses').insert([{ title: `يومية #${tripLabel}`, amount: wage, category: 'رواتب', related_trip_id: tripId, related_driver_id: trip.driver_id, related_vault_id: driversVaultId }]);
+            }
+
+            // 2. بنزين/كروت → مصروف (يسجل بس)
+            if (fuel > 0 && trip.car_id) {
+                await sbClient.from('expenses').insert([{ title: `بنزين #${tripLabel}`, amount: fuel, category: 'تشغيل', related_trip_id: tripId, related_car_id: trip.car_id }]);
+            }
+
+            // 3. صافي الربح → خزنة رواتب السيارات
+            if (netProfit > 0) {
+                const carsVaultId = await getVaultIdByName('خزنة رواتب السيارات');
+                if (carsVaultId) {
+                    const { data: cv } = await sbClient.from('vaults').select('balance').eq('id', carsVaultId).single();
+                    await sbClient.from('vaults').update({ balance: (cv.balance || 0) + netProfit }).eq('id', carsVaultId);
+                }
+            }
+
             document.getElementById('complete-modal').style.display = 'none';
-            loadOperations(); loadDashboard();
+            loadOperations(); loadDashboard(); loadFinance();
         }
 
         async function loadFinance() {
@@ -665,11 +686,25 @@
             const grid = document.getElementById('vaults-grid');
             const select = document.getElementById('gen-exp-vault');
             const modalSelect = document.getElementById('exp-modal-vault');
-            grid.innerHTML = ''; select.innerHTML = '<option value="main">الخزينة الرئيسية</option>'; modalSelect.innerHTML = '<option value="main">الخزينة الرئيسية</option>';
+            grid.innerHTML = ''; select.innerHTML = ''; modalSelect.innerHTML = '';
             if (vaults) {
-                vaults.forEach(v => {
-                    grid.innerHTML += `<div class="glass-panel p-5 border-l-4 border-amber-500"><p class="text-xs font-bold text-slate-400 uppercase">${v.name}</p><h3 class="text-2xl font-black mt-1">${v.balance} <span class="text-sm font-normal">EGP</span></h3></div>`;
-                    if (v.name !== 'الخزينة الرئيسية') { select.innerHTML += `<option value="${v.id}">${v.name}</option>`; modalSelect.innerHTML += `<option value="${v.id}">${v.name}</option>`; }
+                // حساب الخزينة الرئيسية = مجموع كل الخزائن الفرعية
+                const subVaults = vaults.filter(v => v.name !== 'الخزينة الرئيسية');
+                const mainTotal = subVaults.reduce((sum, v) => sum + (Number(v.balance) || 0), 0);
+                // تحديث رصيد الخزينة الرئيسية في الداتابيز
+                const mainVault = vaults.find(v => v.name === 'الخزينة الرئيسية');
+                if (mainVault && mainVault.balance !== mainTotal) {
+                    await sbClient.from('vaults').update({ balance: mainTotal }).eq('id', mainVault.id);
+                }
+                // عرض الخزينة الرئيسية أولاً بلون مميز
+                grid.innerHTML += `<div class="glass-panel p-5 border-l-4 border-green-500 bg-green-50"><p class="text-xs font-bold text-green-700 uppercase"><i class="fas fa-university ml-1"></i> الخزينة الرئيسية (إجمالي)</p><h3 class="text-3xl font-black mt-1 text-green-800">${mainTotal} <span class="text-sm font-normal">EGP</span></h3></div>`;
+                // عرض الخزائن الفرعية
+                const vaultColors = { 'خزنة السواقين': 'blue', 'خزنة رواتب السيارات': 'amber', 'خزنة الصيانة': 'red' };
+                subVaults.forEach(v => {
+                    const color = vaultColors[v.name] || 'slate';
+                    grid.innerHTML += `<div class="glass-panel p-5 border-l-4 border-${color}-500"><p class="text-xs font-bold text-slate-500 uppercase">${v.name}</p><h3 class="text-2xl font-black mt-1">${v.balance} <span class="text-sm font-normal">EGP</span></h3></div>`;
+                    select.innerHTML += `<option value="${v.id}">${v.name}</option>`;
+                    modalSelect.innerHTML += `<option value="${v.id}">${v.name}</option>`;
                 });
             }
             const { data: reqs } = await sbClient.from('transactions').select('*').eq('status', 'pending');
@@ -712,6 +747,7 @@
         }
 
         async function getMainVaultId() { const { data } = await sbClient.from('vaults').select('id').eq('name', 'الخزينة الرئيسية').single(); return data?.id; }
+        async function getVaultIdByName(name) { const { data } = await sbClient.from('vaults').select('id').eq('name', name).single(); return data?.id; }
 
         async function loadFleetList() {
             const { data: cars } = await sbClient.from('cars').select('*');
