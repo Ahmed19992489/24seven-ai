@@ -827,11 +827,67 @@
             const view = document.getElementById('ledger-view'); view.innerHTML = 'جاري التحميل...';
             let income = 0; let outcome = 0; let movements = [];
             const { data: exps } = await sbClient.from('expenses').select('*').eq(type === 'car' ? 'related_car_id' : 'related_driver_id', id);
-            if (exps) exps.forEach(e => { if (type === 'driver' && e.category === 'يومية') { income += e.amount; movements.push({ date: e.created_at, title: e.title, amount: e.amount, type: 'in' }); } else { outcome += e.amount; movements.push({ date: e.created_at, title: e.title, amount: -e.amount, type: 'out' }); } });
-            if (type === 'car') { const { data: trips } = await sbClient.from('trips').select('*').eq('car_id', id).eq('status', 'completed'); if (trips) trips.forEach(t => { income += t.final_price; movements.push({ date: t.created_at, title: `إيراد`, amount: t.final_price, type: 'in' }); }); }
+
+            if (type === 'driver') {
+                // إيراد السواق = يوميات الرحلات (category = رواتب)
+                if (exps) exps.forEach(e => {
+                    if (e.category === 'رواتب') {
+                        income += Number(e.amount);
+                        movements.push({ date: e.created_at, title: e.title, amount: Number(e.amount), type: 'in' });
+                    } else {
+                        outcome += Number(e.amount);
+                        movements.push({ date: e.created_at, title: e.title, amount: -Number(e.amount), type: 'out' });
+                    }
+                });
+            } else {
+                // سيارة
+                if (exps) exps.forEach(e => { outcome += Number(e.amount); movements.push({ date: e.created_at, title: e.title, amount: -Number(e.amount), type: 'out' }); });
+                const { data: trips } = await sbClient.from('trips').select('*').eq('car_id', id).eq('status', 'completed');
+                if (trips) trips.forEach(t => { income += Number(t.final_price); movements.push({ date: t.created_at, title: 'إيراد', amount: Number(t.final_price), type: 'in' }); });
+            }
+
             movements.sort((a, b) => new Date(b.date) - new Date(a.date));
-            let extraBtn = type === 'car' ? `<button onclick="payCarSalary('${id}', ${salary})" class="w-full bg-purple-600 text-white py-2 rounded mt-4">سداد راتب (${salary})</button>` : '';
-            view.innerHTML = `<h3 class="font-bold text-xl mb-4 border-b pb-2">${name}</h3><div class="grid grid-cols-3 gap-2 mb-4 text-center text-xs"><div class="bg-green-50 p-2 rounded"><p>إيراد</p><p class="font-bold text-green-700">${income}</p></div><div class="bg-red-50 p-2 rounded"><p>مصروف</p><p class="font-bold text-red-700">${outcome}</p></div><div class="bg-slate-100 p-2 rounded"><p>صافي</p><p class="font-bold">${income - outcome}</p></div></div><button onclick="openExpenseModal('${type}', '${id}')" class="w-full bg-red-600 text-white py-2 rounded mb-2">تسجيل حركة</button>${extraBtn}<div class="mt-4 space-y-2 max-h-60 overflow-y-auto">${movements.map(m => `<div class="flex justify-between text-xs border-b pb-1"><span>${m.title}</span><span class="${m.type === 'in' ? 'text-green-600' : 'text-red-600'}">${m.amount}</span></div>`).join('')}</div>`;
+            const net = income - outcome;
+
+            let extraBtns = '';
+            if (type === 'car') {
+                extraBtns = `<button onclick="payCarSalary('${id}', ${salary})" class="w-full bg-purple-600 text-white py-2 rounded mt-3 font-bold">سداد قسط (${salary})</button>`;
+            } else {
+                // أزرار السواق: خصم/سلف + تسوية
+                extraBtns = `
+                    <div class="bg-blue-50 p-3 rounded-lg border border-blue-200 mt-3 space-y-2">
+                        <p class="font-bold text-blue-800 text-sm">📝 تسجيل خصم / سلفة</p>
+                        <select id="drv-deduct-type" class="input-std text-xs">
+                            <option value="خصم">خصم</option>
+                            <option value="سلفة">سلفة</option>
+                            <option value="غرامة">غرامة</option>
+                        </select>
+                        <input type="text" id="drv-deduct-reason" placeholder="السبب" class="input-std text-xs">
+                        <input type="number" id="drv-deduct-amount" placeholder="المبلغ" class="input-std text-xs">
+                        <button onclick="addDriverDeduction('${id}', '${name}')" class="w-full bg-red-600 text-white py-1.5 rounded text-xs font-bold">تسجيل</button>
+                    </div>
+                    <button onclick="settleDriver('${id}', '${name}', ${net})" class="w-full bg-green-600 text-white py-2 rounded mt-3 font-bold">💰 تسوية / قبض (المستحق: ${net} EGP)</button>
+                `;
+            }
+
+            view.innerHTML = `<h3 class="font-bold text-xl mb-4 border-b pb-2">${name}</h3>
+                <div class="grid grid-cols-3 gap-2 mb-4 text-center text-xs">
+                    <div class="bg-green-50 p-2 rounded"><p>مستحق (يوميات)</p><p class="font-bold text-green-700">${income}</p></div>
+                    <div class="bg-red-50 p-2 rounded"><p>خصومات/سلف</p><p class="font-bold text-red-700">${outcome}</p></div>
+                    <div class="bg-slate-100 p-2 rounded"><p>صافي مستحق</p><p class="font-bold ${net >= 0 ? 'text-green-700' : 'text-red-600'}">${net}</p></div>
+                </div>
+                <button onclick="openExpenseModal('${type}', '${id}')" class="w-full bg-red-600 text-white py-2 rounded mb-2 text-sm">تسجيل حركة يدوية</button>
+                ${extraBtns}
+                <div class="mt-4 space-y-1 max-h-48 overflow-y-auto">
+                    <p class="font-bold text-xs text-slate-500 mb-2">📋 سجل الحركات:</p>
+                    ${movements.map(m => `<div class="flex justify-between text-xs border-b pb-1 py-1">
+                        <span class="text-slate-600">${m.title}</span>
+                        <div class="flex gap-3">
+                            <span class="${m.type === 'in' ? 'text-green-600' : 'text-red-600'} font-bold">${m.amount}</span>
+                            <span class="text-slate-400 text-[10px]">${new Date(m.date).toLocaleDateString('ar-EG')}</span>
+                        </div>
+                    </div>`).join('')}
+                </div>`;
         }
 
         async function payCarSalary(carId, amount) {
@@ -842,6 +898,33 @@
             const { data: v } = await sbClient.from('vaults').select('balance').eq('id', vid).single();
             await sbClient.from('vaults').update({ balance: (v.balance || 0) - amount }).eq('id', vid);
             alert("تم السداد ✅ تم الخصم من خزنة رواتب السيارات"); loadFinance(); openLedger('car', carId, '...');
+        }
+
+        async function addDriverDeduction(driverId, driverName) {
+            const deductType = document.getElementById('drv-deduct-type').value;
+            const reason = document.getElementById('drv-deduct-reason').value;
+            const amount = Number(document.getElementById('drv-deduct-amount').value);
+            if (!reason || !amount || amount <= 0) return alert('أدخل السبب والمبلغ');
+            await sbClient.from('expenses').insert([{ title: `${deductType}: ${reason}`, amount, category: deductType, related_driver_id: driverId }]);
+            alert(`تم تسجيل ${deductType} بمبلغ ${amount} EGP`);
+            openLedger('driver', driverId, driverName);
+        }
+
+        async function settleDriver(driverId, driverName, netAmount) {
+            if (netAmount <= 0) return alert('لا يوجد مبلغ مستحق للقبض');
+            const payAmount = prompt(`المستحق: ${netAmount} EGP\nأدخل المبلغ المراد قبضه:`, netAmount);
+            if (!payAmount || Number(payAmount) <= 0) return;
+            const pay = Number(payAmount);
+            if (!confirm(`تأكيد قبض ${pay} EGP للكابتن ${driverName}؟`)) return;
+            // خصم من خزنة السواقين
+            const vid = await getVaultIdByName('خزنة السواقين');
+            if (!vid) { alert('خزنة السواقين غير موجودة'); return; }
+            const { data: v } = await sbClient.from('vaults').select('balance').eq('id', vid).single();
+            await sbClient.from('vaults').update({ balance: (v.balance || 0) - pay }).eq('id', vid);
+            // تسجيل التسوية كمصروف على السواق
+            await sbClient.from('expenses').insert([{ title: `تسوية / قبض ${new Date().toLocaleDateString('ar-EG')}`, amount: pay, category: 'تسوية', related_driver_id: driverId, related_vault_id: vid }]);
+            alert(`تم قبض ${pay} EGP ✅\n${pay < netAmount ? `متبقي في حسابه: ${netAmount - pay} EGP` : 'تم التسوية بالكامل'}`);
+            loadFinance(); openLedger('driver', driverId, driverName);
         }
 
         async function openExpenseModal(type, id) { document.getElementById('expense-modal').style.display = 'flex'; document.getElementById('exp-target-type').value = type; document.getElementById('exp-target-id').value = id; }
