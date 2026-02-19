@@ -608,10 +608,10 @@
 
                 list.innerHTML += `
                     <tr class="border-b hover:bg-white text-xs">
-                        <td class="p-4">#${t.id.slice(0, 4)}</td>
+                        <td class="p-4">#${String(t.id)}</td>
                         <td class="p-4 font-bold text-slate-800">${displayName}<br><span class="text-[10px] text-slate-500">${displayPhone}</span></td>
                         <td class="p-4 min-w-[180px] whitespace-normal leading-relaxed text-slate-600">${t.admin_notes || '-'}</td>
-                        <td class="p-4 font-bold text-slate-500">${t.pickup_location.split(',')[0]} ➝ ${t.dropoff_location.split(',')[0]}</td>
+                        <td class="p-4 font-bold text-slate-500">${(t.pickup_location || '-').split(',')[0]} ➝ ${(t.dropoff_location || '-').split(',')[0]}</td>
                         <td class="p-4 font-bold">${driverName} / ${carInfo}</td>
                         <td class="p-4 font-bold text-green-700">${t.estimated_price}</td>
                         <td class="p-4"><span class="px-2 py-1 rounded text-[10px] ${statusColor}">${t.status}</span></td>
