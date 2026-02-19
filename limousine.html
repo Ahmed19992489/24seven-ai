@@ -657,6 +657,9 @@
                     }
                 });
 
+                const typeLabels = { 'one-way': 'ذهاب فقط', 'round-same': 'ذهاب وعودة (نفس اليوم)', 'round-diff': 'ذهاب وعودة (أيام مختلفة)' };
+                const carLabels = { 'sedan': 'سيدان', 'suv': 'SUV عائلية', 'van': 'فان' };
+                document.getElementById('summ-type').innerText = (typeLabels[tripData.type] || '--') + ' | ' + (carLabels[tripData.car] || tripData.car);
                 document.getElementById('summ-dist').innerText = distKm + " km";
                 document.getElementById('summ-price').innerText = tripData.price + " EGP";
                 document.getElementById('details-modal').style.display = 'flex';
