@@ -546,6 +546,62 @@
         </div>
     </div>
 
+    <!-- فيدباك Modal -->
+    <div id="feedback-modal" class="fixed inset-0 bg-black/70 z-[200] flex items-center justify-center p-4"
+        style="display:none">
+        <div
+            class="bg-slate-800 rounded-2xl w-full max-w-md p-6 border border-slate-700 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <div class="text-center mb-4">
+                <div class="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i class="fas fa-check-circle text-4xl text-green-400"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white">تمت الرحلة بنجاح!</h3>
+                <p class="text-slate-400 text-sm mt-1">قيّم تجربتك علشان نحسنها لك</p>
+            </div>
+            <input type="hidden" id="feedback-trip-id">
+
+            <!-- تقييم الكابتن -->
+            <div class="mb-4">
+                <label class="text-sm font-bold text-white block mb-2">⭐ تقييم الكابتن</label>
+                <div class="flex gap-2 justify-center" id="stars-driver"></div>
+            </div>
+            <!-- تقييم السيارة -->
+            <div class="mb-4">
+                <label class="text-sm font-bold text-white block mb-2">🚗 تقييم السيارة</label>
+                <div class="flex gap-2 justify-center" id="stars-car"></div>
+            </div>
+            <!-- تقييم خدمة العملاء -->
+            <div class="mb-4">
+                <label class="text-sm font-bold text-white block mb-2">🛡️ تقييم خدمة العملاء</label>
+                <div class="flex gap-2 justify-center" id="stars-service"></div>
+            </div>
+            <!-- هل ترشحنا؟ -->
+            <div class="mb-4">
+                <label class="text-sm font-bold text-white block mb-2">👍 هل ترشحنا لغيرك؟</label>
+                <div class="flex gap-3 justify-center">
+                    <button onclick="setRecommend(true)" id="btn-rec-yes"
+                        class="px-6 py-2 rounded-xl text-sm font-bold border border-green-500/40 text-green-400 bg-green-500/10 hover:bg-green-500 hover:text-white transition">أكيد
+                        طبعاً ❤️</button>
+                    <button onclick="setRecommend(false)" id="btn-rec-no"
+                        class="px-6 py-2 rounded-xl text-sm font-bold border border-red-500/40 text-red-400 bg-red-500/10 hover:bg-red-500 hover:text-white transition">لا
+                        😔</button>
+                </div>
+            </div>
+            <!-- ملاحظات -->
+            <div class="mb-4">
+                <label class="text-sm font-bold text-white block mb-2">📝 ملاحظات للتحسين</label>
+                <textarea id="feedback-notes" rows="3" placeholder="اكتب ملاحظاتك هنا (اختياري)..."
+                    class="input-field text-sm" style="resize:none"></textarea>
+            </div>
+            <button onclick="submitFeedback()"
+                class="w-full bg-amber-500 text-slate-900 font-bold py-3 rounded-xl text-sm hover:bg-amber-400 transition">
+                <i class="fas fa-paper-plane ml-2"></i>إرسال التقييم
+            </button>
+            <button onclick="closeFeedback()"
+                class="w-full text-slate-400 text-xs mt-3 hover:text-white transition">تخطي</button>
+        </div>
+    </div>
+
     <nav class="bottom-nav" id="main-bottom-nav">
         <div onclick="switchTab('booking')" class="nav-item active" id="nav-booking"><i
                 class="fas fa-car"></i><span>حجز</span></div>
@@ -1119,6 +1175,106 @@
             if (clientChatSubscription) sb.removeChannel(clientChatSubscription);
             switchTab('messages');
         }
+
+        // ==========================================
+        // نظام التقييم / الفيدباك
+        // ==========================================
+        let feedbackRatings = { driver: 0, car: 0, service: 0 };
+        let feedbackRecommend = null;
+
+        function buildStars(containerId, category) {
+            const c = document.getElementById(containerId);
+            c.innerHTML = '';
+            for (let i = 1; i <= 5; i++) {
+                const star = document.createElement('button');
+                star.className = 'text-2xl transition hover:scale-125';
+                star.innerHTML = i <= feedbackRatings[category] ? '⭐' : '☆';
+                star.style.color = i <= feedbackRatings[category] ? '#f59e0b' : '#475569';
+                star.onclick = () => {
+                    feedbackRatings[category] = i;
+                    buildStars(containerId, category);
+                };
+                c.appendChild(star);
+            }
+        }
+
+        function initFeedbackStars() {
+            feedbackRatings = { driver: 0, car: 0, service: 0 };
+            feedbackRecommend = null;
+            document.getElementById('feedback-notes').value = '';
+            document.getElementById('btn-rec-yes').classList.remove('bg-green-500', 'text-white');
+            document.getElementById('btn-rec-no').classList.remove('bg-red-500', 'text-white');
+            buildStars('stars-driver', 'driver');
+            buildStars('stars-car', 'car');
+            buildStars('stars-service', 'service');
+        }
+
+        function setRecommend(val) {
+            feedbackRecommend = val;
+            const yesBtn = document.getElementById('btn-rec-yes');
+            const noBtn = document.getElementById('btn-rec-no');
+            yesBtn.classList.toggle('bg-green-500', val);
+            yesBtn.classList.toggle('text-white', val);
+            noBtn.classList.toggle('bg-red-500', !val);
+            noBtn.classList.toggle('text-white', !val);
+        }
+
+        function showFeedbackModal(tripId) {
+            document.getElementById('feedback-trip-id').value = tripId;
+            initFeedbackStars();
+            document.getElementById('feedback-modal').style.display = 'flex';
+        }
+
+        function closeFeedback() {
+            document.getElementById('feedback-modal').style.display = 'none';
+        }
+
+        async function submitFeedback() {
+            const tripId = document.getElementById('feedback-trip-id').value;
+            if (!tripId) return;
+            if (feedbackRatings.driver === 0) return alert('من فضلك قيّم الكابتن');
+
+            const { error } = await sb.from('trip_ratings').insert([{
+                trip_id: tripId,
+                user_id: user.id,
+                driver_rating: feedbackRatings.driver,
+                car_rating: feedbackRatings.car,
+                service_rating: feedbackRatings.service,
+                would_recommend: feedbackRecommend,
+                feedback_notes: document.getElementById('feedback-notes').value.trim() || null
+            }]);
+
+            if (error) {
+                console.error(error);
+                alert('حدث خطأ أثناء إرسال التقييم');
+                return;
+            }
+            closeFeedback();
+            alert('شكراً لتقييمك! ❤️');
+        }
+
+        // مراقبة تغيير حالة الرحلة لعرض الفيدباك
+        function setupTripStatusListener() {
+            if (!user) return;
+            sb.channel('trip-status-' + user.id)
+                .on('postgres_changes', {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'trips',
+                    filter: 'user_id=eq.' + user.id
+                }, (payload) => {
+                    if (payload.new.status === 'completed' && payload.old.status !== 'completed') {
+                        showFeedbackModal(payload.new.id);
+                    }
+                }).subscribe();
+        }
+        // تشغيل المراقبة بعد تسجيل الدخول
+        const origOnAuth = sb.auth.onAuthStateChange;
+        sb.auth.onAuthStateChange((event, session) => {
+            if (session?.user) setTimeout(setupTripStatusListener, 1000);
+        });
+        // لو اليوزر موجود خلاص
+        if (user) setupTripStatusListener();
     </script>
 </body>
 

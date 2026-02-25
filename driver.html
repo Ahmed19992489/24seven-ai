@@ -412,8 +412,12 @@
                         <div class="flex gap-2">
                             <a href="tel:${clientPhone}" class="w-8 h-8 bg-green-600/20 border border-green-500/30 rounded-full flex items-center justify-center text-green-400"><i class="fas fa-phone text-xs"></i></a>
                             <button onclick="openDriverChat('${t.id}', '${clientName}')" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold"><i class="fas fa-comment ml-1"></i>دردشة</button>
-                        </div>` : ''}
+                        </div>
                     </div>
+                    <div class="flex gap-2 mt-3 pt-3 border-t border-slate-700">
+                        <button onclick="notifyArrived('${t.id}')" class="flex-1 bg-green-600/20 border border-green-500/40 text-green-400 py-2 rounded-xl text-xs font-bold hover:bg-green-600 hover:text-white transition"><i class="fas fa-location-dot ml-1"></i>وصلت للعميل</button>
+                        <button onclick="endTrip('${t.id}')" class="flex-1 bg-red-600/20 border border-red-500/40 text-red-400 py-2 rounded-xl text-xs font-bold hover:bg-red-600 hover:text-white transition"><i class="fas fa-flag-checkered ml-1"></i>إنهاء الرحلة</button>
+                    </div>` : ''}
                 </div>`;
             }).join('');
         }
@@ -603,6 +607,43 @@
                     if (!document.getElementById('page-chats').classList.contains('hidden')) loadDriverChats();
                 })
                 .subscribe();
+        }
+
+        // ==========================================
+        // وصلت للعميل
+        // ==========================================
+        async function notifyArrived(tripId) {
+            if (!confirm('هل وصلت فعلاً لموقع العميل؟')) return;
+            // إرسال رسالة نظام في الدردشة
+            await sb.from('chat_messages').insert([{
+                trip_id: tripId,
+                sender_role: 'driver',
+                sender_id: currentDriver.id,
+                sender_name: currentDriver.name,
+                message: '🚗 الكابتن وصل لموقعك! من فضلك انزل، الكابتن في الانتظار.',
+                message_type: 'system'
+            }]);
+            alert('✅ تم إبلاغ العميل بوصولك');
+        }
+
+        // ==========================================
+        // إنهاء الرحلة
+        // ==========================================
+        async function endTrip(tripId) {
+            if (!confirm('هل تريد إنهاء هذه الرحلة؟')) return;
+            // تحديث حالة الرحلة
+            await sb.from('trips').update({ status: 'completed' }).eq('id', tripId);
+            // إرسال رسالة نظام
+            await sb.from('chat_messages').insert([{
+                trip_id: tripId,
+                sender_role: 'driver',
+                sender_id: currentDriver.id,
+                sender_name: currentDriver.name,
+                message: '✅ تم إنهاء الرحلة بنجاح. شكراً لاستخدامك 24Seven!',
+                message_type: 'system'
+            }]);
+            alert('✅ تم إنهاء الرحلة');
+            loadDriverTrips();
         }
     </script>
 </body>
