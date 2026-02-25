@@ -647,9 +647,11 @@
         async function sendTripEmail(tripId, notifTitle, notifMessage) {
             try {
                 const { data: trip } = await sb.from('trips').select('*, drivers:drivers!fk_trips_driver(*), cars:cars!fk_trips_car(*)').eq('id', tripId).single();
-                if (!trip) return;
+                if (!trip) { console.log('❌ لم يتم العثور على الرحلة'); return; }
 
                 let clientEmail = '', clientName = 'عزيزنا العميل';
+
+                // 1. جلب من profiles
                 if (trip.user_id) {
                     const { data: profile } = await sb.from('profiles').select('full_name, phone, email').eq('id', trip.user_id).single();
                     if (profile) {
@@ -657,16 +659,31 @@
                         if (profile.email) clientEmail = profile.email;
                     }
                 }
-                if (trip.manual_client_name) clientName = trip.manual_client_name;
-                if (trip.client_email) clientEmail = trip.client_email;
-                if (!clientEmail) { console.log('لا يوجد إيميل للعميل'); return; }
 
-                const notes = trip.admin_notes || '';
+                // 2. جلب من client_email في الرحلة
+                if (!clientEmail && trip.client_email) clientEmail = trip.client_email;
+                if (trip.manual_client_name) clientName = trip.manual_client_name;
+
+                // 3. جلب من admin_notes (لو فيه إيميل)
+                if (!clientEmail) {
+                    const notes = trip.admin_notes || '';
+                    const emailMatch = notes.match(/[\w.-]+@[\w.-]+\.\w+/);
+                    if (emailMatch) clientEmail = emailMatch[0];
+                }
+
+                if (!clientEmail) {
+                    console.log('⚠️ لا يوجد إيميل للعميل - لم يتم إرسال الإيميل');
+                    return;
+                }
+
+                console.log('📧 جاري إرسال إيميل لـ:', clientEmail);
+
+                const tripNotes = trip.admin_notes || '';
                 let tripDate = '', tripTime = '';
-                const dateMatch = notes.match(/📅\s*(.*?)\s*-\s*(.*?)[\n|$]/);
+                const dateMatch = tripNotes.match(/📅\s*(.*?)\s*-\s*(.*?)[\n|$]/);
                 if (dateMatch) { tripDate = dateMatch[1].trim(); tripTime = dateMatch[2].trim(); }
 
-                await emailjs.send('service_kq139v5', 'template_9q7kxsc', {
+                const result = await emailjs.send('service_kq139v5', 'template_9q7kxsc', {
                     to_email: clientEmail,
                     client_name: clientName,
                     notification_title: notifTitle,
@@ -680,9 +697,9 @@
                     car_model: trip.cars?.model || '--',
                     plate_number: trip.cars?.plate_number || '--'
                 });
-                console.log('✅ تم إرسال الإيميل بنجاح');
+                console.log('✅ تم إرسال الإيميل بنجاح:', result);
             } catch (err) {
-                console.log('خطأ في إرسال الإيميل:', err);
+                console.error('❌ خطأ في إرسال الإيميل:', err);
             }
         }
 
