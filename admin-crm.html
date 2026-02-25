@@ -951,7 +951,32 @@
         async function deletePricingTier(id) { if (!confirm('هل تريد حذف هذه الشريحة؟')) return; const { error } = await sbClient.from('pricing_tiers').delete().eq('id', id); if (error) { alert('خطأ: ' + error.message); return; } alert('🗑️ تم الحذف'); loadPricing(); }
         async function addPricingTier() { const type = document.getElementById('rule-type').value, min = document.getElementById('rule-min').value, max = document.getElementById('rule-max').value, base = document.getElementById('rule-base').value, km = document.getElementById('rule-km').value; if (!min || !max || !base || !km) { alert('أكمل البيانات'); return; } const { error } = await sbClient.from('pricing_tiers').insert([{ car_type: type, min_km: min, max_km: max, base_price: base, price_per_km: km }]); if (error) { alert('خطأ: ' + error.message); return; } alert('✅ تم الحفظ'); loadPricing(); }
         async function openAssignModal(id) { document.getElementById('modal-trip-id').value = id; document.getElementById('assign-modal').style.display = 'flex'; const { data: d } = await sbClient.from('drivers').select('*'); const { data: c } = await sbClient.from('cars').select('*'); const dSel = document.getElementById('modal-driver'); dSel.innerHTML = ''; d.forEach(x => dSel.innerHTML += `<option value="${x.id}">${x.name}</option>`); const cSel = document.getElementById('modal-car'); cSel.innerHTML = ''; c.forEach(x => cSel.innerHTML += `<option value="${x.id}">${x.brand}</option>`); }
-        async function confirmAssign() { const tid = document.getElementById('modal-trip-id').value, did = document.getElementById('modal-driver').value, cid = document.getElementById('modal-car').value, note = document.getElementById('modal-note').value; await sbClient.from('trips').update({ driver_id: did, car_id: cid, admin_notes: note, status: 'driver_assigned' }).eq('id', tid); document.getElementById('assign-modal').style.display = 'none'; loadOperations(); }
+        async function confirmAssign() {
+            const tid = document.getElementById('modal-trip-id').value;
+            const did = document.getElementById('modal-driver').value;
+            const cid = document.getElementById('modal-car').value;
+            const note = document.getElementById('modal-note').value;
+
+            // جلب الملاحظات الحالية أولاً حتى لا نفقد بيانات الرحلة
+            const { data: existingTrip } = await sbClient.from('trips').select('admin_notes').eq('id', tid).single();
+            const existingNotes = existingTrip?.admin_notes || '';
+
+            // دمج الملاحظات القديمة مع الجديدة
+            let updatedNotes = existingNotes;
+            if (note && note.trim()) {
+                updatedNotes = existingNotes ? existingNotes + '\n--- ملاحظات التعيين ---\n' + note : note;
+            }
+
+            await sbClient.from('trips').update({
+                driver_id: did,
+                car_id: cid,
+                admin_notes: updatedNotes,
+                status: 'driver_assigned'
+            }).eq('id', tid);
+
+            document.getElementById('assign-modal').style.display = 'none';
+            loadOperations();
+        }
         async function addCarPrompt() { const b = prompt("الماركة:"); const p = prompt("اللوحة:"); const s = prompt("الراتب:"); if (b) { await sbClient.from('cars').insert([{ brand: b, plate_number: p, monthly_salary: s || 0 }]); loadFleetList(); } }
         async function addDriverPrompt() { const n = prompt("الاسم:"); const p = prompt("هاتف:"); if (n) { await sbClient.from('drivers').insert([{ name: n, phone: p }]); loadFleetList(); } }
 
