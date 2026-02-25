@@ -1383,6 +1383,8 @@
             }
             closeFeedback();
             alert('شكراً لتقييمك! ❤️');
+            // إرسال إيميل شكر بعد التقييم
+            sendClientEmail(tripId, '❤️ شكراً لتقييمك!', 'شكراً لوقتك في تقييم رحلتك معنا! رأيك يساعدنا نقدّم خدمة أفضل. يسعدنا خدمتك دائماً - احجز رحلتك القادمة الآن!');
         }
 
         // مراقبة تغيير حالة الرحلة لعرض الفيدباك
@@ -1528,13 +1530,16 @@
                     table: 'chat_messages'
                 }, async (payload) => {
                     const msg = payload.new;
-                    // فقط الرسائل النظامية
-                    if (msg.message_type === 'system') {
-                        // التأكد أن الرسالة مرتبطة برحلة العميل
+                    // التأكد أن الرسالة مرتبطة برحلة العميل
+                    if (msg.message_type === 'system' || msg.message_type === 'trip_end') {
                         const { data: trip } = await sb.from('trips').select('user_id').eq('id', msg.trip_id).single();
                         if (trip && trip.user_id === user?.id) {
                             addNotification(msg.message);
                             showNotifBanner(msg.message);
+                            // لو الكابتن أنهى الرحلة → نفتح التقييم
+                            if (msg.message_type === 'trip_end') {
+                                showFeedbackModal(msg.trip_id);
+                            }
                         }
                     }
                 }).subscribe();

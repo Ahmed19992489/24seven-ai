@@ -725,17 +725,18 @@
         // ==========================================
         async function endTrip(tripId) {
             if (!confirm('هل تريد إنهاء هذه الرحلة؟')) return;
-            await sb.from('trips').update({ status: 'completed' }).eq('id', tripId);
+            // لا نغير الحالة لـ completed - الأدمن هو اللي يكمل الرحلة مالياً
+            // نبعت رسالة خاصة تفتح التقييم عند العميل
             await sb.from('chat_messages').insert([{
                 trip_id: tripId,
                 sender_role: 'driver',
                 sender_id: currentDriver.id,
                 sender_name: currentDriver.name,
-                message: '✅ تم إنهاء الرحلة بنجاح. شكراً لاستخدامك 24Seven!',
-                message_type: 'system'
+                message: '✅ تم إنهاء الرحلة بنجاح. شكراً لاستخدامك 24Seven! نسعد بتقييمك.',
+                message_type: 'trip_end'
             }]);
             sendTripEmail(tripId, '✅ رحلتك اكتملت', 'نتمنى أنك استمتعت برحلتك معنا. شكراً لاستخدامك 24Seven! نسعد بتقييمك.');
-            alert('✅ تم إنهاء الرحلة (دردشة + إيميل)');
+            alert('✅ تم إنهاء الرحلة وطلب التقييم من العميل');
             loadDriverTrips();
         }
     </script>
