@@ -1425,7 +1425,7 @@
                 const dateMatch = notes.match(/📅\s*(.*?)\s*-\s*(.*?)[\n|$]/);
                 if (dateMatch) { tripDate = dateMatch[1].trim(); tripTime = dateMatch[2].trim(); }
 
-                await emailjs.send('24seven', 'trip_notification', {
+                await emailjs.send('24seven', 'template_9q7kxsc', {
                     to_email: clientEmail,
                     client_name: clientName,
                     notification_title: notifTitle,
