@@ -1045,7 +1045,7 @@
 
                 if (t.status === 'approved') { statusClass = 'status-approved'; statusText = 'مقبولة'; statusColor = 'text-green-500'; }
                 if (t.status === 'driver_assigned') { statusClass = 'status-driver_assigned'; statusText = 'الكابتن في الطريق'; statusColor = 'text-blue-500'; }
-                if (t.status === 'completed') { statusClass = 'status-completed'; statusText = 'مكتملة'; statusColor = 'text-slate-400'; }
+                if (t.status === 'completed' || t.status === 'trip_ended') { statusClass = 'status-completed'; statusText = 'مكتملة'; statusColor = 'text-slate-400'; }
 
                 let driverHtml = '';
                 if (t.drivers && t.drivers.name) {
@@ -1397,9 +1397,11 @@
                     table: 'trips',
                     filter: 'user_id=eq.' + user.id
                 }, (payload) => {
-                    if (payload.new.status === 'completed' && payload.old.status !== 'completed') {
+                    if ((payload.new.status === 'completed' && payload.old.status !== 'completed') ||
+                        (payload.new.status === 'trip_ended' && payload.old.status !== 'trip_ended')) {
                         showFeedbackModal(payload.new.id);
                         addNotification('✅ رحلتك اكتملت بنجاح! شكراً لاستخدامك 24Seven');
+                        loadTrips();
                     }
                     if (payload.new.status === 'driver_assigned' && payload.old.status !== 'driver_assigned') {
                         addNotification('🚗 تم تعيين كابتن لرحلتك! يمكنك رؤية بياناته في صفحة الرحلات');

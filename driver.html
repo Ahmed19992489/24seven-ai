@@ -356,7 +356,7 @@
             const { data: trips } = await sb.from('trips')
                 .select('*, cars:cars!fk_trips_car(*)')
                 .eq('driver_id', currentDriver.id)
-                .in('status', ['driver_assigned', 'completed'])
+                .in('status', ['driver_assigned', 'completed', 'trip_ended'])
                 .order('created_at', { ascending: false });
 
             if (!trips || trips.length === 0) {
@@ -725,8 +725,8 @@
         // ==========================================
         async function endTrip(tripId) {
             if (!confirm('هل تريد إنهاء هذه الرحلة؟')) return;
-            // لا نغير الحالة لـ completed - الأدمن هو اللي يكمل الرحلة مالياً
-            // نبعت رسالة خاصة تفتح التقييم عند العميل
+            // حالة وسيطة: الكابتن أنهى الرحلة لكن الأدمن لسه ما أكملها مالياً
+            await sb.from('trips').update({ status: 'trip_ended' }).eq('id', tripId);
             await sb.from('chat_messages').insert([{
                 trip_id: tripId,
                 sender_role: 'driver',
