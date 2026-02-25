@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>24Seven | لوحة الكابتن</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Outfit:wght@700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --primary: #3b82f6;
+            --card-bg: #1e293b;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: var(--bg-dark);
+            color: #f8fafc;
+            overflow-x: hidden;
+            padding-bottom: 80px;
+        }
+
+        .font-num {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            border: 1px solid #334155;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .input-field {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 14px;
+            width: 100%;
+            color: white;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        .input-field:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1e293b;
+            border-top: 1px solid #334155;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            z-index: 50;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #64748b;
+            font-size: 0.7rem;
+            gap: 4px;
+            cursor: pointer;
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .nav-item i {
+            font-size: 1.2rem;
+            margin-bottom: 2px;
+        }
+
+        /* Chat Styles */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 180px);
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .msg-bubble {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 16px;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .msg-mine {
+            background: var(--primary);
+            color: white;
+            align-self: flex-start;
+            border-bottom-right-radius: 4px;
+        }
+
+        .msg-other {
+            background: #334155;
+            color: #e2e8f0;
+            align-self: flex-end;
+            border-bottom-left-radius: 4px;
+        }
+
+        .msg-admin {
+            background: #7c3aed30;
+            color: #c4b5fd;
+            border: 1px solid #7c3aed50;
+            align-self: center;
+            text-align: center;
+        }
+
+        .msg-system {
+            background: #f59e0b20;
+            color: #fbbf24;
+            align-self: center;
+            text-align: center;
+            font-size: 0.75rem;
+        }
+
+        .msg-location {
+            background: #059669;
+            color: white;
+        }
+
+        .chat-input-bar {
+            display: flex;
+            gap: 8px;
+            padding: 12px;
+            background: #1e293b;
+            border-top: 1px solid #334155;
+        }
+
+        .chat-input-bar input {
+            flex: 1;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 24px;
+            padding: 10px 16px;
+            color: white;
+            outline: none;
+            font-size: 0.85rem;
+        }
+
+        .chat-input-bar button {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- شاشة الدخول -->
+    <div id="login-screen"
+        class="fixed inset-0 bg-slate-900 z-[100] flex flex-col items-center justify-center p-6 text-center">
+        <div
+            class="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center font-black text-3xl text-white mb-6 shadow-xl shadow-blue-500/20">
+            <i class="fas fa-steering-wheel"></i>
+        </div>
+        <h1 class="text-3xl font-bold text-white mb-2">24Seven</h1>
+        <p class="text-slate-400 mb-8">لوحة الكابتن</p>
+        <input id="driver-phone" type="tel" placeholder="رقم تليفونك"
+            class="input-field mb-4 text-center font-num text-lg" maxlength="11">
+        <button onclick="driverLogin()"
+            class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-500 transition">
+            <i class="fas fa-sign-in-alt ml-2"></i> دخول
+        </button>
+        <p id="login-error" class="text-red-400 text-sm mt-4 hidden"></p>
+    </div>
+
+    <!-- الهيدر -->
+    <header
+        class="p-4 flex justify-between items-center bg-slate-900/90 backdrop-blur-md sticky top-0 z-40 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+            <div
+                class="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center font-black text-white text-sm">
+                24</div>
+            <h1 class="text-lg font-bold">Seven <span
+                    class="text-xs font-normal text-slate-400 block -mt-1">Captain</span></h1>
+        </div>
+        <div class="flex items-center gap-3">
+            <p id="header-driver-name" class="text-xs font-bold text-slate-300">كابتن</p>
+            <button onclick="driverLogout()"
+                class="w-8 h-8 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white transition">
+                <i class="fas fa-sign-out-alt text-xs"></i>
+            </button>
+        </div>
+    </header>
+
+    <div class="p-4 min-h-screen">
+        <!-- صفحة الرحلات -->
+        <div id="page-trips" class="page-content">
+            <h2 class="text-xl font-bold mb-4 text-white"><i class="fas fa-road text-blue-400 ml-2"></i>رحلاتي</h2>
+            <div id="driver-trips-list" class="space-y-4 pb-20"></div>
+        </div>
+
+        <!-- صفحة الدردشة - القائمة -->
+        <div id="page-chats" class="page-content hidden">
+            <h2 class="text-xl font-bold mb-4 text-white"><i class="fas fa-comments text-blue-400 ml-2"></i>المحادثات
+            </h2>
+            <div id="driver-chats-list" class="space-y-3 pb-20"></div>
+        </div>
+
+        <!-- نافذة المحادثة -->
+        <div id="page-chat-window" class="page-content hidden">
+            <div class="chat-container">
+                <div class="flex items-center gap-3 pb-3 border-b border-slate-700 mb-2">
+                    <button onclick="backToChats()"
+                        class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white">
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                    <div class="flex-1">
+                        <p id="chat-client-name" class="font-bold text-white text-sm">العميل</p>
+                        <p id="chat-trip-route" class="text-[10px] text-slate-400"></p>
+                    </div>
+                </div>
+                <div id="chat-messages" class="chat-messages"></div>
+                <div class="chat-input-bar">
+                    <input type="text" id="chat-input" placeholder="اكتب رسالتك..."
+                        onkeypress="if(event.key==='Enter')sendDriverMessage()">
+                    <button onclick="sendDriverMessage()" class="bg-blue-600 text-white"><i
+                            class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- شريط التنقل -->
+    <nav class="bottom-nav" id="main-nav">
+        <div onclick="switchDriverTab('trips')" class="nav-item active" id="nav-trips">
+            <i class="fas fa-road"></i><span>رحلاتي</span>
+        </div>
+        <div onclick="switchDriverTab('chats')" class="nav-item" id="nav-chats">
+            <i class="fas fa-comments"></i><span>المحادثات</span>
+        </div>
+    </nav>
+
+    <script>
+        const sb = supabase.createClient(
+            'https://wtjwzqvmwnbvjxnmweqq.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY'
+        );
+
+        let currentDriver = null;
+        let currentChatTripId = null;
+        let chatSubscription = null;
+
+        // ==========================================
+        // تسجيل الدخول بالتليفون
+        // ==========================================
+        async function driverLogin() {
+            const phone = document.getElementById('driver-phone').value.trim();
+            if (!phone) return;
+            const errEl = document.getElementById('login-error');
+            errEl.classList.add('hidden');
+
+            const { data, error } = await sb.from('drivers').select('*').eq('phone', phone).single();
+            if (error || !data) {
+                errEl.textContent = 'رقم التليفون غير مسجل. تواصل مع الإدارة.';
+                errEl.classList.remove('hidden');
+                return;
+            }
+            currentDriver = data;
+            localStorage.setItem('driver_data', JSON.stringify(data));
+            showDriverApp();
+        }
+
+        function showDriverApp() {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('header-driver-name').textContent = 'كابتن ' + currentDriver.name;
+            loadDriverTrips();
+            setupDriverRealtime();
+        }
+
+        function driverLogout() {
+            localStorage.removeItem('driver_data');
+            currentDriver = null;
+            if (chatSubscription) sb.removeChannel(chatSubscription);
+            location.reload();
+        }
+
+        // تحقق من الجلسة المحفوظة
+        (function checkSavedSession() {
+            const saved = localStorage.getItem('driver_data');
+            if (saved) {
+                currentDriver = JSON.parse(saved);
+                showDriverApp();
+            }
+        })();
+
+        // ==========================================
+        // التنقل بين الصفحات
+        // ==========================================
+        function switchDriverTab(id) {
+            document.querySelectorAll('.page-content').forEach(e => e.classList.add('hidden'));
+            document.getElementById('page-' + id).classList.remove('hidden');
+            document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
+            document.getElementById('nav-' + id)?.classList.add('active');
+            document.getElementById('main-nav').style.display = 'flex';
+            if (id === 'trips') loadDriverTrips();
+            if (id === 'chats') loadDriverChats();
+        }
+
+        // ==========================================
+        // رحلاتي
+        // ==========================================
+        async function loadDriverTrips() {
+            const list = document.getElementById('driver-trips-list');
+            list.innerHTML = '<p class="text-center text-slate-400 py-8"><i class="fas fa-spinner fa-spin ml-2"></i>جاري التحميل...</p>';
+
+            const { data: trips } = await sb.from('trips')
+                .select('*, cars:cars!fk_trips_car(*)')
+                .eq('driver_id', currentDriver.id)
+                .in('status', ['driver_assigned', 'completed'])
+                .order('created_at', { ascending: false });
+
+            if (!trips || trips.length === 0) {
+                list.innerHTML = '<div class="text-center py-12 text-slate-500"><i class="fas fa-inbox text-4xl mb-3 block"></i><p>لا توجد رحلات حالياً</p></div>';
+                return;
+            }
+
+            // جمع user_ids للبحث عن أسماء العملاء
+            const userIds = trips.map(t => t.user_id).filter(Boolean);
+            let profilesMap = {};
+            if (userIds.length > 0) {
+                const { data: profiles } = await sb.from('profiles').select('id, full_name, phone').in('id', userIds);
+                if (profiles) profiles.forEach(p => profilesMap[p.id] = p);
+            }
+
+            list.innerHTML = trips.map(t => {
+                const profile = profilesMap[t.user_id] || {};
+                let clientName = profile.full_name || 'عميل';
+                let clientPhone = profile.phone || '';
+
+                // استخراج من admin_notes لو حجز يدوي
+                if (t.admin_notes && t.admin_notes.includes('حجز هاتفي')) {
+                    const nm = t.admin_notes.match(/العميل: (.*?)[\n(]/);
+                    const ph = t.admin_notes.match(/رقم: (.*?)\n/);
+                    if (nm) clientName = nm[1].trim();
+                    if (ph) clientPhone = ph[1].trim();
+                }
+                if (t.manual_client_name) clientName = t.manual_client_name;
+                if (t.client_phone) clientPhone = t.client_phone;
+
+                const isActive = t.status === 'driver_assigned';
+                const statusText = isActive ? 'نشطة' : 'مكتملة';
+                const statusColor = isActive ? 'text-blue-400 bg-blue-500/10 border-blue-500/30' : 'text-slate-400 bg-slate-500/10 border-slate-500/30';
+
+                return `
+                <div class="glass-card p-4">
+                    <div class="flex justify-between items-start mb-3">
+                        <span class="text-xs px-2 py-1 rounded-full border ${statusColor}">${statusText}</span>
+                        <span class="font-bold font-num text-blue-400">${t.estimated_price} EGP</span>
+                    </div>
+                    <div class="space-y-2 mb-3">
+                        <p class="text-xs text-slate-300"><i class="fas fa-circle-dot text-green-500 ml-2 text-[10px]"></i>${(t.pickup_location || '').split(',')[0]}</p>
+                        <p class="text-xs text-slate-300"><i class="fas fa-location-dot text-red-500 ml-2 text-[10px]"></i>${(t.dropoff_location || '').split(',')[0]}</p>
+                    </div>
+                    <div class="flex items-center justify-between pt-3 border-t border-slate-700">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center text-sm">👤</div>
+                            <div>
+                                <p class="text-xs font-bold text-white">${clientName}</p>
+                                <p class="text-[10px] text-slate-400 font-num">${clientPhone}</p>
+                            </div>
+                        </div>
+                        ${isActive ? `
+                        <div class="flex gap-2">
+                            <a href="tel:${clientPhone}" class="w-8 h-8 bg-green-600/20 border border-green-500/30 rounded-full flex items-center justify-center text-green-400"><i class="fas fa-phone text-xs"></i></a>
+                            <button onclick="openDriverChat('${t.id}', '${clientName}')" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold"><i class="fas fa-comment ml-1"></i>دردشة</button>
+                        </div>` : ''}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // ==========================================
+        // المحادثات
+        // ==========================================
+        async function loadDriverChats() {
+            const list = document.getElementById('driver-chats-list');
+            list.innerHTML = '<p class="text-center text-slate-400 py-8"><i class="fas fa-spinner fa-spin ml-2"></i>جاري التحميل...</p>';
+
+            const { data: trips } = await sb.from('trips')
+                .select('*, cars:cars!fk_trips_car(*)')
+                .eq('driver_id', currentDriver.id)
+                .eq('status', 'driver_assigned')
+                .order('created_at', { ascending: false });
+
+            if (!trips || trips.length === 0) {
+                list.innerHTML = '<div class="text-center py-12 text-slate-500"><i class="fas fa-comment-slash text-4xl mb-3 block"></i><p>لا توجد محادثات نشطة</p></div>';
+                return;
+            }
+
+            const userIds = trips.map(t => t.user_id).filter(Boolean);
+            let profilesMap = {};
+            if (userIds.length > 0) {
+                const { data: profiles } = await sb.from('profiles').select('id, full_name').in('id', userIds);
+                if (profiles) profiles.forEach(p => profilesMap[p.id] = p);
+            }
+
+            // جلب آخر رسالة لكل رحلة
+            let chatsHtml = '';
+            for (const t of trips) {
+                const profile = profilesMap[t.user_id] || {};
+                let clientName = profile.full_name || 'عميل';
+                if (t.admin_notes && t.admin_notes.includes('حجز هاتفي')) {
+                    const nm = t.admin_notes.match(/العميل: (.*?)[\n(]/);
+                    if (nm) clientName = nm[1].trim();
+                }
+                if (t.manual_client_name) clientName = t.manual_client_name;
+
+                const { data: lastMsg } = await sb.from('chat_messages')
+                    .select('message, sender_role, created_at')
+                    .eq('trip_id', t.id)
+                    .order('created_at', { ascending: false })
+                    .limit(1);
+
+                const preview = lastMsg?.[0]?.message || 'لا توجد رسائل بعد';
+                const previewRole = lastMsg?.[0]?.sender_role;
+                const rolePrefix = previewRole === 'driver' ? 'أنت: ' : previewRole === 'admin' ? 'الإدارة: ' : '';
+
+                chatsHtml += `
+                <div onclick="openDriverChat('${t.id}', '${clientName}')" class="glass-card p-4 cursor-pointer hover:border-blue-500/40 transition">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center text-lg">👤</div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-bold text-white text-sm">${clientName}</p>
+                            <p class="text-[11px] text-slate-400 truncate">${rolePrefix}${preview}</p>
+                        </div>
+                        <i class="fas fa-chevron-left text-slate-600 text-xs"></i>
+                    </div>
+                </div>`;
+            }
+            list.innerHTML = chatsHtml;
+        }
+
+        // ==========================================
+        // نافذة الدردشة
+        // ==========================================
+        async function openDriverChat(tripId, clientName) {
+            currentChatTripId = tripId;
+            document.querySelectorAll('.page-content').forEach(e => e.classList.add('hidden'));
+            document.getElementById('page-chat-window').classList.remove('hidden');
+            document.getElementById('main-nav').style.display = 'none';
+            document.getElementById('chat-client-name').textContent = clientName;
+
+            // جلب تفاصيل الرحلة
+            const { data: trip } = await sb.from('trips').select('pickup_location, dropoff_location').eq('id', tripId).single();
+            if (trip) {
+                document.getElementById('chat-trip-route').textContent =
+                    (trip.pickup_location || '').split(',')[0] + ' ➝ ' + (trip.dropoff_location || '').split(',')[0];
+            }
+
+            await loadChatMessages(tripId);
+            subscribeToChatMessages(tripId);
+        }
+
+        async function loadChatMessages(tripId) {
+            const container = document.getElementById('chat-messages');
+            const { data: messages } = await sb.from('chat_messages')
+                .select('*')
+                .eq('trip_id', tripId)
+                .order('created_at', { ascending: true });
+
+            container.innerHTML = '';
+            if (!messages || messages.length === 0) {
+                container.innerHTML = '<p class="text-center text-slate-500 text-xs py-8">لا توجد رسائل بعد. ابدأ المحادثة!</p>';
+                return;
+            }
+            messages.forEach(m => appendMessage(m));
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function appendMessage(msg) {
+            const container = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+
+            if (msg.message_type === 'system') {
+                div.className = 'msg-bubble msg-system';
+                div.textContent = msg.message;
+            } else if (msg.sender_role === 'admin') {
+                div.className = 'msg-bubble msg-admin';
+                div.innerHTML = `<span class="text-[10px] block mb-1">🛡️ الإدارة</span>${msg.message}`;
+            } else if (msg.sender_role === 'driver') {
+                div.className = 'msg-bubble msg-mine';
+                if (msg.message_type === 'location') {
+                    div.innerHTML = `📍 <a href="https://maps.google.com/?q=${msg.location_lat},${msg.location_lng}" target="_blank" class="underline text-white">فتح الموقع</a>`;
+                } else {
+                    div.textContent = msg.message;
+                }
+            } else {
+                div.className = 'msg-bubble msg-other';
+                if (msg.message_type === 'location') {
+                    div.className = 'msg-bubble msg-other msg-location';
+                    div.innerHTML = `📍 لوكيشن العميل<br><a href="https://maps.google.com/?q=${msg.location_lat},${msg.location_lng}" target="_blank" class="underline text-white font-bold">فتح في خرائط جوجل</a>`;
+                } else {
+                    div.textContent = msg.message;
+                }
+            }
+
+            const time = document.createElement('span');
+            time.className = 'block text-[9px] mt-1 opacity-50';
+            time.textContent = new Date(msg.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+            div.appendChild(time);
+
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendDriverMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            if (!message || !currentChatTripId) return;
+
+            input.value = '';
+            await sb.from('chat_messages').insert([{
+                trip_id: currentChatTripId,
+                sender_role: 'driver',
+                sender_id: currentDriver.id,
+                sender_name: currentDriver.name,
+                message: message,
+                message_type: 'text'
+            }]);
+        }
+
+        function subscribeToChatMessages(tripId) {
+            if (chatSubscription) sb.removeChannel(chatSubscription);
+            chatSubscription = sb.channel('chat-driver-' + tripId)
+                .on('postgres_changes', {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'chat_messages',
+                    filter: 'trip_id=eq.' + tripId
+                }, (payload) => {
+                    appendMessage(payload.new);
+                })
+                .subscribe();
+        }
+
+        function backToChats() {
+            currentChatTripId = null;
+            if (chatSubscription) sb.removeChannel(chatSubscription);
+            switchDriverTab('chats');
+        }
+
+        // ==========================================
+        // Realtime للرحلات الجديدة
+        // ==========================================
+        function setupDriverRealtime() {
+            sb.channel('driver-trips-' + currentDriver.id)
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'trips',
+                    filter: 'driver_id=eq.' + currentDriver.id
+                }, () => {
+                    if (!document.getElementById('page-trips').classList.contains('hidden')) loadDriverTrips();
+                    if (!document.getElementById('page-chats').classList.contains('hidden')) loadDriverChats();
+                })
+                .subscribe();
+        }
+    </script>
+</body>
+
+</html>

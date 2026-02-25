@@ -167,6 +167,11 @@
                 <i class="fas fa-car w-5 text-center text-slate-600"></i> السيارات والكباتن
             </div>
 
+            <p class="text-[10px] font-bold text-slate-400 mt-4 mb-1 px-3">التواصل</p>
+            <div onclick="showPage('chat')" id="nav-chat" class="sidebar-item p-3 rounded-lg flex items-center gap-3">
+                <i class="fas fa-comments w-5 text-center text-blue-500"></i> الدردشة
+            </div>
+
             <p class="text-[10px] font-bold text-slate-400 mt-4 mb-1 px-3">الإعدادات</p>
             <div onclick="showPage('pricing')" id="nav-pricing"
                 class="sidebar-item p-3 rounded-lg flex items-center gap-3">
@@ -354,6 +359,40 @@
                 </div>
                 <button onclick="addPricingTier()"
                     class="w-full mt-4 bg-slate-900 text-white py-2 rounded-lg font-bold">حفظ</button>
+            </div>
+        </div>
+
+        <!-- صفحة الدردشة -->
+        <div id="page-chat" class="page-section hidden">
+            <h2 class="text-2xl font-bold mb-6">💬 الدردشة</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <!-- قائمة المحادثات -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-4 border-b bg-gray-50">
+                        <h3 class="font-bold text-gray-700">المحادثات النشطة</h3>
+                    </div>
+                    <div id="admin-chats-list" class="divide-y max-h-[70vh] overflow-y-auto"></div>
+                </div>
+                <!-- نافذة المحادثة -->
+                <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col"
+                    style="height:75vh">
+                    <div id="admin-chat-header" class="p-4 border-b bg-gray-50">
+                        <p class="font-bold text-gray-700">اختر محادثة</p>
+                        <p class="text-xs text-gray-400" id="admin-chat-route"></p>
+                    </div>
+                    <div id="admin-chat-messages" class="flex-1 overflow-y-auto p-4 flex flex-col gap-2 bg-gray-50"
+                        style="direction:rtl">
+                        <p class="text-center text-gray-400 py-12">اختر محادثة من القائمة</p>
+                    </div>
+                    <div id="admin-chat-input-bar" class="p-3 border-t flex gap-2" style="display:none">
+                        <input type="text" id="admin-chat-input" placeholder="تدخل كإدارة..."
+                            class="flex-1 border rounded-full px-4 py-2 text-sm outline-none focus:border-blue-500"
+                            onkeypress="if(event.key==='Enter')sendAdminMessage()">
+                        <button onclick="sendAdminMessage()"
+                            class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center"><i
+                                class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -587,6 +626,7 @@
             if (pageId === 'finance') loadFinance();
             if (pageId === 'fleet') loadFleetList();
             if (pageId === 'pricing') loadPricing();
+            if (pageId === 'chat') loadAdminChats();
         }
 
         async function loadDashboard() {
@@ -1049,6 +1089,160 @@
                 console.error(err);
                 alert("حدث خطأ أثناء الحفظ: " + err.message);
             }
+        }
+
+        // ==========================================
+        // نظام الدردشة - الإدارة
+        // ==========================================
+        let adminCurrentTripId = null;
+        let adminChatSub = null;
+
+        async function loadAdminChats() {
+            const list = document.getElementById('admin-chats-list');
+            list.innerHTML = '<p class="text-center text-gray-400 p-6"><i class="fas fa-spinner fa-spin"></i></p>';
+
+            const { data: trips } = await sbClient.from('trips')
+                .select('*, drivers:drivers!fk_trips_driver(name), cars:cars!fk_trips_car(brand)')
+                .eq('status', 'driver_assigned')
+                .order('created_at', { ascending: false });
+
+            if (!trips || trips.length === 0) {
+                list.innerHTML = '<p class="text-center text-gray-400 p-6">لا توجد محادثات نشطة</p>';
+                return;
+            }
+
+            const userIds = trips.map(t => t.user_id).filter(Boolean);
+            let profilesMap = {};
+            if (userIds.length > 0) {
+                const { data: profiles } = await sbClient.from('profiles').select('id, full_name').in('id', userIds);
+                if (profiles) profiles.forEach(p => profilesMap[p.id] = p);
+            }
+
+            let html = '';
+            for (const t of trips) {
+                let clientName = profilesMap[t.user_id]?.full_name || 'عميل';
+                if (t.manual_client_name) clientName = t.manual_client_name;
+                if (t.admin_notes && t.admin_notes.includes('حجز هاتفي')) {
+                    const nm = t.admin_notes.match(/العميل: (.*?)[\n(]/);
+                    if (nm) clientName = nm[1].trim();
+                }
+                const driverName = t.drivers?.name || 'كابتن';
+
+                const { data: lastMsg } = await sbClient.from('chat_messages')
+                    .select('message, sender_role, created_at').eq('trip_id', t.id)
+                    .order('created_at', { ascending: false }).limit(1);
+                const preview = lastMsg?.[0]?.message || 'لا رسائل';
+                const roleLabel = lastMsg?.[0]?.sender_role === 'client' ? 'العميل' : lastMsg?.[0]?.sender_role === 'driver' ? 'الكابتن' : lastMsg?.[0]?.sender_role === 'admin' ? 'أنت' : '';
+
+                const isActive = adminCurrentTripId == t.id;
+                html += `
+                <div onclick="openAdminChat('${t.id}', '${clientName}', '${driverName}', '${(t.pickup_location || '').split(',')[0]}', '${(t.dropoff_location || '').split(',')[0]}')" 
+                     class="p-3 cursor-pointer hover:bg-blue-50 transition ${isActive ? 'bg-blue-50 border-r-4 border-blue-500' : ''}">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="font-bold text-sm text-gray-800">👤 ${clientName}</p>
+                            <p class="text-[10px] text-gray-400">🚗 ${driverName}</p>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1 truncate">${roleLabel ? roleLabel + ': ' : ''}${preview}</p>
+                </div>`;
+            }
+            list.innerHTML = html;
+        }
+
+        async function openAdminChat(tripId, clientName, driverName, from, to) {
+            adminCurrentTripId = tripId;
+            document.getElementById('admin-chat-header').innerHTML = `
+                <p class="font-bold text-gray-700">👤 ${clientName} ↔ 🚗 ${driverName}</p>
+                <p class="text-xs text-gray-400">${from} ➝ ${to}</p>`;
+            document.getElementById('admin-chat-input-bar').style.display = 'flex';
+
+            await loadAdminChatMessages(tripId);
+            subscribeAdminChat(tripId);
+            loadAdminChats(); // refresh list highlighting
+        }
+
+        async function loadAdminChatMessages(tripId) {
+            const container = document.getElementById('admin-chat-messages');
+            const { data: messages } = await sbClient.from('chat_messages').select('*').eq('trip_id', tripId).order('created_at', { ascending: true });
+            container.innerHTML = '';
+            if (!messages || messages.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-400 py-8">لا توجد رسائل بعد</p>';
+                return;
+            }
+            messages.forEach(m => appendAdminMsg(m));
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function appendAdminMsg(msg) {
+            const container = document.getElementById('admin-chat-messages');
+            const placeholder = container.querySelector('p.text-center');
+            if (placeholder) placeholder.remove();
+
+            const div = document.createElement('div');
+            div.style.animation = 'fadeIn 0.3s ease';
+            div.style.maxWidth = '80%';
+            div.style.padding = '8px 14px';
+            div.style.borderRadius = '12px';
+            div.style.fontSize = '0.85rem';
+            div.style.lineHeight = '1.5';
+            div.style.wordWrap = 'break-word';
+
+            if (msg.sender_role === 'client') {
+                div.style.background = '#fef3c7';
+                div.style.alignSelf = 'flex-start';
+                div.innerHTML = `<span style="font-size:10px;color:#92400e;display:block;margin-bottom:2px">👤 العميل: ${msg.sender_name}</span>`;
+            } else if (msg.sender_role === 'driver') {
+                div.style.background = '#dbeafe';
+                div.style.alignSelf = 'flex-end';
+                div.innerHTML = `<span style="font-size:10px;color:#1e40af;display:block;margin-bottom:2px">🚗 الكابتن: ${msg.sender_name}</span>`;
+            } else if (msg.sender_role === 'admin') {
+                div.style.background = '#ede9fe';
+                div.style.alignSelf = 'center';
+                div.style.textAlign = 'center';
+                div.style.border = '1px solid #c4b5fd';
+                div.innerHTML = `<span style="font-size:10px;color:#6d28d9;display:block;margin-bottom:2px">🛡️ الإدارة</span>`;
+            } else {
+                div.style.background = '#f1f5f9';
+                div.style.alignSelf = 'center';
+            }
+
+            if (msg.message_type === 'location') {
+                div.innerHTML += `📍 <a href="https://maps.google.com/?q=${msg.location_lat},${msg.location_lng}" target="_blank" style="color:#2563eb;text-decoration:underline">فتح الموقع في خرائط جوجل</a>`;
+            } else {
+                div.innerHTML += msg.message;
+            }
+
+            const time = document.createElement('span');
+            time.style.cssText = 'display:block;font-size:9px;margin-top:4px;opacity:0.5';
+            time.textContent = new Date(msg.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+            div.appendChild(time);
+
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendAdminMessage() {
+            const input = document.getElementById('admin-chat-input');
+            const message = input.value.trim();
+            if (!message || !adminCurrentTripId) return;
+            input.value = '';
+            await sbClient.from('chat_messages').insert([{
+                trip_id: adminCurrentTripId,
+                sender_role: 'admin',
+                sender_id: 'admin',
+                sender_name: 'الإدارة',
+                message: message,
+                message_type: 'text'
+            }]);
+        }
+
+        function subscribeAdminChat(tripId) {
+            if (adminChatSub) sbClient.removeChannel(adminChatSub);
+            adminChatSub = sbClient.channel('chat-admin-' + tripId)
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: 'trip_id=eq.' + tripId }, (payload) => {
+                    appendAdminMsg(payload.new);
+                }).subscribe();
         }
     </script>
 </body>

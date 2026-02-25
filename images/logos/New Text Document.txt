@@ -1,0 +1,6 @@
+GOOGLE_SHEETS_ID=1VX4a_5nLHtt785LC0670a0thWeYk1GwWXUSkUbR_I28
+FORMSPREE_ENDPOINT=https://formspree.io/f/xzdrvblp
+WHATSAPP_NUMBER=01121747555
+FACEBOOK_PAGE=https://www.facebook.com/elnoourgifts
+SESSION_SECRET=fatema_handmade_secret_key_2026
+NODE_ENV=production

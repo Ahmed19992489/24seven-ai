@@ -213,6 +213,105 @@
             color: #64748b;
             border: 1px solid #64748b40;
         }
+
+        /* Chat Styles */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 180px);
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .msg-bubble {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 16px;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            word-wrap: break-word;
+            animation: fadeInMsg 0.3s ease;
+        }
+
+        @keyframes fadeInMsg {
+            from {
+                opacity: 0;
+                transform: translateY(10px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        .msg-mine {
+            background: #f59e0b;
+            color: #000;
+            align-self: flex-start;
+            border-bottom-right-radius: 4px;
+        }
+
+        .msg-other {
+            background: #334155;
+            color: #e2e8f0;
+            align-self: flex-end;
+            border-bottom-left-radius: 4px;
+        }
+
+        .msg-admin {
+            background: #7c3aed30;
+            color: #c4b5fd;
+            border: 1px solid #7c3aed50;
+            align-self: center;
+            text-align: center;
+        }
+
+        .msg-system {
+            background: #f59e0b20;
+            color: #fbbf24;
+            align-self: center;
+            text-align: center;
+            font-size: 0.75rem;
+        }
+
+        .chat-input-bar {
+            display: flex;
+            gap: 8px;
+            padding: 12px;
+            background: #1e293b;
+            border-top: 1px solid #334155;
+        }
+
+        .chat-input-bar input {
+            flex: 1;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 24px;
+            padding: 10px 16px;
+            color: white;
+            outline: none;
+            font-size: 0.85rem;
+        }
+
+        .chat-input-bar button {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            border: none;
+            cursor: pointer;
+        }
     </style>
 </head>
 
@@ -403,6 +502,38 @@
             <div id="transactions-list" class="space-y-2"></div>
         </div>
 
+        <!-- صفحة الرسائل - قائمة المحادثات -->
+        <div id="page-messages" class="page-content hidden">
+            <h2 class="text-xl font-bold mb-4 text-white"><i class="fas fa-comments text-amber-500 ml-2"></i>رسائلي</h2>
+            <div id="client-chats-list" class="space-y-3 pb-20"></div>
+        </div>
+
+        <!-- نافذة الدردشة -->
+        <div id="page-chat-window" class="page-content hidden">
+            <div class="chat-container">
+                <div class="flex items-center gap-3 pb-3 border-b border-slate-700 mb-2">
+                    <button onclick="backToMessages()"
+                        class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white">
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                    <div class="flex-1">
+                        <p id="chat-driver-name" class="font-bold text-white text-sm">الكابتن</p>
+                        <p id="chat-route-info" class="text-[10px] text-slate-400"></p>
+                    </div>
+                </div>
+                <div id="client-chat-messages" class="chat-messages"></div>
+                <div class="chat-input-bar">
+                    <button onclick="shareMyLocation()" class="bg-green-600 text-white" title="إرسال اللوكيشن"><i
+                            class="fas fa-location-dot"></i></button>
+                    <input type="text" id="client-chat-input" placeholder="اكتب رسالتك..."
+                        onkeypress="if(event.key==='Enter')sendClientMessage()">
+                    <button onclick="sendClientMessage()" class="bg-amber-500 text-slate-900"><i
+                            class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- صفحة الدعم -->
         <div id="page-support"
             class="page-content hidden h-[80vh] flex flex-col items-center justify-center text-center">
             <div class="w-24 h-24 bg-green-500/10 rounded-full flex items-center justify-center mb-6"><i
@@ -415,13 +546,15 @@
         </div>
     </div>
 
-    <nav class="bottom-nav">
+    <nav class="bottom-nav" id="main-bottom-nav">
         <div onclick="switchTab('booking')" class="nav-item active" id="nav-booking"><i
                 class="fas fa-car"></i><span>حجز</span></div>
         <div onclick="switchTab('trips')" class="nav-item" id="nav-trips"><i class="fas fa-list"></i><span>رحلاتي</span>
         </div>
         <div onclick="switchTab('wallet')" class="nav-item" id="nav-wallet"><i
                 class="fas fa-wallet"></i><span>المحفظة</span></div>
+        <div onclick="switchTab('messages')" class="nav-item" id="nav-messages"><i
+                class="fas fa-comments"></i><span>رسائل</span></div>
         <div onclick="switchTab('support')" class="nav-item" id="nav-support"><i
                 class="fas fa-headset"></i><span>الدعم</span></div>
     </nav>
@@ -549,6 +682,8 @@
             document.getElementById('nav-' + id).classList.add('active');
             if (id === 'trips') loadTrips();
             if (id === 'wallet') { loadWallet(); loadTransactions(); }
+            if (id === 'messages') loadClientChats();
+            document.getElementById('main-bottom-nav').style.display = 'flex';
         }
 
         function setTripType(t) {
@@ -830,6 +965,159 @@
             await sb.auth.signOut();
             localStorage.clear();
             window.location.reload();
+        }
+
+        // ==========================================
+        // نظام الدردشة
+        // ==========================================
+        let currentClientChatTripId = null;
+        let clientChatSubscription = null;
+
+        async function loadClientChats() {
+            const list = document.getElementById('client-chats-list');
+            list.innerHTML = '<p class="text-center text-slate-400 py-8"><i class="fas fa-spinner fa-spin ml-2"></i>جاري التحميل...</p>';
+
+            const { data: trips } = await sb.from('trips')
+                .select('*, drivers:drivers!fk_trips_driver(name, phone), cars:cars!fk_trips_car(brand, model, plate_number)')
+                .eq('user_id', user.id)
+                .eq('status', 'driver_assigned')
+                .order('created_at', { ascending: false });
+
+            if (!trips || trips.length === 0) {
+                list.innerHTML = '<div class="text-center py-12 text-slate-500"><i class="fas fa-comment-slash text-4xl mb-3 block"></i><p>لا توجد محادثات نشطة</p><p class="text-xs mt-2">المحادثات تظهر بعد تعيين كابتن لرحلتك</p></div>';
+                return;
+            }
+
+            let html = '';
+            for (const t of trips) {
+                const driverName = t.drivers?.name || 'الكابتن';
+                const { data: lastMsg } = await sb.from('chat_messages')
+                    .select('message, sender_role').eq('trip_id', t.id)
+                    .order('created_at', { ascending: false }).limit(1);
+                const preview = lastMsg?.[0]?.message || 'ابدأ المحادثة الآن';
+                const rolePrefix = lastMsg?.[0]?.sender_role === 'client' ? 'أنت: ' : lastMsg?.[0]?.sender_role === 'admin' ? 'الإدارة: ' : '';
+
+                html += `
+                <div onclick="openClientChat('${t.id}', '${driverName}')" class="glass-card p-4 cursor-pointer hover:border-amber-500/40 transition">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center text-lg">👨‍✈️</div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-bold text-white text-sm">${driverName}</p>
+                            <p class="text-[10px] text-slate-400">${(t.pickup_location || '').split(',')[0]} ➝ ${(t.dropoff_location || '').split(',')[0]}</p>
+                            <p class="text-[11px] text-slate-500 truncate mt-1">${rolePrefix}${preview}</p>
+                        </div>
+                        <i class="fas fa-chevron-left text-slate-600 text-xs"></i>
+                    </div>
+                </div>`;
+            }
+            list.innerHTML = html;
+        }
+
+        async function openClientChat(tripId, driverName) {
+            currentClientChatTripId = tripId;
+            document.querySelectorAll('.page-content').forEach(e => e.classList.add('hidden'));
+            document.getElementById('page-chat-window').classList.remove('hidden');
+            document.getElementById('main-bottom-nav').style.display = 'none';
+            document.getElementById('chat-driver-name').textContent = 'كابتن ' + driverName;
+
+            const { data: trip } = await sb.from('trips').select('pickup_location, dropoff_location').eq('id', tripId).single();
+            if (trip) document.getElementById('chat-route-info').textContent = (trip.pickup_location || '').split(',')[0] + ' ➝ ' + (trip.dropoff_location || '').split(',')[0];
+
+            await loadClientChatMessages(tripId);
+            subscribeToClientChat(tripId);
+        }
+
+        async function loadClientChatMessages(tripId) {
+            const container = document.getElementById('client-chat-messages');
+            const { data: messages } = await sb.from('chat_messages').select('*').eq('trip_id', tripId).order('created_at', { ascending: true });
+            container.innerHTML = '';
+            if (!messages || messages.length === 0) {
+                container.innerHTML = '<p class="text-center text-slate-500 text-xs py-8">لا توجد رسائل بعد. ابدأ المحادثة!</p>';
+                return;
+            }
+            messages.forEach(m => appendClientMsg(m));
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function appendClientMsg(msg) {
+            const container = document.getElementById('client-chat-messages');
+            // أزل رسالة "لا توجد رسائل"
+            const placeholder = container.querySelector('p.text-center');
+            if (placeholder) placeholder.remove();
+
+            const div = document.createElement('div');
+            if (msg.message_type === 'system') {
+                div.className = 'msg-bubble msg-system';
+                div.textContent = msg.message;
+            } else if (msg.sender_role === 'admin') {
+                div.className = 'msg-bubble msg-admin';
+                div.innerHTML = `<span class="text-[10px] block mb-1">🛡️ الإدارة</span>${msg.message}`;
+            } else if (msg.sender_role === 'client') {
+                div.className = 'msg-bubble msg-mine';
+                if (msg.message_type === 'location') {
+                    div.innerHTML = `📍 تم إرسال موقعك<br><a href="https://maps.google.com/?q=${msg.location_lat},${msg.location_lng}" target="_blank" class="underline text-xs">فتح في الخريطة</a>`;
+                } else { div.textContent = msg.message; }
+            } else {
+                div.className = 'msg-bubble msg-other';
+                div.innerHTML = `<span class="text-[10px] block mb-1 text-blue-400">👨‍✈️ الكابتن</span>`;
+                if (msg.message_type === 'location') {
+                    div.innerHTML += `📍 <a href="https://maps.google.com/?q=${msg.location_lat},${msg.location_lng}" target="_blank" class="underline">موقع الكابتن</a>`;
+                } else { div.innerHTML += msg.message; }
+            }
+            const time = document.createElement('span');
+            time.className = 'block text-[9px] mt-1 opacity-50';
+            time.textContent = new Date(msg.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+            div.appendChild(time);
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendClientMessage() {
+            const input = document.getElementById('client-chat-input');
+            const message = input.value.trim();
+            if (!message || !currentClientChatTripId) return;
+            input.value = '';
+            const { data: profile } = await sb.from('profiles').select('full_name').eq('id', user.id).single();
+            await sb.from('chat_messages').insert([{
+                trip_id: currentClientChatTripId,
+                sender_role: 'client',
+                sender_id: user.id,
+                sender_name: profile?.full_name || 'عميل',
+                message: message,
+                message_type: 'text'
+            }]);
+        }
+
+        async function shareMyLocation() {
+            if (!navigator.geolocation) return alert('المتصفح لا يدعم تحديد الموقع');
+            if (!currentClientChatTripId) return;
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                const { data: profile } = await sb.from('profiles').select('full_name').eq('id', user.id).single();
+                await sb.from('chat_messages').insert([{
+                    trip_id: currentClientChatTripId,
+                    sender_role: 'client',
+                    sender_id: user.id,
+                    sender_name: profile?.full_name || 'عميل',
+                    message: '📍 تم إرسال الموقع',
+                    message_type: 'location',
+                    location_lat: pos.coords.latitude,
+                    location_lng: pos.coords.longitude
+                }]);
+            }, () => alert('لم يتم السماح بتحديد الموقع. يرجى تفعيل GPS.'));
+        }
+
+        function subscribeToClientChat(tripId) {
+            if (clientChatSubscription) sb.removeChannel(clientChatSubscription);
+            clientChatSubscription = sb.channel('chat-client-' + tripId)
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: 'trip_id=eq.' + tripId }, (payload) => {
+                    appendClientMsg(payload.new);
+                }).subscribe();
+        }
+
+        function backToMessages() {
+            currentClientChatTripId = null;
+            if (clientChatSubscription) sb.removeChannel(clientChatSubscription);
+            switchTab('messages');
         }
     </script>
 </body>
