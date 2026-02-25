@@ -386,6 +386,26 @@
                 if (t.manual_client_name) clientName = t.manual_client_name;
                 if (t.client_phone) clientPhone = t.client_phone;
 
+                // استخراج التفاصيل من admin_notes
+                let tripType = '--', payMethod = '--', tripDate = '', tripTime = '', passengers = '--', bags = '--';
+                const notes = t.admin_notes || '';
+                const typeMatch = notes.match(/نوع: (.*?) \|/);
+                if (typeMatch) tripType = typeMatch[1].trim();
+                const payMatch = notes.match(/الدفع: (.*?)[\n|]/);
+                if (payMatch) payMethod = payMatch[1].trim();
+                const dateMatch = notes.match(/📅\s*(.*?)\s*-\s*(.*?)[\n|$]/);
+                if (dateMatch) { tripDate = dateMatch[1].trim(); tripTime = dateMatch[2].trim(); }
+                const passMatch = notes.match(/(\d+)\s*(?:أفراد|فرد|ركاب)/);
+                if (passMatch) passengers = passMatch[1];
+                const bagMatch = notes.match(/(\d+)\s*(?:شنط|شنطة|حقائب)/);
+                if (bagMatch) bags = bagMatch[1];
+
+                if (payMethod === 'cash') payMethod = 'كاش 💵';
+                else if (payMethod === 'wallet') payMethod = 'محفظة 💳';
+                if (tripType === 'one-way') tripType = 'ذهاب فقط';
+                else if (tripType === 'round-same') tripType = 'ذهاب وعودة';
+                else if (tripType === 'round-diff') tripType = 'أيام مختلفة';
+
                 const isActive = t.status === 'driver_assigned';
                 const statusText = isActive ? 'نشطة' : 'مكتملة';
                 const statusColor = isActive ? 'text-blue-400 bg-blue-500/10 border-blue-500/30' : 'text-slate-400 bg-slate-500/10 border-slate-500/30';
@@ -400,6 +420,15 @@
                         <p class="text-xs text-slate-300"><i class="fas fa-circle-dot text-green-500 ml-2 text-[10px]"></i>${(t.pickup_location || '').split(',')[0]}</p>
                         <p class="text-xs text-slate-300"><i class="fas fa-location-dot text-red-500 ml-2 text-[10px]"></i>${(t.dropoff_location || '').split(',')[0]}</p>
                     </div>
+                    <div class="grid grid-cols-3 gap-2 mb-3 bg-slate-800/70 rounded-xl p-3">
+                        <div class="text-center"><p class="text-[9px] text-slate-500">📅 التاريخ</p><p class="text-[11px] text-white font-num">${tripDate || '--'}</p></div>
+                        <div class="text-center"><p class="text-[9px] text-slate-500">🕐 الوقت</p><p class="text-[11px] text-white font-num">${tripTime || '--'}</p></div>
+                        <div class="text-center"><p class="text-[9px] text-slate-500">🚗 النوع</p><p class="text-[11px] text-white">${t.car_type || '--'}</p></div>
+                        <div class="text-center"><p class="text-[9px] text-slate-500">👥 الأفراد</p><p class="text-[11px] text-white">${passengers}</p></div>
+                        <div class="text-center"><p class="text-[9px] text-slate-500">🧳 الشنط</p><p class="text-[11px] text-white">${bags}</p></div>
+                        <div class="text-center"><p class="text-[9px] text-slate-500">💰 الدفع</p><p class="text-[11px] text-white">${payMethod}</p></div>
+                    </div>
+                    <div class="text-center mb-3"><p class="text-[9px] text-slate-500">🛣️ الرحلة</p><p class="text-[11px] text-amber-400">${tripType}</p></div>
                     <div class="flex items-center justify-between pt-3 border-t border-slate-700">
                         <div class="flex items-center gap-2">
                             <div class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center text-sm">👤</div>

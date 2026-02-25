@@ -312,6 +312,77 @@
             border: none;
             cursor: pointer;
         }
+
+        /* Notification Styles */
+        .notif-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 9999;
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: white;
+            padding: 16px 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            text-align: center;
+            animation: slideDown 0.5s ease, slideUp 0.5s ease 5s forwards;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+            }
+
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(0);
+            }
+
+            to {
+                transform: translateY(-100%);
+            }
+        }
+
+        .notif-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            display: none;
+        }
+
+        .notif-dropdown.show {
+            display: block;
+        }
+
+        .notif-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #334155;
+            font-size: 0.8rem;
+            transition: 0.2s;
+        }
+
+        .notif-item:hover {
+            background: #334155;
+        }
+
+        .notif-item:last-child {
+            border-bottom: none;
+        }
     </style>
 </head>
 
@@ -329,6 +400,25 @@
                     class="text-xs font-normal text-slate-400 block -mt-1">Limousine</span></h1>
         </div>
         <div class="flex items-center gap-3">
+            <div class="relative">
+                <button onclick="toggleNotifications()"
+                    class="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-amber-500 transition relative">
+                    <i class="fas fa-bell text-sm"></i>
+                    <span id="notif-badge"
+                        class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center"
+                        style="display:none">0</span>
+                </button>
+                <div id="notif-dropdown" class="notif-dropdown">
+                    <div class="p-3 border-b border-slate-700 flex justify-between items-center">
+                        <span class="font-bold text-sm text-white">🔔 التنبيهات</span>
+                        <button onclick="clearNotifications()" class="text-[10px] text-slate-400 hover:text-red-400">مسح
+                            الكل</button>
+                    </div>
+                    <div id="notif-list">
+                        <p class="text-center text-slate-500 text-xs py-6">لا توجد تنبيهات</p>
+                    </div>
+                </div>
+            </div>
             <div class="text-left">
                 <p id="header-user-name" class="text-xs font-bold leading-tight text-slate-300">زائر</p>
                 <p class="text-[10px] text-amber-500 font-num font-bold"><span id="header-balance">0.00</span> EGP</p>
@@ -928,6 +1018,19 @@
         }
 
         function renderTrips(trips) {
+            const tripIds = trips ? trips.map(t => t.id) : [];
+            if (tripIds.length > 0) {
+                sb.from('trip_ratings').select('*').in('trip_id', tripIds).then(({ data: ratings }) => {
+                    const ratingsMap = {};
+                    if (ratings) ratings.forEach(r => ratingsMap[r.trip_id] = r);
+                    renderTripsWithRatings(trips, ratingsMap);
+                });
+            } else {
+                renderTripsWithRatings(trips, {});
+            }
+        }
+
+        function renderTripsWithRatings(trips, ratingsMap) {
             document.getElementById('trips-list').innerHTML = trips ? trips.map(t => {
                 let statusClass = 'status-pending';
                 let statusText = 'قيد المراجعة';
@@ -953,6 +1056,27 @@
                     </div>`;
                 }
 
+                let ratingHtml = '';
+                const rating = ratingsMap[t.id];
+                if (rating && t.status === 'completed') {
+                    const starsHTML = (val) => '⭐'.repeat(val || 0) + '☆'.repeat(5 - (val || 0));
+                    ratingHtml = `
+                    <div class="mt-3 pt-3 border-t border-slate-700">
+                        <p class="text-[11px] text-slate-400 mb-2">تقييمك لهذه الرحلة:</p>
+                        <div class="grid grid-cols-3 gap-2 text-center text-[10px]">
+                            <div><p class="text-slate-500">الكابتن</p><p>${starsHTML(rating.driver_rating)}</p></div>
+                            <div><p class="text-slate-500">السيارة</p><p>${starsHTML(rating.car_rating)}</p></div>
+                            <div><p class="text-slate-500">الخدمة</p><p>${starsHTML(rating.service_rating)}</p></div>
+                        </div>
+                        ${rating.feedback_notes ? `<p class="text-[10px] text-slate-500 mt-1">📝 ${rating.feedback_notes}</p>` : ''}
+                    </div>`;
+                } else if (t.status === 'completed' && !rating) {
+                    ratingHtml = `
+                    <div class="mt-3 pt-3 border-t border-slate-700 text-center">
+                        <button onclick="showFeedbackModal('${t.id}')" class="bg-amber-500/20 border border-amber-500/40 text-amber-400 px-4 py-2 rounded-xl text-xs font-bold hover:bg-amber-500 hover:text-black transition"><i class="fas fa-star ml-1"></i>قيّم هذه الرحلة</button>
+                    </div>`;
+                }
+
                 return `
                 <div class="glass-card p-4 trip-card animate-fade-in-up mb-4 border border-slate-700/50">
                     <div class="flex justify-between items-start mb-2">
@@ -961,6 +1085,7 @@
                     </div>
                     <div class="mt-6"><p class="text-xs text-slate-300 font-bold">${t.pickup_location}</p><p class="text-xs text-slate-300 font-bold mt-2">${t.dropoff_location}</p></div>
                     ${driverHtml}
+                    ${ratingHtml}
                 </div>`;
             }).join('') : '';
         }
@@ -1265,16 +1390,118 @@
                 }, (payload) => {
                     if (payload.new.status === 'completed' && payload.old.status !== 'completed') {
                         showFeedbackModal(payload.new.id);
+                        addNotification('✅ رحلتك اكتملت بنجاح! شكراً لاستخدامك 24Seven');
+                    }
+                    if (payload.new.status === 'driver_assigned' && payload.old.status !== 'driver_assigned') {
+                        addNotification('🚗 تم تعيين كابتن لرحلتك! يمكنك رؤية بياناته في صفحة الرحلات');
+                        showNotifBanner('🚗 تم تعيين كابتن لرحلتك!');
+                        loadTrips();
                     }
                 }).subscribe();
         }
+
+        // ==========================================
+        // نظام الإشعارات
+        // ==========================================
+        let notifications = [];
+        let unreadCount = 0;
+
+        function toggleNotifications() {
+            const dd = document.getElementById('notif-dropdown');
+            dd.classList.toggle('show');
+            if (dd.classList.contains('show')) {
+                unreadCount = 0;
+                updateNotifBadge();
+            }
+        }
+
+        // إغلاق القائمة عند الضغط خارجها
+        document.addEventListener('click', (e) => {
+            const dd = document.getElementById('notif-dropdown');
+            if (dd && !e.target.closest('.relative') && dd.classList.contains('show')) {
+                dd.classList.remove('show');
+            }
+        });
+
+        function clearNotifications() {
+            notifications = [];
+            unreadCount = 0;
+            updateNotifBadge();
+            document.getElementById('notif-list').innerHTML = '<p class="text-center text-slate-500 text-xs py-6">لا توجد تنبيهات</p>';
+        }
+
+        function addNotification(text) {
+            const notif = { text, time: new Date() };
+            notifications.unshift(notif);
+            unreadCount++;
+            updateNotifBadge();
+            renderNotifications();
+        }
+
+        function updateNotifBadge() {
+            const badge = document.getElementById('notif-badge');
+            if (unreadCount > 0) {
+                badge.style.display = 'flex';
+                badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        function renderNotifications() {
+            const list = document.getElementById('notif-list');
+            if (notifications.length === 0) {
+                list.innerHTML = '<p class="text-center text-slate-500 text-xs py-6">لا توجد تنبيهات</p>';
+                return;
+            }
+            list.innerHTML = notifications.slice(0, 20).map(n => {
+                const timeStr = n.time.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+                return `<div class="notif-item"><p class="text-white text-xs">${n.text}</p><p class="text-slate-500 text-[10px] mt-1">${timeStr}</p></div>`;
+            }).join('');
+        }
+
+        function showNotifBanner(text) {
+            const banner = document.createElement('div');
+            banner.className = 'notif-banner';
+            banner.textContent = text;
+            document.body.appendChild(banner);
+            setTimeout(() => { if (banner.parentNode) banner.parentNode.removeChild(banner); }, 6000);
+        }
+
+        // مراقبة رسائل الدردشة النظامية (وصول الكابتن وغيره)
+        function setupGlobalChatListener() {
+            sb.channel('global-notif')
+                .on('postgres_changes', {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'chat_messages'
+                }, async (payload) => {
+                    const msg = payload.new;
+                    // فقط الرسائل النظامية
+                    if (msg.message_type === 'system') {
+                        // التأكد أن الرسالة مرتبطة برحلة العميل
+                        const { data: trip } = await sb.from('trips').select('user_id').eq('id', msg.trip_id).single();
+                        if (trip && trip.user_id === user?.id) {
+                            addNotification(msg.message);
+                            showNotifBanner(msg.message);
+                        }
+                    }
+                }).subscribe();
+        }
+
         // تشغيل المراقبة بعد تسجيل الدخول
         const origOnAuth = sb.auth.onAuthStateChange;
         sb.auth.onAuthStateChange((event, session) => {
-            if (session?.user) setTimeout(setupTripStatusListener, 1000);
+            if (session?.user) {
+                setTimeout(setupTripStatusListener, 1000);
+                setTimeout(setupGlobalChatListener, 1200);
+            }
         });
         // لو اليوزر موجود خلاص
-        if (user) setupTripStatusListener();
+        if (user) {
+            setupTripStatusListener();
+            setupGlobalChatListener();
+        }
     </script>
 </body>
 

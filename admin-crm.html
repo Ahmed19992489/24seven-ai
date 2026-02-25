@@ -171,6 +171,10 @@
             <div onclick="showPage('chat')" id="nav-chat" class="sidebar-item p-3 rounded-lg flex items-center gap-3">
                 <i class="fas fa-comments w-5 text-center text-blue-500"></i> الدردشة
             </div>
+            <div onclick="showPage('ratings')" id="nav-ratings"
+                class="sidebar-item p-3 rounded-lg flex items-center gap-3">
+                <i class="fas fa-star w-5 text-center text-yellow-500"></i> التقييمات
+            </div>
 
             <p class="text-[10px] font-bold text-slate-400 mt-4 mb-1 px-3">الإعدادات</p>
             <div onclick="showPage('pricing')" id="nav-pricing"
@@ -393,6 +397,39 @@
                                 class="fas fa-paper-plane"></i></button>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- صفحة التقييمات -->
+        <div id="page-ratings" class="page-section hidden">
+            <h2 class="text-2xl font-bold mb-6"><i class="fas fa-star text-yellow-500 ml-2"></i>تقييمات العملاء</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="glass-panel p-5 border-b-4 border-yellow-500 text-center">
+                    <p class="text-slate-400 text-xs font-bold">متوسط تقييم الكابتن</p>
+                    <h3 class="text-3xl font-black mt-1" id="avg-driver-rating">--</h3>
+                    <p class="text-yellow-500 text-xs">من 5 ⭐</p>
+                </div>
+                <div class="glass-panel p-5 border-b-4 border-blue-500 text-center">
+                    <p class="text-slate-400 text-xs font-bold">متوسط تقييم السيارة</p>
+                    <h3 class="text-3xl font-black mt-1" id="avg-car-rating">--</h3>
+                    <p class="text-blue-500 text-xs">من 5 🚗</p>
+                </div>
+                <div class="glass-panel p-5 border-b-4 border-green-500 text-center">
+                    <p class="text-slate-400 text-xs font-bold">نسبة الترشيح</p>
+                    <h3 class="text-3xl font-black mt-1" id="recommend-pct">--</h3>
+                    <p class="text-green-500 text-xs">يرشحونا 👍</p>
+                </div>
+            </div>
+            <div class="glass-panel p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-lg">كل التقييمات</h3>
+                    <select id="ratings-filter" onchange="loadRatings()" class="border rounded-lg px-3 py-1.5 text-sm">
+                        <option value="all">الكل</option>
+                        <option value="negative">السلبية فقط (&lt;3 نجوم)</option>
+                        <option value="positive">الإيجابية فقط</option>
+                    </select>
+                </div>
+                <div id="ratings-list" class="space-y-3"></div>
             </div>
         </div>
 
@@ -627,6 +664,7 @@
             if (pageId === 'fleet') loadFleetList();
             if (pageId === 'pricing') loadPricing();
             if (pageId === 'chat') loadAdminChats();
+            if (pageId === 'ratings') loadRatings();
         }
 
         async function loadDashboard() {
@@ -1243,6 +1281,118 @@
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: 'trip_id=eq.' + tripId }, (payload) => {
                     appendAdminMsg(payload.new);
                 }).subscribe();
+        }
+
+        // ==========================================
+        // التقييمات
+        // ==========================================
+        async function loadRatings() {
+            const filter = document.getElementById('ratings-filter').value;
+            const list = document.getElementById('ratings-list');
+            list.innerHTML = '<p class="text-center text-gray-400 py-6"><i class="fas fa-spinner fa-spin ml-2"></i>جاري التحميل...</p>';
+
+            let query = sbClient.from('trip_ratings').select('*').order('created_at', { ascending: false });
+            if (filter === 'negative') query = query.lt('driver_rating', 3);
+            if (filter === 'positive') query = query.gte('driver_rating', 4);
+            const { data: ratings } = await query;
+
+            if (!ratings || ratings.length === 0) {
+                list.innerHTML = '<p class="text-center text-gray-400 py-8">لا توجد تقييمات</p>';
+                document.getElementById('avg-driver-rating').textContent = '--';
+                document.getElementById('avg-car-rating').textContent = '--';
+                document.getElementById('recommend-pct').textContent = '--';
+                return;
+            }
+
+            // حساب المتوسطات
+            const { data: allRatings } = await sbClient.from('trip_ratings').select('driver_rating, car_rating, service_rating, would_recommend');
+            if (allRatings && allRatings.length > 0) {
+                const avgD = (allRatings.reduce((s, r) => s + (r.driver_rating || 0), 0) / allRatings.length).toFixed(1);
+                const avgC = (allRatings.reduce((s, r) => s + (r.car_rating || 0), 0) / allRatings.length).toFixed(1);
+                const recCount = allRatings.filter(r => r.would_recommend === true).length;
+                const recPct = Math.round((recCount / allRatings.length) * 100);
+                document.getElementById('avg-driver-rating').textContent = avgD;
+                document.getElementById('avg-car-rating').textContent = avgC;
+                document.getElementById('recommend-pct').textContent = recPct + '%';
+            }
+
+            // جلب بيانات الرحلات والعملاء
+            const tripIds = [...new Set(ratings.map(r => r.trip_id))];
+            let tripsMap = {}, profilesMap = {};
+            if (tripIds.length > 0) {
+                const { data: trips } = await sbClient.from('trips').select('id, pickup_location, dropoff_location, user_id, driver_id, manual_client_name, client_phone, admin_notes').in('id', tripIds);
+                if (trips) {
+                    trips.forEach(t => tripsMap[t.id] = t);
+                    const userIds = trips.map(t => t.user_id).filter(Boolean);
+                    if (userIds.length > 0) {
+                        const { data: profiles } = await sbClient.from('profiles').select('id, full_name, phone').in('id', userIds);
+                        if (profiles) profiles.forEach(p => profilesMap[p.id] = p);
+                    }
+                    const driverIds = trips.map(t => t.driver_id).filter(Boolean);
+                    if (driverIds.length > 0) {
+                        const { data: drivers } = await sbClient.from('drivers').select('id, name').in('id', driverIds);
+                        if (drivers) drivers.forEach(d => profilesMap['d_' + d.id] = d);
+                    }
+                }
+            }
+
+            list.innerHTML = ratings.map(r => {
+                const trip = tripsMap[r.trip_id] || {};
+                const profile = profilesMap[trip.user_id] || {};
+                const driver = profilesMap['d_' + trip.driver_id] || {};
+                let clientName = profile.full_name || trip.manual_client_name || 'عميل';
+                let driverName = driver.name || 'كابتن';
+                const isNeg = r.driver_rating < 3;
+                const borderColor = isNeg ? 'border-red-400 bg-red-50' : 'border-slate-200';
+                const starsHTML = (val) => '⭐'.repeat(val || 0) + '☆'.repeat(5 - (val || 0));
+                const route = ((trip.pickup_location || '').split(',')[0] || '-') + ' ➝ ' + ((trip.dropoff_location || '').split(',')[0] || '-');
+                const dateStr = new Date(r.created_at).toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' });
+                return `
+                <div class="border rounded-xl p-4 ${borderColor}">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <p class="font-bold text-sm">👤 ${clientName}</p>
+                            <p class="text-[11px] text-gray-400">${route}</p>
+                        </div>
+                        <div class="text-left">
+                            <p class="text-[10px] text-gray-400">${dateStr}</p>
+                            <p class="text-[11px] text-gray-500">🚗 كابتن: ${driverName}</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-center text-xs mb-2">
+                        <div><p class="text-gray-400">الكابتن</p><p>${starsHTML(r.driver_rating)}</p></div>
+                        <div><p class="text-gray-400">السيارة</p><p>${starsHTML(r.car_rating)}</p></div>
+                        <div><p class="text-gray-400">الخدمة</p><p>${starsHTML(r.service_rating)}</p></div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <span class="text-xs ${r.would_recommend ? 'text-green-600' : 'text-red-500'}">
+                                ${r.would_recommend === true ? '👍 يرشحنا' : r.would_recommend === false ? '👎 لا يرشحنا' : '—'}
+                            </span>
+                            ${r.feedback_notes ? `<span class="text-xs text-gray-500">📝 ${r.feedback_notes}</span>` : ''}
+                        </div>
+                        ${isNeg ? `<button onclick="showPage('chat'); setTimeout(() => openAdminChatForTrip('${r.trip_id}'), 500)" class="bg-red-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold hover:bg-red-700"><i class="fas fa-comment-dots ml-1"></i>تواصل مع العميل</button>` : ''}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // فتح دردشة لرحلة محددة من التقييمات
+        async function openAdminChatForTrip(tripId) {
+            // البحث عن المحادثة في القائمة أو فتحها مباشرة
+            adminCurrentTripId = tripId;
+            const { data: trip } = await sbClient.from('trips').select('pickup_location, dropoff_location, user_id, manual_client_name').eq('id', tripId).single();
+            let clientName = trip?.manual_client_name || 'عميل';
+            if (trip?.user_id) {
+                const { data: profile } = await sbClient.from('profiles').select('full_name').eq('id', trip.user_id).single();
+                if (profile) clientName = profile.full_name;
+            }
+            const route = ((trip?.pickup_location || '').split(',')[0]) + ' ➝ ' + ((trip?.dropoff_location || '').split(',')[0]);
+            document.getElementById('admin-chat-header-name').textContent = clientName;
+            document.getElementById('admin-chat-route').textContent = route;
+            document.getElementById('admin-chat-input-bar').style.display = 'flex';
+            await loadAdminChatMessages(tripId);
+            subscribeAdminChat(tripId);
         }
     </script>
 </body>
