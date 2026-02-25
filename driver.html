@@ -11,6 +11,7 @@
         href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Outfit:wght@700&display=swap"
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <style>
         :root {
             --bg-dark: #0f172a;
@@ -639,11 +640,57 @@
         }
 
         // ==========================================
+        // EmailJS
+        // ==========================================
+        (function () { emailjs.init('KkVNrxD2AIrmD-BxM'); })();
+
+        async function sendTripEmail(tripId, notifTitle, notifMessage) {
+            try {
+                const { data: trip } = await sb.from('trips').select('*, drivers:drivers!fk_trips_driver(*), cars:cars!fk_trips_car(*)').eq('id', tripId).single();
+                if (!trip) return;
+
+                let clientEmail = '', clientName = 'عزيزنا العميل';
+                if (trip.user_id) {
+                    const { data: profile } = await sb.from('profiles').select('full_name, phone, email').eq('id', trip.user_id).single();
+                    if (profile) {
+                        clientName = profile.full_name || clientName;
+                        if (profile.email) clientEmail = profile.email;
+                    }
+                }
+                if (trip.manual_client_name) clientName = trip.manual_client_name;
+                if (trip.client_email) clientEmail = trip.client_email;
+                if (!clientEmail) { console.log('لا يوجد إيميل للعميل'); return; }
+
+                const notes = trip.admin_notes || '';
+                let tripDate = '', tripTime = '';
+                const dateMatch = notes.match(/📅\s*(.*?)\s*-\s*(.*?)[\n|$]/);
+                if (dateMatch) { tripDate = dateMatch[1].trim(); tripTime = dateMatch[2].trim(); }
+
+                await emailjs.send('24seven', 'trip_notification', {
+                    to_email: clientEmail,
+                    client_name: clientName,
+                    notification_title: notifTitle,
+                    notification_message: notifMessage,
+                    trip_from: (trip.pickup_location || '').split(',')[0],
+                    trip_to: (trip.dropoff_location || '').split(',')[0],
+                    trip_date: tripDate || new Date().toLocaleDateString('ar-EG'),
+                    trip_time: tripTime || '--',
+                    trip_price: trip.estimated_price || '0',
+                    captain_name: trip.drivers?.name || currentDriver?.name || 'الكابتن',
+                    car_model: trip.cars?.model || '--',
+                    plate_number: trip.cars?.plate_number || '--'
+                });
+                console.log('✅ تم إرسال الإيميل بنجاح');
+            } catch (err) {
+                console.log('خطأ في إرسال الإيميل:', err);
+            }
+        }
+
+        // ==========================================
         // وصلت للعميل
         // ==========================================
         async function notifyArrived(tripId) {
             if (!confirm('هل وصلت فعلاً لموقع العميل؟')) return;
-            // إرسال رسالة نظام في الدردشة
             await sb.from('chat_messages').insert([{
                 trip_id: tripId,
                 sender_role: 'driver',
@@ -652,7 +699,8 @@
                 message: '🚗 الكابتن وصل لموقعك! من فضلك انزل، الكابتن في الانتظار.',
                 message_type: 'system'
             }]);
-            alert('✅ تم إبلاغ العميل بوصولك');
+            sendTripEmail(tripId, '🚗 الكابتن وصل!', 'الكابتن وصل لموقعك وفي انتظارك. من فضلك انزل في أقرب وقت.');
+            alert('✅ تم إبلاغ العميل بوصولك (دردشة + إيميل)');
         }
 
         // ==========================================
@@ -660,9 +708,7 @@
         // ==========================================
         async function endTrip(tripId) {
             if (!confirm('هل تريد إنهاء هذه الرحلة؟')) return;
-            // تحديث حالة الرحلة
             await sb.from('trips').update({ status: 'completed' }).eq('id', tripId);
-            // إرسال رسالة نظام
             await sb.from('chat_messages').insert([{
                 trip_id: tripId,
                 sender_role: 'driver',
@@ -671,7 +717,8 @@
                 message: '✅ تم إنهاء الرحلة بنجاح. شكراً لاستخدامك 24Seven!',
                 message_type: 'system'
             }]);
-            alert('✅ تم إنهاء الرحلة');
+            sendTripEmail(tripId, '✅ رحلتك اكتملت', 'نتمنى أنك استمتعت برحلتك معنا. شكراً لاستخدامك 24Seven! نسعد بتقييمك.');
+            alert('✅ تم إنهاء الرحلة (دردشة + إيميل)');
             loadDriverTrips();
         }
     </script>

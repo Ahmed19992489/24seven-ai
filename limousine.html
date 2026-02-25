@@ -11,6 +11,7 @@
         href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Outfit:wght@700&display=swap"
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <style>
         :root {
             --bg-dark: #0f172a;
@@ -1395,9 +1396,53 @@
                     if (payload.new.status === 'driver_assigned' && payload.old.status !== 'driver_assigned') {
                         addNotification('🚗 تم تعيين كابتن لرحلتك! يمكنك رؤية بياناته في صفحة الرحلات');
                         showNotifBanner('🚗 تم تعيين كابتن لرحلتك!');
+                        sendClientEmail(payload.new.id, '🚗 تم تعيين كابتن لرحلتك', 'تم تعيين كابتن لرحلتك وهو في الطريق إليك. يمكنك رؤية بيانات الكابتن والسيارة أدناه.');
                         loadTrips();
                     }
                 }).subscribe();
+        }
+
+        // ==========================================
+        // EmailJS
+        // ==========================================
+        (function () { emailjs.init('KkVNrxD2AIrmD-BxM'); })();
+
+        async function sendClientEmail(tripId, notifTitle, notifMessage) {
+            try {
+                const { data: trip } = await sb.from('trips').select('*, drivers:drivers!fk_trips_driver(*), cars:cars!fk_trips_car(*)').eq('id', tripId).single();
+                if (!trip || !user) return;
+
+                // جلب إيميل العميل
+                const { data: { user: authUser } } = await sb.auth.getUser();
+                const clientEmail = authUser?.email || '';
+                if (!clientEmail) { console.log('لا يوجد إيميل للعميل'); return; }
+
+                const { data: profile } = await sb.from('profiles').select('full_name').eq('id', user.id).single();
+                const clientName = profile?.full_name || 'عزيزنا العميل';
+
+                const notes = trip.admin_notes || '';
+                let tripDate = '', tripTime = '';
+                const dateMatch = notes.match(/📅\s*(.*?)\s*-\s*(.*?)[\n|$]/);
+                if (dateMatch) { tripDate = dateMatch[1].trim(); tripTime = dateMatch[2].trim(); }
+
+                await emailjs.send('24seven', 'trip_notification', {
+                    to_email: clientEmail,
+                    client_name: clientName,
+                    notification_title: notifTitle,
+                    notification_message: notifMessage,
+                    trip_from: (trip.pickup_location || '').split(',')[0],
+                    trip_to: (trip.dropoff_location || '').split(',')[0],
+                    trip_date: tripDate || new Date().toLocaleDateString('ar-EG'),
+                    trip_time: tripTime || '--',
+                    trip_price: trip.estimated_price || '0',
+                    captain_name: trip.drivers?.name || 'الكابتن',
+                    car_model: trip.cars?.model || '--',
+                    plate_number: trip.cars?.plate_number || '--'
+                });
+                console.log('✅ تم إرسال الإيميل بنجاح');
+            } catch (err) {
+                console.log('خطأ في إرسال الإيميل:', err);
+            }
         }
 
         // ==========================================

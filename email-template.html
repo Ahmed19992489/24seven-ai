@@ -1,0 +1,127 @@
+<!--
+    ==========================================
+    24Seven Email Template for EmailJS
+    ==========================================
+    Template ID: trip_notification
+    
+    Variables needed:
+    {{client_name}} - اسم العميل
+    {{notification_title}} - عنوان الإشعار
+    {{notification_message}} - نص الإشعار
+    {{trip_from}} - نقطة الانطلاق
+    {{trip_to}} - الوجهة  
+    {{trip_date}} - التاريخ
+    {{trip_time}} - الوقت
+    {{trip_price}} - السعر
+    {{captain_name}} - اسم الكابتن
+    {{car_model}} - نوع السيارة
+    {{plate_number}} - رقم اللوحة
+    {{to_email}} - إيميل العميل
+    ==========================================
+-->
+
+<div
+    style="direction:rtl; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc;">
+
+    <!-- Header -->
+    <div
+        style="background: linear-gradient(135deg, #0f172a, #1e293b); padding: 30px 24px; text-align: center; border-radius: 0 0 16px 16px;">
+        <div
+            style="display: inline-block; background: linear-gradient(135deg, #f59e0b, #ea580c); width: 48px; height: 48px; border-radius: 12px; line-height: 48px; font-size: 20px; font-weight: 900; color: #0f172a; margin-bottom: 12px;">
+            24</div>
+        <h1 style="color: #ffffff; font-size: 28px; margin: 0; font-weight: 800;">Seven</h1>
+        <p style="color: #94a3b8; font-size: 12px; margin: 4px 0 0 0; letter-spacing: 2px;">PREMIUM LIMOUSINE SERVICES
+        </p>
+    </div>
+
+    <!-- Notification Badge -->
+    <div style="text-align: center; margin: -18px auto 0; position: relative; z-index: 1;">
+        <span
+            style="display: inline-block; background: #f59e0b; color: #0f172a; padding: 8px 28px; border-radius: 50px; font-weight: 800; font-size: 14px; box-shadow: 0 4px 12px rgba(245,158,11,0.3);">
+            {{notification_title}}
+        </span>
+    </div>
+
+    <!-- Body -->
+    <div
+        style="background: #ffffff; margin: 20px 16px; border-radius: 16px; padding: 28px 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+
+        <p style="font-size: 18px; font-weight: 700; color: #1e293b; margin: 0 0 4px 0;">مرحباً {{client_name}} 👋</p>
+        <p style="font-size: 14px; color: #64748b; margin: 0 0 20px 0;">{{notification_message}}</p>
+
+        <!-- Trip Details Card -->
+        <div
+            style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+            <p
+                style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 12px 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+                تفاصيل الرحلة</p>
+
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 8px 0; font-size: 13px; color: #94a3b8; width: 30%;">📍 من</td>
+                    <td style="padding: 8px 0; font-size: 13px; color: #1e293b; font-weight: 600;">{{trip_from}}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-size: 13px; color: #94a3b8;">📍 إلى</td>
+                    <td style="padding: 8px 0; font-size: 13px; color: #1e293b; font-weight: 600;">{{trip_to}}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-size: 13px; color: #94a3b8;">📅 التاريخ</td>
+                    <td style="padding: 8px 0; font-size: 13px; color: #1e293b; font-weight: 600;">{{trip_date}}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-size: 13px; color: #94a3b8;">🕐 الوقت</td>
+                    <td style="padding: 8px 0; font-size: 13px; color: #1e293b; font-weight: 600;">{{trip_time}}</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Captain & Car Card -->
+        <div
+            style="background: linear-gradient(135deg, #0f172a, #1e293b); border-radius: 12px; padding: 20px; margin-bottom: 20px; color: white;">
+            <p
+                style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 12px 0; border-bottom: 1px solid #334155; padding-bottom: 8px;">
+                بيانات الكابتن والسيارة</p>
+
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 6px 0; font-size: 13px; color: #94a3b8; width: 30%;">👨‍✈️ الكابتن</td>
+                    <td style="padding: 6px 0; font-size: 14px; color: #f59e0b; font-weight: 700;">{{captain_name}}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; font-size: 13px; color: #94a3b8;">🚗 السيارة</td>
+                    <td style="padding: 6px 0; font-size: 13px; color: #ffffff; font-weight: 600;">{{car_model}}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; font-size: 13px; color: #94a3b8;">🔢 اللوحة</td>
+                    <td
+                        style="padding: 6px 0; font-size: 14px; color: #ffffff; font-weight: 700; font-family: monospace;">
+                        {{plate_number}}</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Price -->
+        <div
+            style="text-align: center; background: linear-gradient(135deg, #f59e0b, #ea580c); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+            <p style="font-size: 11px; color: rgba(0,0,0,0.5); margin: 0; font-weight: 700;">التكلفة</p>
+            <p style="font-size: 28px; color: #0f172a; margin: 4px 0 0 0; font-weight: 900;">{{trip_price}} EGP</p>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div style="text-align: center; padding: 20px 16px 30px;">
+        <p style="font-size: 12px; color: #94a3b8; margin: 0 0 8px 0;">شكراً لاختيارك <strong
+                style="color: #f59e0b;">24Seven</strong> ✨</p>
+        <p style="font-size: 11px; color: #94a3b8; margin: 0 0 4px 0;">📧 info@24seven-ai.com</p>
+        <p style="font-size: 11px; color: #94a3b8; margin: 0 0 16px 0;">🌐 24seven-ai.com</p>
+        <div style="border-top: 1px solid #e2e8f0; padding-top: 12px;">
+            <p style="font-size: 10px; color: #cbd5e1; margin: 0;">© 2024 24Seven Premium Limousine. All rights
+                reserved.</p>
+            <p style="font-size: 10px; color: #cbd5e1; margin: 4px 0 0 0;">هذا البريد مرسل تلقائياً - لا تقم بالرد عليه
+            </p>
+        </div>
+    </div>
+
+</div>
