@@ -54,37 +54,96 @@
             box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
         }
 
-        .bottom-nav {
+        /* ====== Sidebar Nav ====== */
+        .sidebar-overlay {
             position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: #1e293b;
-            border-top: 1px solid #334155;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 90;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            backdrop-filter: blur(2px);
+        }
+
+        .sidebar-overlay.open {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            right: -280px;
+            width: 280px;
+            height: 100%;
+            background: #0f172a;
+            border-left: 1px solid #1e293b;
+            z-index: 100;
+            transition: right 0.35s cubic-bezier(.4, 0, .2, 1);
             display: flex;
-            justify-content: space-around;
-            padding: 10px 0;
-            z-index: 50;
-            padding-bottom: env(safe-area-inset-bottom);
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar.open {
+            right: 0;
+        }
+
+        .sidebar-header {
+            padding: 20px 20px 16px;
+            border-bottom: 1px solid #1e293b;
+            background: linear-gradient(135deg, #0f172a, #1e293b);
         }
 
         .nav-item {
             display: flex;
-            flex-direction: column;
             align-items: center;
+            gap: 14px;
+            padding: 14px 20px;
             color: #64748b;
-            font-size: 0.7rem;
-            gap: 4px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: 12px;
+            margin: 2px 10px;
+        }
+
+        .nav-item:hover {
+            background: #1e293b;
+            color: #94a3b8;
         }
 
         .nav-item.active {
-            color: var(--primary);
+            color: #f59e0b;
+            background: rgba(245, 158, 11, 0.08);
             font-weight: bold;
         }
 
         .nav-item i {
-            font-size: 1.2rem;
-            margin-bottom: 2px;
+            font-size: 1.1rem;
+            width: 22px;
+            text-align: center;
+        }
+
+        .hamburger-btn {
+            width: 38px;
+            height: 38px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #cbd5e1;
+            font-size: 1rem;
+            transition: 0.2s;
+        }
+
+        .hamburger-btn:hover {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
         }
 
         .car-option {
@@ -503,9 +562,8 @@
                 <p id="header-user-name" class="text-xs font-bold leading-tight text-slate-300">زائر</p>
                 <p class="text-[10px] text-amber-500 font-num font-bold"><span id="header-balance">0.00</span> EGP</p>
             </div>
-            <button onclick="handleLogout()"
-                class="w-8 h-8 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white transition">
-                <i class="fas fa-sign-out-alt text-xs"></i>
+            <button onclick="openSidebar()" class="hamburger-btn" id="menu-btn">
+                <i class="fas fa-bars"></i>
             </button>
         </div>
     </header>
@@ -909,18 +967,64 @@
         </div>
     </div>
 
-    <nav class="bottom-nav" id="main-bottom-nav">
-        <div onclick="switchTab('booking')" class="nav-item active" id="nav-booking"><i
-                class="fas fa-car"></i><span>حجز</span></div>
-        <div onclick="switchTab('trips')" class="nav-item" id="nav-trips"><i class="fas fa-list"></i><span>رحلاتي</span>
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="main-sidebar">
+        <!-- Sidebar Header -->
+        <div class="sidebar-header">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-9 h-9 bg-gradient-to-br from-amber-400 to-orange-600 rounded-xl flex items-center justify-center font-black text-base text-slate-900">
+                        24</div>
+                    <div>
+                        <p class="font-black text-white text-sm">24Seven</p>
+                        <p class="text-[10px] text-slate-500">Limousine</p>
+                    </div>
+                </div>
+                <button onclick="closeSidebar()"
+                    class="w-8 h-8 bg-slate-800 rounded-lg flex items-center justify-center text-slate-400 hover:text-white transition">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="bg-slate-800/60 rounded-xl p-3 text-center">
+                <p class="text-xs text-slate-400">مرحباً،</p>
+                <p class="text-sm font-bold text-white" id="sidebar-user-name">...</p>
+            </div>
         </div>
-        <div onclick="switchTab('loyalty')" class="nav-item" id="nav-loyalty"><i
-                class="fas fa-star"></i><span>نقاطي</span></div>
-        <div onclick="switchTab('wallet')" class="nav-item" id="nav-wallet"><i
-                class="fas fa-wallet"></i><span>المحفظة</span></div>
-        <div onclick="switchTab('support')" class="nav-item" id="nav-support"><i
-                class="fas fa-headset"></i><span>الدعم</span></div>
-    </nav>
+
+        <!-- Nav Items -->
+        <div class="flex-1 overflow-y-auto py-3">
+            <div onclick="switchTab('booking'); closeSidebar()" class="nav-item active" id="nav-booking">
+                <i class="fas fa-car text-amber-500"></i><span>حجز رحلة</span>
+            </div>
+            <div onclick="switchTab('trips'); closeSidebar()" class="nav-item" id="nav-trips">
+                <i class="fas fa-list-ul"></i><span>رحلاتي</span>
+            </div>
+            <div onclick="switchTab('loyalty'); closeSidebar()" class="nav-item" id="nav-loyalty">
+                <i class="fas fa-star"></i><span>نقاطي ⭐</span>
+            </div>
+            <div onclick="switchTab('wallet'); closeSidebar()" class="nav-item" id="nav-wallet">
+                <i class="fas fa-wallet"></i><span>المحفظة</span>
+            </div>
+            <div onclick="switchTab('messages'); closeSidebar()" class="nav-item" id="nav-messages">
+                <i class="fas fa-comments"></i><span>الرسائل</span>
+            </div>
+            <div onclick="switchTab('support'); closeSidebar()" class="nav-item" id="nav-support">
+                <i class="fas fa-headset"></i><span>الدعم والتواصل</span>
+            </div>
+        </div>
+
+        <!-- Logout -->
+        <div class="p-4 border-t border-slate-800">
+            <button onclick="handleLogout()"
+                class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition text-sm font-bold">
+                <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+            </button>
+        </div>
+    </div>
 
     <div id="login-screen"
         class="fixed inset-0 bg-slate-900 z-[100] flex flex-col items-center justify-center p-6 text-center">
@@ -1047,7 +1151,19 @@
             if (id === 'wallet') { loadWallet(); loadTransactions(); }
             if (id === 'messages') loadClientChats();
             if (id === 'loyalty') loadLoyalty();
-            document.getElementById('main-bottom-nav').style.display = 'flex';
+        }
+
+        function openSidebar() {
+            document.getElementById('main-sidebar').classList.add('open');
+            document.getElementById('sidebar-overlay').classList.add('open');
+            // تحديث اسم المستخدم في الـ sidebar
+            const name = document.getElementById('header-user-name')?.innerText;
+            if (name) document.getElementById('sidebar-user-name').innerText = name;
+        }
+
+        function closeSidebar() {
+            document.getElementById('main-sidebar').classList.remove('open');
+            document.getElementById('sidebar-overlay').classList.remove('open');
         }
 
         function setTripType(t) {
@@ -1422,7 +1538,7 @@
             currentClientChatTripId = tripId;
             document.querySelectorAll('.page-content').forEach(e => e.classList.add('hidden'));
             document.getElementById('page-chat-window').classList.remove('hidden');
-            document.getElementById('main-bottom-nav').style.display = 'none';
+            closeSidebar();
             document.getElementById('chat-driver-name').textContent = 'كابتن ' + driverName;
 
             const { data: trip } = await sb.from('trips').select('pickup_location, dropoff_location').eq('id', tripId).single();
