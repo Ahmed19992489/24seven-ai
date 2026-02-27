@@ -368,24 +368,21 @@
             const userIds = trips.map(t => t.user_id).filter(Boolean);
             let profilesMap = {};
             if (userIds.length > 0) {
-                const { data: profiles } = await sb.from('profiles').select('id, full_name, phone').in('id', userIds);
+                const { data: profiles } = await sb.from('profiles').select('id, full_name').in('id', userIds);
                 if (profiles) profiles.forEach(p => profilesMap[p.id] = p);
             }
 
             list.innerHTML = trips.map(t => {
                 const profile = profilesMap[t.user_id] || {};
                 let clientName = profile.full_name || 'عميل';
-                let clientPhone = profile.phone || '';
+                // رقم العميل مخفي عن الكابتن - التواصل فقط من خلال الدردشة
 
                 // استخراج من admin_notes لو حجز يدوي
                 if (t.admin_notes && t.admin_notes.includes('حجز هاتفي')) {
                     const nm = t.admin_notes.match(/العميل: (.*?)[\n(]/);
-                    const ph = t.admin_notes.match(/رقم: (.*?)\n/);
                     if (nm) clientName = nm[1].trim();
-                    if (ph) clientPhone = ph[1].trim();
                 }
                 if (t.manual_client_name) clientName = t.manual_client_name;
-                if (t.client_phone) clientPhone = t.client_phone;
 
                 // استخراج التفاصيل من admin_notes
                 let tripType = '--', payMethod = '--', tripDate = '', tripTime = '', passengers = '--', bags = '--';
@@ -435,12 +432,11 @@
                             <div class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center text-sm">👤</div>
                             <div>
                                 <p class="text-xs font-bold text-white">${clientName}</p>
-                                <p class="text-[10px] text-slate-400 font-num">${clientPhone}</p>
+                                <p class="text-[10px] text-blue-400"><i class="fas fa-comment-dots ml-1"></i>التواصل عبر الدردشة فقط</p>
                             </div>
                         </div>
                         ${isActive ? `
                         <div class="flex gap-2">
-                            <a href="tel:${clientPhone}" class="w-8 h-8 bg-green-600/20 border border-green-500/30 rounded-full flex items-center justify-center text-green-400"><i class="fas fa-phone text-xs"></i></a>
                             <button onclick="openDriverChat('${t.id}', '${clientName}')" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold"><i class="fas fa-comment ml-1"></i>دردشة</button>
                         </div>
                     </div>
