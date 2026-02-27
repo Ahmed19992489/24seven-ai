@@ -687,6 +687,19 @@
                                 id="pay-wallet">المحفظة</div>
                         </div>
                     </div>
+                    <!-- حقل الكوبون -->
+                    <div class="mt-3 p-3 bg-slate-800/60 rounded-xl border border-amber-500/20">
+                        <p class="text-xs text-amber-400 font-bold mb-2"><i class="fas fa-ticket-alt ml-1"></i> لديك
+                            كوبون خصم؟</p>
+                        <div class="flex gap-2">
+                            <input type="text" id="coupon-input" placeholder="اكتب كود الكوبون"
+                                class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-amber-500 transition uppercase"
+                                style="font-family:monospace">
+                            <button onclick="applyCoupon()"
+                                class="bg-amber-500 text-slate-900 font-bold px-4 py-2 rounded-xl text-xs hover:bg-amber-400 transition">تطبيق</button>
+                        </div>
+                        <div id="coupon-feedback" class="text-xs mt-2 hidden"></div>
+                    </div>
                     <button onclick="confirmFinalBooking()" id="confirm-btn"
                         class="w-full py-3 bg-green-600 hover:bg-green-500 rounded-xl font-bold text-white mt-4">تأكيد
                         الحجز</button>
@@ -733,6 +746,22 @@
         <!-- صفحة الرسائل - قائمة المحادثات -->
         <div id="page-messages" class="page-content hidden">
             <h2 class="text-xl font-bold mb-4 text-white"><i class="fas fa-comments text-amber-500 ml-2"></i>رسائلي</h2>
+
+            <!-- بطاقة خدمة العملاء ثابتة دائماً -->
+            <div onclick="openSupportChat()"
+                class="glass-card p-4 mb-3 cursor-pointer hover:border-amber-500/40 transition border border-amber-500/20 bg-amber-500/5">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center text-lg">🎟️
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-bold text-amber-400 text-sm">خدمة العملاء - 24Seven</p>
+                        <p class="text-[11px] text-slate-400 mt-0.5">تواصل مع فريق الدعم في أي وقت</p>
+                    </div>
+                    <span class="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></span>
+                </div>
+            </div>
+
+            <p class="text-xs text-slate-500 mb-3">دردشات الكابتن (تظهر عند تعيين سائق)</p>
             <div id="client-chats-list" class="space-y-3 pb-20"></div>
         </div>
 
@@ -761,16 +790,89 @@
             </div>
         </div>
 
+        <!-- نافذة دردشة خدمة العملاء -->
+        <div id="page-support-chat" class="page-content hidden">
+            <div class="chat-container">
+                <div class="flex items-center gap-3 pb-3 border-b border-slate-700 mb-2">
+                    <button onclick="switchTab('messages')"
+                        class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white">
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                    <div class="w-8 h-8 bg-amber-500/20 rounded-full flex items-center justify-center text-sm">🎟️</div>
+                    <div class="flex-1">
+                        <p class="font-bold text-white text-sm">خدمة العملاء</p>
+                        <p class="text-[10px] text-green-400">متاح 24/7 • سيرد عليك الفريق</p>
+                    </div>
+                </div>
+                <div id="support-chat-messages" class="chat-messages"></div>
+                <div class="chat-input-bar">
+                    <input type="text" id="support-chat-input" placeholder="اكتب استفسارك..."
+                        onkeypress="if(event.key==='Enter')sendSupportMessage()">
+                    <button onclick="sendSupportMessage()" class="bg-amber-500 text-slate-900"><i
+                            class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
+
         <!-- صفحة الدعم -->
-        <div id="page-support"
-            class="page-content hidden h-[80vh] flex flex-col items-center justify-center text-center">
-            <div class="w-24 h-24 bg-green-500/10 rounded-full flex items-center justify-center mb-6"><i
-                    class="fab fa-whatsapp text-6xl text-green-500"></i></div>
-            <a href="https://wa.me/201121748885"
-                class="bg-green-600 text-white px-8 py-4 rounded-full font-bold text-lg mb-6">تواصل معنا</a>
-            <button onclick="handleLogout()"
-                class="text-red-500 border border-red-500/30 px-6 py-2 rounded-lg text-sm font-bold hover:bg-red-500/10 transition"><i
-                    class="fas fa-sign-out-alt mr-2"></i> تسجيل خروج</button>
+        <div id="page-support" class="page-content hidden pb-20">
+            <!-- الدردشة الداخلية - وسيلة الدعم الأساسية -->
+            <div class="glass-card p-5 mb-4">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center text-lg">🎟️
+                    </div>
+                    <div>
+                        <p class="font-bold text-white text-sm">دردشة خدمة العملاء</p>
+                        <p class="text-xs text-green-400">متاح 24/7 - رد سريع</p>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-400 mb-4">تواصل مباشرة مع فريقنا للاستفسار عن رحلتك، الحجز، أو أي مساعدة
+                </p>
+                <button onclick="openSupportChat()"
+                    class="w-full py-3 bg-amber-500 text-slate-900 font-bold rounded-xl text-sm hover:bg-amber-400 transition">
+                    <i class="fas fa-comments ml-2"></i>ابدأ محادثة
+                </button>
+            </div>
+
+            <!-- معلومات التواصل -->
+            <div class="glass-card p-5 mb-4">
+                <h3 class="font-bold text-white mb-3 text-sm">معلومات سريعة</h3>
+                <div class="space-y-3">
+                    <div class="flex items-center gap-3 p-3 bg-slate-800/50 rounded-xl">
+                        <i class="fas fa-clock text-amber-500 w-5"></i>
+                        <div>
+                            <p class="text-xs font-bold text-white">ساعات العمل</p>
+                            <p class="text-[11px] text-slate-400">يومياً من 6 صباحاً حتى 12 منتصف الليل</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 p-3 bg-slate-800/50 rounded-xl">
+                        <i class="fas fa-map-marker-alt text-amber-500 w-5"></i>
+                        <div>
+                            <p class="text-xs font-bold text-white">منطقة الخدمة</p>
+                            <p class="text-[11px] text-slate-400">إسكندرية، القاهرة، مرسى مطروح</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- تصعيد للمدير -->
+            <div class="glass-card p-5 border border-red-500/20 bg-red-500/5">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
+                        <i class="fab fa-whatsapp text-2xl text-green-500"></i>
+                    </div>
+                    <div>
+                        <p class="font-bold text-white text-sm">تصعيد شكوى للمدير</p>
+                        <p class="text-[11px] text-red-400">للشكاوى الجدية فقط</p>
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-500 mb-3">يُرجى استخدام الدردشة أولاً، وللشكاوى غير المحلولة يمكن
+                    التواصل مع المدير مباشرة.</p>
+                <a href="https://wa.me/201121748885"
+                    class="w-full flex items-center justify-center gap-2 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl text-sm transition">
+                    <i class="fab fa-whatsapp"></i>مراسلة المدير
+                </a>
+            </div>
         </div>
 
         <!-- ====== صفحة برنامج الولاء ====== -->
@@ -1450,6 +1552,125 @@
             if (!amt || !ref) return alert("أكمل البيانات");
             await sb.from('transactions').insert([{ user_id: user.id, amount: amt, reference_id: ref, status: 'pending' }]);
             alert("تم الإرسال"); loadWallet();
+        }
+
+        // ==========================================
+        // 🎫 نظام الكوبونات
+        // ==========================================
+        let appliedCoupon = null;
+
+        async function applyCoupon() {
+            const code = document.getElementById('coupon-input').value.trim().toUpperCase();
+            const feedback = document.getElementById('coupon-feedback');
+            feedback.classList.remove('hidden');
+
+            if (!code) {
+                feedback.className = 'text-xs mt-2 text-red-400';
+                feedback.textContent = '❌ أدخل كود الكوبون';
+                return;
+            }
+
+            feedback.className = 'text-xs mt-2 text-slate-400';
+            feedback.textContent = '⏳ جاري التحقق...';
+
+            const { data: coupon, error } = await sb
+                .from('coupons')
+                .select('*')
+                .eq('code', code)
+                .eq('is_active', true)
+                .single();
+
+            if (!coupon || error) {
+                feedback.className = 'text-xs mt-2 text-red-400';
+                feedback.textContent = '❌ كود غير صالح أو منتهي';
+                return;
+            }
+
+            // التحقق من تاريخ الانتهاء
+            if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
+                feedback.className = 'text-xs mt-2 text-red-400';
+                feedback.textContent = '❌ انتهت صلاحية هذا الكوبون';
+                return;
+            }
+
+            // تطبيق الخصم
+            appliedCoupon = coupon;
+            const oldPrice = tripData.price;
+            tripData.price = Math.max(0, oldPrice - coupon.value);
+            document.getElementById('summ-price').innerText = tripData.price + ' EGP';
+            document.getElementById('coupon-input').disabled = true;
+            document.querySelector('[onclick="applyCoupon()"]').disabled = true;
+
+            feedback.className = 'text-xs mt-2 text-green-400 font-bold';
+            feedback.textContent = `✅ تم تطبيق خصم ${coupon.value} جنيه! السعر الجديد: ${tripData.price} EGP`;
+        }
+
+        // ==========================================
+        // 💬 دردشة خدمة العملاء
+        // ==========================================
+        let supportChatSubscription = null;
+
+        async function openSupportChat() {
+            document.querySelectorAll('.page-content').forEach(e => e.classList.add('hidden'));
+            document.getElementById('page-support-chat').classList.remove('hidden');
+            await loadSupportMessages();
+            subscribeSupportChat();
+        }
+
+        async function loadSupportMessages() {
+            if (!user) return;
+            const container = document.getElementById('support-chat-messages');
+            const { data: messages } = await sb
+                .from('support_chats')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: true });
+
+            container.innerHTML = '';
+            if (!messages || messages.length === 0) {
+                container.innerHTML = '<p class="text-center text-slate-500 text-xs py-8">أهلاً! كيف يمكننا مساعدتك؟ 😊<br><span class="text-[10px] mt-1 block">سيرد عليك فريقنا في أقرب وقت</span></p>';
+                return;
+            }
+            messages.forEach(m => {
+                const div = document.createElement('div');
+                if (m.sender_role === 'client') {
+                    div.className = 'msg-bubble msg-mine';
+                    div.textContent = m.message;
+                } else {
+                    div.className = 'msg-bubble msg-admin';
+                    div.innerHTML = `<span class="text-[10px] block mb-1">🎟️ خدمة العملاء</span>${m.message}`;
+                }
+                const time = document.createElement('span');
+                time.className = 'block text-[9px] mt-1 opacity-50';
+                time.textContent = new Date(m.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+                div.appendChild(time);
+                container.appendChild(div);
+            });
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendSupportMessage() {
+            if (!user) return;
+            const input = document.getElementById('support-chat-input');
+            const message = input.value.trim();
+            if (!message) return;
+            input.value = '';
+            const { data: profile } = await sb.from('profiles').select('full_name').eq('id', user.id).single();
+            await sb.from('support_chats').insert([{
+                user_id: user.id,
+                sender_role: 'client',
+                sender_name: profile?.full_name || 'عميل',
+                message: message
+            }]);
+        }
+
+        function subscribeSupportChat() {
+            if (supportChatSubscription) sb.removeChannel(supportChatSubscription);
+            if (!user) return;
+            supportChatSubscription = sb.channel('support-' + user.id)
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_chats', filter: 'user_id=eq.' + user.id }, () => {
+                    loadSupportMessages();
+                }).subscribe();
         }
 
         async function handleGoogleLogin() {
