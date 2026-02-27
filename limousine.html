@@ -804,98 +804,96 @@
             </div>
 
             <!-- بطاقات الجوائز -->
-            <h3 class="text-sm font-bold text-white mb-3">🎁 الجوائز المتاحة</h3>
+            <h3 class="text-sm font-bold text-white mb-3">🎁 كوبونات الخصم</h3>
             <div class="space-y-3" id="rewards-container">
 
-                <!-- جائزة 1: خصم 250 -->
-                <div class="reward-card" id="reward-card-10">
+                <!-- كوبون 1: خصم 250 - 20 رحلة -->
+                <div class="reward-card" id="reward-card-20">
                     <div class="flex items-start gap-3">
                         <div
                             class="w-12 h-12 rounded-xl bg-slate-700 flex items-center justify-center text-2xl flex-shrink-0">
                             🎫</div>
                         <div class="flex-1">
                             <div class="flex justify-between items-center mb-1">
-                                <p class="font-bold text-white text-sm">خصم 250 جنيه</p>
-                                <span class="reward-badge">10 رحلات</span>
-                            </div>
-                            <p class="text-xs text-slate-400 mb-3">احصل على خصم فوري 250 جنيه على رحلتك القادمة</p>
-                            <div class="loyalty-progress-bg mb-1" style="height:6px">
-                                <div class="loyalty-progress-fill" id="prog-10" style="width:0%"></div>
-                            </div>
-                            <div class="flex justify-between text-[10px] text-slate-500 mb-3">
-                                <span id="prog-10-txt">0 / 10 رحلات</span>
-                            </div>
-                            <button id="btn-redeem-10" onclick="redeemReward('discount_250', 10, 250)"
-                                class="w-full py-2 rounded-xl text-xs font-bold hidden bg-amber-500 text-slate-900 hover:bg-amber-400 transition">
-                                <i class="fas fa-gift ml-1"></i> استبدل الآن
-                            </button>
-                            <div id="redeemed-10" class="hidden text-xs text-center text-green-400 font-bold py-1">
-                                ✅ تم الاستبدال - سيتواصل معك الفريق
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- جائزة 2: رحلة مجانية 500 -->
-                <div class="reward-card" id="reward-card-20">
-                    <div class="flex items-start gap-3">
-                        <div
-                            class="w-12 h-12 rounded-xl bg-slate-700 flex items-center justify-center text-2xl flex-shrink-0">
-                            🚗</div>
-                        <div class="flex-1">
-                            <div class="flex justify-between items-center mb-1">
-                                <p class="font-bold text-white text-sm">رحلة مجانية</p>
+                                <p class="font-bold text-white text-sm">كوبون خصم 250 جنيه</p>
                                 <span class="reward-badge">20 رحلة</span>
                             </div>
-                            <p class="text-xs text-slate-400 mb-3">رحلة مجانية بقيمة 500 جنيه مع 24Seven</p>
+                            <p class="text-xs text-slate-400 mb-3">احصل على كوبون خصم فوري بقيمة 250 جنيه على رحلتك
+                                القادمة</p>
                             <div class="loyalty-progress-bg mb-1" style="height:6px">
                                 <div class="loyalty-progress-fill" id="prog-20" style="width:0%"></div>
                             </div>
                             <div class="flex justify-between text-[10px] text-slate-500 mb-3">
                                 <span id="prog-20-txt">0 / 20 رحلة</span>
                             </div>
-                            <button id="btn-redeem-20" onclick="redeemReward('free_500', 20, 500)"
+                            <button id="btn-redeem-20" onclick="redeemReward('coupon_250', 20, 250)"
                                 class="w-full py-2 rounded-xl text-xs font-bold hidden bg-amber-500 text-slate-900 hover:bg-amber-400 transition">
-                                <i class="fas fa-gift ml-1"></i> استبدل الآن
+                                <i class="fas fa-ticket-alt ml-1"></i> احصل على الكوبون
                             </button>
                             <div id="redeemed-20" class="hidden text-xs text-center text-green-400 font-bold py-1">
-                                ✅ تم الاستبدال - سيتواصل معك الفريق
+                                ✅ تم إصدار الكوبون - سيتواصل معك الفريق
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- جائزة 3: رحلة القاهرة 1700 -->
-                <div class="reward-card" id="reward-card-100">
+                <!-- كوبون 2: خصم 500 - 50 رحلة -->
+                <div class="reward-card" id="reward-card-50">
                     <div class="flex items-start gap-3">
                         <div
                             class="w-12 h-12 rounded-xl bg-slate-700 flex items-center justify-center text-2xl flex-shrink-0">
-                            ✈️</div>
+                            🎟️</div>
+                        <div class="flex-1">
+                            <div class="flex justify-between items-center mb-1">
+                                <p class="font-bold text-white text-sm">كوبون خصم 500 جنيه</p>
+                                <span class="reward-badge">50 رحلة</span>
+                            </div>
+                            <p class="text-xs text-slate-400 mb-3">احصل على كوبون خصم بقيمة 500 جنيه على أي رحلة</p>
+                            <div class="loyalty-progress-bg mb-1" style="height:6px">
+                                <div class="loyalty-progress-fill" id="prog-50" style="width:0%"></div>
+                            </div>
+                            <div class="flex justify-between text-[10px] text-slate-500 mb-3">
+                                <span id="prog-50-txt">0 / 50 رحلة</span>
+                            </div>
+                            <button id="btn-redeem-50" onclick="redeemReward('coupon_500', 50, 500)"
+                                class="w-full py-2 rounded-xl text-xs font-bold hidden bg-amber-500 text-slate-900 hover:bg-amber-400 transition">
+                                <i class="fas fa-ticket-alt ml-1"></i> احصل على الكوبون
+                            </button>
+                            <div id="redeemed-50" class="hidden text-xs text-center text-green-400 font-bold py-1">
+                                ✅ تم إصدار الكوبون - سيتواصل معك الفريق
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- كوبون 3: خصم 1000 - 100 رحلة VIP -->
+                <div class="reward-card" id="reward-card-100">
+                    <div class="flex items-start gap-3">
+                        <div
+                            class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-700 to-amber-600 flex items-center justify-center text-2xl flex-shrink-0">
+                            👑</div>
                         <div class="flex-1">
                             <div class="flex justify-between items-center mb-1">
                                 <div class="flex items-center gap-2">
-                                    <p class="font-bold text-white text-sm">رحلة القاهرة</p>
+                                    <p class="font-bold text-white text-sm">كوبون خصم 1000 جنيه</p>
                                     <span
-                                        class="text-[10px] bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-full px-2 py-0.5 font-bold">👑
-                                        VIP</span>
+                                        class="text-[10px] bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-full px-2 py-0.5 font-bold">VIP</span>
                                 </div>
                                 <span class="reward-badge">100 رحلة</span>
                             </div>
-
-                            <p class="text-xs text-slate-400 mb-3">رحلة ذهاب للقاهرة مجاناً بقيمة 1700 جنيه - للعملاء
-                                VIP</p>
+                            <p class="text-xs text-slate-400 mb-3">كوبون خصم كبير بقيمة 1000 جنيه - حصري لعملاء VIP</p>
                             <div class="loyalty-progress-bg mb-1" style="height:6px">
                                 <div class="loyalty-progress-fill" id="prog-100" style="width:0%"></div>
                             </div>
                             <div class="flex justify-between text-[10px] text-slate-500 mb-3">
                                 <span id="prog-100-txt">0 / 100 رحلة</span>
                             </div>
-                            <button id="btn-redeem-100" onclick="redeemReward('free_1700', 100, 1700)"
+                            <button id="btn-redeem-100" onclick="redeemReward('coupon_1000', 100, 1000)"
                                 class="w-full py-2 rounded-xl text-xs font-bold hidden bg-gradient-to-r from-purple-600 to-amber-500 text-white transition">
-                                <i class="fas fa-crown ml-1"></i> استبدل الجائزة الكبرى
+                                <i class="fas fa-crown ml-1"></i> احصل على كوبون VIP
                             </button>
                             <div id="redeemed-100" class="hidden text-xs text-center text-green-400 font-bold py-1">
-                                ✅ تم الاستبدال - مبروك! سيتواصل معك الفريق
+                                ✅ تم إصدار كوبون VIP - مبروك! سيتواصل معك الفريق
                             </div>
                         </div>
                     </div>
@@ -1899,9 +1897,9 @@
         // ⭐ نظام برنامج الولاء
         // ==========================================
         const LOYALTY_MILESTONES = [
-            { trips: 10, type: 'discount_250', label: 'خصم 250 جنيه', value: 250, emoji: '🎫' },
-            { trips: 20, type: 'free_500', label: 'رحلة مجانية 500 جنيه', value: 500, emoji: '🚗' },
-            { trips: 100, type: 'free_1700', label: 'رحلة القاهرة 1700 جنيه', value: 1700, emoji: '✈️' },
+            { trips: 20, type: 'coupon_250', label: 'كوبون خصم 250 جنيه', value: 250, emoji: '🎫' },
+            { trips: 50, type: 'coupon_500', label: 'كوبون خصم 500 جنيه', value: 500, emoji: '🎟️' },
+            { trips: 100, type: 'coupon_1000', label: 'كوبون خصم 1000 جنيه', value: 1000, emoji: '👑' },
         ];
 
         async function loadLoyalty() {
