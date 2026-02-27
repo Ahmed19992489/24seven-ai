@@ -384,6 +384,85 @@
         .notif-item:last-child {
             border-bottom: none;
         }
+
+        /* ====== Loyalty Styles ====== */
+        .loyalty-progress-bg {
+            background: #1e293b;
+            border-radius: 999px;
+            height: 10px;
+            overflow: hidden;
+        }
+
+        .loyalty-progress-fill {
+            height: 100%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #f59e0b, #f97316);
+            transition: width 0.8s cubic-bezier(.4, 2, .6, 1);
+        }
+
+        .reward-card {
+            background: #1e293b;
+            border: 1.5px solid #334155;
+            border-radius: 16px;
+            padding: 16px;
+            transition: 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .reward-card.unlocked {
+            border-color: #f59e0b;
+            background: linear-gradient(135deg, #1e293b, #1a2035);
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.15);
+        }
+
+        .reward-card.redeemed {
+            border-color: #334155;
+            opacity: 0.5;
+        }
+
+        .reward-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 999px;
+            padding: 3px 10px;
+            font-size: 0.7rem;
+            color: #f59e0b;
+            font-weight: bold;
+        }
+
+        .loyalty-points-circle {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            border: 3px solid #f59e0b;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            box-shadow: 0 0 30px rgba(245, 158, 11, 0.2);
+        }
+
+        @keyframes pulse-gold {
+
+            0%,
+            100% {
+                box-shadow: 0 0 20px rgba(245, 158, 11, 0.2);
+            }
+
+            50% {
+                box-shadow: 0 0 40px rgba(245, 158, 11, 0.5);
+            }
+        }
+
+        .loyalty-points-circle.has-reward {
+            animation: pulse-gold 2s infinite;
+        }
     </style>
 </head>
 
@@ -635,6 +714,143 @@
                 class="text-red-500 border border-red-500/30 px-6 py-2 rounded-lg text-sm font-bold hover:bg-red-500/10 transition"><i
                     class="fas fa-sign-out-alt mr-2"></i> تسجيل خروج</button>
         </div>
+
+        <!-- ====== صفحة برنامج الولاء ====== -->
+        <div id="page-loyalty" class="page-content hidden pb-20">
+
+            <!-- بطاقة النقاط الرئيسية -->
+            <div class="glass-card p-5 mb-4 text-center">
+                <p class="text-xs text-amber-400 font-bold mb-3 tracking-widest">⭐ برنامج الولاء الذهبي</p>
+                <div class="loyalty-points-circle mb-4" id="loyalty-circle">
+                    <span class="font-black text-3xl font-num text-white" id="loyalty-points-display">0</span>
+                    <span class="text-[10px] text-slate-400 mt-1">رحلة</span>
+                </div>
+                <p class="text-sm font-bold text-white mb-1" id="loyalty-next-label">جاري التحميل...</p>
+                <p class="text-xs text-slate-500 mb-3" id="loyalty-next-sub"></p>
+                <!-- شريط التقدم -->
+                <div class="loyalty-progress-bg mb-1">
+                    <div class="loyalty-progress-fill" id="loyalty-progress-bar" style="width:0%"></div>
+                </div>
+                <div class="flex justify-between text-[10px] text-slate-500">
+                    <span id="loyalty-progress-start">0</span>
+                    <span id="loyalty-progress-end">10</span>
+                </div>
+            </div>
+
+            <!-- بطاقة المعلومات -->
+            <div class="p-3 mb-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                <p class="text-xs text-amber-400">
+                    <i class="fas fa-info-circle ml-1"></i>
+                    كل رحلة مكتملة = نقطة واحدة. اجمع النقاط واستبدلها بخصومات ورحلات مجانية!
+                </p>
+            </div>
+
+            <!-- بطاقات الجوائز -->
+            <h3 class="text-sm font-bold text-white mb-3">🎁 الجوائز المتاحة</h3>
+            <div class="space-y-3" id="rewards-container">
+
+                <!-- جائزة 1: خصم 250 -->
+                <div class="reward-card" id="reward-card-10">
+                    <div class="flex items-start gap-3">
+                        <div
+                            class="w-12 h-12 rounded-xl bg-slate-700 flex items-center justify-center text-2xl flex-shrink-0">
+                            🎫</div>
+                        <div class="flex-1">
+                            <div class="flex justify-between items-center mb-1">
+                                <p class="font-bold text-white text-sm">خصم 250 جنيه</p>
+                                <span class="reward-badge">10 رحلات</span>
+                            </div>
+                            <p class="text-xs text-slate-400 mb-3">احصل على خصم فوري 250 جنيه على رحلتك القادمة</p>
+                            <div class="loyalty-progress-bg mb-1" style="height:6px">
+                                <div class="loyalty-progress-fill" id="prog-10" style="width:0%"></div>
+                            </div>
+                            <div class="flex justify-between text-[10px] text-slate-500 mb-3">
+                                <span id="prog-10-txt">0 / 10 رحلات</span>
+                            </div>
+                            <button id="btn-redeem-10" onclick="redeemReward('discount_250', 10, 250)"
+                                class="w-full py-2 rounded-xl text-xs font-bold hidden bg-amber-500 text-slate-900 hover:bg-amber-400 transition">
+                                <i class="fas fa-gift ml-1"></i> استبدل الآن
+                            </button>
+                            <div id="redeemed-10" class="hidden text-xs text-center text-green-400 font-bold py-1">
+                                ✅ تم الاستبدال - سيتواصل معك الفريق
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- جائزة 2: رحلة مجانية 500 -->
+                <div class="reward-card" id="reward-card-20">
+                    <div class="flex items-start gap-3">
+                        <div
+                            class="w-12 h-12 rounded-xl bg-slate-700 flex items-center justify-center text-2xl flex-shrink-0">
+                            🚗</div>
+                        <div class="flex-1">
+                            <div class="flex justify-between items-center mb-1">
+                                <p class="font-bold text-white text-sm">رحلة مجانية</p>
+                                <span class="reward-badge">20 رحلة</span>
+                            </div>
+                            <p class="text-xs text-slate-400 mb-3">رحلة مجانية بقيمة 500 جنيه مع 24Seven</p>
+                            <div class="loyalty-progress-bg mb-1" style="height:6px">
+                                <div class="loyalty-progress-fill" id="prog-20" style="width:0%"></div>
+                            </div>
+                            <div class="flex justify-between text-[10px] text-slate-500 mb-3">
+                                <span id="prog-20-txt">0 / 20 رحلة</span>
+                            </div>
+                            <button id="btn-redeem-20" onclick="redeemReward('free_500', 20, 500)"
+                                class="w-full py-2 rounded-xl text-xs font-bold hidden bg-amber-500 text-slate-900 hover:bg-amber-400 transition">
+                                <i class="fas fa-gift ml-1"></i> استبدل الآن
+                            </button>
+                            <div id="redeemed-20" class="hidden text-xs text-center text-green-400 font-bold py-1">
+                                ✅ تم الاستبدال - سيتواصل معك الفريق
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- جائزة 3: رحلة القاهرة 1700 -->
+                <div class="reward-card" id="reward-card-100">
+                    <div class="absolute top-3 left-3">
+                        <span
+                            class="text-[10px] bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-full px-2 py-0.5 font-bold">👑
+                            VIP</span>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <div
+                            class="w-12 h-12 rounded-xl bg-slate-700 flex items-center justify-center text-2xl flex-shrink-0">
+                            ✈️</div>
+                        <div class="flex-1">
+                            <div class="flex justify-between items-center mb-1">
+                                <p class="font-bold text-white text-sm">رحلة القاهرة المجانية</p>
+                                <span class="reward-badge">100 رحلة</span>
+                            </div>
+                            <p class="text-xs text-slate-400 mb-3">رحلة ذهاب للقاهرة مجاناً بقيمة 1700 جنيه - للعملاء
+                                VIP</p>
+                            <div class="loyalty-progress-bg mb-1" style="height:6px">
+                                <div class="loyalty-progress-fill" id="prog-100" style="width:0%"></div>
+                            </div>
+                            <div class="flex justify-between text-[10px] text-slate-500 mb-3">
+                                <span id="prog-100-txt">0 / 100 رحلة</span>
+                            </div>
+                            <button id="btn-redeem-100" onclick="redeemReward('free_1700', 100, 1700)"
+                                class="w-full py-2 rounded-xl text-xs font-bold hidden bg-gradient-to-r from-purple-600 to-amber-500 text-white transition">
+                                <i class="fas fa-crown ml-1"></i> استبدل الجائزة الكبرى
+                            </button>
+                            <div id="redeemed-100" class="hidden text-xs text-center text-green-400 font-bold py-1">
+                                ✅ تم الاستبدال - مبروك! سيتواصل معك الفريق
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- سجل الاستبدالات -->
+            <h3 class="text-sm font-bold text-white mt-6 mb-3">📋 سجل الاستبدالات</h3>
+            <div id="redemptions-history" class="space-y-2">
+                <p class="text-center text-slate-500 text-xs py-4">لا توجد استبدالات بعد</p>
+            </div>
+        </div>
+
     </div>
 
     <!-- فيدباك Modal -->
@@ -698,10 +914,10 @@
                 class="fas fa-car"></i><span>حجز</span></div>
         <div onclick="switchTab('trips')" class="nav-item" id="nav-trips"><i class="fas fa-list"></i><span>رحلاتي</span>
         </div>
+        <div onclick="switchTab('loyalty')" class="nav-item" id="nav-loyalty"><i
+                class="fas fa-star"></i><span>نقاطي</span></div>
         <div onclick="switchTab('wallet')" class="nav-item" id="nav-wallet"><i
                 class="fas fa-wallet"></i><span>المحفظة</span></div>
-        <div onclick="switchTab('messages')" class="nav-item" id="nav-messages"><i
-                class="fas fa-comments"></i><span>رسائل</span></div>
         <div onclick="switchTab('support')" class="nav-item" id="nav-support"><i
                 class="fas fa-headset"></i><span>الدعم</span></div>
     </nav>
@@ -830,6 +1046,7 @@
             if (id === 'trips') loadTrips();
             if (id === 'wallet') { loadWallet(); loadTransactions(); }
             if (id === 'messages') loadClientChats();
+            if (id === 'loyalty') loadLoyalty();
             document.getElementById('main-bottom-nav').style.display = 'flex';
         }
 
@@ -1559,6 +1776,179 @@
         if (user) {
             setupTripStatusListener();
             setupGlobalChatListener();
+        }
+
+        // ==========================================
+        // ⭐ نظام برنامج الولاء
+        // ==========================================
+        const LOYALTY_MILESTONES = [
+            { trips: 10, type: 'discount_250', label: 'خصم 250 جنيه', value: 250, emoji: '🎫' },
+            { trips: 20, type: 'free_500', label: 'رحلة مجانية 500 جنيه', value: 500, emoji: '🚗' },
+            { trips: 100, type: 'free_1700', label: 'رحلة القاهرة 1700 جنيه', value: 1700, emoji: '✈️' },
+        ];
+
+        async function loadLoyalty() {
+            if (!user) return;
+
+            // 1. جلب عدد الرحلات المكتملة
+            const { count: completedCount } = await sb
+                .from('trips')
+                .select('id', { count: 'exact', head: true })
+                .eq('user_id', user.id)
+                .in('status', ['completed', 'trip_ended']);
+
+            const totalTrips = completedCount || 0;
+
+            // 2. جلب الاستبدالات السابقة
+            const { data: redeemed } = await sb
+                .from('loyalty_rewards')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false });
+
+            renderLoyaltyUI(totalTrips, redeemed || []);
+        }
+
+        function renderLoyaltyUI(totalTrips, redeemed) {
+            // تحديث العداد الرئيسي
+            document.getElementById('loyalty-points-display').textContent = totalTrips;
+
+            // حساب الجائزة التالية
+            const redeemedTypes = redeemed.map(r => r.reward_type);
+
+            // إيجاد الجائزة التالية غير المستبدلة
+            let nextMilestone = null;
+            for (const m of LOYALTY_MILESTONES) {
+                if (!redeemedTypes.includes(m.type)) {
+                    nextMilestone = m;
+                    break;
+                }
+            }
+
+            const circle = document.getElementById('loyalty-circle');
+            if (!nextMilestone) {
+                // حاز على كل الجوائز
+                document.getElementById('loyalty-next-label').textContent = '🏆 حصلت على جميع الجوائز! شكراً لولائك';
+                document.getElementById('loyalty-next-sub').textContent = '';
+                document.getElementById('loyalty-progress-bar').style.width = '100%';
+                circle.classList.add('has-reward');
+            } else {
+                // حساب آخر عتبة استُبدلت
+                const prevMilestoneTrips = (() => {
+                    const idx = LOYALTY_MILESTONES.findIndex(m => m.type === nextMilestone.type);
+                    return idx > 0 ? LOYALTY_MILESTONES[idx - 1].trips : 0;
+                })();
+
+                const tripsInCycle = totalTrips - prevMilestoneTrips;
+                const tripsNeeded = nextMilestone.trips - prevMilestoneTrips;
+                const pct = Math.min(100, Math.round((tripsInCycle / tripsNeeded) * 100));
+                const remaining = Math.max(0, nextMilestone.trips - totalTrips);
+
+                document.getElementById('loyalty-next-label').textContent =
+                    remaining === 0 ? `🎉 أنت مؤهل للجائزة: ${nextMilestone.label}` :
+                        `${remaining} رحلة متبقية للحصول على ${nextMilestone.emoji} ${nextMilestone.label}`;
+                document.getElementById('loyalty-next-sub').textContent =
+                    remaining === 0 ? 'اضغط على "استبدل الآن" بالأسفل' : `أكمل الرحلات للوصول لـ ${nextMilestone.trips}`;
+
+                document.getElementById('loyalty-progress-bar').style.width = pct + '%';
+                document.getElementById('loyalty-progress-start').textContent = prevMilestoneTrips;
+                document.getElementById('loyalty-progress-end').textContent = nextMilestone.trips;
+
+                if (remaining === 0) circle.classList.add('has-reward');
+                else circle.classList.remove('has-reward');
+            }
+
+            // تحديث كل بطاقة جائزة
+            LOYALTY_MILESTONES.forEach(m => {
+                const card = document.getElementById('reward-card-' + m.trips);
+                const prog = document.getElementById('prog-' + m.trips);
+                const progTxt = document.getElementById('prog-' + m.trips + '-txt');
+                const btnRedeem = document.getElementById('btn-redeem-' + m.trips);
+                const redeemedDiv = document.getElementById('redeemed-' + m.trips);
+
+                const pct = Math.min(100, Math.round((totalTrips / m.trips) * 100));
+                prog.style.width = pct + '%';
+                progTxt.textContent = `${Math.min(totalTrips, m.trips)} / ${m.trips} رحلة`;
+
+                const isRedeemed = redeemedTypes.includes(m.type);
+                const isEligible = totalTrips >= m.trips && !isRedeemed;
+
+                card.classList.toggle('unlocked', isEligible);
+                card.classList.toggle('redeemed', isRedeemed);
+
+                btnRedeem.classList.toggle('hidden', !isEligible);
+                redeemedDiv.classList.toggle('hidden', !isRedeemed);
+            });
+
+            // عرض السجل
+            const historyEl = document.getElementById('redemptions-history');
+            if (redeemed.length === 0) {
+                historyEl.innerHTML = '<p class="text-center text-slate-500 text-xs py-4">لا توجد استبدالات بعد</p>';
+            } else {
+                const labelMap = {
+                    'discount_250': '🎫 خصم 250 جنيه',
+                    'free_500': '🚗 رحلة مجانية 500 جنيه',
+                    'free_1700': '✈️ رحلة القاهرة 1700 جنيه'
+                };
+                historyEl.innerHTML = redeemed.map(r => `
+                    <div class="flex justify-between items-center p-3 bg-slate-800 rounded-xl border border-slate-700 text-xs">
+                        <div>
+                            <p class="text-white font-bold">${labelMap[r.reward_type] || r.reward_type}</p>
+                            <p class="text-slate-500 mt-0.5">${new Date(r.created_at).toLocaleDateString('ar-EG')}</p>
+                        </div>
+                        <span class="${r.status === 'applied' ? 'text-green-400' : 'text-amber-400'} font-bold">
+                            ${r.status === 'applied' ? '✅ مُطبّق' : '⏳ قيد المراجعة'}
+                        </span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        async function redeemReward(rewardType, requiredTrips, value) {
+            const labels = {
+                'discount_250': 'خصم 250 جنيه',
+                'free_500': 'رحلة مجانية بقيمة 500 جنيه',
+                'free_1700': 'رحلة القاهرة المجانية بقيمة 1700 جنيه'
+            };
+            const confirmed = confirm(`هل تريد استبدال نقاطك بـ: ${labels[rewardType]}؟\n\nسيقوم فريق 24Seven بالتواصل معك في أقرب وقت لتطبيق المكافأة.`);
+            if (!confirmed) return;
+
+            const btn = document.getElementById('btn-redeem-' + requiredTrips);
+            btn.disabled = true;
+            btn.textContent = 'جاري الإرسال...';
+
+            const { count } = await sb
+                .from('trips')
+                .select('id', { count: 'exact', head: true })
+                .eq('user_id', user.id)
+                .in('status', ['completed', 'trip_ended']);
+
+            if ((count || 0) < requiredTrips) {
+                alert('عذراً، رصيد رحلاتك غير كافٍ!');
+                btn.disabled = false;
+                btn.textContent = 'استبدل الآن';
+                return;
+            }
+
+            const { error } = await sb.from('loyalty_rewards').insert([{
+                user_id: user.id,
+                reward_type: rewardType,
+                trips_at_redemption: count,
+                status: 'pending'
+            }]);
+
+            if (error) {
+                alert('حدث خطأ: ' + error.message);
+                btn.disabled = false;
+                btn.textContent = 'استبدل الآن';
+                return;
+            }
+
+            // إشعار نجاح
+            showNotifBanner(`🎉 تم طلب استبدال ${labels[rewardType]} بنجاح!`);
+            addNotification(`🎁 طلبت استبدال: ${labels[rewardType]} - سيتواصل معك الفريق قريباً`);
+            // إعادة رسم الواجهة
+            loadLoyalty();
         }
     </script>
 </body>
