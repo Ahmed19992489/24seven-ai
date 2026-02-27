@@ -1128,24 +1128,61 @@
     </div>
 
     <div id="login-screen"
-        class="fixed inset-0 bg-slate-900 z-[100] flex flex-col items-center justify-center p-6 text-center">
+        class="fixed inset-0 bg-slate-900 z-[100] flex flex-col items-center justify-center p-4 text-center overflow-y-auto">
         <div
-            class="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-600 rounded-2xl flex items-center justify-center font-black text-3xl text-slate-900 mb-6 shadow-xl shadow-amber-500/20">
+            class="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-600 rounded-2xl flex items-center justify-center font-black text-3xl text-slate-900 mb-4 shadow-xl shadow-amber-500/20">
             24</div>
-        <h1 class="text-3xl font-bold text-white mb-8">24Seven</h1>
+        <h1 class="text-2xl font-bold text-white mb-6">24Seven Limousine</h1>
+
+        <!-- Google Login -->
         <button onclick="handleGoogleLogin()"
-            class="w-full bg-white text-slate-900 font-bold py-3 rounded-xl mb-4 flex justify-center items-center gap-2"><img
-                src="https://img.icons8.com/color/48/google-logo.png" class="w-5"> Google Login</button>
-        <div class="w-full border-t border-slate-700 my-4 relative"><span
-                class="absolute top-[-10px] left-1/2 -translate-x-1/2 bg-slate-900 px-2 text-xs text-slate-500">OR</span>
+            class="w-full bg-white text-slate-900 font-bold py-3 rounded-xl mb-4 flex justify-center items-center gap-2">
+            <img src="https://img.icons8.com/color/48/google-logo.png" class="w-5"> تسجيل الدخول بجوجل
+        </button>
+
+        <!-- Tabs: Email / Phone -->
+        <div class="w-full border-t border-slate-700 my-3 relative">
+            <span
+                class="absolute top-[-10px] left-1/2 -translate-x-1/2 bg-slate-900 px-2 text-xs text-slate-500">أو</span>
         </div>
-        <input id="login-email" type="email" placeholder="البريد الإلكتروني" class="input-field mb-2 text-center">
-        <input id="login-pass" type="password" placeholder="كلمة المرور" class="input-field mb-4 text-center">
-        <div class="flex gap-2 w-full">
-            <button onclick="emailLogin()"
-                class="flex-1 bg-amber-500 text-slate-900 font-bold py-3 rounded-xl">دخول</button>
-            <button onclick="emailSignUp()"
-                class="flex-1 bg-slate-800 text-slate-300 font-bold py-3 rounded-xl border border-slate-700">جديد</button>
+        <div class="flex w-full mb-4 bg-slate-800 rounded-xl p-1">
+            <button onclick="showLoginTab('email')" id="tab-email-btn"
+                class="flex-1 py-2 rounded-lg text-xs font-bold bg-amber-500 text-slate-900 transition">
+                <i class="fas fa-envelope ml-1"></i> بريد إلكتروني
+            </button>
+            <button onclick="showLoginTab('phone')" id="tab-phone-btn"
+                class="flex-1 py-2 rounded-lg text-xs font-bold text-slate-400 transition hover:text-white">
+                <i class="fas fa-mobile-alt ml-1"></i> رقم الهاتف
+            </button>
+        </div>
+
+        <!-- Email Login Tab -->
+        <div id="login-tab-email" class="w-full">
+            <input id="login-email" type="email" placeholder="البريد الإلكتروني" class="input-field mb-2 text-center">
+            <input id="login-pass" type="password" placeholder="كلمة المرور" class="input-field mb-3 text-center">
+            <div class="flex gap-2 w-full">
+                <button onclick="emailLogin()"
+                    class="flex-1 bg-amber-500 text-slate-900 font-bold py-3 rounded-xl">دخول</button>
+                <button onclick="emailSignUp()"
+                    class="flex-1 bg-slate-800 text-slate-300 font-bold py-3 rounded-xl border border-slate-700">تسجيل
+                    جديد</button>
+            </div>
+        </div>
+
+        <!-- Phone Login Tab -->
+        <div id="login-tab-phone" class="w-full hidden">
+            <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 mb-4 text-right">
+                <p class="text-xs text-blue-300 font-bold"><i class="fas fa-info-circle ml-1"></i> للعملاء الذين حجزوا
+                    بالتليفون</p>
+                <p class="text-[10px] text-slate-400 mt-1">سجّل برقم هاتفك المسجل لدينا • كلمة المرور: آخر 6 أرقام من
+                    رقمك</p>
+            </div>
+            <input id="login-phone" type="tel" placeholder="01xxxxxxxxx" class="input-field mb-2 text-center font-mono"
+                dir="ltr">
+            <p class="text-[10px] text-slate-500 mb-3">إذا لم تسجل بعد، أدخل رقمك وستُنشأ حسابك تلقائياً</p>
+            <button onclick="phoneLogin()" class="w-full bg-amber-500 text-slate-900 font-bold py-3 rounded-xl">
+                <i class="fas fa-mobile-alt ml-2"></i> دخول برقم الهاتف
+            </button>
         </div>
     </div>
 
@@ -1420,8 +1457,8 @@
 
             const paxCount = document.getElementById('pax-count').value || '1';
             const bagsCount = document.getElementById('bags-count').value || '0';
-            const note = `نوع: ${tripData.type} | الدفع: ${tripData.pay}\n📅 ${tripData.date} - ${tripData.time}\n📱 ${phone}\n👥 ${paxCount} أفراد | 🧳 ${bagsCount} شنط`;
-            let trip1Price = tripData.type === 'round-diff' ? tripData.price / 2 : tripData.price;
+            const note = `نوع: ${tripData.type} | الدفع: ${tripData.pay}\n📅 ${tripData.date} - ${tripData.time}\n📱 ${phone}\n👥 ${paxCount} أفراد | 🧳 ${bagsCount} شنط${tripData.coupon_discount ? '\n🎫 خصم كوبون: ' + tripData.coupon_discount + ' جنيه' : ''}`;
+            let trip1Price = tripData.type === 'round-diff' ? Number(tripData.price) / 2 : Number(tripData.price);
 
             const { error: tripError } = await sb.from('trips').insert([{
                 user_id: user.id, pickup_location: document.getElementById('pickup').value, dropoff_location: document.getElementById('dropoff').value,
@@ -1593,16 +1630,23 @@
                 return;
             }
 
-            // تطبيق الخصم
+            // تطبيق الخصم - تأكد من أن السعر رقم وليس نص
             appliedCoupon = coupon;
-            const oldPrice = tripData.price;
-            tripData.price = Math.max(0, oldPrice - coupon.value);
-            document.getElementById('summ-price').innerText = tripData.price + ' EGP';
+            const oldPrice = Number(tripData.price) || 0;
+            const discountVal = Number(coupon.value) || 0;
+            const newPrice = Math.max(0, oldPrice - discountVal);
+            tripData.price = newPrice;  // هذا صح وحقيقي
+            tripData.coupon_discount = discountVal;  // حفظ قيمة الخصم
+
+            // تحديث العرض
+            const priceEl = document.getElementById('summ-price');
+            if (priceEl) priceEl.innerText = newPrice + ' EGP';
+
             document.getElementById('coupon-input').disabled = true;
             document.querySelector('[onclick="applyCoupon()"]').disabled = true;
 
             feedback.className = 'text-xs mt-2 text-green-400 font-bold';
-            feedback.textContent = `✅ تم تطبيق خصم ${coupon.value} جنيه! السعر الجديد: ${tripData.price} EGP`;
+            feedback.textContent = `✅ تم تطبيق خصم ${discountVal} جنيه! السعر الجديد: ${newPrice} EGP`;
         }
 
         // ==========================================
@@ -1655,13 +1699,32 @@
             const message = input.value.trim();
             if (!message) return;
             input.value = '';
+
+            // عرض الرسالة فورًا بدون انتظار السيرفر
+            const container = document.getElementById('support-chat-messages');
+            const tempDiv = document.createElement('div');
+            tempDiv.className = 'msg-bubble msg-mine';
+            tempDiv.textContent = message;
+            container.appendChild(tempDiv);
+            container.scrollTop = container.scrollHeight;
+
             const { data: profile } = await sb.from('profiles').select('full_name').eq('id', user.id).single();
-            await sb.from('support_chats').insert([{
+            const { error } = await sb.from('support_chats').insert([{
                 user_id: user.id,
                 sender_role: 'client',
                 sender_name: profile?.full_name || 'عميل',
                 message: message
             }]);
+
+            if (error) {
+                // إزالة البابل المؤقت وعرض خطأ
+                tempDiv.remove();
+                alert('خطأ في الإرسال: ' + error.message);
+                input.value = message;
+                return;
+            }
+            // تحديث كامل من السيرفر بعد الإدراج الناجح
+            await loadSupportMessages();
         }
 
         function subscribeSupportChat() {
@@ -1680,7 +1743,83 @@
             });
         }
 
+        function showLoginTab(tab) {
+            const emailTab = document.getElementById('login-tab-email');
+            const phoneTab = document.getElementById('login-tab-phone');
+            const emailBtn = document.getElementById('tab-email-btn');
+            const phoneBtn = document.getElementById('tab-phone-btn');
+
+            if (tab === 'email') {
+                emailTab.classList.remove('hidden');
+                phoneTab.classList.add('hidden');
+                emailBtn.className = 'flex-1 py-2 rounded-lg text-xs font-bold bg-amber-500 text-slate-900 transition';
+                phoneBtn.className = 'flex-1 py-2 rounded-lg text-xs font-bold text-slate-400 transition hover:text-white';
+            } else {
+                emailTab.classList.add('hidden');
+                phoneTab.classList.remove('hidden');
+                phoneBtn.className = 'flex-1 py-2 rounded-lg text-xs font-bold bg-amber-500 text-slate-900 transition';
+                emailBtn.className = 'flex-1 py-2 rounded-lg text-xs font-bold text-slate-400 transition hover:text-white';
+            }
+        }
+
+        async function phoneLogin() {
+            const rawPhone = document.getElementById('login-phone').value.trim().replace(/\D/g, '');
+            if (!rawPhone || rawPhone.length < 10) {
+                return alert('❌ أدخل رقم هاتف صحيح');
+            }
+
+            const fakeEmail = rawPhone + '@24seven-client.app';
+            const password = rawPhone.slice(-6);  // آخر 6 أرقام ككلمة مرور
+
+            const btn = document.querySelector('[onclick="phoneLogin()"]');
+            btn.disabled = true;
+            btn.textContent = '⏳ جاري الدخول...';
+
+            // محاولة الدخول أولاً
+            const { error: signInError } = await sb.auth.signInWithPassword({
+                email: fakeEmail,
+                password: password
+            });
+
+            if (!signInError) {
+                // تسجيل الدخول نجح
+                btn.disabled = false; btn.innerHTML = '<i class="fas fa-mobile-alt ml-2"></i> دخول برقم الهاتف';
+                return;
+            }
+
+            // الحساب غير موجود → إنشاء حساب جديد
+            if (signInError.message.includes('Invalid login credentials') || signInError.message.includes('Email not confirmed')) {
+                const { data: signUpData, error: signUpError } = await sb.auth.signUp({
+                    email: fakeEmail,
+                    password: password
+                });
+
+                if (signUpError) {
+                    btn.disabled = false; btn.innerHTML = '<i class="fas fa-mobile-alt ml-2"></i> دخول برقم الهاتف';
+                    alert('⚠️ خطأ: رقم الهاتف غير مسجل في سيستمنا.\nتواصل مع فريقنا للتسجيل.');
+                    return;
+                }
+
+                // إنشاء profile برقم الهاتف
+                if (signUpData?.user) {
+                    await sb.from('profiles').upsert({
+                        id: signUpData.user.id,
+                        phone: rawPhone,
+                        full_name: 'عميل ' + rawPhone.slice(-4),
+                        wallet_balance: 0
+                    });
+
+                    // تسجيل الدخول بعد التسجيل
+                    await sb.auth.signInWithPassword({ email: fakeEmail, password });
+                }
+            } else {
+                btn.disabled = false; btn.innerHTML = '<i class="fas fa-mobile-alt ml-2"></i> دخول برقم الهاتف';
+                alert('⚠️ خطأ في الدخول: ' + signInError.message);
+            }
+        }
+
         async function emailLogin() {
+
             const { error } = await sb.auth.signInWithPassword({
                 email: document.getElementById('login-email').value,
                 password: document.getElementById('login-pass').value

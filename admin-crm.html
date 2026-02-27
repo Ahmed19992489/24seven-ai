@@ -1130,7 +1130,7 @@
 
         new Chart(document.getElementById('tripsChart'), { type: 'bar', data: { labels: ['S', 'M', 'T', 'W', 'T', 'F', 'S'], datasets: [{ label: 'الرحلات', data: [5, 8, 12, 7, 15, 10, 9], backgroundColor: '#3b82f6', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, display: false }, x: { grid: { display: false } } } } });
 
-        // --- وظيفة إضافة حجز يدوي (تم التعديل لتخزين البيانات في الملاحظات لتجنب الأخطاء) ---
+        // --- وظيفة إضافة حجز يدوي ---
         async function submitManualTrip() {
             // 1. جمع البيانات
             const name = document.getElementById('manual-name').value;
@@ -1142,7 +1142,6 @@
             const price = document.getElementById('manual-price').value;
             const notes = document.getElementById('manual-notes').value;
 
-            // الحقول الجديدة
             const clientType = document.getElementById('manual-client-type').value;
             const carType = document.getElementById('manual-car-type').value;
             const tripType = document.getElementById('manual-trip-type').value;
@@ -1155,8 +1154,29 @@
                 return;
             }
 
-            // 3. تجميع النص الشامل للملاحظات
-            // هذا هو الحل السحري لتخزين كل البيانات بدون تغيير هيكل الداتابيز
+            // 3. إنشاء/ربط حساب العميل برقم هاتفه
+            const rawPhone = phone.replace(/\D/g, '');
+            const fakeEmail = rawPhone + '@24seven-client.app';
+            const password = rawPhone.slice(-6);
+            let clientUserId = null;
+
+            // أولاً تحقق من وجود الحساب
+            try {
+                const { data: existingProfile } = await sbClient.from('profiles').select('id').eq('phone', rawPhone).maybeSingle();
+                if (existingProfile) {
+                    clientUserId = existingProfile.id;
+                    await sbClient.from('profiles').update({ full_name: name }).eq('id', clientUserId);
+                } else {
+                    // إنشاء حساب جديد
+                    const { data: signUpData } = await sbClient.auth.signUp({ email: fakeEmail, password });
+                    if (signUpData?.user) {
+                        clientUserId = signUpData.user.id;
+                        await sbClient.from('profiles').upsert({ id: clientUserId, full_name: name, phone: rawPhone, wallet_balance: 0 });
+                    }
+                }
+            } catch (e) { console.log('خطأ منوع إنشاء الحساب:', e); }
+
+            // 4. تجميع الملاحظات
             const fullNotes = `حجز هاتفي 📞
 العميل: ${name} (${clientType})
 رقم: ${phone}
@@ -1166,24 +1186,27 @@
 ملاحظات إضافية: ${notes}`;
 
             try {
-                // 4. الإرسال إلى Supabase
+                // 5. الإرسال إلى Supabase مع ربط user_id
                 const { error } = await sbClient.from('trips').insert([{
-                    // لا نرسل client_phone أو manual_client_name مباشرة لتجنب الخطأ
-                    // نعتمد على admin_notes في العرض (كما عدلت دالة loadOperations)
+                    user_id: clientUserId,
                     pickup_location: pickup,
                     dropoff_location: dropoff,
                     estimated_price: Number(price),
                     status: 'pending',
-                    admin_notes: fullNotes
+                    admin_notes: fullNotes,
+                    car_type: carType
                 }]);
 
                 if (error) throw error;
 
-                // 5. نجاح
-                alert("✅ تم تسجيل الحجز بنجاح");
+                // 6. نجاح
+                const successMsg = clientUserId
+                    ? `✅ تم تسجيل الحجز بنجاح!\n\n📱 تم إنشاء/ربط حساب العميل:\nرقم الهاتف: ${phone}\nكلمة المرور: ${password}\n\nأخبر العميل بهذه البيانات للدخول على الموقع.`
+                    : '✅ تم تسجيل الحجز بنجاح';
+                alert(successMsg);
                 document.getElementById('manual-trip-modal').style.display = 'none';
 
-                // تفريغ الحقول الأساسية
+                // تفريغ الحقول
                 document.getElementById('manual-name').value = '';
                 document.getElementById('manual-phone').value = '';
                 document.getElementById('manual-pickup').value = '';
