@@ -1199,6 +1199,28 @@
 
                 if (error) throw error;
 
+                // إرسال إلى جوجل شيت
+                try {
+                    sendToAdminSheet({
+                        tripDate: date,
+                        tripTime: time,
+                        clientName: name,
+                        phone: rawPhone,
+                        whatsapp: rawPhone,
+                        pickup: pickup,
+                        dropoff: dropoff,
+                        passengers: passengers,
+                        bags: luggage,
+                        carType: carType,
+                        clientStatus: clientType === 'vip' ? 'VIP' : (clientType === 'returning' ? 'عميل قديم' : 'عميل جديد'),
+                        price: price,
+                        email: '',
+                        notes: notes,
+                        tripType: tripType,
+                        enteredBy: 'موظف'
+                    });
+                } catch (se) { console.log('Sheet error:', se); }
+
                 // 6. نجاح
                 const successMsg = clientUserId
                     ? `✅ تم تسجيل الحجز بنجاح!\n\n📱 تم إنشاء/ربط حساب العميل:\nرقم الهاتف: ${phone}\nكلمة المرور: ${password}\n\nأخبر العميل بهذه البيانات للدخول على الموقع.`
@@ -1215,6 +1237,7 @@
 
                 loadOperations();
                 loadDashboard();
+
 
             } catch (err) {
                 console.error(err);
@@ -1560,6 +1583,21 @@
             if (!confirm(`إلغاء الكوبون "${code}" فوراً؟\nلن يتمكن العملاء من استخدامه بعد الإلغاء.`)) return;
             await sbClient.from('coupons').update({ is_active: false }).eq('id', id);
             loadCouponsPage();
+        }
+
+        // ==========================================
+        // إرسال بيانات الحجز إلى جوجل شيت
+        // ==========================================
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw5Q4UGMCx20OhlCYhHfaazk0zEa7udc0PN6G1buQDZcYEdu_9clW3FvaD6rb3sA4ymwg/exec';
+
+        function sendToAdminSheet(data) {
+            if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'PASTE_YOUR_APPS_SCRIPT_URL_HERE') return;
+            fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            }).catch(e => console.log('Sheet error:', e));
         }
 
     </script>
