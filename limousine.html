@@ -1782,7 +1782,9 @@
             });
 
             if (!signInError) {
-                // تسجيل الدخول نجح
+                // تسجيل الدخول نجح - ربط الرحلات القديمة
+                const { data: { session } } = await sb.auth.getSession();
+                if (session) await syncOldPhoneTrips(rawPhone, session.user.id);
                 btn.disabled = false; btn.innerHTML = '<i class="fas fa-mobile-alt ml-2"></i> دخول برقم الهاتف';
                 return;
             }
@@ -1810,13 +1812,49 @@
                     });
 
                     // تسجيل الدخول بعد التسجيل
-                    await sb.auth.signInWithPassword({ email: fakeEmail, password });
+                    const { data: newSession } = await sb.auth.signInWithPassword({ email: fakeEmail, password });
+                    if (newSession?.session) await syncOldPhoneTrips(rawPhone, newSession.session.user.id);
                 }
             } else {
                 btn.disabled = false; btn.innerHTML = '<i class="fas fa-mobile-alt ml-2"></i> دخول برقم الهاتف';
                 alert('⚠️ خطأ في الدخول: ' + signInError.message);
             }
         }
+
+        // ربط الرحلات القديمة (بدون user_id) بحساب العميل عبر رقم الهاتف
+        async function syncOldPhoneTrips(phone, userId) {
+            try {
+                // ابحث عن رحلات فيها رقم التليفون في الملاحظات وبدون user_id
+                const { data: trips } = await sb.from('trips')
+                    .select('id')
+                    .is('user_id', null)
+                    .ilike('admin_notes', '%' + phone + '%');
+
+                if (trips && trips.length > 0) {
+                    await Promise.all(trips.map(t =>
+                        sb.from('trips').update({ user_id: userId }).eq('id', t.id)
+                    ));
+                    console.log(`✅ تم ربط ${trips.length} رحلة بحساب العميل`);
+                }
+
+                // أيضاً ابحث في الرحلات التي لها user_id مختلف خُزّن بشكل خاطئ
+                // (حالة الحجز اليدوي الجديد بالـ signUp من الأدمن)
+                const { data: profiles } = await sb.from('profiles')
+                    .select('id').eq('phone', phone).neq('id', userId);
+                if (profiles && profiles.length > 0) {
+                    for (const p of profiles) {
+                        const { data: oldTrips } = await sb.from('trips')
+                            .select('id').eq('user_id', p.id);
+                        if (oldTrips?.length) {
+                            await Promise.all(oldTrips.map(t =>
+                                sb.from('trips').update({ user_id: userId }).eq('id', t.id)
+                            ));
+                        }
+                    }
+                }
+            } catch (e) { console.log('syncOldPhoneTrips error:', e); }
+        }
+
 
         async function emailLogin() {
 
