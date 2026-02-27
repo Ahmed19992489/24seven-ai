@@ -181,6 +181,12 @@
                 class="sidebar-item p-3 rounded-lg flex items-center gap-3">
                 <i class="fas fa-tags w-5 text-center text-gray-600"></i> التسعير
             </div>
+
+            <p class="text-[10px] font-bold text-slate-400 mt-4 mb-1 px-3">التسويق</p>
+            <div onclick="showPage('coupons')" id="nav-coupons"
+                class="sidebar-item p-3 rounded-lg flex items-center gap-3">
+                <i class="fas fa-ticket-alt w-5 text-center text-pink-600"></i> كوبونات الخصم
+            </div>
         </nav>
     </aside>
 
@@ -433,6 +439,68 @@
             </div>
         </div>
 
+        <!-- صفحة كوبونات الخصم -->
+        <div id="page-coupons" class="page-section hidden">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold">🎫 كوبونات الخصم</h2>
+                <button onclick="loadCouponsPage()"
+                    class="bg-white border px-4 py-2 rounded-lg hover:bg-slate-100 font-bold text-sm">
+                    <i class="fas fa-sync-alt ml-1"></i> تحديث
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- إنشاء كوبون جديد -->
+                <div class="glass-panel p-6 border-t-4 border-pink-500">
+                    <h3 class="font-bold mb-4 flex items-center gap-2 text-pink-700">
+                        <i class="fas fa-plus-circle"></i> إنشاء كوبون جديد
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-xs font-bold text-slate-500 block mb-1">قيمة الخصم (جنيه)</label>
+                                <input type="number" id="crm-coupon-value" class="input-std" placeholder="مثل: 250">
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-slate-500 block mb-1">كود مخصص (اختياري)</label>
+                                <input type="text" id="crm-coupon-code" class="input-std font-mono uppercase"
+                                    placeholder="مثل: SAVE250">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-500 block mb-1">صالح حتى (اتركه فارغاً = لا
+                                ينتهي)</label>
+                            <input type="datetime-local" id="crm-coupon-expires" class="input-std">
+                        </div>
+                        <button onclick="createCoupon()"
+                            class="w-full bg-pink-600 hover:bg-pink-700 text-white py-2.5 rounded-lg font-bold transition flex items-center justify-center gap-2">
+                            <i class="fas fa-magic"></i> إنشاء الكوبون
+                        </button>
+                    </div>
+                </div>
+
+                <!-- الكوبونات النشطة -->
+                <div class="glass-panel p-6">
+                    <h3 class="font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-list-check text-green-600"></i> الكوبونات النشطة
+                    </h3>
+                    <div id="crm-coupons-list" class="space-y-2 max-h-72 overflow-y-auto">
+                        <p class="text-center text-slate-400 py-6"><i class="fas fa-spinner fa-spin ml-1"></i> جاري
+                            التحميل...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- سجل الكوبونات الملغاة -->
+            <div class="glass-panel p-6 mt-6">
+                <h3 class="font-bold mb-4 flex items-center gap-2 text-slate-500">
+                    <i class="fas fa-ban text-red-400"></i> الكوبونات الملغاة / المنتهية
+                </h3>
+                <div id="crm-coupons-inactive" class="space-y-2 max-h-48 overflow-y-auto">
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <div id="assign-modal"
@@ -665,6 +733,7 @@
             if (pageId === 'pricing') loadPricing();
             if (pageId === 'chat') loadAdminChats();
             if (pageId === 'ratings') loadRatings();
+            if (pageId === 'coupons') loadCouponsPage();
         }
 
         async function loadDashboard() {
@@ -1395,7 +1464,83 @@
             await loadAdminChatMessages(tripId);
             subscribeAdminChat(tripId);
         }
+
+        // ==========================================
+        // 🎫 إدارة الكوبونات
+        // ==========================================
+        async function loadCouponsPage() {
+            const activeEl = document.getElementById('crm-coupons-list');
+            const inactiveEl = document.getElementById('crm-coupons-inactive');
+            activeEl.innerHTML = '<p class="text-center text-slate-400 py-4"><i class="fas fa-spinner fa-spin ml-1"></i></p>';
+
+            const { data: active } = await sbClient.from('coupons').select('*').eq('is_active', true).order('created_at', { ascending: false });
+            const { data: inactive } = await sbClient.from('coupons').select('*').eq('is_active', false).order('created_at', { ascending: false }).limit(10);
+
+            if (!active || active.length === 0) {
+                activeEl.innerHTML = '<p class="text-center text-slate-400 py-6">لا توجد كوبونات نشطة</p>';
+            } else {
+                activeEl.innerHTML = active.map(c => {
+                    const expired = c.expires_at && new Date(c.expires_at) < new Date();
+                    const expiryLabel = c.expires_at ? new Date(c.expires_at).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'لا ينتهي';
+                    return `
+                    <div class="flex items-center justify-between p-3 rounded-xl border ${expired ? 'bg-red-50 border-red-200 opacity-70' : 'bg-green-50 border-green-200'} gap-3">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="font-mono font-bold text-pink-700 cursor-pointer select-all" onclick="navigator.clipboard.writeText('${c.code}'); alert('✅ تم نسخ الكود: ${c.code}')">${c.code}</span>
+                                ${expired ? '<span class="text-[9px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-bold">منتهي</span>' : '<span class="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-bold">نشط</span>'}
+                            </div>
+                            <p class="text-[10px] text-slate-500 mt-0.5">⏰ ${expiryLabel}</p>
+                        </div>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <span class="font-bold text-green-700 text-sm">${c.value} جنيه</span>
+                            <button onclick="deactivateCrm('${c.id}', '${c.code}')" class="text-slate-400 hover:text-red-500 transition" title="إلغاء فوري">
+                                <i class="fas fa-ban"></i>
+                            </button>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+
+            inactiveEl.innerHTML = (!inactive || inactive.length === 0)
+                ? '<p class="text-center text-slate-300 py-4 text-sm">لا توجد كوبونات مُلغاة</p>'
+                : inactive.map(c => `
+                    <div class="flex items-center justify-between p-2 rounded-lg bg-slate-100 border border-slate-200 opacity-60 text-xs gap-2">
+                        <span class="font-mono text-slate-600 line-through">${c.code}</span>
+                        <span class="text-slate-500">${c.value} جنيه</span>
+                        <span class="text-slate-400">${new Date(c.created_at).toLocaleDateString('ar-EG')}</span>
+                    </div>`).join('');
+        }
+
+        async function createCoupon() {
+            const value = document.getElementById('crm-coupon-value').value;
+            const customCode = document.getElementById('crm-coupon-code').value.trim().toUpperCase();
+            const expiresAt = document.getElementById('crm-coupon-expires').value;
+
+            if (!value || parseInt(value) <= 0) return alert('❌ أدخل قيمة الخصم');
+            const code = customCode || Math.random().toString(36).substring(2, 9).toUpperCase();
+            const insertData = { code, value: parseInt(value), is_active: true };
+            if (expiresAt) insertData.expires_at = new Date(expiresAt).toISOString();
+
+            const { data, error } = await sbClient.from('coupons').insert([insertData]).select().single();
+            if (error) {
+                alert('❌ خطأ: ' + (error.message || 'تأكد من إنشاء جدول coupons في Supabase'));
+                return;
+            }
+            alert(`✅ تم إنشاء الكوبون بنجاح!\n\nالكود: ${data.code}\nالقيمة: ${data.value} جنيه\n${expiresAt ? 'ينتهي: ' + new Date(expiresAt).toLocaleDateString('ar-EG') : 'لا ينتهي'}\n\nانقر على الكود لنسخه`);
+            document.getElementById('crm-coupon-value').value = '';
+            document.getElementById('crm-coupon-code').value = '';
+            document.getElementById('crm-coupon-expires').value = '';
+            loadCouponsPage();
+        }
+
+        async function deactivateCrm(id, code) {
+            if (!confirm(`إلغاء الكوبون "${code}" فوراً؟\nلن يتمكن العملاء من استخدامه بعد الإلغاء.`)) return;
+            await sbClient.from('coupons').update({ is_active: false }).eq('id', id);
+            loadCouponsPage();
+        }
+
     </script>
+
 </body>
 
 </html>
