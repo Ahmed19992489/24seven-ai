@@ -886,9 +886,18 @@
         async function loadFinancePage() {
             if (!currentDriver) return;
 
-            // جلب بيانات السائق (المستحق والسلف)
-            const { data: driver } = await sb.from('drivers').select('*').eq('id', currentDriver.id).single();
-            if (!driver) return;
+            // جلب البيانات المالية (المستحق والسلف) من المشتريات/المصروفات الخاصة بالكابتن
+            const { data: expenses } = await sb.from('expenses').select('*').eq('related_driver_id', currentDriver.id);
+            let due = 0; let advances = 0; let deductions = 0; let settlements = 0;
+            if (expenses) {
+                expenses.forEach(e => {
+                    const amt = Number(e.amount) || 0;
+                    if (e.category === 'رواتب') due += amt;
+                    else if (e.category === 'سلفة') advances += amt;
+                    else if (e.category === 'تسوية') settlements += amt;
+                    else deductions += amt; // خصم، غرامة أو أي شيء آخر
+                });
+            }
 
             // جلب الرحلات المنتهية للكابتن
             const { data: trips } = await sb.from('trips')
@@ -898,16 +907,13 @@
                 .order('created_at', { ascending: false });
 
             const totalTrips = trips?.length || 0;
-            const due = driver.due_amount || 0;
-            const advances = driver.advances || 0;
-            const deductions = driver.deductions || 0;
-            const net = due - advances - deductions;
+            const net = due - advances - deductions - settlements;
 
             document.getElementById('fin-total-trips').textContent = totalTrips;
             document.getElementById('fin-due').textContent = due;
             document.getElementById('fin-advances').textContent = advances;
             document.getElementById('fin-deductions').textContent = deductions;
-            document.getElementById('fin-net').textContent = Math.max(0, net);
+            document.getElementById('fin-net').textContent = net;
 
             // عرض قائمة الرحلات
             const finList = document.getElementById('fin-trips-list');

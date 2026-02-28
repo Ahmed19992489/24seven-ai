@@ -811,7 +811,7 @@
                 const carInfo = t.cars ? `${t.cars.brand}` : '-';
                 let btns = '';
                 if (t.status === 'pending' || t.status === 'approved') btns = `<button onclick="openAssignModal('${t.id}')" class="bg-slate-900 text-white px-2 py-1 rounded text-xs">تعيين</button>`;
-                else if (t.status === 'driver_assigned' || t.status === 'trip_ended') btns = `<button onclick="openCompleteModal('${t.id}', ${t.estimated_price}, ${t.distance_km || 0})" class="bg-green-600 text-white px-2 py-1 rounded text-xs">إنهاء</button>`;
+                else if (t.status === 'driver_assigned' || t.status === 'trip_ended') btns = `<button onclick="openCompleteModal('${t.id}', ${t.estimated_price}, ${t.distance_km || 0}, ${t.fuel_cost || 0}, ${t.toll_cost || 0})" class="bg-green-600 text-white px-2 py-1 rounded text-xs">إنهاء</button>`;
                 // زر عرض صور الفحص لأي رحلة عينها سواق
                 if (t.status !== 'pending') btns += ` <button onclick="viewTripPhotos('${t.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs">📸</button>`;
 
@@ -867,13 +867,13 @@
             document.body.appendChild(modal);
         }
 
-        function openCompleteModal(tripId, price, distKm) {
+        function openCompleteModal(tripId, price, distKm, fuelCost = 0, tollCost = 0) {
             document.getElementById('comp-trip-id').value = tripId;
             document.getElementById('comp-price').value = price;
             document.getElementById('comp-dist-km').value = distKm || 0;
             document.getElementById('comp-wage').value = 0;
-            document.getElementById('comp-fuel').value = 0;
-            document.getElementById('comp-tolls').value = 0;
+            document.getElementById('comp-fuel').value = fuelCost;
+            document.getElementById('comp-tolls').value = tollCost;
             document.getElementById('comp-commission').value = 0;
             const maint = Math.round((distKm || 0) * 0.6);
             document.getElementById('comp-maintenance-display').innerText = maint + ' EGP (' + (distKm || 0) + ' km × 0.6)';
