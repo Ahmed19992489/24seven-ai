@@ -14,14 +14,19 @@
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <style>
         :root {
-            --bg-dark: #0f172a;
+            --bg: #0f172a;
+            --card: #1e293b;
+            --border: #334155;
             --primary: #3b82f6;
-            --card-bg: #1e293b;
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         body {
             font-family: 'Cairo', sans-serif;
-            background-color: var(--bg-dark);
+            background: var(--bg);
             color: #f8fafc;
             overflow-x: hidden;
             padding-bottom: 80px;
@@ -31,27 +36,10 @@
             font-family: 'Outfit', sans-serif;
         }
 
-        .glass-card {
-            background: var(--card-bg);
-            border: 1px solid #334155;
+        .glass {
+            background: var(--card);
+            border: 1px solid var(--border);
             border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        }
-
-        .input-field {
-            background: #0f172a;
-            border: 1px solid #334155;
-            border-radius: 12px;
-            padding: 14px;
-            width: 100%;
-            color: white;
-            outline: none;
-            transition: 0.3s;
-        }
-
-        .input-field:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
         }
 
         .bottom-nav {
@@ -63,9 +51,8 @@
             border-top: 1px solid #334155;
             display: flex;
             justify-content: space-around;
-            padding: 10px 0;
+            padding: 10px 0 16px;
             z-index: 50;
-            padding-bottom: env(safe-area-inset-bottom);
         }
 
         .nav-item {
@@ -73,51 +60,59 @@
             flex-direction: column;
             align-items: center;
             color: #64748b;
-            font-size: 0.7rem;
-            gap: 4px;
+            font-size: 0.65rem;
+            gap: 3px;
             cursor: pointer;
+            transition: 0.2s;
+            padding: 4px 12px;
+            border-radius: 12px;
         }
 
         .nav-item.active {
             color: var(--primary);
-            font-weight: bold;
         }
 
         .nav-item i {
-            font-size: 1.2rem;
-            margin-bottom: 2px;
+            font-size: 1.1rem;
         }
 
-        /* Chat Styles */
-        .chat-container {
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* Chat */
+        .chat-wrap {
             display: flex;
             flex-direction: column;
-            height: calc(100vh - 180px);
+            height: calc(100vh - 140px);
         }
 
-        .chat-messages {
+        .chat-msgs {
             flex: 1;
             overflow-y: auto;
-            padding: 16px;
+            padding: 12px;
             display: flex;
             flex-direction: column;
             gap: 8px;
         }
 
-        .msg-bubble {
-            max-width: 80%;
+        .msg {
+            max-width: 78%;
             padding: 10px 14px;
             border-radius: 16px;
-            font-size: 0.85rem;
+            font-size: 0.82rem;
             line-height: 1.5;
-            word-wrap: break-word;
-            animation: fadeIn 0.3s ease;
+            animation: pop 0.2s ease;
         }
 
-        @keyframes fadeIn {
+        @keyframes pop {
             from {
                 opacity: 0;
-                transform: translateY(10px);
+                transform: translateY(8px);
             }
 
             to {
@@ -126,7 +121,7 @@
             }
         }
 
-        .msg-mine {
+        .msg-me {
             background: var(--primary);
             color: white;
             align-self: flex-start;
@@ -141,35 +136,34 @@
         }
 
         .msg-admin {
-            background: #7c3aed30;
+            background: #7c3aed25;
             color: #c4b5fd;
-            border: 1px solid #7c3aed50;
+            border: 1px solid #7c3aed40;
             align-self: center;
             text-align: center;
+            border-radius: 12px;
+            font-size: 0.78rem;
         }
 
         .msg-system {
-            background: #f59e0b20;
+            background: #f59e0b15;
             color: #fbbf24;
             align-self: center;
             text-align: center;
-            font-size: 0.75rem;
+            font-size: 0.72rem;
+            border-radius: 20px;
+            padding: 6px 14px;
         }
 
-        .msg-location {
-            background: #059669;
-            color: white;
-        }
-
-        .chat-input-bar {
+        .chat-bar {
             display: flex;
             gap: 8px;
-            padding: 12px;
+            padding: 10px 12px;
             background: #1e293b;
             border-top: 1px solid #334155;
         }
 
-        .chat-input-bar input {
+        .chat-bar input {
             flex: 1;
             background: #0f172a;
             border: 1px solid #334155;
@@ -177,19 +171,39 @@
             padding: 10px 16px;
             color: white;
             outline: none;
-            font-size: 0.85rem;
+            font-size: 0.82rem;
+            font-family: 'Cairo', sans-serif;
         }
 
-        .chat-input-bar button {
-            width: 42px;
-            height: 42px;
+        .chat-bar button {
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1rem;
             border: none;
             cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        /* Trip Stage Badge */
+        .stage-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.7rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid;
+        }
+
+        /* Finance card */
+        .fin-stat {
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
         }
     </style>
 </head>
@@ -202,10 +216,11 @@
             class="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center font-black text-3xl text-white mb-6 shadow-xl shadow-blue-500/20">
             <i class="fas fa-steering-wheel"></i>
         </div>
-        <h1 class="text-3xl font-bold text-white mb-2">24Seven</h1>
-        <p class="text-slate-400 mb-8">لوحة الكابتن</p>
+        <h1 class="text-3xl font-bold text-white mb-1">24Seven</h1>
+        <p class="text-slate-400 mb-8 text-sm">لوحة الكابتن</p>
         <input id="driver-phone" type="tel" placeholder="رقم تليفونك"
-            class="input-field mb-4 text-center font-num text-lg" maxlength="11">
+            class="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 text-center text-white font-num text-lg mb-4 outline-none focus:border-blue-500"
+            maxlength="11">
         <button onclick="driverLogin()"
             class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-500 transition">
             <i class="fas fa-sign-in-alt ml-2"></i> دخول
@@ -220,11 +235,13 @@
             <div
                 class="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center font-black text-white text-sm">
                 24</div>
-            <h1 class="text-lg font-bold">Seven <span
-                    class="text-xs font-normal text-slate-400 block -mt-1">Captain</span></h1>
+            <div>
+                <h1 class="text-sm font-bold leading-tight">Seven Captain</h1>
+                <p id="header-driver-name" class="text-[10px] text-slate-400">كابتن</p>
+            </div>
         </div>
-        <div class="flex items-center gap-3">
-            <p id="header-driver-name" class="text-xs font-bold text-slate-300">كابتن</p>
+        <div class="flex items-center gap-2">
+            <div id="header-status" class="w-2 h-2 rounded-full bg-green-400"></div>
             <button onclick="driverLogout()"
                 class="w-8 h-8 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white transition">
                 <i class="fas fa-sign-out-alt text-xs"></i>
@@ -232,35 +249,35 @@
         </div>
     </header>
 
-    <div class="p-4 min-h-screen">
+    <div class="p-4">
         <!-- صفحة الرحلات -->
-        <div id="page-trips" class="page-content">
-            <h2 class="text-xl font-bold mb-4 text-white"><i class="fas fa-road text-blue-400 ml-2"></i>رحلاتي</h2>
-            <div id="driver-trips-list" class="space-y-4 pb-20"></div>
+        <div id="page-trips" class="page active">
+            <h2 class="text-lg font-bold mb-4 text-white"><i class="fas fa-road text-blue-400 ml-2"></i>رحلاتي</h2>
+            <div id="driver-trips-list" class="space-y-4 pb-4"></div>
         </div>
 
-        <!-- صفحة الدردشة - القائمة -->
-        <div id="page-chats" class="page-content hidden">
-            <h2 class="text-xl font-bold mb-4 text-white"><i class="fas fa-comments text-blue-400 ml-2"></i>المحادثات
+        <!-- صفحة المحادثات -->
+        <div id="page-chats" class="page">
+            <h2 class="text-lg font-bold mb-4 text-white"><i class="fas fa-comments text-blue-400 ml-2"></i>المحادثات
             </h2>
-            <div id="driver-chats-list" class="space-y-3 pb-20"></div>
+            <div id="driver-chats-list" class="space-y-3 pb-4"></div>
         </div>
 
-        <!-- نافذة المحادثة -->
-        <div id="page-chat-window" class="page-content hidden">
-            <div class="chat-container">
-                <div class="flex items-center gap-3 pb-3 border-b border-slate-700 mb-2">
+        <!-- نافذة محادثة مفردة -->
+        <div id="page-chat-window" class="page">
+            <div class="chat-wrap">
+                <div class="flex items-center gap-3 pb-3 border-b border-slate-700 mb-1">
                     <button onclick="backToChats()"
                         class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white">
-                        <i class="fas fa-arrow-right"></i>
+                        <i class="fas fa-arrow-right text-sm"></i>
                     </button>
                     <div class="flex-1">
                         <p id="chat-client-name" class="font-bold text-white text-sm">العميل</p>
                         <p id="chat-trip-route" class="text-[10px] text-slate-400"></p>
                     </div>
                 </div>
-                <div id="chat-messages" class="chat-messages"></div>
-                <div class="chat-input-bar">
+                <div id="chat-messages" class="chat-msgs"></div>
+                <div class="chat-bar">
                     <input type="text" id="chat-input" placeholder="اكتب رسالتك..."
                         onkeypress="if(event.key==='Enter')sendDriverMessage()">
                     <button onclick="sendDriverMessage()" class="bg-blue-600 text-white"><i
@@ -268,15 +285,58 @@
                 </div>
             </div>
         </div>
+
+        <!-- صفحة الحسابات -->
+        <div id="page-finance" class="page">
+            <h2 class="text-lg font-bold mb-4 text-white"><i class="fas fa-wallet text-green-400 ml-2"></i>حسابي</h2>
+            <div id="finance-content">
+                <div class="glass p-4 mb-4">
+                    <div class="grid grid-cols-3 gap-3 mb-4">
+                        <div class="fin-stat">
+                            <p class="text-[10px] text-slate-400 mb-1">إجمالي الرحلات</p>
+                            <p id="fin-total-trips" class="font-bold text-white font-num text-lg">0</p>
+                            <p class="text-[10px] text-slate-500">رحلة</p>
+                        </div>
+                        <div class="fin-stat">
+                            <p class="text-[10px] text-green-400 mb-1">المستحق</p>
+                            <p id="fin-due" class="font-bold text-green-400 font-num text-lg">0</p>
+                            <p class="text-[10px] text-slate-500">جنيه</p>
+                        </div>
+                        <div class="fin-stat">
+                            <p class="text-[10px] text-red-400 mb-1">الخصومات</p>
+                            <p id="fin-deductions" class="font-bold text-red-400 font-num text-lg">0</p>
+                            <p class="text-[10px] text-slate-500">جنيه</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="fin-stat">
+                            <p class="text-[10px] text-amber-400 mb-1">السلف</p>
+                            <p id="fin-advances" class="font-bold text-amber-400 font-num text-xl">0</p>
+                            <p class="text-[10px] text-slate-500">جنيه</p>
+                        </div>
+                        <div class="fin-stat border border-green-500/30">
+                            <p class="text-[10px] text-green-300 mb-1">🏆 الصافي</p>
+                            <p id="fin-net" class="font-bold text-green-300 font-num text-xl">0</p>
+                            <p class="text-[10px] text-slate-500">جنيه</p>
+                        </div>
+                    </div>
+                </div>
+                <h3 class="text-sm font-bold text-slate-300 mb-3">سجل الرحلات المنتهية</h3>
+                <div id="fin-trips-list" class="space-y-3 pb-4"></div>
+            </div>
+        </div>
     </div>
 
     <!-- شريط التنقل -->
     <nav class="bottom-nav" id="main-nav">
-        <div onclick="switchDriverTab('trips')" class="nav-item active" id="nav-trips">
+        <div onclick="switchTab('trips')" class="nav-item active" id="nav-trips">
             <i class="fas fa-road"></i><span>رحلاتي</span>
         </div>
-        <div onclick="switchDriverTab('chats')" class="nav-item" id="nav-chats">
+        <div onclick="switchTab('chats')" class="nav-item" id="nav-chats">
             <i class="fas fa-comments"></i><span>المحادثات</span>
+        </div>
+        <div onclick="switchTab('finance')" class="nav-item" id="nav-finance">
+            <i class="fas fa-wallet"></i><span>حسابي</span>
         </div>
     </nav>
 
@@ -288,10 +348,10 @@
 
         let currentDriver = null;
         let currentChatTripId = null;
-        let chatSubscription = null;
+        let chatSub = null;
 
         // ==========================================
-        // تسجيل الدخول بالتليفون
+        // تسجيل الدخول
         // ==========================================
         async function driverLogin() {
             const phone = document.getElementById('driver-phone').value.trim();
@@ -320,34 +380,31 @@
         function driverLogout() {
             localStorage.removeItem('driver_data');
             currentDriver = null;
-            if (chatSubscription) sb.removeChannel(chatSubscription);
+            if (chatSub) sb.removeChannel(chatSub);
             location.reload();
         }
 
-        // تحقق من الجلسة المحفوظة
-        (function checkSavedSession() {
+        (function () {
             const saved = localStorage.getItem('driver_data');
-            if (saved) {
-                currentDriver = JSON.parse(saved);
-                showDriverApp();
-            }
+            if (saved) { currentDriver = JSON.parse(saved); showDriverApp(); }
         })();
 
         // ==========================================
         // التنقل بين الصفحات
         // ==========================================
-        function switchDriverTab(id) {
-            document.querySelectorAll('.page-content').forEach(e => e.classList.add('hidden'));
-            document.getElementById('page-' + id).classList.remove('hidden');
-            document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
+        function switchTab(id) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('page-' + id).classList.add('active');
             document.getElementById('nav-' + id)?.classList.add('active');
             document.getElementById('main-nav').style.display = 'flex';
             if (id === 'trips') loadDriverTrips();
-            if (id === 'chats') loadDriverChats();
+            else if (id === 'chats') loadDriverChats();
+            else if (id === 'finance') loadFinancePage();
         }
 
         // ==========================================
-        // رحلاتي
+        // رحلاتي - التصميم الجديد
         // ==========================================
         async function loadDriverTrips() {
             const list = document.getElementById('driver-trips-list');
@@ -360,11 +417,10 @@
                 .order('created_at', { ascending: false });
 
             if (!trips || trips.length === 0) {
-                list.innerHTML = '<div class="text-center py-12 text-slate-500"><i class="fas fa-inbox text-4xl mb-3 block"></i><p>لا توجد رحلات حالياً</p></div>';
+                list.innerHTML = '<div class="text-center py-16 text-slate-500"><i class="fas fa-inbox text-5xl mb-3 block opacity-30"></i><p>لا توجد رحلات حالياً</p></div>';
                 return;
             }
 
-            // جمع user_ids للبحث عن أسماء العملاء
             const userIds = trips.map(t => t.user_id).filter(Boolean);
             let profilesMap = {};
             if (userIds.length > 0) {
@@ -372,81 +428,220 @@
                 if (profiles) profiles.forEach(p => profilesMap[p.id] = p);
             }
 
-            list.innerHTML = trips.map(t => {
-                const profile = profilesMap[t.user_id] || {};
-                let clientName = profile.full_name || 'عميل';
-                // رقم العميل مخفي عن الكابتن - التواصل فقط من خلال الدردشة
-
-                // استخراج من admin_notes لو حجز يدوي
-                if (t.admin_notes && t.admin_notes.includes('حجز هاتفي')) {
-                    const nm = t.admin_notes.match(/العميل: (.*?)[\n(]/);
-                    if (nm) clientName = nm[1].trim();
-                }
-                if (t.manual_client_name) clientName = t.manual_client_name;
-
-                // استخراج التفاصيل من admin_notes
-                let tripType = '--', payMethod = '--', tripDate = '', tripTime = '', passengers = '--', bags = '--';
-                const notes = t.admin_notes || '';
-                const typeMatch = notes.match(/نوع: (.*?) \|/);
-                if (typeMatch) tripType = typeMatch[1].trim();
-                const payMatch = notes.match(/الدفع: (.*?)[\n|]/);
-                if (payMatch) payMethod = payMatch[1].trim();
-                const dateMatch = notes.match(/📅\s*(.*?)\s*-\s*(.*?)[\n|$]/);
-                if (dateMatch) { tripDate = dateMatch[1].trim(); tripTime = dateMatch[2].trim(); }
-                const passMatch = notes.match(/(\d+)\s*(?:أفراد|فرد|ركاب)/);
-                if (passMatch) passengers = passMatch[1];
-                const bagMatch = notes.match(/(\d+)\s*(?:شنط|شنطة|حقائب)/);
-                if (bagMatch) bags = bagMatch[1];
-
-                if (payMethod === 'cash') payMethod = 'كاش 💵';
-                else if (payMethod === 'wallet') payMethod = 'محفظة 💳';
-                if (tripType === 'one-way') tripType = 'ذهاب فقط';
-                else if (tripType === 'round-same') tripType = 'ذهاب وعودة';
-                else if (tripType === 'round-diff') tripType = 'أيام مختلفة';
-
-                const isActive = t.status === 'driver_assigned';
-                const statusText = isActive ? 'نشطة' : 'مكتملة';
-                const statusColor = isActive ? 'text-blue-400 bg-blue-500/10 border-blue-500/30' : 'text-slate-400 bg-slate-500/10 border-slate-500/30';
-
-                return `
-                <div class="glass-card p-4">
-                    <div class="flex justify-between items-start mb-3">
-                        <span class="text-xs px-2 py-1 rounded-full border ${statusColor}">${statusText}</span>
-                        <span class="font-bold font-num text-blue-400">${t.estimated_price} EGP</span>
-                    </div>
-                    <div class="space-y-2 mb-3">
-                        <p class="text-xs text-slate-300"><i class="fas fa-circle-dot text-green-500 ml-2 text-[10px]"></i>${(t.pickup_location || '').split(',')[0]}</p>
-                        <p class="text-xs text-slate-300"><i class="fas fa-location-dot text-red-500 ml-2 text-[10px]"></i>${(t.dropoff_location || '').split(',')[0]}</p>
-                    </div>
-                    <div class="grid grid-cols-3 gap-2 mb-3 bg-slate-800/70 rounded-xl p-3">
-                        <div class="text-center"><p class="text-[9px] text-slate-500">📅 التاريخ</p><p class="text-[11px] text-white font-num">${tripDate || '--'}</p></div>
-                        <div class="text-center"><p class="text-[9px] text-slate-500">🕐 الوقت</p><p class="text-[11px] text-white font-num">${tripTime || '--'}</p></div>
-                        <div class="text-center"><p class="text-[9px] text-slate-500">🚗 النوع</p><p class="text-[11px] text-white">${t.car_type || '--'}</p></div>
-                        <div class="text-center"><p class="text-[9px] text-slate-500">👥 الأفراد</p><p class="text-[11px] text-white">${passengers}</p></div>
-                        <div class="text-center"><p class="text-[9px] text-slate-500">🧳 الشنط</p><p class="text-[11px] text-white">${bags}</p></div>
-                        <div class="text-center"><p class="text-[9px] text-slate-500">💰 الدفع</p><p class="text-[11px] text-white">${payMethod}</p></div>
-                    </div>
-                    <div class="text-center mb-3"><p class="text-[9px] text-slate-500">🛣️ الرحلة</p><p class="text-[11px] text-amber-400">${tripType}</p></div>
-                    <div class="flex items-center justify-between pt-3 border-t border-slate-700">
-                        <div class="flex items-center gap-2">
-                            <div class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center text-sm">👤</div>
-                            <div>
-                                <p class="text-xs font-bold text-white">${clientName}</p>
-                                <p class="text-[10px] text-blue-400"><i class="fas fa-comment-dots ml-1"></i>التواصل عبر الدردشة فقط</p>
-                            </div>
-                        </div>
-                        ${isActive ? `
-                        <div class="flex gap-2">
-                            <button onclick="openDriverChat('${t.id}', '${clientName}')" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold"><i class="fas fa-comment ml-1"></i>دردشة</button>
-                        </div>
-                    </div>
-                    <div class="flex gap-2 mt-3 pt-3 border-t border-slate-700">
-                        <button onclick="notifyArrived('${t.id}')" class="flex-1 bg-green-600/20 border border-green-500/40 text-green-400 py-2 rounded-xl text-xs font-bold hover:bg-green-600 hover:text-white transition"><i class="fas fa-location-dot ml-1"></i>وصلت للعميل</button>
-                        <button onclick="endTrip('${t.id}')" class="flex-1 bg-red-600/20 border border-red-500/40 text-red-400 py-2 rounded-xl text-xs font-bold hover:bg-red-600 hover:text-white transition"><i class="fas fa-flag-checkered ml-1"></i>إنهاء الرحلة</button>
-                    </div>` : ''}
-                </div>`;
-            }).join('');
+            list.innerHTML = trips.map(t => renderTripCard(t, profilesMap)).join('');
         }
+
+        function renderTripCard(t, profilesMap) {
+            const profile = profilesMap[t.user_id] || {};
+            let clientName = profile.full_name || 'عميل';
+            if (t.admin_notes && t.admin_notes.includes('حجز هاتفي')) {
+                const nm = t.admin_notes.match(/العميل: (.*?)[\n(]/);
+                if (nm) clientName = nm[1].trim();
+            }
+            if (t.manual_client_name) clientName = t.manual_client_name;
+
+            // بيانات من admin_notes
+            let tripType = '', payMethod = '', tripDate = '', tripTime = '', passengers = '1', bags = '0';
+            const notes = t.admin_notes || '';
+            const typeM = notes.match(/نوع: (.*?) \|/); if (typeM) tripType = typeM[1].trim();
+            const payM = notes.match(/الدفع: (.*?)[\n|]/); if (payM) payMethod = payM[1].trim();
+            const dateM = notes.match(/📅\s*(.*?)\s*-\s*(.*?)[\n|$]/); if (dateM) { tripDate = dateM[1].trim(); tripTime = dateM[2].trim(); }
+            const passM = notes.match(/(\d+)\s*(?:أفراد|فرد|ركاب)/); if (passM) passengers = passM[1];
+            const bagM = notes.match(/(\d+)\s*(?:شنط|شنطة|حقائب)/); if (bagM) bags = bagM[1];
+            if (payMethod === 'cash') payMethod = '💵 كاش';
+            else if (payMethod === 'wallet') payMethod = '💳 محفظة';
+            const tripTypeAr = tripType === 'one-way' ? 'ذهاب فقط' : tripType === 'round-diff' ? 'ذهاب وعودة' : tripType || '--';
+
+            const isActive = t.status === 'driver_assigned';
+            const statusColor = isActive ? 'text-blue-400 bg-blue-500/10 border-blue-500/30' : 'text-slate-400 bg-slate-700/30 border-slate-600/30';
+            const statusText = isActive ? '🟢 نشطة' : '✅ مكتملة';
+
+            const pickup = (t.pickup_location || '').split(',')[0];
+            const dropoff = (t.dropoff_location || '').split(',')[0];
+
+            return `
+            <div class="glass p-4 mb-3">
+                <!-- هيدر الكارت -->
+                <div class="flex items-center justify-between mb-3">
+                    <span class="stage-badge ${statusColor} text-xs">${statusText}</span>
+                    <span class="font-bold font-num text-blue-400 text-lg">${t.estimated_price} EGP</span>
+                </div>
+
+                <!-- المسار -->
+                <div class="bg-slate-800/60 rounded-xl p-3 mb-3 space-y-2">
+                    <div class="flex items-start gap-2">
+                        <i class="fas fa-circle-dot text-green-500 text-[10px] mt-1 flex-shrink-0"></i>
+                        <p class="text-xs text-slate-200 leading-tight">${pickup}</p>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <i class="fas fa-location-dot text-red-500 text-[10px] mt-1 flex-shrink-0"></i>
+                        <p class="text-xs text-slate-200 leading-tight">${dropoff}</p>
+                    </div>
+                </div>
+
+                <!-- البيانات -->
+                <div class="grid grid-cols-3 gap-2 mb-3 text-center">
+                    <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">📅 التاريخ</p><p class="text-[11px] text-white font-num">${tripDate || '--'}</p></div>
+                    <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">⏰ الوقت</p><p class="text-[11px] text-white font-num">${tripTime || '--'}</p></div>
+                    <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">🚗 النوع</p><p class="text-[11px] text-white">${tripTypeAr}</p></div>
+                    <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">👥 أفراد</p><p class="text-[11px] text-white">${passengers}</p></div>
+                    <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">🧳 شنط</p><p class="text-[11px] text-white">${bags}</p></div>
+                    <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">💰 الدفع</p><p class="text-[11px] text-white">${payMethod || '--'}</p></div>
+                </div>
+
+                <!-- العميل -->
+                <div class="flex items-center justify-between pt-3 border-t border-slate-700/60">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 bg-blue-600/20 border border-blue-500/30 rounded-full flex items-center justify-center text-sm">👤</div>
+                        <div>
+                            <p class="text-xs font-bold text-white">${clientName}</p>
+                            <p class="text-[10px] text-blue-400"><i class="fas fa-comment-dots ml-1 text-[8px]"></i>التواصل عبر الدردشة فقط</p>
+                        </div>
+                    </div>
+                    ${isActive ? `
+                    <button onclick="openDriverChat('${t.id}', '${clientName}')"
+                        class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1">
+                        <i class="fas fa-comment"></i> دردشة
+                    </button>` : ''}
+                </div>
+
+                <!-- فلو مراحل الرحلة (الرحلات النشطة فقط) -->
+                ${isActive ? `
+                <div class="mt-3 pt-3 border-t border-slate-700/60 space-y-2" id="stages-${t.id}">
+                    <p class="text-[10px] text-slate-400 font-bold mb-2">📍 مراحل الرحلة</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="openCarInspection('${t.id}', 'pre')"
+                            class="stage-btn bg-yellow-600/20 border border-yellow-500/40 text-yellow-400 py-2.5 rounded-xl text-xs font-bold hover:bg-yellow-600 hover:text-white transition">
+                            🏭 استلام من الجراش
+                        </button>
+                        <button onclick="tripStage('${t.id}','heading_client','🚗 الكابتن في الطريق إليك، يصل قريباً!')"
+                            class="stage-btn bg-blue-600/20 border border-blue-500/40 text-blue-400 py-2.5 rounded-xl text-xs font-bold hover:bg-blue-600 hover:text-white transition">
+                            🚗 التحرك للعميل
+                        </button>
+                        <button onclick="notifyArrived('${t.id}')"
+                            class="stage-btn bg-green-600/20 border border-green-500/40 text-green-400 py-2.5 rounded-xl text-xs font-bold hover:bg-green-600 hover:text-white transition">
+                            📍 وصلت للعميل
+                        </button>
+                        <button onclick="tripStage('${t.id}','trip_started','🚀 انطلقت الرحلة! نتمنى لك رحلة ممتعة.')"
+                            class="stage-btn bg-indigo-600/20 border border-indigo-500/40 text-indigo-400 py-2.5 rounded-xl text-xs font-bold hover:bg-indigo-600 hover:text-white transition">
+                            🚀 بدء الرحلة
+                        </button>
+                        <button onclick="requestDestChange('${t.id}')"
+                            class="stage-btn bg-orange-600/20 border border-orange-500/40 text-orange-400 py-2.5 rounded-xl text-xs font-bold hover:bg-orange-600 hover:text-white transition">
+                            🔀 تغيير وجهة
+                        </button>
+                        <button onclick="endTripFlow('${t.id}', ${t.estimated_price})"
+                            class="stage-btn bg-red-600/20 border border-red-500/40 text-red-400 py-2.5 rounded-xl text-xs font-bold hover:bg-red-600 hover:text-white transition">
+                            🏁 وصول وإنهاء
+                        </button>
+                    </div>
+                    <button onclick="openDriverChat('${t.id}', '${clientName}')"
+                        class="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-xl text-xs font-bold transition mt-1">
+                        <i class="fas fa-comment ml-1"></i> فتح الدردشة
+                    </button>
+                </div>` : ''}
+            </div>`;
+        }
+
+        // ==========================================
+        // مراحل الرحلة - إرسال تحديث في الشات
+        // ==========================================
+        async function tripStage(tripId, stage, message) {
+            const btn = event?.target;
+            if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+            await sb.from('chat_messages').insert([{
+                trip_id: tripId, sender_role: 'driver',
+                sender_id: currentDriver.id, sender_name: currentDriver.name,
+                message, message_type: 'system'
+            }]);
+            // تحديث حقل stage_status في الرحلة
+            await sb.from('trips').update({ stage_status: stage }).eq('id', tripId).catch(() => { });
+            if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+            alert('✅ تم إرسال التحديث للعميل');
+        }
+
+        // طلب تغيير الوجهة (إشعار للإدارة)
+        async function requestDestChange(tripId) {
+            const newDest = prompt('🔀 أدخل الوجهة الجديدة المطلوبة:');
+            if (!newDest) return;
+            await sb.from('chat_messages').insert([{
+                trip_id: tripId, sender_role: 'driver',
+                sender_id: currentDriver.id, sender_name: currentDriver.name,
+                message: `⚠️ طلب تغيير وجهة:\n${newDest}\nفي انتظار موافقة الإدارة...`,
+                message_type: 'system'
+            }]);
+            // إرسال رسالة للإدارة
+            await sb.from('chat_messages').insert([{
+                trip_id: tripId, sender_role: 'driver',
+                sender_id: currentDriver.id, sender_name: currentDriver.name,
+                message: `🚨 [طلب موافقة إدارية] الكابتن ${currentDriver.name} يطلب تغيير الوجهة إلى: ${newDest}`,
+                message_type: 'admin_request'
+            }]);
+            alert('✅ تم إرسال طلب تغيير الوجهة للإدارة - انتظر الموافقة');
+        }
+
+        // إنهاء الرحلة مع الإقفال المالي
+        async function endTripFlow(tripId, tripPrice) {
+            if (!confirm('هل تريد إنهاء الرحلة وإدخال المصاريف؟')) return;
+            // فتح نافذة الإقفال المالي
+            openFinancialClose(tripId, tripPrice);
+        }
+
+        // نافذة الإقفال المالي
+        function openFinancialClose(tripId, tripPrice) {
+            const modal = document.createElement('div');
+            modal.id = 'fin-close-modal';
+            modal.className = 'fixed inset-0 bg-black/80 z-[200] flex items-end justify-center p-4';
+            modal.innerHTML = `
+            <div class="bg-slate-800 border border-slate-600 rounded-2xl p-5 w-full max-w-sm">
+                <h3 class="text-white font-bold text-center mb-4 text-lg">🏁 إقفال الرحلة</h3>
+                <p class="text-slate-400 text-xs text-center mb-4">أدخل مصاريف الرحلة ليتم خصمها من إجمالي الرحلة</p>
+                <div class="space-y-3 mb-4">
+                    <div>
+                        <label class="text-xs text-slate-400 block mb-1">⛽ البنزين (جنيه)</label>
+                        <input id="fc-fuel" type="number" min="0" value="0" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-2.5 text-white font-num outline-none focus:border-blue-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400 block mb-1">🛣️ الكروت / رسوم الطريق (جنيه)</label>
+                        <input id="fc-tolls" type="number" min="0" value="0" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-2.5 text-white font-num outline-none focus:border-blue-500 text-sm">
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="document.getElementById('fin-close-modal').remove()"
+                        class="flex-1 bg-slate-700 text-white py-2.5 rounded-xl text-sm font-bold">إلغاء</button>
+                    <button onclick="confirmEndTrip('${tripId}', ${tripPrice})"
+                        class="flex-1 bg-red-600 hover:bg-red-500 text-white py-2.5 rounded-xl text-sm font-bold transition">تأكيد الإنهاء</button>
+                </div>
+            </div>`;
+            document.body.appendChild(modal);
+        }
+
+        async function confirmEndTrip(tripId, tripPrice) {
+            const fuel = parseFloat(document.getElementById('fc-fuel').value) || 0;
+            const tolls = parseFloat(document.getElementById('fc-tolls').value) || 0;
+            const total = tripPrice - fuel - tolls;
+
+            // تحديث الرحلة بالمصاريف
+            await sb.from('trips').update({
+                status: 'trip_ended',
+                fuel_cost: fuel,
+                toll_cost: tolls
+            }).eq('id', tripId).catch(() => { });
+
+            await sb.from('chat_messages').insert([{
+                trip_id: tripId, sender_role: 'driver',
+                sender_id: currentDriver.id, sender_name: currentDriver.name,
+                message: `✅ تم إنهاء الرحلة بنجاح!\n⛽ بنزين: ${fuel} جنيه\n🛣️ كروت: ${tolls} جنيه\nشكراً لاستخدامك 24Seven! نسعد بتقييمك.`,
+                message_type: 'trip_end'
+            }]);
+
+            sendTripEmail(tripId, '✅ رحلتك اكتملت', 'نتمنى أنك استمتعت برحلتك معنا. شكراً لاستخدامك 24Seven!');
+            document.getElementById('fin-close-modal').remove();
+            alert(`✅ تم إنهاء الرحلة\n⛽ بنزين: ${fuel} جنيه | 🛣️ كروت: ${tolls} جنيه`);
+            loadDriverTrips();
+        }
+
+
 
         // ==========================================
         // المحادثات
@@ -456,13 +651,11 @@
             list.innerHTML = '<p class="text-center text-slate-400 py-8"><i class="fas fa-spinner fa-spin ml-2"></i>جاري التحميل...</p>';
 
             const { data: trips } = await sb.from('trips')
-                .select('*, cars:cars!fk_trips_car(*)')
-                .eq('driver_id', currentDriver.id)
-                .eq('status', 'driver_assigned')
-                .order('created_at', { ascending: false });
+                .select('*').eq('driver_id', currentDriver.id)
+                .eq('status', 'driver_assigned').order('created_at', { ascending: false });
 
             if (!trips || trips.length === 0) {
-                list.innerHTML = '<div class="text-center py-12 text-slate-500"><i class="fas fa-comment-slash text-4xl mb-3 block"></i><p>لا توجد محادثات نشطة</p></div>';
+                list.innerHTML = '<div class="text-center py-16 text-slate-500"><i class="fas fa-comment-slash text-5xl mb-3 block opacity-30"></i><p>لا توجد محادثات نشطة</p></div>';
                 return;
             }
 
@@ -473,8 +666,7 @@
                 if (profiles) profiles.forEach(p => profilesMap[p.id] = p);
             }
 
-            // جلب آخر رسالة لكل رحلة
-            let chatsHtml = '';
+            let html = '';
             for (const t of trips) {
                 const profile = profilesMap[t.user_id] || {};
                 let clientName = profile.full_name || 'عميل';
@@ -485,28 +677,27 @@
                 if (t.manual_client_name) clientName = t.manual_client_name;
 
                 const { data: lastMsg } = await sb.from('chat_messages')
-                    .select('message, sender_role, created_at')
-                    .eq('trip_id', t.id)
-                    .order('created_at', { ascending: false })
-                    .limit(1);
+                    .select('message, sender_role').eq('trip_id', t.id)
+                    .order('created_at', { ascending: false }).limit(1);
 
                 const preview = lastMsg?.[0]?.message || 'لا توجد رسائل بعد';
-                const previewRole = lastMsg?.[0]?.sender_role;
-                const rolePrefix = previewRole === 'driver' ? 'أنت: ' : previewRole === 'admin' ? 'الإدارة: ' : '';
+                const role = lastMsg?.[0]?.sender_role;
+                const prefix = role === 'driver' ? 'أنت: ' : role === 'admin' ? 'الإدارة: ' : '';
 
-                chatsHtml += `
-                <div onclick="openDriverChat('${t.id}', '${clientName}')" class="glass-card p-4 cursor-pointer hover:border-blue-500/40 transition">
+                html += `
+                <div onclick="openDriverChat('${t.id}', '${clientName}')"
+                    class="glass p-4 cursor-pointer hover:border-blue-500/40 transition">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center text-lg">👤</div>
+                        <div class="w-10 h-10 bg-blue-600/20 border border-blue-500/20 rounded-full flex items-center justify-center">👤</div>
                         <div class="flex-1 min-w-0">
                             <p class="font-bold text-white text-sm">${clientName}</p>
-                            <p class="text-[11px] text-slate-400 truncate">${rolePrefix}${preview}</p>
+                            <p class="text-[11px] text-slate-400 truncate">${prefix}${preview}</p>
                         </div>
                         <i class="fas fa-chevron-left text-slate-600 text-xs"></i>
                     </div>
                 </div>`;
             }
-            list.innerHTML = chatsHtml;
+            list.innerHTML = html;
         }
 
         // ==========================================
@@ -514,124 +705,194 @@
         // ==========================================
         async function openDriverChat(tripId, clientName) {
             currentChatTripId = tripId;
-            document.querySelectorAll('.page-content').forEach(e => e.classList.add('hidden'));
-            document.getElementById('page-chat-window').classList.remove('hidden');
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-chat-window').classList.add('active');
             document.getElementById('main-nav').style.display = 'none';
             document.getElementById('chat-client-name').textContent = clientName;
 
-            // جلب تفاصيل الرحلة
             const { data: trip } = await sb.from('trips').select('pickup_location, dropoff_location').eq('id', tripId).single();
             if (trip) {
                 document.getElementById('chat-trip-route').textContent =
                     (trip.pickup_location || '').split(',')[0] + ' ➝ ' + (trip.dropoff_location || '').split(',')[0];
             }
-
-            await loadChatMessages(tripId);
-            subscribeToChatMessages(tripId);
+            await loadChatMsgs(tripId);
+            subscribeChatMsgs(tripId);
         }
 
-        async function loadChatMessages(tripId) {
-            const container = document.getElementById('chat-messages');
-            const { data: messages } = await sb.from('chat_messages')
-                .select('*')
-                .eq('trip_id', tripId)
-                .order('created_at', { ascending: true });
-
-            container.innerHTML = '';
-            if (!messages || messages.length === 0) {
-                container.innerHTML = '<p class="text-center text-slate-500 text-xs py-8">لا توجد رسائل بعد. ابدأ المحادثة!</p>';
+        async function loadChatMsgs(tripId) {
+            const box = document.getElementById('chat-messages');
+            const { data: msgs } = await sb.from('chat_messages').select('*').eq('trip_id', tripId).order('created_at', { ascending: true });
+            box.innerHTML = '';
+            if (!msgs || msgs.length === 0) {
+                box.innerHTML = '<p class="text-center text-slate-500 text-xs py-8">لا توجد رسائل. ابدأ المحادثة!</p>';
                 return;
             }
-            messages.forEach(m => appendMessage(m));
-            container.scrollTop = container.scrollHeight;
+            msgs.forEach(m => appendMsg(m));
+            box.scrollTop = box.scrollHeight;
         }
 
-        function appendMessage(msg) {
-            const container = document.getElementById('chat-messages');
+        function appendMsg(msg) {
+            const box = document.getElementById('chat-messages');
             const div = document.createElement('div');
-
-            if (msg.message_type === 'system') {
-                div.className = 'msg-bubble msg-system';
+            if (msg.message_type === 'system' || msg.message_type === 'trip_end') {
+                div.className = 'msg msg-system';
                 div.textContent = msg.message;
             } else if (msg.sender_role === 'admin') {
-                div.className = 'msg-bubble msg-admin';
-                div.innerHTML = `<span class="text-[10px] block mb-1">🛡️ الإدارة</span>${msg.message}`;
+                div.className = 'msg msg-admin';
+                div.innerHTML = `<span class="text-[10px] block mb-1 opacity-70">🛡️ الإدارة</span>${msg.message}`;
             } else if (msg.sender_role === 'driver') {
-                div.className = 'msg-bubble msg-mine';
+                div.className = 'msg msg-me';
                 if (msg.message_type === 'location') {
-                    div.innerHTML = `📍 <a href="https://maps.google.com/?q=${msg.location_lat},${msg.location_lng}" target="_blank" class="underline text-white">فتح الموقع</a>`;
+                    div.innerHTML = `📍 <a href="https://maps.google.com/?q=${msg.location_lat},${msg.location_lng}" target="_blank" class="underline">فتح الموقع</a>`;
                 } else {
                     div.textContent = msg.message;
                 }
             } else {
-                div.className = 'msg-bubble msg-other';
+                div.className = 'msg msg-other';
                 if (msg.message_type === 'location') {
-                    div.className = 'msg-bubble msg-other msg-location';
-                    div.innerHTML = `📍 لوكيشن العميل<br><a href="https://maps.google.com/?q=${msg.location_lat},${msg.location_lng}" target="_blank" class="underline text-white font-bold">فتح في خرائط جوجل</a>`;
+                    div.innerHTML = `📍 لوكيشن العميل<br><a href="https://maps.google.com/?q=${msg.location_lat},${msg.location_lng}" target="_blank" class="underline font-bold">فتح في الخرائط</a>`;
                 } else {
                     div.textContent = msg.message;
                 }
             }
-
             const time = document.createElement('span');
-            time.className = 'block text-[9px] mt-1 opacity-50';
+            time.className = 'block text-[9px] mt-1 opacity-40';
             time.textContent = new Date(msg.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
             div.appendChild(time);
-
-            container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
         }
 
         async function sendDriverMessage() {
             const input = document.getElementById('chat-input');
             const message = input.value.trim();
             if (!message || !currentChatTripId) return;
-
             input.value = '';
             await sb.from('chat_messages').insert([{
                 trip_id: currentChatTripId,
                 sender_role: 'driver',
                 sender_id: currentDriver.id,
                 sender_name: currentDriver.name,
-                message: message,
-                message_type: 'text'
+                message, message_type: 'text'
             }]);
         }
 
-        function subscribeToChatMessages(tripId) {
-            if (chatSubscription) sb.removeChannel(chatSubscription);
-            chatSubscription = sb.channel('chat-driver-' + tripId)
-                .on('postgres_changes', {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'chat_messages',
-                    filter: 'trip_id=eq.' + tripId
-                }, (payload) => {
-                    appendMessage(payload.new);
-                })
+        function subscribeChatMsgs(tripId) {
+            if (chatSub) sb.removeChannel(chatSub);
+            chatSub = sb.channel('chat-drv-' + tripId)
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: 'trip_id=eq.' + tripId },
+                    (p) => appendMsg(p.new))
                 .subscribe();
         }
 
         function backToChats() {
             currentChatTripId = null;
-            if (chatSubscription) sb.removeChannel(chatSubscription);
-            switchDriverTab('chats');
+            if (chatSub) sb.removeChannel(chatSub);
+            switchTab('chats');
         }
 
         // ==========================================
-        // Realtime للرحلات الجديدة
+        // وصلت للعميل
+        // ==========================================
+        async function notifyArrived(tripId) {
+            if (!confirm('هل وصلت فعلاً لموقع العميل؟')) return;
+            await sb.from('chat_messages').insert([{
+                trip_id: tripId, sender_role: 'driver', sender_id: currentDriver.id,
+                sender_name: currentDriver.name,
+                message: '🚗 الكابتن وصل لموقعك! من فضلك انزل، الكابتن في الانتظار.',
+                message_type: 'system'
+            }]);
+            sendTripEmail(tripId, '🚗 الكابتن وصل!', 'الكابتن وصل لموقعك وفي انتظارك.');
+            alert('✅ تم إبلاغ العميل بوصولك');
+        }
+
+        // ==========================================
+        // إنهاء الرحلة
+        // ==========================================
+        async function endTrip(tripId) {
+            if (!confirm('هل تريد إنهاء هذه الرحلة؟')) return;
+            await sb.from('trips').update({ status: 'trip_ended' }).eq('id', tripId);
+            await sb.from('chat_messages').insert([{
+                trip_id: tripId, sender_role: 'driver', sender_id: currentDriver.id,
+                sender_name: currentDriver.name,
+                message: '✅ تم إنهاء الرحلة بنجاح. شكراً لاستخدامك 24Seven! نسعد بتقييمك.',
+                message_type: 'trip_end'
+            }]);
+            sendTripEmail(tripId, '✅ رحلتك اكتملت', 'نتمنى أنك استمتعت برحلتك معنا. شكراً لاستخدامك 24Seven!');
+            alert('✅ تم إنهاء الرحلة');
+            loadDriverTrips();
+        }
+
+        // ==========================================
+        // صفحة الحسابات
+        // ==========================================
+        async function loadFinancePage() {
+            if (!currentDriver) return;
+
+            // جلب بيانات السائق (المستحق والسلف)
+            const { data: driver } = await sb.from('drivers').select('*').eq('id', currentDriver.id).single();
+            if (!driver) return;
+
+            // جلب الرحلات المنتهية للكابتن
+            const { data: trips } = await sb.from('trips')
+                .select('id, estimated_price, status, admin_notes, created_at, pickup_location, dropoff_location')
+                .eq('driver_id', currentDriver.id)
+                .in('status', ['completed', 'trip_ended'])
+                .order('created_at', { ascending: false });
+
+            const totalTrips = trips?.length || 0;
+            const due = driver.due_amount || 0;
+            const advances = driver.advances || 0;
+            const deductions = driver.deductions || 0;
+            const net = due - advances - deductions;
+
+            document.getElementById('fin-total-trips').textContent = totalTrips;
+            document.getElementById('fin-due').textContent = due;
+            document.getElementById('fin-advances').textContent = advances;
+            document.getElementById('fin-deductions').textContent = deductions;
+            document.getElementById('fin-net').textContent = Math.max(0, net);
+
+            // عرض قائمة الرحلات
+            const finList = document.getElementById('fin-trips-list');
+            if (!trips || trips.length === 0) {
+                finList.innerHTML = '<p class="text-center text-slate-500 text-sm py-6">لا توجد رحلات منتهية بعد</p>';
+                return;
+            }
+
+            finList.innerHTML = trips.map(t => {
+                const date = new Date(t.created_at).toLocaleDateString('ar-EG');
+                const pickup = (t.pickup_location || '').split(',')[0];
+                const dropoff = (t.dropoff_location || '').split(',')[0];
+                return `
+                <div class="glass p-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[10px] text-slate-400">${date}</span>
+                        <span class="font-bold font-num text-green-400 text-sm">${t.estimated_price} EGP</span>
+                    </div>
+                    <div class="flex items-center gap-1 text-xs text-slate-300">
+                        <i class="fas fa-circle-dot text-green-500 text-[8px]"></i>
+                        <span class="truncate">${pickup}</span>
+                    </div>
+                    <div class="flex items-center gap-1 text-xs text-slate-300 mt-1">
+                        <i class="fas fa-location-dot text-red-500 text-[8px]"></i>
+                        <span class="truncate">${dropoff}</span>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // ==========================================
+        // Realtime للرحلات
         // ==========================================
         function setupDriverRealtime() {
-            sb.channel('driver-trips-' + currentDriver.id)
-                .on('postgres_changes', {
-                    event: '*',
-                    schema: 'public',
-                    table: 'trips',
-                    filter: 'driver_id=eq.' + currentDriver.id
-                }, () => {
-                    if (!document.getElementById('page-trips').classList.contains('hidden')) loadDriverTrips();
-                    if (!document.getElementById('page-chats').classList.contains('hidden')) loadDriverChats();
-                })
+            sb.channel('drv-trips-' + currentDriver.id)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'trips', filter: 'driver_id=eq.' + currentDriver.id },
+                    () => {
+                        const tripsActive = document.getElementById('page-trips').classList.contains('active');
+                        const chatsActive = document.getElementById('page-chats').classList.contains('active');
+                        if (tripsActive) loadDriverTrips();
+                        if (chatsActive) loadDriverChats();
+                    })
                 .subscribe();
         }
 
@@ -643,99 +904,236 @@
         async function sendTripEmail(tripId, notifTitle, notifMessage) {
             try {
                 const { data: trip } = await sb.from('trips').select('*, drivers:drivers!fk_trips_driver(*), cars:cars!fk_trips_car(*)').eq('id', tripId).single();
-                if (!trip) { console.log('❌ لم يتم العثور على الرحلة'); return; }
+                if (!trip) return;
 
                 let clientEmail = '', clientName = 'عزيزنا العميل';
-
-                // 1. جلب من profiles
                 if (trip.user_id) {
-                    const { data: profile } = await sb.from('profiles').select('full_name, phone, email').eq('id', trip.user_id).single();
-                    if (profile) {
-                        clientName = profile.full_name || clientName;
-                        if (profile.email) clientEmail = profile.email;
-                    }
+                    const { data: profile } = await sb.from('profiles').select('full_name, email').eq('id', trip.user_id).single();
+                    if (profile) { clientName = profile.full_name || clientName; if (profile.email) clientEmail = profile.email; }
                 }
-
-                // 2. جلب من client_email في الرحلة
                 if (!clientEmail && trip.client_email) clientEmail = trip.client_email;
                 if (trip.manual_client_name) clientName = trip.manual_client_name;
+                if (!clientEmail) { const m = (trip.admin_notes || '').match(/[\w.-]+@[\w.-]+\.\w+/); if (m) clientEmail = m[0]; }
+                if (!clientEmail) return;
 
-                // 3. جلب من admin_notes (لو فيه إيميل)
-                if (!clientEmail) {
-                    const notes = trip.admin_notes || '';
-                    const emailMatch = notes.match(/[\w.-]+@[\w.-]+\.\w+/);
-                    if (emailMatch) clientEmail = emailMatch[0];
-                }
-
-                if (!clientEmail) {
-                    console.log('⚠️ لا يوجد إيميل للعميل - لم يتم إرسال الإيميل');
-                    return;
-                }
-
-                console.log('📧 جاري إرسال إيميل لـ:', clientEmail);
-
-                const tripNotes = trip.admin_notes || '';
+                const notes = trip.admin_notes || '';
                 let tripDate = '', tripTime = '';
-                const dateMatch = tripNotes.match(/📅\s*(.*?)\s*-\s*(.*?)[\n|$]/);
-                if (dateMatch) { tripDate = dateMatch[1].trim(); tripTime = dateMatch[2].trim(); }
+                const dm = notes.match(/📅\s*(.*?)\s*-\s*(.*?)[\n|$]/);
+                if (dm) { tripDate = dm[1].trim(); tripTime = dm[2].trim(); }
 
-                const result = await emailjs.send('service_kq139v5', 'template_9q7kxsc', {
-                    to_email: clientEmail,
-                    client_name: clientName,
-                    notification_title: notifTitle,
-                    notification_message: notifMessage,
+                await emailjs.send('service_kq139v5', 'template_9q7kxsc', {
+                    to_email: clientEmail, client_name: clientName,
+                    notification_title: notifTitle, notification_message: notifMessage,
                     trip_from: (trip.pickup_location || '').split(',')[0],
                     trip_to: (trip.dropoff_location || '').split(',')[0],
                     trip_date: tripDate || new Date().toLocaleDateString('ar-EG'),
-                    trip_time: tripTime || '--',
-                    trip_price: trip.estimated_price || '0',
+                    trip_time: tripTime || '--', trip_price: trip.estimated_price || '0',
                     captain_name: trip.drivers?.name || currentDriver?.name || 'الكابتن',
-                    car_model: trip.cars?.model || '--',
-                    plate_number: trip.cars?.plate_number || '--'
+                    car_model: trip.cars?.model || '--', plate_number: trip.cars?.plate_number || '--'
                 });
-                console.log('✅ تم إرسال الإيميل بنجاح:', result);
+            } catch (err) { console.error('Email error:', err); }
+        }
+
+        // ==========================================
+        // نظام تصوير السيارة (Phase 3)
+        // ==========================================
+        const INSPECTION_PHOTOS = {
+            pre: [
+                { id: 'oil', label: '🛢️ مقياس زيت الماكينة', hint: 'صوّر مقياس الزيت بوضوح' },
+                { id: 'coolant', label: '💧 قربة ماء التبريد', hint: 'صوّر قربة الماء' },
+                { id: 'washer', label: '🚿 قربة مياه المساحات', hint: 'صوّر قربة المساحات' },
+                { id: 'brake', label: '🔧 زيت الباكم', hint: 'صوّر سائل الفرامل' },
+                { id: 'front', label: '🚗 الجهة الأمامية', hint: 'صوّر مقدمة السيارة' },
+                { id: 'back', label: '🚗 الجهة الخلفية', hint: 'صوّر مؤخرة السيارة' },
+                { id: 'door_fr', label: '🚪 باب أمامي أيمن', hint: 'صوّر الباب الأمامي الأيمن' },
+                { id: 'door_rr', label: '🚪 باب خلفي أيمن', hint: 'صوّر الباب الخلفي الأيمن' },
+                { id: 'door_fl', label: '🚪 باب أمامي أيسر', hint: 'صوّر الباب الأمامي الأيسر' },
+                { id: 'door_rl', label: '🚪 باب خلفي أيسر', hint: 'صوّر الباب الخلفي الأيسر' }
+            ],
+            post: [
+                { id: 'front', label: '🚗 الجهة الأمامية (بعد)', hint: 'صوّر مقدمة السيارة' },
+                { id: 'back', label: '🚗 الجهة الخلفية (بعد)', hint: 'صوّر مؤخرة السيارة' },
+                { id: 'door_fr', label: '🚪 باب أمامي أيمن (بعد)', hint: 'صوّر الباب الأمامي الأيمن' },
+                { id: 'door_rr', label: '🚪 باب خلفي أيمن (بعد)', hint: 'صوّر الباب الخلفي الأيمن' },
+                { id: 'door_fl', label: '🚪 باب أمامي أيسر (بعد)', hint: 'صوّر الباب الأمامي الأيسر' },
+                { id: 'door_rl', label: '🚪 باب خلفي أيسر (بعد)', hint: 'صوّر الباب الخلفي الأيسر' }
+            ]
+        };
+
+        let inspectionFiles = {};   // id → File
+        let currentInspectionTrip = null;
+        let currentInspectionType = null;
+
+        function openCarInspection(tripId, type) {
+            currentInspectionTrip = tripId;
+            currentInspectionType = type;
+            inspectionFiles = {};
+
+            const photos = INSPECTION_PHOTOS[type];
+            const title = type === 'pre' ? '🏭 فحص السيارة قبل الرحلة' : '🏁 فحص السيارة بعد الرحلة';
+            const hint = type === 'pre' ? 'أكمل التصوير لتأكيد استلام السيارة' : 'أكمل التصوير لإنهاء الرحلة';
+
+            const modal = document.createElement('div');
+            modal.id = 'car-inspect-modal';
+            modal.className = 'fixed inset-0 bg-black z-[300] overflow-y-auto';
+            modal.innerHTML = `
+            <div class="p-4 pb-24">
+                <div class="flex items-center gap-3 mb-5 sticky top-0 bg-black py-3">
+                    <button onclick="document.getElementById('car-inspect-modal').remove()"
+                        class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400">
+                        <i class="fas fa-times text-sm"></i>
+                    </button>
+                    <div>
+                        <h2 class="text-white font-bold text-sm">${title}</h2>
+                        <p class="text-slate-400 text-[10px]">${hint}</p>
+                    </div>
+                </div>
+                <div id="inspect-photos-list" class="space-y-3">
+                    ${photos.map(p => `
+                    <div class="bg-slate-900 border border-slate-700 rounded-xl p-3" id="inspect-item-${p.id}">
+                        <div class="flex items-center justify-between mb-2">
+                            <div>
+                                <p class="text-white text-sm font-bold">${p.label}</p>
+                                <p class="text-slate-400 text-[10px]">${p.hint}</p>
+                            </div>
+                            <span id="check-${p.id}" class="text-slate-600 text-xl">⬜</span>
+                        </div>
+                        <label class="block w-full cursor-pointer">
+                            <input type="file" accept="image/*" capture="camera"
+                                class="hidden" onchange="captureInspectionPhoto('${p.id}', this)">
+                            <div id="preview-${p.id}" class="w-full h-28 bg-slate-800 border-2 border-dashed border-slate-600 rounded-xl flex items-center justify-center text-slate-400 text-sm hover:border-blue-500 transition overflow-hidden">
+                                <div class="text-center"><i class="fas fa-camera text-2xl mb-1 block"></i>اضغط للتصوير</div>
+                            </div>
+                        </label>
+                    </div>`).join('')}
+                </div>
+                <div class="fixed bottom-4 left-4 right-4">
+                    <div class="text-center text-slate-400 text-xs mb-2" id="inspect-progress">0 / ${photos.length} صور مكتملة</div>
+                    <button onclick="submitInspection()"
+                        class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-blue-500 transition"
+                        id="submit-inspect-btn">
+                        ✅ تأكيد الفحص وإرسال الصور
+                    </button>
+                </div>
+            </div>`;
+            document.body.appendChild(modal);
+        }
+
+        function captureInspectionPhoto(id, input) {
+            if (!input.files || !input.files[0]) return;
+            const file = input.files[0];
+            inspectionFiles[id] = file;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const preview = document.getElementById('preview-' + id);
+                preview.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover rounded-xl">`;
+                document.getElementById('check-' + id).textContent = '✅';
+            };
+            reader.readAsDataURL(file);
+
+            // تحديث العداد
+            const photos = INSPECTION_PHOTOS[currentInspectionType];
+            const done = Object.keys(inspectionFiles).length;
+            document.getElementById('inspect-progress').textContent = `${done} / ${photos.length} صور مكتملة`;
+        }
+
+        async function submitInspection() {
+            const photos = INSPECTION_PHOTOS[currentInspectionType];
+            const missing = photos.filter(p => !inspectionFiles[p.id]).map(p => p.label);
+
+            if (missing.length > 0) {
+                alert(`❌ يجب تصوير الصور التالية أولاً:\n${missing.join('\n')}`);
+                return;
+            }
+
+            const btn = document.getElementById('submit-inspect-btn');
+            btn.disabled = true;
+            btn.textContent = '⏳ جاري رفع الصور...';
+
+            try {
+                // رفع الصور إلى Supabase Storage
+                const uploadedUrls = [];
+                for (const [id, file] of Object.entries(inspectionFiles)) {
+                    const path = `inspections/${currentInspectionTrip}/${currentInspectionType}/${id}_${Date.now()}.jpg`;
+                    const { error } = await sb.storage.from('trip-photos').upload(path, file, { upsert: true });
+                    if (!error) {
+                        const { data: urlData } = sb.storage.from('trip-photos').getPublicUrl(path);
+                        uploadedUrls.push({ id, url: urlData.publicUrl });
+                    }
+                }
+
+                // حفظ مرجع الصور في الداتابيز
+                await sb.from('trips').update({
+                    [`${currentInspectionType}_inspection_photos`]: uploadedUrls
+                }).eq('id', currentInspectionTrip).catch(() => { });
+
+                // إرسال رسالة في الشات
+                const msg = currentInspectionType === 'pre'
+                    ? '🔑 تم استلام السيارة من الجراش وتصوير حالتها. الكابتن في الطريق!'
+                    : '📸 تم تصوير حالة السيارة بعد الرحلة وإرسالها للإدارة.';
+
+                await sb.from('chat_messages').insert([{
+                    trip_id: currentInspectionTrip, sender_role: 'driver',
+                    sender_id: currentDriver.id, sender_name: currentDriver.name,
+                    message: msg, message_type: 'system'
+                }]);
+
+                if (currentInspectionType === 'pre') {
+                    await sb.from('trips').update({ stage_status: 'garage_pickup' })
+                        .eq('id', currentInspectionTrip).catch(() => { });
+                }
+
+                document.getElementById('car-inspect-modal').remove();
+                alert(`✅ تم رفع ${uploadedUrls.length} صورة بنجاح!`);
+                loadDriverTrips();
+
             } catch (err) {
-                console.error('❌ خطأ في إرسال الإيميل:', err);
+                btn.disabled = false;
+                btn.textContent = '✅ تأكيد الفحص وإرسال الصور';
+                alert('❌ خطأ في رفع الصور: ' + err.message);
             }
         }
 
         // ==========================================
-        // وصلت للعميل
+        // Phase 4: تنبيه قبل الرحلة بساعة
         // ==========================================
-        async function notifyArrived(tripId) {
-            if (!confirm('هل وصلت فعلاً لموقع العميل؟')) return;
-            await sb.from('chat_messages').insert([{
-                trip_id: tripId,
-                sender_role: 'driver',
-                sender_id: currentDriver.id,
-                sender_name: currentDriver.name,
-                message: '🚗 الكابتن وصل لموقعك! من فضلك انزل، الكابتن في الانتظار.',
-                message_type: 'system'
-            }]);
-            sendTripEmail(tripId, '🚗 الكابتن وصل!', 'الكابتن وصل لموقعك وفي انتظارك. من فضلك انزل في أقرب وقت.');
-            alert('✅ تم إبلاغ العميل بوصولك (دردشة + إيميل)');
+        async function checkUpcomingTrips() {
+            if (!currentDriver) return;
+            const now = new Date();
+            const in1hr = new Date(now.getTime() + 60 * 60 * 1000);
+
+            const { data: trips } = await sb.from('trips')
+                .select('id, admin_notes').eq('driver_id', currentDriver.id)
+                .eq('status', 'driver_assigned');
+
+            if (!trips) return;
+            for (const t of trips) {
+                const notes = t.admin_notes || '';
+                const dm = notes.match(/📅\s*(.*?)\s*-\s*(.*?)[\n|$]/);
+                if (!dm) continue;
+                const tripDateTime = new Date(dm[1].trim() + ' ' + dm[2].trim());
+                if (tripDateTime > now && tripDateTime <= in1hr) {
+                    // تحقق أن التنبيه لم يُرسل بعد
+                    const key = 'notif_sent_' + t.id;
+                    if (!localStorage.getItem(key)) {
+                        await sb.from('chat_messages').insert([{
+                            trip_id: t.id, sender_role: 'admin',
+                            sender_id: 'system', sender_name: 'النظام',
+                            message: '⏰ تنبيه: الرحلة بعد ساعة! هل استلمت السيارة من الجراش؟ لا تنسى تصوير حالة السيارة.',
+                            message_type: 'system'
+                        }]);
+                        localStorage.setItem(key, '1');
+                    }
+                }
+            }
         }
 
-        // ==========================================
-        // إنهاء الرحلة
-        // ==========================================
-        async function endTrip(tripId) {
-            if (!confirm('هل تريد إنهاء هذه الرحلة؟')) return;
-            // حالة وسيطة: الكابتن أنهى الرحلة لكن الأدمن لسه ما أكملها مالياً
-            await sb.from('trips').update({ status: 'trip_ended' }).eq('id', tripId);
-            await sb.from('chat_messages').insert([{
-                trip_id: tripId,
-                sender_role: 'driver',
-                sender_id: currentDriver.id,
-                sender_name: currentDriver.name,
-                message: '✅ تم إنهاء الرحلة بنجاح. شكراً لاستخدامك 24Seven! نسعد بتقييمك.',
-                message_type: 'trip_end'
-            }]);
-            sendTripEmail(tripId, '✅ رحلتك اكتملت', 'نتمنى أنك استمتعت برحلتك معنا. شكراً لاستخدامك 24Seven! نسعد بتقييمك.');
-            alert('✅ تم إنهاء الرحلة وطلب التقييم من العميل');
-            loadDriverTrips();
-        }
+        // فحص التنبيهات كل 5 دقائق
+        setInterval(checkUpcomingTrips, 5 * 60 * 1000);
+
     </script>
+
 </body>
 
 </html>

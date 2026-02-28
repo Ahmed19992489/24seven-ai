@@ -1106,7 +1106,7 @@
             const note = document.getElementById('modal-note').value;
 
             // جلب الملاحظات الحالية أولاً حتى لا نفقد بيانات الرحلة
-            const { data: existingTrip } = await sbClient.from('trips').select('admin_notes').eq('id', tid).single();
+            const { data: existingTrip } = await sbClient.from('trips').select('admin_notes, pickup_location, dropoff_location, estimated_price').eq('id', tid).single();
             const existingNotes = existingTrip?.admin_notes || '';
 
             // دمج الملاحظات القديمة مع الجديدة
@@ -1122,9 +1122,29 @@
                 status: 'driver_assigned'
             }).eq('id', tid);
 
+            // جلب بيانات الكابتن والسيارة
+            const { data: driverInfo } = await sbClient.from('drivers').select('name').eq('id', did).single();
+            const { data: carInfo } = await sbClient.from('cars').select('brand, model, plate_number').eq('id', cid).single();
+
+            // إرسال رسالة تنبيه في الشات للكابتن
+            const pickup = (existingTrip?.pickup_location || '').split(',')[0];
+            const dropoff = (existingTrip?.dropoff_location || '').split(',')[0];
+            const price = existingTrip?.estimated_price || 0;
+
+            await sbClient.from('chat_messages').insert([{
+                trip_id: tid,
+                sender_role: 'admin',
+                sender_id: 'admin',
+                sender_name: 'الإدارة',
+                message: `🎯 مرحباً كابتن ${driverInfo?.name || ''}!\n\nتم تعيينك على رحلة جديدة:\n📍 من: ${pickup}\n🏁 إلى: ${dropoff}\n💰 قيمة الرحلة: ${price} EGP\n🚗 السيارة: ${carInfo?.brand || ''} ${carInfo?.model || ''} (${carInfo?.plate_number || ''})\n\n✅ تواصل مع العميل من خلال الدردشة فقط\n📸 لا تنسى تصوير السيارة قبل الخروج من الجراش`,
+                message_type: 'system'
+            }]);
+
             document.getElementById('assign-modal').style.display = 'none';
+            alert(`✅ تم تعيين الكابتن ${driverInfo?.name || ''} وإرسال إشعار له`);
             loadOperations();
         }
+
         async function addCarPrompt() { const b = prompt("الماركة:"); const p = prompt("اللوحة:"); const s = prompt("الراتب:"); if (b) { await sbClient.from('cars').insert([{ brand: b, plate_number: p, monthly_salary: s || 0 }]); loadFleetList(); } }
         async function addDriverPrompt() { const n = prompt("الاسم:"); const p = prompt("هاتف:"); if (n) { await sbClient.from('drivers').insert([{ name: n, phone: p }]); loadFleetList(); } }
 
