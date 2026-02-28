@@ -505,42 +505,88 @@
                     </button>` : ''}
                 </div>
 
-                <!-- فلو مراحل الرحلة (الرحلات النشطة فقط) -->
-                ${isActive ? `
-                <div class="mt-3 pt-3 border-t border-slate-700/60 space-y-2" id="stages-${t.id}">
-                    <p class="text-[10px] text-slate-400 font-bold mb-2">📍 مراحل الرحلة</p>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button onclick="openCarInspection('${t.id}', 'pre')"
-                            class="stage-btn bg-yellow-600/20 border border-yellow-500/40 text-yellow-400 py-2.5 rounded-xl text-xs font-bold hover:bg-yellow-600 hover:text-white transition">
-                            🏭 استلام من الجراش
-                        </button>
-                        <button onclick="tripStage('${t.id}','heading_client','🚗 الكابتن في الطريق إليك، يصل قريباً!')"
-                            class="stage-btn bg-blue-600/20 border border-blue-500/40 text-blue-400 py-2.5 rounded-xl text-xs font-bold hover:bg-blue-600 hover:text-white transition">
-                            🚗 التحرك للعميل
-                        </button>
-                        <button onclick="notifyArrived('${t.id}')"
-                            class="stage-btn bg-green-600/20 border border-green-500/40 text-green-400 py-2.5 rounded-xl text-xs font-bold hover:bg-green-600 hover:text-white transition">
-                            📍 وصلت للعميل
-                        </button>
-                        <button onclick="tripStage('${t.id}','trip_started','🚀 انطلقت الرحلة! نتمنى لك رحلة ممتعة.')"
-                            class="stage-btn bg-indigo-600/20 border border-indigo-500/40 text-indigo-400 py-2.5 rounded-xl text-xs font-bold hover:bg-indigo-600 hover:text-white transition">
-                            🚀 بدء الرحلة
-                        </button>
-                        <button onclick="requestDestChange('${t.id}')"
-                            class="stage-btn bg-orange-600/20 border border-orange-500/40 text-orange-400 py-2.5 rounded-xl text-xs font-bold hover:bg-orange-600 hover:text-white transition">
-                            🔀 تغيير وجهة
-                        </button>
-                        <button onclick="endTripFlow('${t.id}', ${t.estimated_price})"
-                            class="stage-btn bg-red-600/20 border border-red-500/40 text-red-400 py-2.5 rounded-xl text-xs font-bold hover:bg-red-600 hover:text-white transition">
-                            🏁 وصول وإنهاء
-                        </button>
-                    </div>
-                    <button onclick="openDriverChat('${t.id}', '${clientName}')"
-                        class="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-xl text-xs font-bold transition mt-1">
-                        <i class="fas fa-comment ml-1"></i> فتح الدردشة
-                    </button>
-                </div>` : ''}
+                <!-- فلو مراحل الرحلة المتسلسل (الرحلات النشطة فقط) -->
+                ${isActive ? renderStageFlow(t) : ''}
             </div>`;
+        }
+
+        // ==========================================
+        // فلو الرحلة المتسلسل - كل مرحلة تظهر بعد السابقة
+        // ==========================================
+        function renderStageFlow(t) {
+            const stage = t.stage_status || 'new';
+            const tid = t.id;
+            const price = t.estimated_price || 0;
+
+            // تعريف المراحل بالترتيب
+            const STAGES = [
+                { key: 'garage_pickup', label: '🏭 استلام من الجراش', desc: 'صوّر السيارة قبل التحرك' },
+                { key: 'heading_client', label: '🚗 التحرك للعميل', desc: 'في الطريق للعميل' },
+                { key: 'arrived_client', label: '📍 وصلت للعميل', desc: 'انتظار العميل' },
+                { key: 'trip_started', label: '🚀 بدء الرحلة', desc: 'الرحلة جارية' },
+                { key: 'post_photos', label: '📸 تصوير السيارة (بعد)', desc: 'صوّر السيارة بعد الرحلة' },
+                { key: 'financial_close', label: '💰 إقفال الحساب', desc: 'أدخل البنزين والكروت' },
+                { key: 'trip_ended', label: '✅ منتهية', desc: 'تم إنهاء الرحلة' }
+            ];
+
+            const ORDER = STAGES.map(s => s.key);
+            const currentIdx = ORDER.indexOf(stage);
+
+            // الزرار الفعال التالي
+            function stageBtn(key, label, onclick, color) {
+                return `<button onclick="${onclick}" class="w-full py-3 rounded-xl text-sm font-bold border transition ${color}">${label}</button>`;
+            }
+
+            // عرض شريط التقدم
+            let progressHtml = `<div class="mt-3 pt-3 border-t border-slate-700/60">`;
+            progressHtml += `<p class="text-[10px] text-slate-400 font-bold mb-3">📍 فلو الرحلة</p>`;
+            progressHtml += `<div class="space-y-2">`;
+
+            STAGES.forEach((s, idx) => {
+                const isDone = idx < currentIdx;
+                const isCurrent = idx === currentIdx;
+                const isFuture = idx > currentIdx;
+
+                let rowClass, icon;
+                if (isDone) { rowClass = 'text-green-400 opacity-70'; icon = '✅'; }
+                else if (isCurrent) { rowClass = 'text-white'; icon = '▶️'; }
+                else { rowClass = 'text-slate-600'; icon = '⬜'; }
+
+                progressHtml += `<div class="flex items-center gap-2 text-xs ${rowClass}">`;
+                progressHtml += `<span class="text-base">${icon}</span>`;
+                progressHtml += `<span class="font-bold">${s.label}</span>`;
+                if (isCurrent) progressHtml += `<span class="mr-auto text-[10px] opacity-60">${s.desc}</span>`;
+                progressHtml += `</div>`;
+            });
+
+            progressHtml += `</div>`;
+
+            // الزرار الفعال
+            let actionBtn = '';
+            if (stage === 'new' || currentIdx < 0) {
+                actionBtn = stageBtn('garage_pickup', '🏭 ابدأ: استلام السيارة من الجراش', `openCarInspection('${tid}','pre')`, 'bg-yellow-600 text-white hover:bg-yellow-500');
+            } else if (stage === 'garage_pickup') {
+                actionBtn = stageBtn('heading_client', '🚗 تحركت - في الطريق للعميل', `tripStage('${tid}','heading_client','� الكابتن في الطريق إليك، يصل قريباً!')`, 'bg-blue-600 text-white hover:bg-blue-500');
+            } else if (stage === 'heading_client') {
+                actionBtn = stageBtn('arrived_client', '📍 وصلت لموقع العميل', `notifyArrived('${tid}')`, 'bg-green-600 text-white hover:bg-green-500');
+            } else if (stage === 'arrived_client') {
+                actionBtn = stageBtn('trip_started', '🚀 ركب العميل - ابدأ الرحلة', `tripStage('${tid}','trip_started','🚀 انطلقت الرحلة! نتمنى لك رحلة ممتعة.')`, 'bg-indigo-600 text-white hover:bg-indigo-500');
+            } else if (stage === 'trip_started') {
+                actionBtn = stageBtn('post_photos', '🏁 وصلنا - صوّر السيارة بعد الرحلة', `openCarInspection('${tid}','post')`, 'bg-red-600 text-white hover:bg-red-500');
+                actionBtn += stageBtn('dest_change', '🔀 تغيير وجهة (موافقة إدارة)', `requestDestChange('${tid}')`, 'mt-2 bg-orange-600/20 border border-orange-500/40 text-orange-400 hover:bg-orange-600 hover:text-white');
+            } else if (stage === 'post_photos') {
+                actionBtn = stageBtn('financial_close', '💰 إقفال الحساب (بنزين + كروت)', `openFinancialClose('${tid}',${price})`, 'bg-purple-600 text-white hover:bg-purple-500');
+            } else if (stage === 'financial_close' || stage === 'trip_ended') {
+                actionBtn = `<div class="bg-green-600/20 border border-green-500/30 rounded-xl p-3 text-center text-green-400 text-sm font-bold">✅ الرحلة منتهية بنجاح</div>`;
+            }
+
+            progressHtml += `<div class="mt-3">${actionBtn}</div>`;
+
+            // زرار الدردشة دايماً ظاهر
+            let clientName = t.manual_client_name || 'العميل';
+            progressHtml += `<button onclick="openDriverChat('${tid}', '${clientName}')" class="w-full mt-2 bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-xl text-xs font-bold transition"><i class="fas fa-comment ml-1"></i> فتح الدردشة</button>`;
+            progressHtml += `</div>`;
+            return progressHtml;
         }
 
         // ==========================================
@@ -617,33 +663,41 @@
         }
 
         async function confirmEndTrip(tripId, tripPrice) {
-            const fuel = parseFloat(document.getElementById('fc-fuel').value) || 0;
-            const tolls = parseFloat(document.getElementById('fc-tolls').value) || 0;
-            const total = tripPrice - fuel - tolls;
+            const fuelEl = document.getElementById('fc-fuel');
+            const tollsEl = document.getElementById('fc-tolls');
+            if (!fuelEl || !tollsEl) { alert('❌ خطأ: لم يتم العثور على حقول الإدخال'); return; }
+            const fuel = parseFloat(fuelEl.value) || 0;
+            const tolls = parseFloat(tollsEl.value) || 0;
 
-            // تحديث الرحلة بالمصاريف
-            await sb.from('trips').update({
-                status: 'trip_ended',
-                fuel_cost: fuel,
-                toll_cost: tolls
-            }).eq('id', tripId).catch(() => { });
+            const btn = document.querySelector('#fin-close-modal button.bg-red-600');
+            if (btn) { btn.disabled = true; btn.textContent = '⏳ جاري الحفظ...'; }
 
-            await sb.from('chat_messages').insert([{
-                trip_id: tripId, sender_role: 'driver',
-                sender_id: currentDriver.id, sender_name: currentDriver.name,
-                message: `✅ تم إنهاء الرحلة بنجاح!\n⛽ بنزين: ${fuel} جنيه\n🛣️ كروت: ${tolls} جنيه\nشكراً لاستخدامك 24Seven! نسعد بتقييمك.`,
-                message_type: 'trip_end'
-            }]);
+            try {
+                const { error } = await sb.from('trips').update({
+                    status: 'trip_ended',
+                    stage_status: 'trip_ended'
+                }).eq('id', tripId);
+                if (error) throw new Error(error.message);
 
-            sendTripEmail(tripId, '✅ رحلتك اكتملت', 'نتمنى أنك استمتعت برحلتك معنا. شكراً لاستخدامك 24Seven!');
-            document.getElementById('fin-close-modal').remove();
-            alert(`✅ تم إنهاء الرحلة\n⛽ بنزين: ${fuel} جنيه | 🛣️ كروت: ${tolls} جنيه`);
-            loadDriverTrips();
+                await sb.from('chat_messages').insert([{
+                    trip_id: tripId, sender_role: 'driver',
+                    sender_id: currentDriver.id, sender_name: currentDriver.name,
+                    message: `✅ تم إنهاء الرحلة!\n⛽ بنزين: ${fuel} جنيه\n🛣️ كروت: ${tolls} جنيه\nشكراً لاستخدامك 24Seven! نسعد بتقييمك.`,
+                    message_type: 'trip_end'
+                }]);
+
+                sendTripEmail(tripId, '✅ رحلتك اكتملت', 'نتمنى أنك استمتعت برحلتك معنا. شكراً لاستخدامك 24Seven!');
+                document.getElementById('fin-close-modal')?.remove();
+                alert(`✅ تم إنهاء الرحلة!\n⛽ بنزين: ${fuel} جنيه | 🛣️ كروت: ${tolls} جنيه`);
+                loadDriverTrips();
+            } catch (err) {
+                if (btn) { btn.disabled = false; btn.textContent = 'تأكيد الإنهاء'; }
+                alert('❌ خطأ: ' + err.message);
+            }
         }
 
-
-
         // ==========================================
+
         // المحادثات
         // ==========================================
         async function loadDriverChats() {
@@ -1106,6 +1160,8 @@
 
                 if (currentInspectionType === 'pre') {
                     await sb.from('trips').update({ stage_status: 'garage_pickup' }).eq('id', currentInspectionTrip);
+                } else {
+                    await sb.from('trips').update({ stage_status: 'post_photos' }).eq('id', currentInspectionTrip);
                 }
 
                 document.getElementById('car-inspect-modal').remove();
