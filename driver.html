@@ -595,15 +595,19 @@
         async function tripStage(tripId, stage, message) {
             const btn = event?.target;
             if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
-            await sb.from('chat_messages').insert([{
-                trip_id: tripId, sender_role: 'driver',
-                sender_id: currentDriver.id, sender_name: currentDriver.name,
-                message, message_type: 'system'
-            }]);
-            // تحديث حقل stage_status في الرحلة
-            await sb.from('trips').update({ stage_status: stage }).eq('id', tripId).catch(() => { });
-            if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
-            alert('✅ تم إرسال التحديث للعميل');
+            try {
+                await sb.from('chat_messages').insert([{
+                    trip_id: tripId, sender_role: 'driver',
+                    sender_id: currentDriver.id, sender_name: currentDriver.name,
+                    message, message_type: 'system'
+                }]);
+                const { error } = await sb.from('trips').update({ stage_status: stage }).eq('id', tripId);
+                if (error) throw new Error(error.message);
+                loadDriverTrips();
+            } catch (err) {
+                if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+                alert('❌ خطأ: ' + err.message);
+            }
         }
 
         // طلب تغيير الوجهة (إشعار للإدارة)
@@ -850,14 +854,20 @@
         // ==========================================
         async function notifyArrived(tripId) {
             if (!confirm('هل وصلت فعلاً لموقع العميل؟')) return;
-            await sb.from('chat_messages').insert([{
-                trip_id: tripId, sender_role: 'driver', sender_id: currentDriver.id,
-                sender_name: currentDriver.name,
-                message: '🚗 الكابتن وصل لموقعك! من فضلك انزل، الكابتن في الانتظار.',
-                message_type: 'system'
-            }]);
-            sendTripEmail(tripId, '🚗 الكابتن وصل!', 'الكابتن وصل لموقعك وفي انتظارك.');
-            alert('✅ تم إبلاغ العميل بوصولك');
+            try {
+                await sb.from('chat_messages').insert([{
+                    trip_id: tripId, sender_role: 'driver', sender_id: currentDriver.id,
+                    sender_name: currentDriver.name,
+                    message: '🚗 الكابتن وصل لموقعك! من فضلك انزل، الكابتن في الانتظار.',
+                    message_type: 'system'
+                }]);
+                const { error } = await sb.from('trips').update({ stage_status: 'arrived_client' }).eq('id', tripId);
+                if (error) throw new Error(error.message);
+                sendTripEmail(tripId, '🚗 الكابتن وصل!', 'الكابتن وصل لموقعك وفي انتظارك.');
+                loadDriverTrips();
+            } catch (err) {
+                alert('❌ خطأ: ' + err.message);
+            }
         }
 
         // ==========================================
@@ -1106,23 +1116,32 @@
             btn.textContent = '⏳ جاري رفع الصور...';
 
             try {
-                // ضغط الصور قبل الرفع لتسريع العملية
+                // ضغط الصورة - مع fallback للملف الأصلي لو فشل الضغط
                 async function compressImage(file) {
                     return new Promise((resolve) => {
                         const img = new Image();
                         const url = URL.createObjectURL(file);
                         img.onload = () => {
-                            const MAX = 800;
-                            let w = img.width, h = img.height;
-                            if (w > MAX || h > MAX) {
-                                if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-                                else { w = Math.round(w * MAX / h); h = MAX; }
+                            try {
+                                const MAX = 900;
+                                let w = img.width, h = img.height;
+                                if (w > MAX || h > MAX) {
+                                    if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+                                    else { w = Math.round(w * MAX / h); h = MAX; }
+                                }
+                                const canvas = document.createElement('canvas');
+                                canvas.width = w; canvas.height = h;
+                                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                                canvas.toBlob(blob => {
+                                    URL.revokeObjectURL(url);
+                                    resolve(blob || file); // fallback to original if null
+                                }, 'image/jpeg', 0.70);
+                            } catch (e) {
+                                URL.revokeObjectURL(url);
+                                resolve(file); // fallback to original file
                             }
-                            const canvas = document.createElement('canvas');
-                            canvas.width = w; canvas.height = h;
-                            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                            canvas.toBlob(blob => { URL.revokeObjectURL(url); resolve(blob); }, 'image/jpeg', 0.65);
                         };
+                        img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
                         img.src = url;
                     });
                 }
