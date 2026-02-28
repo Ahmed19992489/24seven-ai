@@ -791,6 +791,22 @@
                 else if (t.status === 'completed') statusColor = 'bg-slate-200 text-slate-600';
                 else if (t.status === 'trip_ended') statusColor = 'bg-yellow-100 text-yellow-800';
 
+                // إضافة مرحلة الكابتن بجوار الحالة
+                let stageText = '';
+                if (t.status === 'driver_assigned' && t.stage_status) {
+                    const stages = {
+                        'new': 'عينت السائق',
+                        'garage_pickup': 'استلم من الجراش',
+                        'heading_client': 'في الطريق لمحطة الانطلاق',
+                        'arrived_client': 'وصل للعميل',
+                        'trip_started': 'الرحلة جارية',
+                        'post_photos': 'صور بعد الرحلة',
+                        'financial_close': 'قفل الحساب',
+                        'trip_ended': 'انتهت'
+                    };
+                    stageText = `<br><span class="text-[9px] text-blue-600 font-bold mt-1 inline-block">⏳ ${stages[t.stage_status] || t.stage_status}</span>`;
+                }
+
                 const driverName = t.drivers ? t.drivers.name : '-';
                 const carInfo = t.cars ? `${t.cars.brand}` : '-';
                 let btns = '';
@@ -807,7 +823,7 @@
                         <td class="p-4 font-bold text-slate-500">${(t.pickup_location || '-').split(',')[0]} ➝ ${(t.dropoff_location || '-').split(',')[0]}</td>
                         <td class="p-4 font-bold">${driverName} / ${carInfo}</td>
                         <td class="p-4 font-bold text-green-700">${t.estimated_price}</td>
-                        <td class="p-4"><span class="px-2 py-1 rounded text-[10px] ${statusColor}">${t.status}</span></td>
+                        <td class="p-4"><span class="px-2 py-1 rounded text-[10px] ${statusColor}">${t.status}</span>${stageText}</td>
                         <td class="p-4">${btns}</td>
                     </tr>
                 `;

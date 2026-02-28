@@ -596,11 +596,7 @@
             const btn = event?.target;
             if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
             try {
-                await sb.from('chat_messages').insert([{
-                    trip_id: tripId, sender_role: 'driver',
-                    sender_id: currentDriver.id, sender_name: currentDriver.name,
-                    message, message_type: 'system'
-                }]);
+                // شلنا الرسالة من الشات علشان متبقاش مزعجة للعميل بناءً على طلبك
                 const { error } = await sb.from('trips').update({ stage_status: stage }).eq('id', tripId);
                 if (error) throw new Error(error.message);
                 loadDriverTrips();
@@ -679,7 +675,9 @@
             try {
                 const { error } = await sb.from('trips').update({
                     status: 'trip_ended',
-                    stage_status: 'trip_ended'
+                    stage_status: 'trip_ended',
+                    fuel_cost: fuel,
+                    toll_cost: tolls
                 }).eq('id', tripId);
                 if (error) throw new Error(error.message);
 
@@ -855,12 +853,7 @@
         async function notifyArrived(tripId) {
             if (!confirm('هل وصلت فعلاً لموقع العميل؟')) return;
             try {
-                await sb.from('chat_messages').insert([{
-                    trip_id: tripId, sender_role: 'driver', sender_id: currentDriver.id,
-                    sender_name: currentDriver.name,
-                    message: '🚗 الكابتن وصل لموقعك! من فضلك انزل، الكابتن في الانتظار.',
-                    message_type: 'system'
-                }]);
+                // شلنا رسالة الشات هنا كمان بناءً على طلبك
                 const { error } = await sb.from('trips').update({ stage_status: 'arrived_client' }).eq('id', tripId);
                 if (error) throw new Error(error.message);
                 sendTripEmail(tripId, '🚗 الكابتن وصل!', 'الكابتن وصل لموقعك وفي انتظارك.');
