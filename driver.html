@@ -566,11 +566,11 @@
             if (stage === 'new' || currentIdx < 0) {
                 actionBtn = stageBtn('garage_pickup', '🏭 ابدأ: استلام السيارة من الجراش', `openCarInspection('${tid}','pre')`, 'bg-yellow-600 text-white hover:bg-yellow-500');
             } else if (stage === 'garage_pickup') {
-                actionBtn = stageBtn('heading_client', '🚗 تحركت - في الطريق للعميل', `tripStage('${tid}','heading_client','� الكابتن في الطريق إليك، يصل قريباً!')`, 'bg-blue-600 text-white hover:bg-blue-500');
+                actionBtn = stageBtn('heading_client', '🚗 تحركت - في الطريق للعميل', `tripStage('${tid}','heading_client','🚗 الكابتن في الطريق إليك، يرجى الاستعداد!')`, 'bg-blue-600 text-white hover:bg-blue-500');
             } else if (stage === 'heading_client') {
                 actionBtn = stageBtn('arrived_client', '📍 وصلت لموقع العميل', `notifyArrived('${tid}')`, 'bg-green-600 text-white hover:bg-green-500');
             } else if (stage === 'arrived_client') {
-                actionBtn = stageBtn('trip_started', '🚀 ركب العميل - ابدأ الرحلة', `tripStage('${tid}','trip_started','🚀 انطلقت الرحلة! نتمنى لك رحلة ممتعة.')`, 'bg-indigo-600 text-white hover:bg-indigo-500');
+                actionBtn = stageBtn('trip_started', '🚀 ركب العميل - ابدأ الرحلة', `tripStage('${tid}','trip_started','🚀 انطلقت الرحلة! نتمنى لك رحلة سعيدة.')`, 'bg-indigo-600 text-white hover:bg-indigo-500');
             } else if (stage === 'trip_started') {
                 actionBtn = stageBtn('post_photos', '🏁 وصلنا - صوّر السيارة بعد الرحلة', `openCarInspection('${tid}','post')`, 'bg-red-600 text-white hover:bg-red-500');
                 actionBtn += stageBtn('dest_change', '🔀 تغيير وجهة (موافقة إدارة)', `requestDestChange('${tid}')`, 'mt-2 bg-orange-600/20 border border-orange-500/40 text-orange-400 hover:bg-orange-600 hover:text-white');
@@ -592,13 +592,19 @@
         // ==========================================
         // مراحل الرحلة - إرسال تحديث في الشات
         // ==========================================
-        async function tripStage(tripId, stage, message) {
+        async function tripStage(tripId, stage, notifyClientMsg = null) {
             const btn = event?.target;
             if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
             try {
-                // شلنا الرسالة من الشات علشان متبقاش مزعجة للعميل بناءً على طلبك
                 const { error } = await sb.from('trips').update({ stage_status: stage }).eq('id', tripId);
                 if (error) throw new Error(error.message);
+
+                if (notifyClientMsg) {
+                    await sb.from('chat_messages').insert([{
+                        trip_id: tripId, sender_role: 'system', sender_id: 'system', sender_name: 'النظام',
+                        message: notifyClientMsg, message_type: 'system'
+                    }]);
+                }
                 loadDriverTrips();
             } catch (err) {
                 if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
@@ -853,9 +859,14 @@
         async function notifyArrived(tripId) {
             if (!confirm('هل وصلت فعلاً لموقع العميل؟')) return;
             try {
-                // شلنا رسالة الشات هنا كمان بناءً على طلبك
                 const { error } = await sb.from('trips').update({ stage_status: 'arrived_client' }).eq('id', tripId);
                 if (error) throw new Error(error.message);
+
+                await sb.from('chat_messages').insert([{
+                    trip_id: tripId, sender_role: 'system', sender_id: 'system', sender_name: 'النظام',
+                    message: '📍 الكابتن وصل لموقعك! من فضلك انزل، الكابتن في الانتظار.', message_type: 'system'
+                }]);
+
                 sendTripEmail(tripId, '🚗 الكابتن وصل!', 'الكابتن وصل لموقعك وفي انتظارك.');
                 loadDriverTrips();
             } catch (err) {
@@ -977,7 +988,9 @@
                 if (!clientEmail && trip.client_email) clientEmail = trip.client_email;
                 if (trip.manual_client_name) clientName = trip.manual_client_name;
                 if (!clientEmail) { const m = (trip.admin_notes || '').match(/[\w.-]+@[\w.-]+\.\w+/); if (m) clientEmail = m[0]; }
-                if (!clientEmail) return;
+
+                // تجاهل الإيميلات الوهمية لمنع خطأ Address not found
+                if (!clientEmail || clientEmail.includes('@24seven-client.app')) return;
 
                 const notes = trip.admin_notes || '';
                 let tripDate = '', tripTime = '';

@@ -1438,6 +1438,17 @@
 
             if (msg.message_type === 'location') {
                 div.innerHTML += `📍 <a href="https://maps.google.com/?q=${msg.location_lat},${msg.location_lng}" target="_blank" style="color:#2563eb;text-decoration:underline">فتح الموقع في خرائط جوجل</a>`;
+            } else if (msg.message_type === 'admin_request' && msg.message.includes('يطلب تغيير الوجهة إلى:')) {
+                const match = msg.message.match(/إلى:\s*(.*)/);
+                const newD = match ? match[1].trim() : '';
+                div.innerHTML += `<div class="bg-orange-50 p-2 rounded border border-orange-200 mt-1">
+                    <p class="font-bold text-orange-800 text-xs mb-2 text-center">🚨 طلب تغيير وجهة</p>
+                    <p class="text-xs text-orange-700 mb-3 text-center">الكابتن يطلب تغيير الوجهة إلى:<br><strong>${newD}</strong></p>
+                    <div class="flex gap-2 justify-center">
+                        <button onclick="respondDestChange('${msg.trip_id}', '${newD}', true)" class="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-green-700 w-full">✅ موافقة</button>
+                        <button onclick="respondDestChange('${msg.trip_id}', '${newD}', false)" class="bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-700 w-full">❌ رفض</button>
+                    </div>
+                </div>`;
             } else {
                 div.innerHTML += msg.message;
             }
@@ -1472,6 +1483,29 @@
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: 'trip_id=eq.' + tripId }, (payload) => {
                     appendAdminMsg(payload.new);
                 }).subscribe();
+        }
+
+        async function respondDestChange(tripId, newDest, isApproved) {
+            if (!confirm(`هل أنت متأكد من ${isApproved ? 'الموافقة على' : 'رفض'} الوجهة الجديدة (${newDest})؟`)) return;
+            try {
+                if (isApproved) {
+                    await sbClient.from('trips').update({ dropoff_location: newDest }).eq('id', tripId);
+                }
+                const msg = isApproved ? `✅ الإدارة وافقت على تغيير الوجهة إلى: ${newDest}` : `❌ الإدارة رفضت طلب تغيير الوجهة.`;
+                await sbClient.from('chat_messages').insert([{
+                    trip_id: tripId, sender_role: 'admin', sender_id: 'admin', sender_name: 'الإدارة',
+                    message: msg, message_type: 'system'
+                }]);
+
+                // إضافة رسالة للنظام في الشات
+                appendAdminMsg({
+                    trip_id: tripId, sender_role: 'system', sender_name: 'النظام',
+                    message: `تم ${isApproved ? 'الموافقة على' : 'رفض'} طلب تغيير الوجهة بواسطة الإدارة.`, created_at: new Date().toISOString()
+                });
+
+                alert('✅ تم إرسال الرد للكابتن');
+                if (isApproved) loadOperations();
+            } catch (err) { alert('❌ خطأ: ' + err.message); }
         }
 
         // ==========================================
