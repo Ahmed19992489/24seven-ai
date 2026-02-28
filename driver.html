@@ -205,6 +205,41 @@
             padding: 12px;
             text-align: center;
         }
+
+        /* Notification Dropdown */
+        .notif-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            display: none;
+        }
+
+        .notif-dropdown.show {
+            display: block;
+        }
+
+        .notif-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #334155;
+            font-size: 0.8rem;
+            transition: 0.2s;
+        }
+
+        .notif-item:hover {
+            background: #334155;
+        }
+
+        .notif-item:last-child {
+            border-bottom: none;
+        }
     </style>
 </head>
 
@@ -242,6 +277,30 @@
         </div>
         <div class="flex items-center gap-2">
             <div id="header-status" class="w-2 h-2 rounded-full bg-green-400"></div>
+
+            <!-- Notifications -->
+            <div class="relative z-[100]">
+                <button onclick="toggleNotifications()"
+                    class="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 hover:text-white transition relative">
+                    <i class="fas fa-bell text-xs"></i>
+                    <span id="notif-badge"
+                        class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full text-[8px] flex items-center justify-center text-white font-bold"
+                        style="display: none;">0</span>
+                </button>
+                <div id="notif-dropdown" class="notif-dropdown left-auto right-0 mt-2">
+                    <div
+                        class="p-3 border-b border-slate-700 flex justify-between items-center bg-slate-800/80 sticky top-0 backdrop-blur-md">
+                        <span class="text-xs font-bold text-white"><i
+                                class="fas fa-bell text-amber-500 ml-1"></i>التنبيهات</span>
+                        <button onclick="clearNotifications()" class="text-[10px] text-slate-400 hover:text-white">مسح
+                            الكل</button>
+                    </div>
+                    <div id="notif-list" class="text-slate-300">
+                        <div class="p-4 text-center text-[10px] text-slate-500">لا توجد تنبيهات جديدة</div>
+                    </div>
+                </div>
+            </div>
+
             <button onclick="driverLogout()"
                 class="w-8 h-8 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white transition">
                 <i class="fas fa-sign-out-alt text-xs"></i>
@@ -375,6 +434,7 @@
             document.getElementById('header-driver-name').textContent = 'كابتن ' + currentDriver.name;
             loadDriverTrips();
             setupDriverRealtime();
+            renderNotifications();
         }
 
         function driverLogout() {
@@ -961,17 +1021,41 @@
             }).join('');
         }
 
-        // ==========================================
-        // Realtime للرحلات
+        // التحديث اللحظي للرحلات والمحادثات
         // ==========================================
         function setupDriverRealtime() {
-            sb.channel('drv-trips-' + currentDriver.id)
+            if (!currentDriver) return;
+
+            // تحديث الرحلات
+            sb.channel('driver-trips')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'trips', filter: 'driver_id=eq.' + currentDriver.id },
-                    () => {
-                        const tripsActive = document.getElementById('page-trips').classList.contains('active');
-                        const chatsActive = document.getElementById('page-chats').classList.contains('active');
-                        if (tripsActive) loadDriverTrips();
-                        if (chatsActive) loadDriverChats();
+                    () => loadDriverTrips())
+                .subscribe();
+
+            // تنبيهات المحادثات الواردة
+            sb.channel('driver-notifs')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' },
+                    async (payload) => {
+                        const msg = payload.new;
+                        if (msg.sender_role === 'driver') return; // لا تنبه السائق لرسائله
+
+                        // تجاهل إشعارات النظام الناتجة عن أفعال السائق (مثل وصل للموقع)
+                        if (msg.sender_id === 'system' && (msg.message.includes('الكابتن وصل') || msg.message.includes('الكابتن في الطريق'))) return;
+
+
+                        // تحقق أن هذه الرسالة تابعة لرحلة هذا السائق
+                        const { data: trip } = await sb.from('trips').select('driver_id').eq('id', msg.trip_id).single();
+                        if (trip && trip.driver_id === currentDriver.id) {
+                            // تنبيه صوتي بسيط
+                            try { new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play(); } catch (e) { }
+
+                            // إذا لم يكن الكابتن فاتحاً للمحادثة نفسها، أضف تنبيه
+                            if (currentChatTripId !== msg.trip_id) {
+                                let title = msg.sender_role === 'admin' ? 'الإدارة: ' : (msg.sender_role === 'system' ? 'النظام: ' : 'العميل: ');
+                                addNotification(title + msg.message);
+                                loadDriverChats(); // لتحديث معاينة الرسالة الأخيرة في قائمة المحادثات
+                            }
+                        }
                     })
                 .subscribe();
         }
@@ -1059,7 +1143,7 @@
             modal.id = 'car-inspect-modal';
             modal.className = 'fixed inset-0 bg-black z-[300] overflow-y-auto';
             modal.innerHTML = `
-            <div class="p-4 pb-24">
+                    < div class="p-4 pb-24" >
                 <div class="flex items-center gap-3 mb-5 sticky top-0 bg-black py-3">
                     <button onclick="document.getElementById('car-inspect-modal').remove()"
                         class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400">
@@ -1097,7 +1181,7 @@
                         ✅ تأكيد الفحص وإرسال الصور
                     </button>
                 </div>
-            </div>`;
+            </div > `;
             document.body.appendChild(modal);
         }
 
@@ -1109,7 +1193,7 @@
             const reader = new FileReader();
             reader.onload = (e) => {
                 const preview = document.getElementById('preview-' + id);
-                preview.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover rounded-xl">`;
+                preview.innerHTML = `< img src = "${e.target.result}" class="w-full h-full object-cover rounded-xl" > `;
                 document.getElementById('check-' + id).textContent = '✅';
             };
             reader.readAsDataURL(file);
@@ -1166,34 +1250,37 @@
 
                 btn.textContent = '⏳ جاري رفع الصور...';
 
-                // رفع الصور بشكل متوازي (أسرع)
+                // رفع الصور بشكل متوازي مع معالجة الأخطاء
                 const uploadedUrls = [];
                 await Promise.all(Object.entries(inspectionFiles).map(async ([id, file]) => {
                     try {
                         const compressed = await compressImage(file);
                         const path = `inspections/${currentInspectionTrip}/${currentInspectionType}/${id}_${Date.now()}.jpg`;
                         const { error } = await sb.storage.from('trip-photos').upload(path, compressed, { upsert: true, contentType: 'image/jpeg' });
-                        if (!error) {
-                            const { data: urlData } = sb.storage.from('trip-photos').getPublicUrl(path);
-                            uploadedUrls.push({ id, url: urlData.publicUrl });
+                        if (error) {
+                            throw new Error(`تعذر رفع الصورة ${id}: ${error.message}`);
                         }
-                    } catch (e) { console.warn('photo skip:', id, e); }
+                        const { data: urlData } = sb.storage.from('trip-photos').getPublicUrl(path);
+                        if (!urlData || !urlData.publicUrl) {
+                            throw new Error(`فشل الحصول على رابط الصورة ${id}`);
+                        }
+                        uploadedUrls.push({ id, url: urlData.publicUrl });
+                    } catch (e) {
+                        console.error('photo skip:', id, e);
+                        throw new Error(`خطأ في رفع ${id}: ${e.message}`);
+                    }
                 }));
 
                 // حفظ مرجع الصور في الداتابيز
                 const fieldName = currentInspectionType + '_inspection_photos';
                 await sb.from('trips').update({ [fieldName]: uploadedUrls }).eq('id', currentInspectionTrip);
 
-                // إرسال رسالة في الشات
+                // إضافة التنبيه لمركز التنبيهات الخاص بالكابتن بدلاً من الشات
                 const msg = currentInspectionType === 'pre'
                     ? '🔑 تم استلام السيارة من الجراش وتصوير حالتها. الكابتن في الطريق!'
                     : '📸 تم تصوير حالة السيارة بعد الرحلة وإرسالها للإدارة.';
 
-                await sb.from('chat_messages').insert([{
-                    trip_id: currentInspectionTrip, sender_role: 'driver',
-                    sender_id: currentDriver.id, sender_name: currentDriver.name,
-                    message: msg, message_type: 'system'
-                }]);
+                addNotification(msg);
 
                 if (currentInspectionType === 'pre') {
                     await sb.from('trips').update({ stage_status: 'garage_pickup' }).eq('id', currentInspectionTrip);
@@ -1211,6 +1298,65 @@
                 alert('❌ خطأ في رفع الصور: ' + err.message);
             }
         }
+
+        // ==========================================
+        // مركز التنبيهات (Notification Center)
+        // ==========================================
+        function toggleNotifications() {
+            document.getElementById('notif-dropdown').classList.toggle('show');
+        }
+
+        function clearNotifications() {
+            localStorage.removeItem('driver_notifs_' + currentDriver?.id);
+            renderNotifications();
+        }
+
+        function addNotification(msg, timeStr) {
+            if (!currentDriver) return;
+            const key = 'driver_notifs_' + currentDriver.id;
+            let notifs = JSON.parse(localStorage.getItem(key) || '[]');
+            notifs.unshift({ msg, time: timeStr || new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) });
+            if (notifs.length > 20) notifs = notifs.slice(0, 20); // احتفظ بآخر 20 تنبيه
+            localStorage.setItem(key, JSON.stringify(notifs));
+
+            // تحديث الشارة (Badge)
+            const badge = document.getElementById('notif-badge');
+            let count = parseInt(badge.textContent || '0') + 1;
+            badge.textContent = count;
+            badge.style.display = 'flex';
+
+            renderNotifications();
+        }
+
+        function renderNotifications() {
+            if (!currentDriver) return;
+            const key = 'driver_notifs_' + currentDriver.id;
+            let notifs = JSON.parse(localStorage.getItem(key) || '[]');
+            const list = document.getElementById('notif-list');
+
+            if (notifs.length === 0) {
+                list.innerHTML = '<div class="p-4 text-center text-[10px] text-slate-500">لا توجد تنبيهات جديدة</div>';
+                document.getElementById('notif-badge').style.display = 'none';
+                document.getElementById('notif-badge').textContent = '0';
+                return;
+            }
+
+            list.innerHTML = notifs.map(n => `
+            <div class="p-3 border-b border-slate-800 last:border-0 hover:bg-slate-800/50 transition">
+                <p class="text-white mb-1"><i class="fas fa-car text-blue-400 ml-1"></i> ${n.msg}</p>
+                <p class="text-[9px] text-slate-500 text-left" dir="ltr">${n.time}</p>
+            </div>`).join('');
+        }
+
+        // إغلاق قائمة التنبيهات عند النقر خارجها
+        document.addEventListener('click', function (e) {
+            const dropdown = document.getElementById('notif-dropdown');
+            const btn = dropdown?.previousElementSibling;
+            if (dropdown && dropdown.classList.contains('show') && !dropdown.contains(e.target) && !btn.contains(e.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+
 
         // ==========================================
         // Phase 4: تنبيه قبل الرحلة بساعة
@@ -1234,12 +1380,14 @@
                     // تحقق أن التنبيه لم يُرسل بعد
                     const key = 'notif_sent_' + t.id;
                     if (!localStorage.getItem(key)) {
+                        const msg = '⏰ تنبيه: الرحلة بعد ساعة! هل استلمت السيارة من الجراش؟ لا تنسى تصوير حالة السيارة.';
                         await sb.from('chat_messages').insert([{
                             trip_id: t.id, sender_role: 'admin',
                             sender_id: 'system', sender_name: 'النظام',
-                            message: '⏰ تنبيه: الرحلة بعد ساعة! هل استلمت السيارة من الجراش؟ لا تنسى تصوير حالة السيارة.',
+                            message: msg,
                             message_type: 'system'
                         }]);
+                        addNotification(msg); // إضافة لمركز التنبيهات
                         localStorage.setItem(key, '1');
                     }
                 }
