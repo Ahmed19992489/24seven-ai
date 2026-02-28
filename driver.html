@@ -903,10 +903,15 @@
             if (expenses) {
                 expenses.forEach(e => {
                     const amt = Number(e.amount) || 0;
-                    if (e.category === 'رواتب') due += amt;
-                    else if (e.category === 'سلفة') advances += amt;
-                    else if (e.category === 'تسوية') settlements += amt;
-                    else deductions += amt; // خصم، غرامة أو أي شيء آخر
+                    if (e.category === 'رواتب') {
+                        due += amt;
+                    } else if (e.category === 'سلفة') {
+                        advances += amt;
+                    } else if (e.category === 'تسوية') {
+                        settlements += amt;
+                    } else {
+                        deductions += amt; // خصم، غرامة أو أي شيء آخر
+                    }
                 });
             }
 
@@ -918,6 +923,7 @@
                 .order('created_at', { ascending: false });
 
             const totalTrips = trips?.length || 0;
+            // الحساب الصحيح: المستحق (الإيراد) - السلف - المخصومات - التسويات
             const net = due - advances - deductions - settlements;
 
             document.getElementById('fin-total-trips').textContent = totalTrips;
