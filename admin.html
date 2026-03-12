@@ -765,7 +765,6 @@
                 await sbAdmin.from('support_chats').insert([{
                     user_id: currentChatUserId,
                     sender_role: 'admin',
-                    sender_name: 'خدمة العملاء',
                     message: msg
                 }]);
                 selectSupportChat(currentChatUserId, document.getElementById('active-chat-user').innerText);
