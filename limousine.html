@@ -2172,11 +2172,15 @@
                         addNotification('✅ رحلتك اكتملت بنجاح! شكراً لاستخدامك 24Seven');
                         loadTrips();
                     }
-                    if (payload.new.status === 'driver_assigned' && payload.old.status !== 'driver_assigned') {
-                        addNotification('🚗 تم تعيين كابتن لرحلتك! يمكنك رؤية بياناته في صفحة الرحلات');
-                        showNotifBanner('🚗 تم تعيين كابتن لرحلتك!');
-                        sendClientEmail(payload.new.id, '🚗 تم تعيين كابتن لرحلتك', 'تم تعيين كابتن لرحلتك وهو في الطريق إليك. يمكنك رؤية بيانات الكابتن والسيارة أدناه.');
-                        loadTrips();
+                    if (payload.new.status === 'driver_assigned') {
+                        const notifKey = 'notified_assigned_' + payload.new.id;
+                        if (!localStorage.getItem(notifKey)) {
+                            addNotification('🚗 تم تعيين كابتن لرحلتك! يمكنك رؤية بياناته في صفحة الرحلات');
+                            showNotifBanner('🚗 تم تعيين كابتن لرحلتك!');
+                            sendClientEmail(payload.new.id, '🚗 تم تعيين كابتن لرحلتك', 'تم تعيين كابتن لرحلتك وهو في الطريق إليك. يمكنك رؤية بيانات الكابتن والسيارة أدناه.');
+                            localStorage.setItem(notifKey, 'true');
+                            loadTrips();
+                        }
                     }
                 }).subscribe();
         }
@@ -2294,24 +2298,42 @@
 
         // مراقبة رسائل الدردشة النظامية (وصول الكابتن وغيره)
         function setupGlobalChatListener() {
-            sb.channel('global-notif')
+            if (!user) return;
+            sb.channel('global-notif-' + user.id)
                 .on('postgres_changes', {
                     event: 'INSERT',
                     schema: 'public',
                     table: 'chat_messages'
                 }, async (payload) => {
                     const msg = payload.new;
-                    // التأكد أن الرسالة مرتبطة برحلة العميل
-                    if (msg.message_type === 'system' || msg.message_type === 'trip_end') {
-                        const { data: trip } = await sb.from('trips').select('user_id').eq('id', msg.trip_id).single();
-                        if (trip && trip.user_id === user?.id) {
-                            addNotification(msg.message);
-                            showNotifBanner(msg.message);
-                            // لو الكابتن أنهى الرحلة → نفتح التقييم
-                            if (msg.message_type === 'trip_end') {
-                                showFeedbackModal(msg.trip_id);
-                            }
-                        }
+                    // فقط رسائل النظام - جهات رحلة العميل
+                    if (msg.message_type !== 'system' && msg.message_type !== 'trip_end') return;
+
+                    // تحقق أن هذه الرسالة مرتبطة برحلة العميل الحالي
+                    const { data: trip } = await sb.from('trips').select('user_id').eq('id', msg.trip_id).single();
+                    if (!trip || trip.user_id !== user?.id) return;
+
+                    // تحديد الرسالة بناءً على نوع الحدث (notification routing للعميل فقط)
+                    const m = msg.message;
+                    let clientNotif = null;
+
+                    if (m.includes('الكابتن وصل لموقعك')) {
+                        clientNotif = '📍 الكابتن وصل إلى موقعك! يرجى النزول الآن.';
+                    } else if (m.includes('انطلقت الرحلة') || m.includes('رحلة سعيدة')) {
+                        clientNotif = '🚗 انطلقت رحلتك! نتمنى لك رحلة سعيدة ❤️';
+                    } else if (m.includes('الكابتن في الطريق')) {
+                        clientNotif = '🚗 الكابتن في الطريق إليك! جهز نفسك من فضلك.';
+                    } else if (msg.message_type === 'trip_end' || m.includes('تم إنهاء الرحلة')) {
+                        clientNotif = '✅ اكتملت رحلتك بنجاح! نتمنى أنك استمتعت بالرحلة ❤️';
+                        showFeedbackModal(msg.trip_id);
+                    } else {
+                        // تجاهل رسائل النظام الأخرى غير الموجهة للعميل
+                        return;
+                    }
+
+                    if (clientNotif) {
+                        addNotification(clientNotif);
+                        showNotifBanner(clientNotif);
                     }
                 }).subscribe();
         }

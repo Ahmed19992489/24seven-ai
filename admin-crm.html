@@ -702,6 +702,31 @@
         </div>
     </div>
 
+    <div id="edit-dest-modal"
+        class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[9000] backdrop-blur-sm p-4">
+        <div class="bg-white p-6 rounded-2xl w-full max-w-[400px] shadow-2xl border-t-4 border-amber-500">
+            <h3 class="text-xl font-bold mb-4 text-amber-700 border-b pb-3">تعديل الوجهة والسعر</h3>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs font-bold text-slate-500">الوجهة الجديدة (Dropoff)</label>
+                    <input type="text" id="edit-dest-input" class="input-std" placeholder="الوجهة الجديدة المتفق عليها">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500">السعر الجديد (EGP)</label>
+                    <input type="number" id="edit-price-input" class="input-std font-bold text-green-700"
+                        placeholder="0">
+                </div>
+                <div class="flex gap-2 pt-4">
+                    <button onclick="confirmDestChange()"
+                        class="flex-1 bg-amber-600 text-white py-2.5 rounded-lg font-bold hover:bg-amber-700">حفظ وإرسال
+                        للكابتن</button>
+                    <button onclick="document.getElementById('edit-dest-modal').style.display='none'"
+                        class="flex-1 bg-slate-200 text-slate-700 py-2.5 rounded-lg font-bold">إلغاء</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const supabaseUrl = 'https://wtjwzqvmwnbvjxnmweqq.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY';
@@ -726,7 +751,7 @@
             document.getElementById(`nav-${pageId}`).classList.add('active');
             if (window.innerWidth <= 768) { document.getElementById('sidebar').classList.remove('active'); document.getElementById('sidebar-overlay').classList.remove('active'); }
             if (pageId === 'dashboard') loadDashboard();
-            if (pageId === 'operations') loadOperations();
+            if (pageId === 'operations') { loadOperations(); setupOpsRealtime(); }
             if (pageId === 'crm') loadCRM();
             if (pageId === 'finance') loadFinance();
             if (pageId === 'fleet') loadFleetList();
@@ -748,6 +773,23 @@
                 document.getElementById('kpi-maint-vault').innerText = `${maint.balance} EGP`;
                 document.getElementById('kpi-cars-salary').innerText = `${cars.balance} EGP`;
             }
+        }
+
+        // ==========================================
+        // غرفة العمليات - تحديث لحظي
+        // ==========================================
+        let opsRealtimeChannel = null;
+        function setupOpsRealtime() {
+            if (opsRealtimeChannel) return; // لا تسجّل مرتين
+            opsRealtimeChannel = sbClient.channel('ops-realtime')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'trips' }, () => {
+                    // تحديث الجدول تلقائياً عند أي تغيير
+                    const opsPage = document.getElementById('page-operations');
+                    if (opsPage && !opsPage.classList.contains('hidden')) {
+                        loadOperations();
+                    }
+                })
+                .subscribe();
         }
 
         async function loadOperations() {
@@ -1382,8 +1424,15 @@
         async function openAdminChat(tripId, clientName, driverName, from, to) {
             adminCurrentTripId = tripId;
             document.getElementById('admin-chat-header').innerHTML = `
-                <p class="font-bold text-gray-700">👤 ${clientName} ↔ 🚗 ${driverName}</p>
-                <p class="text-xs text-gray-400">${from} ➝ ${to}</p>`;
+                <div class="flex justify-between items-center w-full">
+                    <div>
+                        <p class="font-bold text-gray-700">👤 ${clientName} ↔ 🚗 ${driverName}</p>
+                        <p id="admin-chat-route-text" class="text-xs text-gray-400">${from} ➝ ${to}</p>
+                    </div>
+                    <button onclick="openDestChangeModal('${tripId}', '${to}')" class="bg-amber-100 text-amber-700 hover:bg-amber-200 px-3 py-1.5 rounded-lg text-xs font-bold border border-amber-200 transition flex items-center gap-1">
+                        <i class="fas fa-edit"></i> تعديل الوجهة والسعر
+                    </button>
+                </div>`;
             document.getElementById('admin-chat-input-bar').style.display = 'flex';
 
             await loadAdminChatMessages(tripId);
@@ -1467,14 +1516,81 @@
             const message = input.value.trim();
             if (!message || !adminCurrentTripId) return;
             input.value = '';
-            await sbClient.from('chat_messages').insert([{
-                trip_id: adminCurrentTripId,
-                sender_role: 'admin',
-                sender_id: 'admin',
-                sender_name: 'الإدارة',
-                message: message,
-                message_type: 'text'
-            }]);
+            try {
+                await sbClient.from('chat_messages').insert([{
+                    trip_id: adminCurrentTripId,
+                    sender_role: 'admin',
+                    sender_id: 'admin',
+                    sender_name: 'الإدارة',
+                    message: message,
+                    message_type: 'text'
+                }]);
+            } catch (error) {
+                console.error('Error sending message:', error);
+                alert('فشل إرسال الرسالة');
+            }
+        }
+
+        // ==========================================
+        // تعديل الوجهة والسعر من الشات
+        // ==========================================
+        async function openDestChangeModal(tripId, currentDest) {
+            document.getElementById('edit-dest-input').value = currentDest || '';
+
+            // احضار السعر الحالي من الداتابيز
+            const { data: trip } = await sbClient.from('trips').select('estimated_price').eq('id', tripId).single();
+            if (trip) {
+                document.getElementById('edit-price-input').value = trip.estimated_price || 0;
+            }
+            document.getElementById('edit-dest-modal').style.display = 'flex';
+        }
+
+        async function confirmDestChange() {
+            if (!adminCurrentTripId) return;
+            const newDest = document.getElementById('edit-dest-input').value.trim();
+            const newPrice = Number(document.getElementById('edit-price-input').value) || 0;
+
+            if (!newDest || newPrice <= 0) {
+                alert('يرجى إدخال الوجهة الجديدة والسعر بشكل صحيح');
+                return;
+            }
+
+            try {
+                // 1. تحديث الرحلة في الداتابيز
+                const { error } = await sbClient.from('trips')
+                    .update({ dropoff_location: newDest, estimated_price: newPrice })
+                    .eq('id', adminCurrentTripId);
+
+                if (error) throw error;
+
+                // 2. إرسال رسالة في الشات بالتحديث الجديد (تظهر للكابتن بلون مميز كنظام)
+                await sbClient.from('chat_messages').insert([{
+                    trip_id: adminCurrentTripId,
+                    sender_role: 'system',
+                    sender_id: 'system',
+                    sender_name: 'النظام',
+                    message: `✅ تم تعديل الوجهة من قبل الإدارة.\nالوجهة الجديدة: ${newDest}\nالسعر الجديد: ${newPrice} EGP`,
+                    message_type: 'system'
+                }]);
+
+                document.getElementById('edit-dest-modal').style.display = 'none';
+
+                // تحديث الهيدر فورياً
+                const routeP = document.getElementById('admin-chat-route-text');
+                if (routeP) {
+                    const parts = routeP.textContent.split('➝');
+                    if (parts.length === 2) {
+                        routeP.textContent = `${parts[0].trim()} ➝ ${newDest}`;
+                    }
+                }
+
+                // تحديث جدول العمليات ضمناً (سيحدث تلقائياً إذا أعاد فتح التاب)
+                alert('✅ تم تعديل الوجهة بنجاح وإشعار الكابتن');
+
+            } catch (err) {
+                console.error(err);
+                alert('❌ حدث خطأ أثناء تعديل الوجهة: ' + err.message);
+            }
         }
 
         function subscribeAdminChat(tripId) {
