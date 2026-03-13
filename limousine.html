@@ -1522,27 +1522,66 @@
 
 
         async function loadTrips() {
+            // 1. Fetch assigned/completed trips from 'trips'
             const { data: trips, error } = await sb
                 .from('trips')
                 .select('*, drivers:drivers!fk_trips_driver(*), cars:cars!fk_trips_car(*)')
                 .eq('user_id', user.id)
                 .order('created_at', { ascending: false });
 
-            if (error) {
-                const { data: simpleTrips } = await sb.from('trips').select('*').eq('user_id', user.id);
-                if (simpleTrips) renderTrips(simpleTrips);
-                return;
+            let allTrips = [];
+            if (!error && trips) allTrips = [...trips];
+
+            try {
+                // 2. Fetch pending reservations from 'google_reservations' using phone
+                const { data: profile } = await sb.from('profiles').select('phone').eq('id', user.id).single();
+                const userPhone = profile?.phone;
+
+                if (userPhone && userPhone.length >= 10) {
+                    const cleanUserPhone = userPhone.replace(/\D/g, '');
+                    const { data: sheetRes } = await sb
+                        .from('google_reservations')
+                        .select('*')
+                        .or(`customer_phone.ilike.%${cleanUserPhone}%,whatsapp_num.ilike.%${cleanUserPhone}%`)
+                        .neq('status', 'driver_assigned');
+
+                    if (sheetRes && sheetRes.length > 0) {
+                        const pendingTrips = sheetRes.map(r => ({
+                            id: 'gr_' + r.id, 
+                            status: 'pending',
+                            pickup_location: r.pickup_address || 'انتظار التأكيد',
+                            dropoff_location: r.dropoff_address || 'انتظار التأكيد',
+                            estimated_price: r.cost || 0,
+                            created_at: r.created_at || new Date().toISOString(),
+                            drivers: null,
+                            cars: null,
+                            admin_notes: `تاريخ الرحلة: ${r.trip_date || '--'} الساعة ${r.trip_time || '--'}`
+                        }));
+                        allTrips = [...allTrips, ...pendingTrips];
+                    }
+                }
+            } catch (err) {
+                console.log('Error fetching sheet reservations', err);
             }
-            renderTrips(trips);
+
+            // Sort all trips by newest first
+            allTrips.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+            
+            renderTrips(allTrips);
         }
 
         function renderTrips(trips) {
-            const tripIds = trips ? trips.map(t => t.id) : [];
+            // Filter tripIds to only include valid UUIDs (exclude our custom gr_ ids for google_reservations)
+            const tripIds = trips ? trips.map(t => t.id).filter(id => !String(id).startsWith('gr_')) : [];
+            
             if (tripIds.length > 0) {
                 sb.from('trip_ratings').select('*').in('trip_id', tripIds).then(({ data: ratings }) => {
                     const ratingsMap = {};
                     if (ratings) ratings.forEach(r => ratingsMap[r.trip_id] = r);
                     renderTripsWithRatings(trips, ratingsMap);
+                }).catch(err => {
+                    console.log('Error fetching ratings', err);
+                    renderTripsWithRatings(trips, {});
                 });
             } else {
                 renderTripsWithRatings(trips, {});
