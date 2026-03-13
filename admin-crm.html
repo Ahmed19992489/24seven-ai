@@ -2377,7 +2377,10 @@
                 omniGroupedChats[msg.sender_id].messages.push(msg);
                 omniGroupedChats[msg.sender_id].last_message = msg;
                 omniGroupedChats[msg.sender_id].channel = msg.channel; // التحديث لآخر قناة استخدمها
-                omniGroupedChats[msg.sender_id].sender_name = msg.sender_name || omniGroupedChats[msg.sender_id].sender_name;
+                // 🛑 لا تجعل اسم العميل يتغير إلى Admin إذا كانت الرسالة من الموظف
+                if (!msg.is_from_admin && msg.sender_name) {
+                    omniGroupedChats[msg.sender_id].sender_name = msg.sender_name;
+                }
                 
                 if(!msg.is_from_admin && !msg.read_by_admin) {
                     omniGroupedChats[msg.sender_id].unread_count++;
