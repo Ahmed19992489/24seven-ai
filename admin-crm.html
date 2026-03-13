@@ -523,6 +523,65 @@
             </div>
         </div>
 
+        <!-- ========== صفحة أوامر الحجز ========== -->
+        <div id="page-reservations" class="page-section hidden">
+            <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+                <h2 class="text-2xl font-bold"><i class="fas fa-clipboard-list text-indigo-600 ml-2"></i>أوامر الحجز (من الشيت)</h2>
+                <button onclick="loadReservationsPage()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700">
+                    <i class="fas fa-sync-alt ml-1"></i>تحديث
+                </button>
+            </div>
+            <!-- فلاتر -->
+            <div class="glass-panel p-4 mb-4 flex gap-3 flex-wrap items-end">
+                <div class="flex-1 min-w-[180px]">
+                    <label class="text-xs font-bold text-slate-500 block mb-1">بحث (اسم/هاتف/عنوان)</label>
+                    <input type="text" id="res-search" oninput="filterReservations()" placeholder="ابحث..." class="input-std">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500 block mb-1">الحالة</label>
+                    <select id="res-status-filter" onchange="filterReservations()" class="input-std">
+                        <option value="">الكل</option>
+                        <option value="تم الترحيل">تم الترحيل ✅</option>
+                        <option value="pending">في الانتظار ⏳</option>
+                        <option value="خطأ في الإدراج">خطأ ❌</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500 block mb-1">من تاريخ</label>
+                    <input type="date" id="res-date-from" onchange="filterReservations()" class="input-std">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500 block mb-1">إلى تاريخ</label>
+                    <input type="date" id="res-date-to" onchange="filterReservations()" class="input-std">
+                </div>
+            </div>
+            <!-- إحصائيات -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4" id="res-stats"></div>
+            <!-- جدول -->
+            <div class="glass-panel overflow-x-auto">
+                <div class="p-3 bg-slate-50 border-b text-sm text-slate-500" id="res-count">جاري التحميل...</div>
+                <table class="w-full text-sm">
+                    <thead class="bg-indigo-50 text-indigo-800">
+                        <tr>
+                            <th class="p-3 text-right font-bold">#صف</th>
+                            <th class="p-3 text-right font-bold">التاريخ</th>
+                            <th class="p-3 text-right font-bold">العميل</th>
+                            <th class="p-3 text-right font-bold">الهاتف</th>
+                            <th class="p-3 text-right font-bold">من</th>
+                            <th class="p-3 text-right font-bold">إلى</th>
+                            <th class="p-3 text-right font-bold">سيارة</th>
+                            <th class="p-3 text-right font-bold">سعر</th>
+                            <th class="p-3 text-right font-bold">موظف</th>
+                            <th class="p-3 text-right font-bold">الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody id="res-table-body">
+                        <tr><td colspan="10" class="text-center p-8 text-slate-400"><i class="fas fa-spinner fa-spin text-2xl"></i></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </main>
 
     <div id="assign-modal"
@@ -2110,12 +2169,12 @@
             }
         }
 
-        // ربط showPage بصفحة الحجوزات
-        const _origShowPage = showPage;
+        // ربط showPage بصفحة الحجوزات - نضيف للدالة الأصلية
+        const _origShowPage2 = showPage;
         showPage = function(page) {
-            _origShowPage(page);
+            _origShowPage2(page);
             if (page === 'reservations') {
-                loadReservationsPage();
+                setTimeout(loadReservationsPage, 100);
             }
         };
     </script>
