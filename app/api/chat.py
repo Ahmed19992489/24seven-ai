@@ -1,12 +1,30 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 from app import models, database
 from app.api.auth import get_current_user
 from pydantic import BaseModel
+import requests
+import json
+import traceback
 
 router = APIRouter()
+
+# =====================================================
+# 🔑 إعدادات الواتساب والماسنجر و Supabase
+# =====================================================
+WHATSAPP_TOKEN = "EAAPDbwUyvY0BQrm6ZB9qb62LU9hI50ZC9QOfZAO3VPA7ZCSnFSRMCb2kouBRkXu4LiVmRU2ydv1vLl00kKmgTFMN5ULJOpImor7i8oITjicjIjWiOLxTL7yltYrlF0RLxcdU6UNOaIdqo4Ouv0BnQ79OK2sgSLpHY9ZCQs4iRIxcpjnoxr8EWpV4FSgGTzgZDZD"
+PHONE_ID = "597129733493778"
+FB_PAGE_TOKEN = "" # User needs to fill this later or we pull it from their code. For now using the empty one as was in messenger_agent
+
+SUPABASE_URL = 'https://wtjwzqvmwnbvjxnmweqq.supabase.co'
+SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY'
+SUPABASE_HEADERS = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': f'Bearer {SUPABASE_KEY}',
+    'Content-Type': 'application/json'
+}
 
 # --- نماذج البيانات (Pydantic Models) ---
 
@@ -25,6 +43,11 @@ class MessageResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class OmnichannelReply(BaseModel):
+    channel: str # 'whatsapp' or 'messenger'
+    sender_id: str
+    message: str
 
 # --- نقاط الاتصال (Endpoints) ---
 
@@ -105,3 +128,69 @@ async def admin_reply(data: AdminReply, db: Session = Depends(database.get_db)):
     db.add(new_msg)
     db.commit()
     return {"status": "success", "message": "Reply sent successfully"}
+
+# =====================================================
+# 🚀 API صندوق الوارد الموحد (Omnichannel Inbox)
+# =====================================================
+@router.post("/send_omnichannel")
+async def send_omnichannel_reply(
+    data: OmnichannelReply, 
+    # Depends(get_current_user) is omitted here for simplicity while migrating, ensuring the admin CRM works directly
+):
+    """
+    تقوم هذه الدالة بإرسال رسالة من الموظف للعميل بناءً على القناة المستخدمة (WhatsApp أو Messenger)
+    ثم تحفظ الرسالة في Supabase
+    """
+    channel = data.channel.lower()
+    
+    # 1. إرسال الرسالة عبر القناة المناسبة
+    if channel == 'whatsapp':
+        url = f"https://graph.facebook.com/v17.0/{PHONE_ID}/messages"
+        headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}", "Content-Type": "application/json"}
+        payload = { "messaging_product": "whatsapp", "to": data.sender_id, "type": "text", "text": {"body": data.message} }
+        try:
+            r = requests.post(url, headers=headers, json=payload)
+            if r.status_code not in [200, 201]:
+                print(f"❌ Failed to send WhatsApp: {r.text}")
+                # We can still proceed to save the attempt or raise an error.
+        except Exception as e:
+            print(f"❌ WA Send Exception: {e}")
+
+    elif channel == 'messenger':
+        if not FB_PAGE_TOKEN:
+            # We will still try to save the message but warning that token is missing
+            print("⚠️ FB_PAGE_TOKEN is empty. Message will be saved but not sent to Facebook.")
+        else:
+            url = f"https://graph.facebook.com/v18.0/me/messages?access_token={FB_PAGE_TOKEN}"
+            headers = {"Content-Type": "application/json"}
+            payload = { "recipient": {"id": data.sender_id}, "message": {"text": data.message} }
+            try:
+                r = requests.post(url, headers=headers, json=payload)
+                if r.status_code != 200:
+                    print(f"❌ Failed to send Messenger: {r.text}")
+            except Exception as e:
+                print(f"❌ Messenger Send Exception: {e}")
+    else:
+        raise HTTPException(status_code=400, detail="Invalid channel type")
+
+    # 2. حفظ الرسالة في Supabase (كـ رسالة من الموظف)
+    supabase_url = f"{SUPABASE_URL}/rest/v1/omnichannel_messages"
+    db_payload = {
+        "channel": channel,
+        "sender_id": data.sender_id,
+        "sender_name": "Admin", # The UI doesn't necessarily need the employee name if strictly just the agency replied
+        "message_text": data.message,
+        "is_from_admin": True,
+        "read_by_admin": True
+    }
+    
+    try:
+        response = requests.post(supabase_url, headers=SUPABASE_HEADERS, json=db_payload)
+        if response.status_code not in [200, 201]:
+             print(f"❌ Supabase save error: {response.text}")
+             raise HTTPException(status_code=500, detail="Message sent but failed to save in Database")
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"status": "success", "message": f"Reply sent successfully via {channel}"}

@@ -163,6 +163,13 @@
                 <i class="fas fa-users w-5 text-center text-purple-600"></i> العملاء (CRM)
             </div>
 
+            <p class="text-[10px] font-bold text-slate-400 mt-4 mb-1 px-3">خدمة العملاء</p>
+            <div onclick="showPage('omnichannel')" id="nav-omnichannel"
+                class="sidebar-item p-3 rounded-lg flex items-center gap-3">
+                <i class="fas fa-headset w-5 text-center text-teal-600"></i> صندوق الوارد (شات)
+                <span id="omnichannel-badge" class="hidden mr-auto bg-red-500 text-white text-xs rounded-full px-2 py-0.5"></span>
+            </div>
+
             <p class="text-[10px] font-bold text-slate-400 mt-4 mb-1 px-3">المالية والموارد</p>
             <div onclick="showPage('finance')" id="nav-finance"
                 class="sidebar-item p-3 rounded-lg flex items-center gap-3">
@@ -519,6 +526,78 @@
                     <i class="fas fa-ban text-red-400"></i> الكوبونات الملغاة / المنتهية
                 </h3>
                 <div id="crm-coupons-inactive" class="space-y-2 max-h-48 overflow-y-auto">
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== صفحة صندوق الوارد الموحد (Omnichannel) ========== -->
+        <div id="page-omnichannel" class="page-section hidden h-full flex flex-col md:flex-row gap-4 p-4">
+            <!-- قائمة المحادثات (اليسار/اليمين) -->
+            <div class="glass-panel w-full md:w-1/3 flex flex-col h-[calc(100vh-100px)]">
+                <div class="p-4 border-b border-slate-200">
+                    <h2 class="text-xl font-bold flex items-center gap-2">
+                        <i class="fas fa-headset text-teal-600"></i> صندوق الوارد
+                    </h2>
+                    <div class="mt-3 relative">
+                        <i class="fas fa-search absolute right-3 top-3 text-slate-400"></i>
+                        <input type="text" id="omni-search" placeholder="ابحث باسم أو رقم..." oninput="filterOmniChats()"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2 pr-10 pl-3 text-sm focus:outline-none focus:border-teal-500">
+                    </div>
+                </div>
+                <!-- مساحة كروت الدردشة -->
+                <div id="omni-chat-list" class="flex-1 overflow-y-auto w-full p-2 space-y-2">
+                    <div class="text-center text-slate-400 py-10"><i class="fas fa-spinner fa-spin text-2xl"></i><br>جاري تحميل الرسائل...</div>
+                </div>
+            </div>
+
+            <!-- نافذة الدردشة الرئيسية -->
+            <div class="glass-panel w-full md:w-2/3 flex flex-col h-[calc(100vh-100px)] relative" id="omni-chat-window">
+                <!-- شاشة بديلة عند عدم اختيار محادثة -->
+                <div id="omni-no-chat" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 rounded-xl z-10">
+                    <i class="fas fa-comments text-6xl text-slate-300 mb-4"></i>
+                    <h3 class="text-slate-500 font-bold">اختر محادثة للبدء في الرد</h3>
+                </div>
+
+                <!-- رأس الدردشة (Header) -->
+                <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-white rounded-t-xl" id="omni-chat-header" style="visibility: hidden;">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-teal-100 text-teal-600 flex items-center justify-center font-bold text-lg" id="omni-active-avatar">
+                            ع
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-800" id="omni-active-name">اسم العميل</h3>
+                            <div class="flex items-center gap-1 text-xs text-slate-500">
+                                <span id="omni-active-channel-icon"></span>
+                                <span id="omni-active-channel-name">Platform</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="text-slate-400 hover:text-red-500 transition" onclick="closeOmniChat()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <!-- مساحة الرسائل (Messages Area) -->
+                <div id="omni-messages-area" class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50" style="visibility: hidden;">
+                    <!-- سيتم حقن الرسائل هنا عبر JS -->
+                </div>
+
+                <!-- شريط الإدخال (Input Form) -->
+                <div class="p-4 bg-white border-t border-slate-200 rounded-b-xl" id="omni-input-area" style="visibility: hidden;">
+                    <form onsubmit="sendOmniReply(event)" class="flex gap-2 relative">
+                        <!-- متغيرات مخفية لتتبع المستقبل والقناة -->
+                        <input type="hidden" id="omni-reply-sender-id">
+                        <input type="hidden" id="omni-reply-channel">
+                        
+                        <!-- <button type="button" class="text-slate-400 hover:text-teal-600 p-2"><i class="fas fa-paperclip"></i></button> -->
+                        <input type="text" id="omni-reply-text" required autocomplete="off"
+                            class="flex-1 bg-slate-100 border-none rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                            placeholder="اكتب ردك هنا...">
+                        <button type="submit" id="omni-send-btn"
+                            class="bg-teal-600 hover:bg-teal-700 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition transform hover:scale-105">
+                            <i class="fas fa-paper-plane mr-1"></i>
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -2226,12 +2305,350 @@
             }
         }
 
+        // ==========================================
+        // 💬 رسائل Omnichannel (الماسنجر والواتساب)
+        // ==========================================
+        let allOmniMessages = [];
+        let omniGroupedChats = {};
+        let omniActiveSenderId = null;
+        let omniSubscription = null;
+
+        async function loadOmnichannelChats() {
+            try {
+                // جلب كل الرسائل
+                const { data, error } = await sbClient
+                    .from('omnichannel_messages')
+                    .select('*')
+                    .order('created_at', { ascending: true }); // نجلب الأقدم للأحدث لنرتبهم صح
+                
+                if (error) throw error;
+                
+                allOmniMessages = data || [];
+                groupOmniMessages();
+                renderOmniChatList();
+                
+                // تحديث الـ Badge في الـ Sidebar للرسائل غير المقروءة (إن وجدت)
+                updateOmniBadge();
+
+                // تفعيل الاستماع اللحظي (Realtime) للرسائل الجديدة
+                if(!omniSubscription) {
+                    omniSubscription = sbClient
+                        .channel('public:omnichannel_messages')
+                        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'omnichannel_messages' }, payload => {
+                            allOmniMessages.push(payload.new);
+                            groupOmniMessages();
+                            renderOmniChatList();
+                            updateOmniBadge();
+                            
+                            // لو المحادثة مفتوحة حالياً، ضيف الرسالة للشاشة
+                            if(omniActiveSenderId === payload.new.sender_id) {
+                                appendOmniMessage(payload.new);
+                                scrollToOmniBottom();
+                                // تحديث كـ مقروءة فوراً إذا كانت نافذته مفتوحة
+                                if(!payload.new.is_from_admin && !payload.new.read_by_admin) {
+                                    markOmniChatAsRead(payload.new.sender_id);
+                                }
+                            } else {
+                                // تشغيل تنبيه صوتي لرسالة جديدة من عميل آخر
+                                if(!payload.new.is_from_admin) playNotificationSound();
+                            }
+                        })
+                        .subscribe();
+                }
+            } catch (err) {
+                console.error("Error loading omnichannel:", err);
+            }
+        }
+
+        function groupOmniMessages() {
+            omniGroupedChats = {};
+            allOmniMessages.forEach(msg => {
+                if(!omniGroupedChats[msg.sender_id]) {
+                    omniGroupedChats[msg.sender_id] = {
+                        sender_id: msg.sender_id,
+                        sender_name: msg.sender_name || msg.sender_id,
+                        channel: msg.channel,
+                        messages: [],
+                        last_message: null,
+                        unread_count: 0
+                    };
+                }
+                
+                omniGroupedChats[msg.sender_id].messages.push(msg);
+                omniGroupedChats[msg.sender_id].last_message = msg;
+                omniGroupedChats[msg.sender_id].channel = msg.channel; // التحديث لآخر قناة استخدمها
+                omniGroupedChats[msg.sender_id].sender_name = msg.sender_name || omniGroupedChats[msg.sender_id].sender_name;
+                
+                if(!msg.is_from_admin && !msg.read_by_admin) {
+                    omniGroupedChats[msg.sender_id].unread_count++;
+                }
+            });
+        }
+
+        function renderOmniChatList() {
+            const listDiv = document.getElementById('omni-chat-list');
+            const search = (document.getElementById('omni-search')?.value || '').toLowerCase();
+            
+            // تحويل الـ Object إلى Array وترتيبه حسب آخر رسالة (الأحدث أولاً)
+            let chats = Object.values(omniGroupedChats).sort((a,b) => {
+                const dateA = new Date(a.last_message?.created_at || 0);
+                const dateB = new Date(b.last_message?.created_at || 0);
+                return dateB - dateA;
+            });
+
+            if (search) {
+                chats = chats.filter(c => 
+                    (c.sender_name || '').toLowerCase().includes(search) || 
+                    (c.sender_id || '').toLowerCase().includes(search)
+                );
+            }
+
+            if (chats.length === 0) {
+                listDiv.innerHTML = `<div class="text-center text-slate-400 py-10">لا توجد محادثات</div>`;
+                return;
+            }
+
+            listDiv.innerHTML = chats.map(chat => {
+                const lastMsg = chat.last_message;
+                const timeStr = lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString('ar-EG', {hour: '2-digit', minute:'2-digit'}) : '';
+                const msgPreview = lastMsg ? lastMsg.message_text.substring(0, 30) + (lastMsg.message_text.length > 30 ? '...' : '') : '';
+                const isActive = omniActiveSenderId === chat.sender_id;
+                const icon = chat.channel === 'whatsapp' ? '<i class="fab fa-whatsapp text-green-500"></i>' : '<i class="fab fa-facebook-messenger text-blue-500"></i>';
+                const avatarChar = (chat.sender_name || '?').charAt(0).toUpperCase();
+                const unreadBadge = chat.unread_count > 0 ? `<div class="bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full ml-1 shrink-0 font-bold">${chat.unread_count}</div>` : '';
+
+                return `
+                <div onclick="openOmniChat('${chat.sender_id}')" class="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition ${isActive ? 'bg-teal-50 border border-teal-200' : 'bg-white hover:bg-slate-50 border border-transparent'} shadow-sm">
+                    <div class="relative shrink-0">
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-teal-400 to-emerald-500 text-white flex items-center justify-center text-xl font-bold shadow-inner">
+                            ${avatarChar}
+                        </div>
+                        <div class="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow">
+                            ${icon}
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-baseline mb-1">
+                            <h4 class="font-bold text-slate-800 text-sm truncate">${chat.sender_name || chat.sender_id}</h4>
+                            <span class="text-[10px] text-slate-400 shrink-0 mr-2" dir="ltr">${timeStr}</span>
+                        </div>
+                        <p class="text-xs ${chat.unread_count > 0 ? 'text-slate-800 font-bold' : 'text-slate-500'} truncate">${msgPreview}</p>
+                    </div>
+                    ${unreadBadge}
+                </div>`;
+            }).join('');
+        }
+
+        function filterOmniChats() {
+            renderOmniChatList();
+        }
+
+        function updateOmniBadge() {
+            const badge = document.getElementById('omnichannel-badge');
+            let totalUnread = 0;
+            Object.values(omniGroupedChats).forEach(c => totalUnread += c.unread_count);
+            
+            if (totalUnread > 0) {
+                badge.textContent = totalUnread;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        async function openOmniChat(senderId) {
+            omniActiveSenderId = senderId;
+            const chat = omniGroupedChats[senderId];
+            if(!chat) return;
+
+            // تحديث الواجهة النشطة
+            renderOmniChatList();
+            
+            document.getElementById('omni-no-chat').style.display = 'none';
+            document.getElementById('omni-chat-header').style.visibility = 'visible';
+            document.getElementById('omni-messages-area').style.visibility = 'visible';
+            document.getElementById('omni-input-area').style.visibility = 'visible';
+
+            document.getElementById('omni-active-name').textContent = chat.sender_name || chat.sender_id;
+            document.getElementById('omni-active-avatar').textContent = (chat.sender_name || '?').charAt(0).toUpperCase();
+            
+            if(chat.channel === 'whatsapp') {
+                document.getElementById('omni-active-channel-icon').innerHTML = '<i class="fab fa-whatsapp text-green-500"></i>';
+                document.getElementById('omni-active-channel-name').textContent = 'WhatsApp';
+            } else {
+                document.getElementById('omni-active-channel-icon').innerHTML = '<i class="fab fa-facebook-messenger text-blue-500"></i>';
+                document.getElementById('omni-active-channel-name').textContent = 'Messenger';
+            }
+
+            document.getElementById('omni-reply-sender-id').value = senderId;
+            document.getElementById('omni-reply-channel').value = chat.channel;
+
+            const msgsArea = document.getElementById('omni-messages-area');
+            msgsArea.innerHTML = '';
+            
+            chat.messages.forEach(msg => appendOmniMessage(msg));
+            scrollToOmniBottom();
+
+            // تحديث الرسائل كـ مقروءة
+            if(chat.unread_count > 0) {
+                markOmniChatAsRead(senderId);
+            }
+        }
+
+        function appendOmniMessage(msg) {
+            const area = document.getElementById('omni-messages-area');
+            const timeStr = new Date(msg.created_at).toLocaleTimeString('ar-EG', {hour: '2-digit', minute:'2-digit'});
+            
+            const div = document.createElement('div');
+            div.className = "flex w-full mb-4";
+            
+            if (msg.is_from_admin) {
+                div.innerHTML = `
+                    <div class="mr-auto max-w-[80%]">
+                        <div class="bg-teal-600 text-white rounded-2xl rounded-tl-none p-3 shadow-md relative">
+                            <p class="text-sm whitespace-pre-wrap">${escapeHtml(msg.message_text)}</p>
+                        </div>
+                        <div class="text-[10px] text-slate-400 mt-1 flex justify-end gap-1 items-center">
+                            <span dir="ltr">${timeStr}</span> <i class="fas fa-check-double text-teal-500"></i>
+                        </div>
+                    </div>`;
+            } else {
+                div.innerHTML = `
+                    <div class="ml-auto max-w-[80%]">
+                        <div class="bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-tr-none p-3 shadow-sm relative">
+                            <p class="text-sm whitespace-pre-wrap">${escapeHtml(msg.message_text)}</p>
+                        </div>
+                        <div class="text-[10px] text-slate-400 mt-1 flex justify-start">
+                            <span dir="ltr">${timeStr}</span>
+                        </div>
+                    </div>`;
+            }
+            area.appendChild(div);
+        }
+
+        function scrollToOmniBottom() {
+            const area = document.getElementById('omni-messages-area');
+            area.scrollTop = area.scrollHeight;
+        }
+
+        function closeOmniChat() {
+            omniActiveSenderId = null;
+            document.getElementById('omni-no-chat').style.display = 'flex';
+            document.getElementById('omni-chat-header').style.visibility = 'hidden';
+            document.getElementById('omni-messages-area').style.visibility = 'hidden';
+            document.getElementById('omni-input-area').style.visibility = 'hidden';
+            renderOmniChatList();
+        }
+
+        async function markOmniChatAsRead(senderId) {
+            if(omniGroupedChats[senderId]) omniGroupedChats[senderId].unread_count = 0;
+            updateOmniBadge();
+            renderOmniChatList();
+            
+            // تحديث في قاعدة البيانات
+            const unreadMessagesIds = allOmniMessages
+                .filter(m => m.sender_id === senderId && !m.is_from_admin && !m.read_by_admin)
+                .map(m => m.id);
+                
+            if(unreadMessagesIds.length > 0) {
+                // تحديث الذاكرة المحلية أولا
+                allOmniMessages.forEach(m => {
+                    if(unreadMessagesIds.includes(m.id)) m.read_by_admin = true;
+                });
+                
+                // تحديث قاعدة البيانات
+                try {
+                    await sbClient.from('omnichannel_messages')
+                        .update({ read_by_admin: true })
+                        .in('id', unreadMessagesIds);
+                } catch(e) { console.error("Error marking as read", e); }
+            }
+        }
+
+        async function sendOmniReply(e) {
+            e.preventDefault();
+            const input = document.getElementById('omni-reply-text');
+            const text = input.value.trim();
+            if(!text) return;
+            
+            const senderId = document.getElementById('omni-reply-sender-id').value;
+            const channel = document.getElementById('omni-reply-channel').value;
+            
+            const btn = document.getElementById('omni-send-btn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+
+            try {
+                // استدعاء הـ API اللي برمجناه في main.py للإرسال عبر (WhatsApp/Messenger API)
+                const res = await fetch('/api/chat/send_omnichannel', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        channel: channel,
+                        sender_id: senderId,
+                        message: text
+                    })
+                });
+                
+                if(!res.ok) {
+                    const errorTxt = await res.text();
+                    throw new Error(errorTxt);
+                }
+
+                // إضافة الرسالة للواجهة كشكل مبدئي قبل ما تيجي من الـ Realtime
+                const tempMsg = {
+                    id: 'temp_' + Date.now(),
+                    channel: channel,
+                    sender_id: senderId,
+                    message_text: text,
+                    is_from_admin: true,
+                    created_at: new Date().toISOString()
+                };
+                
+                // لن نضطر لإضافتها هنا لو الـ Realtime سريع، لكن تحسباً عشان ما تحسش ببطء
+                // allOmniMessages.push(tempMsg);
+                // appendOmniMessage(tempMsg);
+                // scrollToOmniBottom();
+                
+                input.value = '';
+            } catch(e) {
+                alert('خطأ في إرسال الرسالة: ' + e.message);
+            } finally {
+                btn.innerHTML = '<i class="fas fa-paper-plane mr-1"></i>';
+                btn.disabled = false;
+                input.focus();
+            }
+        }
+
+        function playNotificationSound() {
+            try {
+                const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                audio.play().catch(e => {}); // Ignore autoplay errors
+            } catch(e) {}
+        }
+
+        // ==========================================
+        // وظائف مساعدة عامة
+        // ==========================================
+        function escapeHtml(unsafe) {
+            if(!unsafe) return '';
+            return unsafe
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
+
         // ربط showPage بصفحة الحجوزات - نضيف للدالة الأصلية
         const _origShowPage2 = showPage;
         showPage = function(page) {
             _origShowPage2(page);
             if (page === 'reservations') {
                 setTimeout(loadReservationsPage, 100);
+            }
+            if (page === 'omnichannel') {
+                setTimeout(loadOmnichannelChats, 100);
             }
         };
     </script>
