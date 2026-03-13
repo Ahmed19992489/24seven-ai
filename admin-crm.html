@@ -2161,6 +2161,12 @@
                     <td class="p-3 font-bold text-green-700">${r.cost ? Number(r.cost).toLocaleString() + ' EGP' : '--'}</td>
                     <td class="p-3 text-xs">${r.booking_employee || '--'}</td>
                     <td class="p-3"><span class="px-2 py-1 rounded-full text-xs font-bold ${stClass}">${st}</span></td>
+                    <td class="p-3">
+                        <button onclick="openAssignResModal(${JSON.stringify(r).replace(/"/g, '&quot;')})" 
+                            class="bg-indigo-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-indigo-700 whitespace-nowrap">
+                            <i class="fas fa-user-plus ml-1"></i>تعيين كابتن
+                        </button>
+                    </td>
                 </tr>`;
             }).join('');
 
@@ -2180,5 +2186,40 @@
     </script>
 
 </body>
+
+<!-- مودال تعيين كابتن للحجوزات -->
+<div id="res-assign-modal"
+    class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[9500] backdrop-blur-sm p-4">
+    <div class="bg-white p-6 rounded-2xl w-full max-w-[480px] shadow-2xl border-t-4 border-indigo-600">
+        <h3 class="text-xl font-bold mb-4 text-indigo-700 border-b pb-3">
+            <i class="fas fa-user-check ml-2"></i>تعيين كابتن للحجز
+        </h3>
+        <!-- تفاصيل الحجز -->
+        <div id="res-modal-info" class="mb-4"></div>
+        <!-- اختيار الكابتن والسيارة -->
+        <div class="space-y-4">
+            <div>
+                <label class="text-xs font-bold text-slate-500 block mb-1">اختر الكابتن</label>
+                <select id="res-modal-driver" class="input-std bg-white"></select>
+            </div>
+            <div>
+                <label class="text-xs font-bold text-slate-500 block mb-1">اختر السيارة</label>
+                <select id="res-modal-car" class="input-std bg-white"></select>
+            </div>
+        </div>
+        <!-- أزرار -->
+        <div class="flex gap-3 pt-5 mt-4 border-t">
+            <button id="res-assign-btn" onclick="confirmResAssign()"
+                class="flex-1 bg-indigo-600 text-white py-2.5 rounded-lg font-bold hover:bg-indigo-700">
+                <i class="fas fa-check ml-1"></i>تعيين الكابتن
+            </button>
+            <button onclick="document.getElementById('res-assign-modal').style.display='none'"
+                class="flex-1 bg-slate-200 text-slate-700 py-2.5 rounded-lg font-bold hover:bg-slate-300">
+                إلغاء
+            </button>
+        </div>
+    </div>
+</div>
+
 
 </html>
