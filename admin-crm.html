@@ -2579,8 +2579,8 @@
             btn.disabled = true;
 
             try {
-                // استدعاء הـ API اللي برمجناه في main.py للإرسال عبر (WhatsApp/Messenger API)
-                const res = await fetch('/api/chat/send_omnichannel', {
+                // استدعاء הـ API اللي برمجناه في webhook_server.py للإرسال عبر (WhatsApp/Messenger API)
+                const res = await fetch('http://localhost:3000/api/send_reply', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
