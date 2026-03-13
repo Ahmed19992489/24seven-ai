@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>24Seven | لوحة الموديتور</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Cairo', sans-serif; background-color: #f8fafc; }
+        .glass-panel { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); border-radius: 1.5rem; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); }
+        .sidebar-item { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; border-radius: 1rem; margin-bottom: 0.5rem; display: flex; align-items: center; padding: 0.75rem 1rem; color: #64748b; }
+        .sidebar-item:hover { background-color: #f1f5f9; color: #0d9488; transform: translateX(-5px); }
+        .sidebar-item.active { background-color: #0d9488; color: white; box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3); }
+        .input-std { background-color: white; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 0.6rem 1rem; width: 100%; transition: all 0.2s; }
+        .input-std:focus { outline: none; border-color: #0d9488; ring: 2px; ring-color: #0d9488; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-slate-50 overflow-hidden h-screen flex">
+
+    <!-- Sidebar -->
+    <aside class="w-72 bg-white border-l border-slate-200 flex flex-col p-6 z-50">
+        <div class="flex items-center gap-3 mb-10 px-2">
+            <div class="w-10 h-10 bg-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-teal-200">
+                <i class="fas fa-headset text-white text-xl"></i>
+            </div>
+            <div>
+                <h1 class="font-black text-xl text-slate-800 leading-none">24Seven</h1>
+                <p class="text-[10px] text-teal-600 font-bold tracking-widest uppercase mt-1">Moderator Hub</p>
+            </div>
+        </div>
+
+        <nav class="flex-1">
+            <div onclick="showTab('dashboard')" id="btn-dashboard" class="sidebar-item active">
+                <i class="fas fa-chart-pie w-6"></i>
+                <span class="font-bold">لوحة التحكم</span>
+            </div>
+            <div onclick="showTab('chat')" id="btn-chat" class="sidebar-item">
+                <i class="fas fa-comments w-6"></i>
+                <span class="font-bold">المراسلات</span>
+                <span id="chat-badge" class="hidden mr-auto bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">0</span>
+            </div>
+            <div onclick="showTab('trips')" id="btn-trips" class="sidebar-item">
+                <i class="fas fa-route w-6"></i>
+                <span class="font-bold">الحجوزات</span>
+            </div>
+            <div onclick="showTab('performance')" id="btn-performance" class="sidebar-item">
+                <i class="fas fa-medal w-6"></i>
+                <span class="font-bold">الأداء والعمولات</span>
+            </div>
+        </nav>
+
+        <div class="mt-auto border-t pt-6">
+            <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <div id="user-avatar" class="w-10 h-10 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold">M</div>
+                <div class="flex-1 overflow-hidden">
+                    <p id="user-name" class="text-sm font-bold text-slate-800 truncate">الموديتور</p>
+                    <p class="text-[10px] text-slate-500 uppercase tracking-tighter">Moderator Account</p>
+                </div>
+                <button onclick="logout()" class="text-slate-400 hover:text-red-500 transition">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 relative flex flex-col p-8 overflow-y-auto">
+        
+        <!-- Tab: Dashboard -->
+        <section id="tab-dashboard" class="tab-content block space-y-6">
+            <header class="flex justify-between items-center mb-4">
+                <div>
+                    <h2 class="text-2xl font-black text-slate-800">أهلاً بك، <span id="hello-name">موديتور</span> 👋</h2>
+                    <p class="text-slate-500 text-sm mt-1">إليك ملخص أدائك وتحليل الحجوزات اليوم.</p>
+                </div>
+                <div id="live-time" class="bg-white px-4 py-2 rounded-xl border border-slate-200 text-sm font-bold text-slate-600">--:--:--</div>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <!-- Stats Cards Placeholder -->
+                <div class="glass-panel p-6 border-r-4 border-teal-500">
+                    <p class="text-xs text-slate-500 font-bold mb-1">حجوزات اليوم</p>
+                    <h3 id="stat-count-today" class="text-3xl font-black text-slate-800">0</h3>
+                </div>
+                <div class="glass-panel p-6 border-r-4 border-blue-500">
+                    <p class="text-xs text-slate-500 font-bold mb-1">حجوزات VIP</p>
+                    <h3 id="stat-vip-today" class="text-3xl font-black text-slate-800">0</h3>
+                </div>
+                <div class="glass-panel p-6 border-r-4 border-orange-500">
+                    <p class="text-xs text-slate-500 font-bold mb-1">حجوزات Offer</p>
+                    <h3 id="stat-offer-today" class="text-3xl font-black text-slate-800">0</h3>
+                </div>
+                <div class="glass-panel p-6 border-r-4 border-indigo-500">
+                    <p class="text-xs text-slate-500 font-bold mb-1">عمولة مستحقة (تقديري)</p>
+                    <h3 id="stat-commission-today" class="text-3xl font-black text-indigo-700">0 EGP</h3>
+                </div>
+            </div>
+
+            <!-- Recent Activity Table Placeholder -->
+            <div class="glass-panel p-6 h-full min-h-[400px]">
+                <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <i class="fas fa-history text-teal-600"></i> أحدث حجوزاتك
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-50 text-slate-500 font-bold">
+                            <tr>
+                                <th class="p-3 text-right">العميل</th>
+                                <th class="p-3 text-right">المسار</th>
+                                <th class="p-3 text-center">النوع</th>
+                                <th class="p-3 text-center">التاريخ</th>
+                                <th class="p-3 text-center">السعر</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-trips-body">
+                            <!-- Rows via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab: Chat (Messenger/WhatsApp Unified) -->
+        <section id="tab-chat" class="tab-content hidden h-full flex gap-6">
+            <!-- Reuse Omnichannel Logic from admin-crm.html but adapted -->
+            <div class="w-80 flex flex-col h-full bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-4 border-b">
+                    <div class="relative">
+                        <input type="text" id="chat-search" oninput="filterChat()" placeholder="بحث في المراسلات..." class="input-std pl-10">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    </div>
+                </div>
+                <div id="chat-list" class="flex-1 overflow-y-auto p-2 space-y-2">
+                   <!-- Chat items via JS -->
+                </div>
+            </div>
+
+            <!-- Chat Window -->
+            <div class="flex-1 flex flex-col bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden relative">
+                <div id="no-chat" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 z-10">
+                    <div class="w-20 h-20 bg-slate-200 rounded-full flex items-center justify-center text-slate-400 text-3xl mb-4">
+                        <i class="fas fa-comment-dots"></i>
+                    </div>
+                    <p class="font-bold text-slate-500">اختر محادثة للبدء في الرد</p>
+                </div>
+
+                <!-- Chat Header -->
+                <div id="chat-header" class="p-4 border-b flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                         <div id="chat-avatar" class="w-10 h-10 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold">?</div>
+                         <div>
+                            <p id="chat-name" class="font-bold text-slate-800">اسم العميل</p>
+                            <p id="chat-status" class="text-[10px] text-teal-600 font-bold">متصل الآن</p>
+                         </div>
+                    </div>
+                </div>
+
+                <!-- Messages Area -->
+                <div id="chat-messages" class="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50">
+                    <!-- Messages via JS -->
+                </div>
+
+                <!-- Input Area -->
+                <form id="chat-form" onsubmit="handleSend(event)" class="p-4 border-t flex items-center gap-3 bg-white">
+                    <input type="text" id="chat-input" placeholder="اكتب ردك هنا..." class="input-std">
+                    <button type="submit" class="w-10 h-10 bg-teal-600 text-white rounded-xl shadow-lg shadow-teal-200 flex items-center justify-center hover:scale-110 transition">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Tab: Trips (Search & Create) -->
+        <section id="tab-trips" class="tab-content hidden h-full space-y-6">
+            <header class="flex justify-between items-center mb-4">
+                <div>
+                    <h2 class="text-2xl font-black text-slate-800">إدارة الرحلات</h2>
+                    <p class="text-slate-500 text-sm mt-1">ابحث عن رحلة موجودة أو أنشئ حجزاً جديداً.</p>
+                </div>
+                <button onclick="toggleTripForm()" class="bg-teal-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg shadow-teal-200 hover:scale-105 transition flex items-center gap-2">
+                    <i class="fas fa-plus"></i> حجز جديد
+                </button>
+            </header>
+
+            <!-- Search Area -->
+            <div class="glass-panel p-6 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="relative">
+                        <input type="text" id="trip-search-input" placeholder="رقم الهاتف أو اسم العميل..." class="input-std pr-10">
+                        <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    </div>
+                    <button onclick="searchTrips()" class="bg-slate-800 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-slate-900 transition">بحث سريع</button>
+                    <div id="search-results-count" class="flex items-center text-xs text-slate-400 font-bold px-4"></div>
+                </div>
+            </div>
+
+            <!-- Trip Form (Hidden by default) -->
+            <div id="trip-form-container" class="glass-panel p-8 mb-6 hidden border-t-4 border-teal-500 animate-in fade-in duration-300">
+                <h3 class="font-black text-slate-800 text-lg mb-6 flex justify-between">
+                    <span>بيانات الحجز الجديد</span>
+                    <button onclick="toggleTripForm()" class="text-slate-400 hover:text-red-500"><i class="fas fa-times"></i></button>
+                </h3>
+                <form id="new-trip-form" onsubmit="createNewTrip(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-2">اسم العميل</label>
+                        <input type="text" id="t-name" required class="input-std" placeholder="الاسم بالكامل">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-2">رقم الهاتف</label>
+                        <input type="text" id="t-phone" required class="input-std" placeholder="01xxxxxxxxx">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-2">نوع الرحلة</label>
+                        <select id="t-type" class="input-std">
+                            <option value="Offer">Offer (عرض)</option>
+                            <option value="VIP">VIP (خاص)</option>
+                            <option value="Normal">عادي</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-2">من (نقطة التحرك)</label>
+                        <input type="text" id="t-from" required class="input-std" placeholder="العنوان بالتفصيل">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-2">إلى (نقطة الوصول)</label>
+                        <input type="text" id="t-to" required class="input-std" placeholder="العنوان بالتفصيل">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-2">التاريخ</label>
+                        <input type="date" id="t-date" required class="input-std">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-2">الوقت</label>
+                        <input type="time" id="t-time" required class="input-std">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-2">السعر المتفق عليه</label>
+                        <input type="number" id="t-cost" required class="input-std" placeholder="0.00">
+                    </div>
+                    <div class="lg:col-span-3 flex justify-end">
+                        <button type="submit" id="t-submit" class="bg-teal-600 text-white px-10 py-3 rounded-xl font-bold shadow-lg shadow-teal-100 hover:scale-105 transition">تأكيد الحجز وحفظه</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Trips Table -->
+            <div class="glass-panel p-6 flex-1 overflow-hidden flex flex-col">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-50 text-slate-500 font-bold">
+                            <tr>
+                                <th class="p-4 text-right">العميل</th>
+                                <th class="p-4 text-right">المسار</th>
+                                <th class="p-4 text-center">التاريخ والوقت</th>
+                                <th class="p-4 text-center">النوع</th>
+                                <th class="p-4 text-center">الحالة</th>
+                                <th class="p-4 text-center">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trips-table-body">
+                            <!-- Data -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab: Performance (Commissions) -->
+        <section id="tab-performance" class="tab-content hidden h-full space-y-6">
+            <header class="mb-6">
+                <h2 class="text-2xl font-black text-slate-800">أدائي المالي</h2>
+                <p class="text-slate-500 text-sm mt-1">تتبع عمولاتك والراتب الشهري بناءً على الحجوزات.</p>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                 <div class="glass-panel p-8 bg-gradient-to-br from-indigo-600 to-indigo-800 text-white">
+                    <p class="text-indigo-100 text-xs font-bold mb-2 uppercase tracking-widest">إجمالي العمولة المستحقة</p>
+                    <h3 id="total-commission" class="text-4xl font-black mb-4">0 EGP</h3>
+                    <div class="h-2 w-full bg-indigo-900/30 rounded-full overflow-hidden">
+                        <div id="performance-bar" class="h-full bg-indigo-300 w-[65%]"></div>
+                    </div>
+                    <p class="text-[10px] text-indigo-200 mt-2 font-bold">وصلت إلى 65% من التارجت الشهري</p>
+                 </div>
+
+                 <div class="glass-panel p-8">
+                     <div class="flex justify-between items-center mb-6">
+                        <p class="text-slate-500 font-bold text-sm">توزيع الحجوزات</p>
+                        <i class="fas fa-chart-bar text-slate-300"></i>
+                     </div>
+                     <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-slate-700">VIP Trips</span>
+                            <span id="p-vip-count" class="text-teal-600 font-black">0</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-slate-700">Offer Trips</span>
+                            <span id="p-offer-count" class="text-orange-600 font-black">0</span>
+                        </div>
+                     </div>
+                 </div>
+
+                 <div class="glass-panel p-8 flex flex-col justify-center text-center">
+                    <p class="text-slate-400 text-xs font-bold mb-1">الراتب المتوقع صرفه</p>
+                    <h3 id="expected-salary" class="text-3xl font-black text-slate-800">0 EGP</h3>
+                    <p class="text-[10px] text-slate-500 mt-2 italic">يتم الصرف في أول كل شهر ميلادي</p>
+                 </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // --- Supabase Config ---
+        const SUPABASE_URL = 'https://wtjwzqvmwnbvjxnmweqq.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY';
+        const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let currentModName = localStorage.getItem('mod_name');
+        let currentModId = localStorage.getItem('mod_id');
+        let activeTab = "dashboard";
+
+        // --- Session check ---
+        if(!currentModId) {
+            window.location.href = 'moderator-login.html';
+        }
+
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+            
+            document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+            document.getElementById('btn-' + tabId).classList.add('active');
+            
+            activeTab = tabId;
+            if(tabId === 'performance') loadPerformance();
+            if(tabId === 'dashboard') loadSummary();
+            if(tabId === 'chat') loadChats();
+        }
+
+        // --- Core UI Logic ---
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('live-time').textContent = now.toLocaleTimeString('en-US', {hour12: false});
+        }, 1000);
+
+        async function loadSummary() {
+            document.getElementById('hello-name').textContent = currentModName;
+            document.getElementById('user-name').textContent = currentModName;
+            document.getElementById('user-avatar').textContent = currentModName.charAt(0);
+
+            // Fetch current moderator stats
+            const { data: res } = await sbClient.from('google_reservations')
+                .select('*')
+                .eq('booking_employee', currentModName);
+            
+            if(res) {
+                document.getElementById('stat-count-today').textContent = res.length;
+                const vips = res.filter(r => (r.trip_type || '').toLowerCase().includes('vip')).length;
+                const offers = res.filter(r => (r.trip_type || '').toLowerCase().includes('offer')).length;
+                document.getElementById('stat-vip-today').textContent = vips;
+                document.getElementById('stat-offer-today').textContent = offers;
+                
+                // Assume dummy commission logic until user provides real rates
+                const comm = (vips * 15) + (offers * 5); // Example
+                document.getElementById('stat-commission-today').textContent = comm + " EGP";
+
+                renderRecentTrips(res.slice(0, 10));
+            }
+        }
+
+        function renderRecentTrips(trips) {
+            const tbody = document.getElementById('recent-trips-body');
+            tbody.innerHTML = trips.map(t => `
+                <tr class="border-b hover:bg-slate-50 transition">
+                    <td class="p-4 font-bold text-slate-700">${t.customer_name || '---'}</td>
+                    <td class="p-4 text-xs text-slate-500">${t.pickup_address?.split(',')[0]} ➝ ${t.dropoff_address?.split(',')[0]}</td>
+                    <td class="p-4 text-center">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-black ${t.trip_type?.includes('VIP') ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}">${t.trip_type || 'نقل'}</span>
+                    </td>
+                    <td class="p-4 text-center text-xs text-slate-500">${t.trip_date || '--'}</td>
+                    <td class="p-4 text-center font-bold text-teal-600">${t.cost || 0}</td>
+                </tr>
+            `).join('');
+        }
+
+        // --- Omnichannel Chat Logic ---
+        let allMessages = [];
+        let groupedChats = {};
+        let activeChatId = null;
+
+        async function loadChats() {
+            const { data, error } = await sbClient.from('omnichannel_messages').select('*').order('created_at', { ascending: true });
+            if (data) {
+                allMessages = data;
+                regroupAndRender();
+            }
+            // Realtime
+            sbClient.channel('mod-chat').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'omnichannel_messages' }, payload => {
+                allMessages.push(payload.new);
+                regroupAndRender();
+                if(activeChatId === payload.new.sender_id) renderMessages();
+            }).subscribe();
+        }
+
+        function regroupAndRender() {
+            groupedChats = {};
+            allMessages.forEach(m => {
+                if(!groupedChats[m.sender_id]) {
+                    groupedChats[m.sender_id] = { id: m.sender_id, name: m.sender_name, channel: m.channel, messages: [], last: m };
+                }
+                groupedChats[m.sender_id].messages.push(m);
+                groupedChats[m.sender_id].last = m;
+                // Never take 'Admin' as group name
+                if(!m.is_from_admin) groupedChats[m.sender_id].name = m.sender_name;
+            });
+            renderChatList();
+        }
+
+        function renderChatList() {
+            const list = document.getElementById('chat-list');
+            const search = document.getElementById('chat-search').value.toLowerCase();
+            
+            const sorted = Object.values(groupedChats).sort((a,b) => new Date(b.last.created_at) - new Date(a.last.created_at));
+            
+            list.innerHTML = sorted.filter(c => c.name?.toLowerCase().includes(search) || c.id?.includes(search)).map(c => `
+                <div onclick="openChat('${c.id}')" class="p-3 rounded-2xl cursor-pointer flex items-center gap-3 transition ${activeChatId === c.id ? 'bg-teal-50 border border-teal-200 shadow-sm' : 'hover:bg-slate-50'}">
+                    <div class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-500">${c.name?.charAt(0) || '?'}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-baseline">
+                            <h4 class="text-sm font-bold truncate ${activeChatId === c.id ? 'text-teal-700' : 'text-slate-800'}">${c.name || c.id}</h4>
+                            <span class="text-[9px] text-slate-400">${new Date(c.last.created_at).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}</span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 truncate">${c.last.message_text}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openChat(id) {
+            activeChatId = id;
+            document.getElementById('no-chat').classList.add('hidden');
+            const chat = groupedChats[id];
+            document.getElementById('chat-name').textContent = chat.name || chat.id;
+            document.getElementById('chat-avatar').textContent = (chat.name || '?').charAt(0);
+            renderMessages();
+            renderChatList();
+        }
+
+        function renderMessages() {
+            const container = document.getElementById('chat-messages');
+            const chat = groupedChats[activeChatId];
+            container.innerHTML = chat.messages.map(m => `
+                <div class="flex ${m.is_from_admin ? 'justify-start' : 'justify-end'}">
+                    <div class="max-w-[75%] rounded-2xl px-4 py-2 text-sm ${m.is_from_admin ? 'bg-teal-600 text-white rounded-tl-none' : 'bg-white border text-slate-800 rounded-tr-none shadow-sm'}">
+                        <p class="whitespace-pre-wrap">${m.message_text}</p>
+                        <p class="text-[9px] mt-1 opacity-70 text-left">${new Date(m.created_at).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}</p>
+                    </div>
+                </div>
+            `).join('');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function handleSend(e) {
+            e.preventDefault();
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if(!text || !activeChatId) return;
+            
+            const chat = groupedChats[activeChatId];
+            input.value = '';
+
+            try {
+                const res = await fetch('http://localhost:3000/api/send_reply', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ channel: chat.channel, sender_id: activeChatId, message: text })
+                });
+            } catch(e) { console.error(e); }
+        }
+
+        // --- Trip Management Logic ---
+        function toggleTripForm() {
+            const container = document.getElementById('trip-form-container');
+            container.classList.toggle('hidden');
+        }
+
+        async function searchTrips() {
+            const query = document.getElementById('trip-search-input').value.trim();
+            if(!query) return;
+
+            const resultsCount = document.getElementById('search-results-count');
+            resultsCount.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري البحث...';
+
+            const { data, error } = await sbClient.from('google_reservations')
+                .select('*')
+                .or(`customer_name.ilike.%${query}%,customer_phone.ilike.%${query}%`)
+                .order('trip_date', { ascending: false })
+                .limit(50);
+            
+            if(data) {
+                resultsCount.textContent = `تم العثور على ${data.length} نتيجة`;
+                renderTripsTable(data);
+            } else {
+                resultsCount.textContent = 'لم يتم العثور على نتائج';
+            }
+        }
+
+        function renderTripsTable(trips) {
+            const tbody = document.getElementById('trips-table-body');
+            tbody.innerHTML = trips.map(t => `
+                <tr class="border-b hover:bg-slate-50 transition">
+                    <td class="p-4 font-bold text-slate-700">${t.customer_name || '---'}</td>
+                    <td class="p-4 text-xs text-slate-500">${t.pickup_address?.substring(0,25)}... ➝ ${t.dropoff_address?.substring(0,25)}...</td>
+                    <td class="p-4 text-center text-xs">
+                        <span class="font-bold">${t.trip_date || '--'}</span><br>
+                        <span class="opacity-50">${t.trip_time || '--'}</span>
+                    </td>
+                    <td class="p-4 text-center">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-black ${t.trip_type?.includes('VIP') ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}">${t.trip_type || 'نقل'}</span>
+                    </td>
+                    <td class="p-4 text-center">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] bg-slate-100 text-slate-600 font-bold">${t.status || 'معلق'}</span>
+                    </td>
+                    <td class="p-4 text-center">
+                        <button onclick="navigator.clipboard.writeText('${t.customer_phone}'); alert('تم نسخ الرقم')" class="text-teal-600 hover:text-teal-800"><i class="fas fa-phone"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function createNewTrip(e) {
+            e.preventDefault();
+            const btn = document.getElementById('t-submit');
+            btn.disabled = true;
+            btn.textContent = 'جاري الحفظ...';
+
+            const payload = {
+                customer_name: document.getElementById('t-name').value,
+                customer_phone: document.getElementById('t-phone').value,
+                trip_type: document.getElementById('t-type').value,
+                pickup_address: document.getElementById('t-from').value,
+                dropoff_address: document.getElementById('t-to').value,
+                trip_date: document.getElementById('t-date').value,
+                trip_time: document.getElementById('t-time').value,
+                cost: document.getElementById('t-cost').value,
+                booking_employee: currentModName,
+                status: 'pending'
+            };
+
+            const { data, error } = await sbClient.from('google_reservations').insert([payload]);
+            
+            if(!error) {
+                alert('✅ تم تسجيل الحجز بنجاح!');
+                document.getElementById('new-trip-form').reset();
+                toggleTripForm();
+                loadSummary(); // Refresh dashboard stats
+            } else {
+                alert('❌ خطأ في الحفظ: ' + error.message);
+            }
+            btn.disabled = false;
+            btn.textContent = 'تأكيد الحجز وحفظه';
+        }
+
+        async function loadPerformance() {
+            // ... (previous)
+            document.getElementById('expected-salary').textContent = "--- EGP";
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'moderator-login.html';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+             showTab('dashboard');
+        });
+    </script>
+</body>
+</html>
