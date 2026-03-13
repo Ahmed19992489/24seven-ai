@@ -2803,7 +2803,13 @@
 
             try {
                 // استدعاء الـ API الخلفي لإنشاء الحساب ( Flask server on port 3000 )
-                const apiUrl = window.location.protocol + "//" + window.location.hostname + ":3000/admin/create-staff";
+                let apiUrl;
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    apiUrl = `http://localhost:3000/admin/create-staff`;
+                } else {
+                    apiUrl = window.location.protocol + "//" + window.location.hostname + ":3000/admin/create-staff";
+                }
+                
                 const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
