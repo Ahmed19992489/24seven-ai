@@ -2185,18 +2185,14 @@
         };
     </script>
 
-</body>
-
 <!-- مودال تعيين كابتن للحجوزات -->
-<div id="res-assign-modal"
-    class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[9500] backdrop-blur-sm p-4">
+<div id="res-assign-modal" style="display:none"
+    class="fixed inset-0 bg-black/60 items-center justify-center z-[9500] backdrop-blur-sm p-4">
     <div class="bg-white p-6 rounded-2xl w-full max-w-[480px] shadow-2xl border-t-4 border-indigo-600">
         <h3 class="text-xl font-bold mb-4 text-indigo-700 border-b pb-3">
             <i class="fas fa-user-check ml-2"></i>تعيين كابتن للحجز
         </h3>
-        <!-- تفاصيل الحجز -->
         <div id="res-modal-info" class="mb-4"></div>
-        <!-- اختيار الكابتن والسيارة -->
         <div class="space-y-4">
             <div>
                 <label class="text-xs font-bold text-slate-500 block mb-1">اختر الكابتن</label>
@@ -2207,13 +2203,12 @@
                 <select id="res-modal-car" class="input-std bg-white"></select>
             </div>
         </div>
-        <!-- أزرار -->
         <div class="flex gap-3 pt-5 mt-4 border-t">
             <button id="res-assign-btn" onclick="confirmResAssign()"
                 class="flex-1 bg-indigo-600 text-white py-2.5 rounded-lg font-bold hover:bg-indigo-700">
                 <i class="fas fa-check ml-1"></i>تعيين الكابتن
             </button>
-            <button onclick="document.getElementById('res-assign-modal').classList.add('hidden'); document.getElementById('res-assign-modal').style.display=''"
+            <button onclick="closeResModal()"
                 class="flex-1 bg-slate-200 text-slate-700 py-2.5 rounded-lg font-bold hover:bg-slate-300">
                 إلغاء
             </button>
@@ -2221,5 +2216,119 @@
     </div>
 </div>
 
+<script>
+function closeResModal() {
+    document.getElementById('res-assign-modal').style.display = 'none';
+}
 
+function openAssignResByRow(sheetRow) {
+    const r = allReservations.find(x => x.sheet_row === sheetRow);
+    if (r) openAssignResModal(r);
+    else alert('لم يتم العثور على الحجز');
+}
+
+async function openAssignResModal(reservation) {
+    currentResRow = reservation;
+    const driverSel = document.getElementById('res-modal-driver');
+    const carSel = document.getElementById('res-modal-car');
+    driverSel.innerHTML = '<option value="">جاري التحميل...</option>';
+    carSel.innerHTML = '<option value="">جاري التحميل...</option>';
+
+    document.getElementById('res-assign-modal').style.display = 'flex';
+
+    const [{ data: drivers }, { data: cars }] = await Promise.all([
+        sbClient.from('drivers').select('id,name,phone').order('name'),
+        sbClient.from('cars').select('id,brand,plate_number').order('brand')
+    ]);
+
+    driverSel.innerHTML = '<option value="">اختر كابتن</option>' +
+        (drivers || []).map(d => `<option value="${d.id}" data-name="${d.name || ''}" data-phone="${d.phone || ''}">${d.name} - ${d.phone || ''}</option>`).join('');
+
+    carSel.innerHTML = '<option value="">اختر سيارة</option>' +
+        (cars || []).map(c => `<option value="${c.id}">${c.brand} - ${c.plate_number}</option>`).join('');
+
+    document.getElementById('res-modal-info').innerHTML = `
+        <div class="bg-indigo-50 rounded-lg p-3 text-sm space-y-1">
+            <p><b>العميل:</b> ${reservation.customer_name || '--'} | ${reservation.customer_phone || '--'}</p>
+            <p><b>من:</b> ${reservation.pickup_address || '--'}</p>
+            <p><b>إلى:</b> ${reservation.dropoff_address || '--'}</p>
+            <p><b>التاريخ:</b> ${reservation.trip_date || '--'} الساعة ${reservation.trip_time || '--'}</p>
+            <p><b>السعر:</b> ${Number(reservation.cost || 0).toLocaleString()} EGP</p>
+        </div>`;
+}
+
+async function confirmResAssign() {
+    const driverSel = document.getElementById('res-modal-driver');
+    const carSel = document.getElementById('res-modal-car');
+    const driverId = driverSel.value;
+    const carId = carSel.value;
+    if (!driverId || !carId) { alert('يرجى اختيار الكابتن والسيارة'); return; }
+
+    const driverOpt = driverSel.options[driverSel.selectedIndex];
+    const driverName = driverOpt.dataset.name || driverOpt.text.split(' - ')[0];
+    const driverPhone = driverOpt.dataset.phone || '';
+    const r = currentResRow;
+
+    const btn = document.getElementById('res-assign-btn');
+    btn.disabled = true; btn.textContent = 'جاري التعيين...';
+
+    try {
+        // 1. إيجاد/إنشاء حساب العميل في Supabase
+        const rawPhone = (r.customer_phone || '').replace(/\D/g, '');
+        const fakeEmail = rawPhone + '@24seven-client.app';
+        let clientUserId = null;
+        const { data: existingProfile } = await sbClient.from('profiles').select('id').eq('phone', rawPhone).maybeSingle();
+        if (existingProfile) {
+            clientUserId = existingProfile.id;
+        } else {
+            const { data: signUpData } = await sbClient.auth.signUp({ email: fakeEmail, password: rawPhone.slice(-6) || '123456' });
+            if (signUpData?.user) {
+                clientUserId = signUpData.user.id;
+                await sbClient.from('profiles').upsert({ id: clientUserId, full_name: r.customer_name, phone: rawPhone, wallet_balance: 0 });
+            }
+        }
+
+        // 2. إنشاء رحلة في Supabase trips
+        const { data: newTrip, error: tripErr } = await sbClient.from('trips').insert([{
+            user_id: clientUserId,
+            driver_id: driverId,
+            car_id: carId,
+            pickup_location: r.pickup_address || '',
+            dropoff_location: r.dropoff_address || '',
+            estimated_price: Number(r.cost) || 0,
+            status: 'driver_assigned',
+            admin_notes: `حجز شيت صف ${r.sheet_row}\nالعميل: ${r.customer_name}\nالسائق: ${driverName} (${driverPhone})`
+        }]).select().single();
+        if (tripErr) throw new Error('خطأ إنشاء الرحلة: ' + tripErr.message);
+
+        // 3. إرسال رسالة للكابتن
+        const { data: carInfo } = await sbClient.from('cars').select('brand,model,plate_number').eq('id', carId).single();
+        await sbClient.from('chat_messages').insert([{
+            trip_id: newTrip.id,
+            sender_role: 'admin',
+            sender_id: 'admin',
+            sender_name: 'الإدارة',
+            message: `🎯 مرحباً كابتن ${driverName}!\n\nتم تعيينك على رحلة جديدة:\n📍 من: ${r.pickup_address || ''}\n🏁 إلى: ${r.dropoff_address || ''}\n💰 قيمة الرحلة: ${Number(r.cost || 0).toLocaleString()} EGP\n🚗 السيارة: ${carInfo?.brand || ''} ${carInfo?.model || ''} (${carInfo?.plate_number || ''})\n\n✅ تواصل مع العميل من خلال الدردشة فقط`,
+            message_type: 'system'
+        }]);
+
+        // 4. تحديث google_reservations
+        await sbClient.from('google_reservations').update({
+            status: 'تم تعيين كابتن',
+            sql_server_id: String(newTrip.id)
+        }).eq('sheet_row', r.sheet_row);
+
+        closeResModal();
+        alert(`✅ تم تعيين كابتن ${driverName} بنجاح!\nتم إرسال إشعار للكابتن`);
+        await loadReservationsPage();
+
+    } catch(e) {
+        alert('❌ خطأ: ' + e.message);
+    } finally {
+        btn.disabled = false; btn.textContent = 'تعيين الكابتن';
+    }
+}
+</script>
+
+</body>
 </html>
