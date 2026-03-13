@@ -154,6 +154,11 @@
                 class="sidebar-item p-3 rounded-lg flex items-center gap-3">
                 <i class="fas fa-satellite-dish w-5 text-center text-amber-600"></i> غرفة العمليات
             </div>
+            <div onclick="showPage('reservations')" id="nav-reservations"
+                class="sidebar-item p-3 rounded-lg flex items-center gap-3">
+                <i class="fas fa-clipboard-list w-5 text-center text-indigo-600"></i> أوامر الحجز
+                <span id="res-badge" class="hidden mr-auto bg-indigo-500 text-white text-xs rounded-full px-2 py-0.5"></span>
+            </div>
             <div onclick="showPage('crm')" id="nav-crm" class="sidebar-item p-3 rounded-lg flex items-center gap-3">
                 <i class="fas fa-users w-5 text-center text-purple-600"></i> العملاء (CRM)
             </div>
@@ -1971,6 +1976,148 @@
             }).catch(e => console.log('Sheet error:', e));
         }
 
+    </script>
+
+    <script>
+        // ==========================================
+        // أوامر الحجز - تحميل من Supabase
+        // ==========================================
+        let allReservations = [];
+        let resRefreshTimer = null;
+
+        async function loadReservationsPage() {
+            const tbody = document.getElementById('res-table-body');
+            const countEl = document.getElementById('res-count');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center p-8 text-slate-400"><i class="fas fa-spinner fa-spin text-2xl"></i></td></tr>';
+
+            const { data, error } = await sbClient
+                .from('google_reservations')
+                .select('*')
+                .order('trip_date', { ascending: false })
+                .order('sheet_row', { ascending: false })
+                .limit(2000);
+
+            if (error) {
+                tbody.innerHTML = `<tr><td colspan="10" class="text-center p-6 text-red-500">خطأ: ${error.message}</td></tr>`;
+                return;
+            }
+
+            allReservations = data || [];
+
+            // إحصائيات
+            const total = allReservations.length;
+            const transferred = allReservations.filter(r => r.status === 'تم الترحيل').length;
+            const pending = allReservations.filter(r => !r.status || r.status === 'pending' || r.status === 'تم الارسال').length;
+            const errors = allReservations.filter(r => r.status && r.status.includes('خطأ')).length;
+            const totalRevenue = allReservations.filter(r => r.status === 'تم الترحيل').reduce((s, r) => s + (Number(r.cost) || 0), 0);
+
+            document.getElementById('res-stats').innerHTML = `
+                <div class="glass-panel p-4 border-r-4 border-indigo-500">
+                    <p class="text-xs text-slate-500">إجمالي الحجوزات</p>
+                    <h3 class="text-2xl font-black text-indigo-700">${total.toLocaleString()}</h3>
+                </div>
+                <div class="glass-panel p-4 border-r-4 border-green-500">
+                    <p class="text-xs text-slate-500">تم الترحيل ✅</p>
+                    <h3 class="text-2xl font-black text-green-700">${transferred.toLocaleString()}</h3>
+                </div>
+                <div class="glass-panel p-4 border-r-4 border-amber-500">
+                    <p class="text-xs text-slate-500">في الانتظار ⏳</p>
+                    <h3 class="text-2xl font-black text-amber-700">${pending.toLocaleString()}</h3>
+                </div>
+                <div class="glass-panel p-4 border-r-4 border-blue-500">
+                    <p class="text-xs text-slate-500">إيرادات (تم الترحيل)</p>
+                    <h3 class="text-2xl font-black text-blue-700">${totalRevenue.toLocaleString()} EGP</h3>
+                </div>`;
+
+            // Badge في القائمة الجانبية
+            const badge = document.getElementById('res-badge');
+            if (badge && pending > 0) {
+                badge.textContent = pending;
+                badge.classList.remove('hidden');
+            }
+
+            filterReservations();
+
+            // تحديث تلقائي كل 30 ثانية
+            if (resRefreshTimer) clearTimeout(resRefreshTimer);
+            resRefreshTimer = setTimeout(loadReservationsPage, 30000);
+        }
+
+        function filterReservations() {
+            const search = (document.getElementById('res-search')?.value || '').toLowerCase();
+            const statusFilter = document.getElementById('res-status-filter')?.value || '';
+            const dateFrom = document.getElementById('res-date-from')?.value || '';
+            const dateTo = document.getElementById('res-date-to')?.value || '';
+            const tbody = document.getElementById('res-table-body');
+            const countEl = document.getElementById('res-count');
+            if (!tbody) return;
+
+            let filtered = allReservations.filter(r => {
+                const matchSearch = !search ||
+                    (r.customer_name || '').toLowerCase().includes(search) ||
+                    (r.customer_phone || '').includes(search) ||
+                    (r.pickup_address || '').toLowerCase().includes(search) ||
+                    (r.dropoff_address || '').toLowerCase().includes(search);
+
+                const matchStatus = !statusFilter || (r.status || 'pending') === statusFilter ||
+                    (statusFilter === 'pending' && (!r.status || r.status === 'pending' || r.status === 'تم الارسال'));
+
+                const matchFrom = !dateFrom || (r.trip_date && r.trip_date >= dateFrom);
+                const matchTo = !dateTo || (r.trip_date && r.trip_date <= dateTo);
+
+                return matchSearch && matchStatus && matchFrom && matchTo;
+            });
+
+            countEl.textContent = `عرض ${filtered.length.toLocaleString()} من ${allReservations.length.toLocaleString()} حجز`;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center p-8 text-slate-400">لا توجد نتائج</td></tr>';
+                return;
+            }
+
+            const statusColors = {
+                'تم الترحيل': 'bg-green-100 text-green-700',
+                'pending': 'bg-amber-100 text-amber-700',
+                'تم الارسال': 'bg-blue-100 text-blue-700',
+                'تم الارسال': 'bg-blue-100 text-blue-700',
+                'بيانات ناقصة': 'bg-gray-100 text-gray-600',
+                'خطأ في الإدراج': 'bg-red-100 text-red-700',
+                'إعادة ترحيل': 'bg-purple-100 text-purple-700',
+            };
+
+            tbody.innerHTML = filtered.slice(0, 500).map((r, idx) => {
+                const st = r.status || 'pending';
+                const stClass = statusColors[st] || 'bg-gray-100 text-gray-600';
+                const pickup = (r.pickup_address || '').substring(0, 30) + ((r.pickup_address || '').length > 30 ? '...' : '');
+                const dropoff = (r.dropoff_address || '').substring(0, 30) + ((r.dropoff_address || '').length > 30 ? '...' : '');
+                return `<tr class="border-b hover:bg-slate-50 ${idx % 2 === 0 ? '' : 'bg-slate-50/50'}">
+                    <td class="p-3 text-slate-400 text-xs">${r.sheet_row || ''}</td>
+                    <td class="p-3 font-bold text-xs">${r.trip_date || '--'}<br><span class="text-slate-400">${r.trip_time || ''}</span></td>
+                    <td class="p-3 font-bold">${r.customer_name || '--'}</td>
+                    <td class="p-3 text-xs text-slate-600" dir="ltr">${r.customer_phone || '--'}</td>
+                    <td class="p-3 text-xs text-slate-600" title="${r.pickup_address || ''}">${pickup || '--'}</td>
+                    <td class="p-3 text-xs text-slate-600" title="${r.dropoff_address || ''}">${dropoff || '--'}</td>
+                    <td class="p-3 text-xs">${r.car_type || '--'}</td>
+                    <td class="p-3 font-bold text-green-700">${r.cost ? Number(r.cost).toLocaleString() + ' EGP' : '--'}</td>
+                    <td class="p-3 text-xs">${r.booking_employee || '--'}</td>
+                    <td class="p-3"><span class="px-2 py-1 rounded-full text-xs font-bold ${stClass}">${st}</span></td>
+                </tr>`;
+            }).join('');
+
+            if (filtered.length > 500) {
+                tbody.innerHTML += `<tr><td colspan="10" class="text-center p-3 text-slate-400 text-sm">... و ${(filtered.length - 500).toLocaleString()} حجز آخر (استخدم الفلاتر لتضييق النتائج)</td></tr>`;
+            }
+        }
+
+        // ربط showPage بصفحة الحجوزات
+        const _origShowPage = showPage;
+        showPage = function(page) {
+            _origShowPage(page);
+            if (page === 'reservations') {
+                loadReservationsPage();
+            }
+        };
     </script>
 
 </body>
