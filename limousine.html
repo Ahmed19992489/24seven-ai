@@ -1836,7 +1836,11 @@
 
                 if (signUpError) {
                     btn.disabled = false; btn.innerHTML = '<i class="fas fa-mobile-alt ml-2"></i> دخول برقم الهاتف';
-                    alert('⚠️ خطأ: رقم الهاتف غير مسجل في سيستمنا.\nتواصل مع فريقنا للتسجيل.');
+                    if (signUpError.message && signUpError.message.toLowerCase().includes('rate limit')) {
+                        alert('⚠️ عدد محاولات الدخول تجاوز الحد المسموح به مؤقتاً.\nيرجى الانتظار 15 دقيقة ثم المحاولة مرة أخرى.');
+                    } else {
+                        alert('⚠️ خطأ: تأكد من إدخال رقم هاتف صحيح تم استخدامه للحجز من قبل.\nإذا استمرت المشكلة تواصل مع الدعم.');
+                    }
                     return;
                 }
 
