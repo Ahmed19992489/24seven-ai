@@ -162,3 +162,69 @@ def delete_coupon(code: str, db: Session = Depends(get_db)):
         db.delete(coupon)
         db.commit()
     return {"status": "deleted"}
+
+# ---------------------------------------------------------
+# 🛡️ إدارة الموظفين (Staff Management)
+# ---------------------------------------------------------
+
+@router.get("/staff")
+def get_staff_list():
+    """تجاوز السيرفر المحلي لجلب الموظفين مباشرة من سوبابيز (سيتم استخدامه في الفرونت إند غالباً)"""
+    # ملاحظة: الفرونت إند حالياً يقوم بجلب البيانات مباشرة، 
+    # ولكن يمكننا مستقبلاً إضافة عمليات فلترة متقدمة هنا.
+    return {"status": "ok", "note": "Use Frontend Supabase Client for direct fetch"}
+
+@router.post("/create-staff")
+def create_staff_account(data: dict):
+    """
+    إنشاء حساب موظف جديد في Supabase Auth وإدراج سجل في profiles.
+    يتطلب وجود SUPABASE_SERVICE_ROLE_KEY في البيئة البرمجية.
+    """
+    import requests
+    import os
+
+    email = data.get("email")
+    password = data.get("password")
+    full_name = data.get("full_name")
+    role = data.get("role", "moderator")
+
+    url = os.getenv("SUPABASE_URL", "https://wtjwzqvmwnbvjxnmweqq.supabase.co")
+    service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+
+    if not service_key:
+        # إذا لم نجد المفتاح، نرسل تحذير
+        raise HTTPException(status_code=500, detail="SUPABASE_SERVICE_ROLE_KEY is missing in server environment")
+
+    headers = {
+        "apikey": service_key,
+        "Authorization": f"Bearer {service_key}",
+        "Content-Type": "application/json"
+    }
+
+    # 1. إنشاء المستخدم في Auth
+    auth_url = f"{url}/auth/v1/admin/users"
+    auth_data = {
+        "email": email,
+        "password": password,
+        "email_confirm": True,
+        "user_metadata": {"full_name": full_name, "role": role}
+    }
+
+    r_auth = requests.post(auth_url, headers=headers, json=auth_data)
+    if r_auth.status_code not in [200, 201]:
+        raise HTTPException(status_code=r_auth.status_code, detail=f"Auth Error: {r_auth.text}")
+
+    user_info = r_auth.json()
+    user_id = user_info.get("id")
+
+    # 2. إدراج في جدول profiles
+    profile_url = f"{url}/rest/v1/profiles"
+    profile_data = {
+        "id": user_id,
+        "full_name": full_name,
+        "role": role,
+        "email": email
+    }
+    r_prof = requests.post(profile_url, headers=headers, json=profile_data)
+    
+    return {"status": "success", "user_id": user_id}

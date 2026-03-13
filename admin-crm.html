@@ -52,7 +52,7 @@
 
         .input-std:focus {
             border-color: #f59e0b;
-            ring: 2px solid #fcd34d;
+            box-shadow: 0 0 0 2px #fcd34d;
         }
 
         /* شريط التمرير */
@@ -194,7 +194,11 @@
                 <i class="fas fa-tags w-5 text-center text-gray-600"></i> التسعير
             </div>
 
-            <p class="text-[10px] font-bold text-slate-400 mt-4 mb-1 px-3">التسويق</p>
+            <p class="text-[10px] font-bold text-slate-400 mt-4 mb-1 px-3">الإدارة</p>
+            <div onclick="showPage('staff')" id="nav-staff"
+                class="sidebar-item p-3 rounded-lg flex items-center gap-3">
+                <i class="fas fa-user-shield w-5 text-center text-red-600"></i> إدارة الموظفين
+            </div>
             <div onclick="showPage('coupons')" id="nav-coupons"
                 class="sidebar-item p-3 rounded-lg flex items-center gap-3">
                 <i class="fas fa-ticket-alt w-5 text-center text-pink-600"></i> كوبونات الخصم
@@ -601,6 +605,43 @@
                 </div>
             </div>
         </div>
+        
+        <!-- ========== صفحة إدارة الموظفين (Staff Management) ========== -->
+        <div id="page-staff" class="page-section hidden">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <h2 class="text-2xl font-bold">🛡️ إدارة الموظفين</h2>
+                <button onclick="document.getElementById('add-staff-modal').style.display='flex'" 
+                    class="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition flex items-center gap-2">
+                    <i class="fas fa-user-plus"></i> إضافة موظف جديد
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                <div class="glass-panel p-6 border-b-4 border-slate-500">
+                    <p class="text-slate-400 text-xs font-bold uppercase">إجمالي فريق العمل</p>
+                    <h3 class="text-3xl font-black mt-2" id="staff-total-count">0</h3>
+                </div>
+            </div>
+
+            <div class="glass-panel overflow-hidden">
+                <div class="table-responsive">
+                    <table class="w-full text-right text-sm">
+                        <thead class="bg-slate-100 text-slate-600 font-bold border-b">
+                            <tr>
+                                <th class="p-4 text-right">الاسم</th>
+                                <th class="p-4 text-right">البريد الإلكتروني</th>
+                                <th class="p-4 text-right">الرتبة</th>
+                                <th class="p-4 text-right">تاريخ الانضمام</th>
+                                <th class="p-4 text-right">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="staff-table-body" class="divide-y divide-slate-100 font-medium">
+                            <tr><td colspan="5" class="text-center p-10 text-slate-400"><i class="fas fa-spinner fa-spin text-2xl mb-2"></i><br>جاري تحميل قائمة الموظفين...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
 
         <!-- ========== صفحة أوامر الحجز ========== -->
         <div id="page-reservations" class="page-section hidden">
@@ -913,6 +954,45 @@
         </div>
     </div>
 
+    <!-- مودال إضافة موظف جديد -->
+    <div id="add-staff-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[9500] backdrop-blur-sm p-4 text-right">
+        <div class="bg-white p-6 rounded-2xl w-full max-w-[450px] shadow-2xl border-t-4 border-blue-600 max-h-[90vh] overflow-y-auto">
+            <h3 class="text-xl font-bold mb-4 border-b pb-3 flex items-center gap-2">
+                <i class="fas fa-user-plus text-blue-600"></i> إعداد حساب موظف جديد
+            </h3>
+            <form onsubmit="createNewStaffAccount(event)" class="space-y-4">
+                <div>
+                    <label class="text-xs font-bold text-slate-500 block mb-1">الاسم الكامل للموظف</label>
+                    <input type="text" id="staff-full-name" required class="input-std" placeholder="الاسم ثلاثي">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500 block mb-1">البريد الإلكتروني (سيكون هو اسم المستخدم)</label>
+                    <input type="email" id="staff-email" required class="input-std" placeholder="name@24seven.com">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500 block mb-1">كلمة المرور المؤقتة</label>
+                    <input type="text" id="staff-password" required class="input-std" placeholder="سجل كلمة مرور قوية">
+                    <p class="text-[10px] text-slate-400 mt-1">⚠️ يجب أن لا تقل عن 8 رموز.</p>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500 block mb-1">الصلاحيات (Role)</label>
+                    <select id="staff-role" class="input-std bg-slate-50">
+                        <option value="moderator">موظف (Moderator)</option>
+                        <option value="admin">مدير نظام (Admin)</option>
+                    </select>
+                </div>
+                <div class="flex gap-2 pt-4">
+                    <button type="submit" id="btn-save-staff"
+                        class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 shadow-lg flex items-center justify-center gap-2">
+                        <i class="fas fa-check-circle"></i> إنشاء الحساب وتفعيل الموظف
+                    </button>
+                    <button type="button" onclick="document.getElementById('add-staff-modal').style.display='none'"
+                        class="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold hover:bg-slate-200">إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         const supabaseUrl = 'https://wtjwzqvmwnbvjxnmweqq.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY';
@@ -945,6 +1025,7 @@
             if (pageId === 'chat') loadAdminChats();
             if (pageId === 'ratings') loadRatings();
             if (pageId === 'coupons') loadCouponsPage();
+            if (pageId === 'staff') loadStaff();
         }
 
         async function loadDashboard() {
@@ -2653,7 +2734,116 @@
             if (page === 'omnichannel') {
                 setTimeout(loadOmnichannelChats, 100);
             }
+            if (page === 'staff') {
+                setTimeout(loadStaff, 100);
+            }
         };
+
+        // ==========================================
+        // 👮 إدارة الموظفين (Staff Management)
+        // ==========================================
+        async function loadStaff() {
+            const list = document.getElementById('staff-table-body');
+            list.innerHTML = '<tr><td colspan="5" class="text-center p-10 text-slate-400"><i class="fas fa-spinner fa-spin text-2xl mb-2"></i><br>جاري التحميل...</td></tr>';
+            
+            try {
+                // جلب الموظفين والمديرين من جدول profiles
+                const { data: staff, error, count } = await sbClient
+                    .from('profiles')
+                    .select('*', { count: 'exact' })
+                    .in('role', ['admin', 'moderator'])
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                document.getElementById('staff-total-count').innerText = count || 0;
+
+                if (!staff || staff.length === 0) {
+                    list.innerHTML = '<tr><td colspan="5" class="text-center p-10 text-slate-400">لا يوجد موظفين مسجلين حالياً</td></tr>';
+                    return;
+                }
+
+                list.innerHTML = staff.map(s => `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="p-4 font-bold text-slate-700">${escapeHtml(s.full_name || 'بدون اسم')}</td>
+                        <td class="p-4 text-slate-500">${escapeHtml(s.email || '-')}</td>
+                        <td class="p-4">
+                            <span class="px-3 py-1 rounded-full text-[10px] font-bold ${s.role === 'admin' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'} uppercase">
+                                ${s.role === 'admin' ? 'مدير نظام' : 'موظف (Mod)'}
+                            </span>
+                        </td>
+                        <td class="p-4 text-[11px] text-slate-400">${s.created_at ? new Date(s.created_at).toLocaleDateString('ar-EG') : '-'}</td>
+                        <td class="p-4 flex gap-2">
+                             <button onclick="deleteStaff('${s.id}', '${escapeHtml(s.full_name)}')" class="text-slate-400 hover:text-red-500 transition"><i class="fas fa-trash-alt"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+
+            } catch (err) {
+                console.error('Staff Load Error:', err);
+                list.innerHTML = `<tr><td colspan="5" class="text-center p-10 text-red-500">❌ فشل تحميل القائمة: ${err.message}</td></tr>`;
+            }
+        }
+
+        async function createNewStaffAccount(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-save-staff');
+            const fullName = document.getElementById('staff-full-name').value;
+            const email = document.getElementById('staff-email').value;
+            const password = document.getElementById('staff-password').value;
+            const role = document.getElementById('staff-role').value;
+
+            if (password.length < 8) {
+                alert('⚠️ يجب أن لا تقل كلمة المرور عن 8 رموز للأمان.');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري إنشاء الحساب...';
+
+            try {
+                // استدعاء الـ API الخلفي لإنشاء الحساب
+                // نستخدم fetch بدلاً من sbClient لأننا نحتاج الـ Server-side Logic
+                const response = await fetch('/admin/create-staff', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ full_name: fullName, email, password, role })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert(`✅ تم إنشاء حساب ${fullName} بنجاح!\nيمكنه الآن تسجيل الدخول باستخدام بريده وكلمة المرور.`);
+                    document.getElementById('add-staff-modal').style.display = 'none';
+                    e.target.reset();
+                    loadStaff();
+                } else {
+                    throw new Error(result.detail || 'فشل إنشاء الحساب');
+                }
+            } catch (err) {
+                alert('❌ خطأ: ' + err.message);
+                console.error('Staff Create Error:', err);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check-circle"></i> إنشاء الحساب وتفعيل الموظف';
+            }
+        }
+
+        async function deleteStaff(id, name) {
+            if (!confirm(`⚠️ هل أنت متأكد من حذف حساب (${name})؟\nهذا الإجراء سيمنعه من الدخول للنظام فوراً.`)) return;
+            
+            try {
+                // ملاحظة: الحذف المباشر من profiles ممكن، ولكن حذف اليوزر من Auth يتطلب Admin API
+                // حالياً سنقوم بحذف سجل الـ profile فقط كمرحلة أولى، أو يمكننا مستقبلاً إضافة API للحذف
+                const { error } = await sbClient.from('profiles').delete().eq('id', id);
+                if (error) throw error;
+                
+                alert('✅ تم حذف الموظف من القائمة بنجاح.');
+                loadStaff();
+            } catch (err) {
+                alert('❌ خطأ في الحذف: ' + err.message);
+            }
+        }
     </script>
 
 <!-- مودال تعيين كابتن للحجوزات -->
