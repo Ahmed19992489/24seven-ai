@@ -2802,9 +2802,9 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري إنشاء الحساب...';
 
             try {
-                // استدعاء الـ API الخلفي لإنشاء الحساب
-                // نستخدم fetch بدلاً من sbClient لأننا نحتاج الـ Server-side Logic
-                const response = await fetch('/admin/create-staff', {
+                // استدعاء الـ API الخلفي لإنشاء الحساب ( Flask server on port 3000 )
+                const apiUrl = window.location.protocol + "//" + window.location.hostname + ":3000/admin/create-staff";
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ full_name: fullName, email, password, role })
