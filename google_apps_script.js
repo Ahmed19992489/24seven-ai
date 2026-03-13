@@ -8,7 +8,13 @@ const SHEET_TAB = 'امر حجز عميل';
 function doPost(e) {
     try {
         const data = JSON.parse(e.postData.contents);
-        appendBookingToSheet(data);
+        
+        if (data.action === 'assignDriver') {
+            updateDriverInSheet(data);
+        } else {
+            appendBookingToSheet(data);
+        }
+        
         return ContentService
             .createTextOutput(JSON.stringify({ success: true }))
             .setMimeType(ContentService.MimeType.JSON);
@@ -89,4 +95,20 @@ function appendBookingToSheet(data) {
     sheet.getRange(newRow, 6).setValue(whats);
 
     Logger.log('✅ ' + data.clientName + ' | ' + formattedDate + ' ' + formattedTime + ' | ' + phone);
+}
+
+
+function updateDriverInSheet(data) {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const sheet = ss.getSheetByName(SHEET_TAB);
+    if (!sheet) throw new Error('الشيت غير موجود');
+
+    const rowNum = parseInt(data.sheetRow);
+    if (!rowNum || rowNum < 2) throw new Error('رقم الصف غير صحيح: ' + data.sheetRow);
+
+    sheet.getRange(rowNum, 22).setValue(data.driverName || '');
+    sheet.getRange(rowNum, 23).setNumberFormat('@');
+    sheet.getRange(rowNum, 23).setValue(data.driverPhone || '');
+
+    Logger.log('✅ تعيين السائق: ' + data.driverName + ' في صف ' + rowNum);
 }
