@@ -560,23 +560,49 @@
             <!-- جدول -->
             <div class="glass-panel overflow-x-auto">
                 <div class="p-3 bg-slate-50 border-b text-sm text-slate-500" id="res-count">جاري التحميل...</div>
-                <table class="w-full text-sm">
+                <table class="w-full text-sm whitespace-nowrap">
                     <thead class="bg-indigo-50 text-indigo-800">
                         <tr>
                             <th class="p-3 text-right font-bold">#صف</th>
-                            <th class="p-3 text-right font-bold">التاريخ</th>
+                            <th class="p-3 text-right font-bold">طابع زمني</th>
+                            <th class="p-3 text-right font-bold">التاريخ/الوقت</th>
                             <th class="p-3 text-right font-bold">العميل</th>
                             <th class="p-3 text-right font-bold">الهاتف</th>
+                            <th class="p-3 text-right font-bold">واتساب</th>
                             <th class="p-3 text-right font-bold">من</th>
                             <th class="p-3 text-right font-bold">إلى</th>
-                            <th class="p-3 text-right font-bold">سيارة</th>
-                            <th class="p-3 text-right font-bold">سعر</th>
-                            <th class="p-3 text-right font-bold">موظف</th>
-                            <th class="p-3 text-right font-bold">الحالة</th>
+                            <th class="p-3 text-right font-bold">الأفراد</th>
+                            <th class="p-3 text-right font-bold">الحقائب</th>
+                            <th class="p-3 text-right font-bold">السيارة</th>
+                            <th class="p-3 text-right font-bold">حالة العميل</th>
+                            <th class="p-3 text-right font-bold">السعر</th>
+                            <th class="p-3 text-right font-bold">بريد إلكتروني</th>
+                            <th class="p-3 text-right font-bold">ملاحظات</th>
+                            <th class="p-3 text-right font-bold">نوع الرحلة</th>
+                            <th class="p-3 text-right font-bold">العمولة</th>
+                            <th class="p-3 text-right font-bold">الموظف</th>
+                            <th class="p-3 text-right font-bold">صورة التذكرة</th>
+                            <th class="p-3 text-right font-bold">حالة الترحيل</th>
+                            <th class="p-3 text-right font-bold">SQL ID</th>
+                            <th class="p-3 text-right font-bold">الكابتن</th>
+                            <th class="p-3 text-right font-bold">هاتف الكابتن</th>
+                            <th class="p-3 text-right font-bold">Col_24</th>
+                            <th class="p-3 text-right font-bold">رسالة كابتن</th>
+                            <th class="p-3 text-right font-bold">رسالة تقييم</th>
+                            <th class="p-3 text-right font-bold">رسالة تأكيد</th>
+                            <th class="p-3 text-right font-bold">قرار العميل</th>
+                            <th class="p-3 text-right font-bold">لوكيشن</th>
+                            <th class="p-3 text-right font-bold">نجوم</th>
+                            <th class="p-3 text-right font-bold">نظافة</th>
+                            <th class="p-3 text-right font-bold">سلوك</th>
+                            <th class="p-3 text-right font-bold">ترشيح</th>
+                            <th class="p-3 text-right font-bold">اقتراحات</th>
+                            <th class="p-3 text-right font-bold">حالة الرحلة</th>
+                            <th class="p-3 text-right font-bold sticky right-0 bg-indigo-50 shadow-md">إجراءات</th>
                         </tr>
                     </thead>
                     <tbody id="res-table-body">
-                        <tr><td colspan="10" class="text-center p-8 text-slate-400"><i class="fas fa-spinner fa-spin text-2xl"></i></td></tr>
+                        <tr><td colspan="36" class="text-center p-8 text-slate-400"><i class="fas fa-spinner fa-spin text-2xl"></i></td></tr>
                     </tbody>
                 </table>
             </div>
@@ -2152,18 +2178,43 @@
                 const dropoff = (r.dropoff_address || '').substring(0, 30) + ((r.dropoff_address || '').length > 30 ? '...' : '');
                 return `<tr class="border-b hover:bg-slate-50 ${idx % 2 === 0 ? '' : 'bg-slate-50/50'}">
                     <td class="p-3 text-slate-400 text-xs">${r.sheet_row || ''}</td>
+                    <td class="p-3 text-xs text-slate-500">${r.sheet_timestamp || '--'}</td>
                     <td class="p-3 font-bold text-xs">${r.trip_date || '--'}<br><span class="text-slate-400">${r.trip_time || ''}</span></td>
                     <td class="p-3 font-bold">${r.customer_name || '--'}</td>
                     <td class="p-3 text-xs text-slate-600" dir="ltr">${r.customer_phone || '--'}</td>
+                    <td class="p-3 text-xs text-slate-600" dir="ltr">${r.whatsapp_num || '--'}</td>
                     <td class="p-3 text-xs text-slate-600" title="${r.pickup_address || ''}">${pickup || '--'}</td>
                     <td class="p-3 text-xs text-slate-600" title="${r.dropoff_address || ''}">${dropoff || '--'}</td>
+                    <td class="p-3 text-xs">${r.passengers || '1'}</td>
+                    <td class="p-3 text-xs">${r.bags || '0'}</td>
                     <td class="p-3 text-xs">${r.car_type || '--'}</td>
+                    <td class="p-3 text-xs">${r.client_status || '--'}</td>
                     <td class="p-3 font-bold text-green-700">${r.cost ? Number(r.cost).toLocaleString() + ' EGP' : '--'}</td>
+                    <td class="p-3 text-xs">${r.email || '--'}</td>
+                    <td class="p-3 text-xs truncate max-w-[150px]" title="${r.notes || ''}">${r.notes || '--'}</td>
+                    <td class="p-3 text-xs">${r.trip_type || '--'}</td>
+                    <td class="p-3 text-xs">${r.commission || '--'}</td>
                     <td class="p-3 text-xs">${r.booking_employee || '--'}</td>
+                    <td class="p-3 text-xs">${r.ticket_image ? '<a href="'+r.ticket_image+'" target="_blank" class="text-blue-500 underline">رابط</a>' : '--'}</td>
                     <td class="p-3"><span class="px-2 py-1 rounded-full text-xs font-bold ${stClass}">${st}</span></td>
-                    <td class="p-3">
+                    <td class="p-3 text-xs">${r.sql_server_id || '--'}</td>
+                    <td class="p-3 text-xs font-bold text-indigo-700">${r.modified_driver_name || '--'}</td>
+                    <td class="p-3 text-xs text-slate-600" dir="ltr">${r.modified_driver_phone || '--'}</td>
+                    <td class="p-3 text-xs">${r.column_24 || '--'}</td>
+                    <td class="p-3 text-xs">${r.driver_msg_status || '--'}</td>
+                    <td class="p-3 text-xs">${r.review_msg_status || '--'}</td>
+                    <td class="p-3 text-xs">${r.confirm_msg_status || '--'}</td>
+                    <td class="p-3 text-xs">${r.client_decision || '--'}</td>
+                    <td class="p-3 text-xs">${r.location_link ? '<a href="'+r.location_link+'" target="_blank" class="text-blue-500 underline">رابط</a>' : '--'}</td>
+                    <td class="p-3 text-xs text-amber-500">${r.rating_stars || '--'}</td>
+                    <td class="p-3 text-xs">${r.car_cleanliness || '--'}</td>
+                    <td class="p-3 text-xs">${r.driver_behavior || '--'}</td>
+                    <td class="p-3 text-xs">${r.recommend_us || '--'}</td>
+                    <td class="p-3 text-xs truncate max-w-[150px]" title="${r.suggestions || ''}">${r.suggestions || '--'}</td>
+                    <td class="p-3 text-xs font-bold">${r.trip_status || '--'}</td>
+                    <td class="p-3 sticky right-0 bg-white/90 shadow-[inset_1px_0_0_rgba(0,0,0,0.1)] backdrop-blur-sm z-10 w-full h-full flex items-center justify-center">
                         <button onclick="openAssignResByRow(${r.sheet_row})" 
-                            class="bg-indigo-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-indigo-700 whitespace-nowrap">
+                            class="bg-indigo-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-indigo-700 whitespace-nowrap shadow-sm">
                             <i class="fas fa-user-plus ml-1"></i>تعيين كابتن
                         </button>
                     </td>
@@ -2171,7 +2222,7 @@
             }).join('');
 
             if (filtered.length > 500) {
-                tbody.innerHTML += `<tr><td colspan="10" class="text-center p-3 text-slate-400 text-sm">... و ${(filtered.length - 500).toLocaleString()} حجز آخر (استخدم الفلاتر لتضييق النتائج)</td></tr>`;
+                tbody.innerHTML += `<tr><td colspan="36" class="text-center p-3 text-slate-400 text-sm">... و ${(filtered.length - 500).toLocaleString()} حجز آخر (استخدم الفلاتر لتضييق النتائج)</td></tr>`;
             }
         }
 
