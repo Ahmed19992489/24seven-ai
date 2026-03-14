@@ -144,6 +144,11 @@ while True:
                 msg_feedback_status = row[25] 
                 msg_confirm_status = row[26]  
                 
+                # [DEBUG] تسجيل ما يراه السكريبت في حالة وجود اسم سائق
+                if driver_name.strip() != "":
+                    print(f"DEBUG الصف {real_idx}: اسم السائق='{driver_name}', هاتف السائق='{row[22]}', من الشيت: '{row[22]}'")
+                    print(f"DEBUG مستلم الرسالة للعميل={cust_phone}, حالة رسالة السائق='{msg_driver_status}'")
+                
                 # قراءة اللوكيشن
                 location_url = str(row[28]).strip()
 
@@ -170,11 +175,15 @@ while True:
                 # 2️⃣ إبلاغ السائق والعميل (عند تعيين سائق)
                 # -------------------------------------------
                 if driver_name.strip() != "" and msg_driver_status.strip() == "" and cust_phone:
-                    # أ) للعميل
+                    print(f"🔎 صف {real_idx}: تم تعيين سائق ({driver_name}) لـ ({cust_name})...")
+                    
+                    # أ) للعميل - نرسل له بيانات السائق
+                    # نستخدم driver_phone النظيف أو الرقم الأصلي لو فشل التنظيف لضمان وصوله للعميل كـ "نص"
+                    display_driver_phone = driver_phone if driver_phone else str(row[22])
                     p_client = [
                         {"text": cust_name}, 
                         {"text": driver_name}, 
-                        {"text": str(row[22])}, 
+                        {"text": display_driver_phone}, 
                         {"text": str(row[10])}, 
                         {"text": "24Seven"}
                     ]
@@ -199,10 +208,12 @@ while True:
                             {"text": notes_content}
                         ]
                         s2 = send_template(driver_phone, TMPL_ORDER_TO_DRIVER, "ar", p_driver)
+                    else:
+                        print(f"⚠️ تنبيه: هاتف السائق '{row[22]}' غير صالح للإرسال (row {real_idx})")
+                        s2 = False
 
-                        if s2:
-                            sheet.update_cell(real_idx, 25, "تم ابلاغ الطرفين")
-                    
+                    if s2:
+                        sheet.update_cell(real_idx, 25, "تم ابلاغ الطرفين")
                     elif s1:
                         sheet.update_cell(real_idx, 25, "تم ابلاغ العميل فقط")
 
