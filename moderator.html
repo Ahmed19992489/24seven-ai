@@ -139,9 +139,9 @@
         </section>
 
         <!-- Tab: Chat (Messenger/WhatsApp Unified) -->
-        <section id="tab-chat" class="tab-content hidden h-full flex gap-6">
+        <section id="tab-chat" class="tab-content hidden h-full flex flex-col lg:flex-row lg:gap-6">
             <!-- Reuse Omnichannel Logic from admin-crm.html but adapted -->
-            <div class="w-80 flex flex-col h-full bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+            <div id="chat-list-container" class="w-full lg:w-80 flex flex-col h-full bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
                 <div class="p-4 border-b">
                     <div class="relative">
                         <input type="text" id="chat-search" oninput="filterChat()" placeholder="بحث في المراسلات..." class="input-std pl-10">
@@ -154,7 +154,7 @@
             </div>
 
             <!-- Chat Window -->
-            <div class="flex-1 flex flex-col bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden relative">
+            <div id="chat-window-container" class="hidden lg:flex flex-1 flex-col bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden relative">
                 <div id="no-chat" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 z-10">
                     <div class="w-20 h-20 bg-slate-200 rounded-full flex items-center justify-center text-slate-400 text-3xl mb-4">
                         <i class="fas fa-comment-dots"></i>
@@ -164,6 +164,9 @@
 
                 <div id="chat-header" class="p-4 border-b flex items-center justify-between">
                     <div class="flex items-center gap-3">
+                         <button onclick="backToChatList()" class="lg:hidden w-8 h-8 rounded-full bg-slate-100 text-slate-500 mr-1 flex items-center justify-center">
+                            <i class="fas fa-arrow-right"></i>
+                         </button>
                          <div id="chat-avatar" class="w-10 h-10 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold">?</div>
                          <div>
                             <div class="flex items-center gap-2">
@@ -386,7 +389,14 @@
             activeTab = tabId;
             if(tabId === 'performance') loadPerformance();
             if(tabId === 'dashboard') loadSummary();
-            if(tabId === 'chat') loadChats();
+            if(tabId === 'chat') {
+                loadChats();
+                // Ensure list is visible on mobile when opening tab
+                if (window.innerWidth < 1024) {
+                    document.getElementById('chat-list-container').classList.remove('hidden');
+                    document.getElementById('chat-window-container').classList.add('hidden');
+                }
+            }
 
             // Close sidebar on mobile after selecting tab
             if (window.innerWidth < 1024) {
@@ -562,6 +572,21 @@
             document.getElementById('chat-avatar').textContent = (chat.name || '?').charAt(0);
             renderMessages();
             renderChatList();
+
+            // Mobile view toggle
+            if (window.innerWidth < 1024) {
+                document.getElementById('chat-list-container').classList.add('hidden');
+                document.getElementById('chat-window-container').classList.remove('hidden');
+                document.getElementById('chat-window-container').classList.add('flex');
+            }
+        }
+
+        function backToChatList() {
+            if (window.innerWidth < 1024) {
+                document.getElementById('chat-list-container').classList.remove('hidden');
+                document.getElementById('chat-window-container').classList.add('hidden');
+                document.getElementById('chat-window-container').classList.remove('flex');
+            }
         }
 
         function renderMessages() {
