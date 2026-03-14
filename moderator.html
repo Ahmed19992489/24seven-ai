@@ -431,6 +431,7 @@
         let allMessages = [];
         let groupedChats = {};
         let activeChatId = null;
+        let chatSubscription = null;
 
         async function loadChats() {
             // First ensure we have some trip data for name resolution
@@ -441,8 +442,12 @@
                 allMessages = data;
                 regroupAndRender();
             }
-            // Realtime
-            sbClient.channel('mod-chat').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'omnichannel_messages' }, payload => {
+
+            // --- 🛡️ Prevent Multiple Subscriptions ---
+            if (chatSubscription) return; // Already subscribed
+
+            chatSubscription = sbClient.channel('mod-chat').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'omnichannel_messages' }, payload => {
+                console.log("🆕 New message received via Realtime:", payload.new);
                 allMessages.push(payload.new);
                 regroupAndRender();
                 if(activeChatId === payload.new.sender_id) renderMessages();
@@ -473,10 +478,10 @@
                 const currentName = groupedChats[m.sender_id].name;
                 const isIdOrJunk = !currentName || currentName === m.sender_id || ['Admin', 'ش'].includes(currentName);
                 
-                if(isIdOrJunk && m.channel === 'whatsapp') {
-                    // Normalize ID for comparison
+                if(isIdOrJunk) {
                     const cleanSenderId = m.sender_id.replace(/\D/g,'');
-                    if(cleanSenderId.length >= 8) {
+                    // For WhatsApp: Match based on phone number
+                    if(m.channel === 'whatsapp' && cleanSenderId.length >= 8) {
                         const trip = allTrips.find(t => {
                             if(!t.customer_phone) return false;
                             const cleanTripPhone = t.customer_phone.replace(/\D/g,'');
@@ -486,6 +491,8 @@
                             groupedChats[m.sender_id].name = trip.customer_name;
                         }
                     }
+                    // For Messenger: Matching is harder unless we have a manual link or trip has the name
+                    // We don't change anything for Messenger here yet as PSIDs don't match phones
                 }
             });
             renderChatList();
@@ -525,10 +532,10 @@
             const container = document.getElementById('chat-messages');
             const chat = groupedChats[activeChatId];
             container.innerHTML = chat.messages.map(m => `
-                <div class="flex ${m.is_from_admin ? 'justify-start' : 'justify-end'}">
-                    <div class="max-w-[75%] rounded-2xl px-4 py-2 text-sm ${m.is_from_admin ? 'bg-teal-600 text-white rounded-tl-none' : 'bg-white border text-slate-800 rounded-tr-none shadow-sm'}">
+                <div class="flex ${m.is_from_admin ? 'justify-end' : 'justify-start'}">
+                    <div class="max-w-[75%] rounded-2xl px-4 py-2 text-sm ${m.is_from_admin ? 'bg-teal-600 text-white rounded-tr-none' : 'bg-white border text-slate-800 rounded-tl-none shadow-sm'}">
                         <p class="whitespace-pre-wrap">${m.message_text}</p>
-                        <p class="text-[9px] mt-1 opacity-70 text-left">${new Date(m.created_at).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}</p>
+                        <p class="text-[9px] mt-1 opacity-70 ${m.is_from_admin ? 'text-right' : 'text-left'}">${new Date(m.created_at).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}</p>
                     </div>
                 </div>
             `).join('');
