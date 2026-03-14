@@ -449,20 +449,27 @@
             groupedChats = {};
             allMessages.forEach(m => {
                 if(!groupedChats[m.sender_id]) {
-                    groupedChats[m.sender_id] = { id: m.sender_id, name: m.sender_name, channel: m.channel, messages: [], last: m };
+                    // Initialize with ID as name fallback, never 'Admin' or 'ش'
+                    let initialName = m.sender_id;
+                    if (m.sender_name && m.sender_name !== m.sender_id && !['Admin', 'ش'].includes(m.sender_name)) {
+                        initialName = m.sender_name;
+                    }
+                    groupedChats[m.sender_id] = { id: m.sender_id, name: initialName, channel: m.channel, messages: [], last: m };
                 }
                 groupedChats[m.sender_id].messages.push(m);
                 groupedChats[m.sender_id].last = m;
                 
                 // --- 🧠 Automated Name Resolution Logic ---
-                // 1. Prefer non-Admin, non-ID names from message records
-                if(!m.is_from_admin && m.sender_name && m.sender_name !== m.sender_id) {
+                // 1. Prefer non-Admin, non-ID names from message records (if not junk)
+                if(!m.is_from_admin && m.sender_name && m.sender_name !== m.sender_id && !['Admin', 'ش'].includes(m.sender_name)) {
                     groupedChats[m.sender_id].name = m.sender_name;
                 }
                 
-                // 2. If name is still an ID (common for past messages), check trip data
+                // 2. If name is still an ID or junk, check trip data
                 const currentName = groupedChats[m.sender_id].name;
-                if((!currentName || currentName === m.sender_id) && m.channel === 'whatsapp') {
+                const isIdOrJunk = !currentName || currentName === m.sender_id || ['Admin', 'ش'].includes(currentName);
+                
+                if(isIdOrJunk && m.channel === 'whatsapp') {
                     // Normalize ID for comparison
                     const cleanSenderId = m.sender_id.replace(/\D/g,'');
                     if(cleanSenderId.length >= 8) {
@@ -471,7 +478,7 @@
                             const cleanTripPhone = t.customer_phone.replace(/\D/g,'');
                             return cleanTripPhone.includes(cleanSenderId) || cleanSenderId.includes(cleanTripPhone);
                         });
-                        if(trip && trip.customer_name) {
+                        if(trip && trip.customer_name && !['Admin', 'ش'].includes(trip.customer_name)) {
                             groupedChats[m.sender_id].name = trip.customer_name;
                         }
                     }
