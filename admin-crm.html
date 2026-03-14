@@ -39,6 +39,8 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             border: 1px solid #e2e8f0;
         }
+        .animate-pulse-subtle { animation: pulse-subtle 3s infinite; }
+        @keyframes pulse-subtle { 0%, 100% { border-color: #ef4444; } 50% { border-color: #fecaca; box-shadow: 0 0 10px rgba(239, 68, 68, 0.3); } }
 
         /* حقول الإدخال */
         .input-std {
@@ -622,17 +624,17 @@
                     <h3 class="text-3xl font-black mt-2" id="staff-total-count">0</h3>
                 </div>
                 <!-- لوحة إعدادات السيرفر -->
-                <div class="glass-panel p-4 col-span-1 md:col-span-3 border-b-4 border-amber-500">
-                    <p class="text-slate-400 text-xs font-bold uppercase mb-2">إعدادات الاتصال بالسيرفر (API)</p>
+                <div class="glass-panel p-4 col-span-1 md:col-span-3 border-b-4 border-red-500 bg-red-50 animate-pulse-subtle">
+                    <p class="text-red-600 text-xs font-black uppercase mb-2">⚠️ ضروري: إعدادات السيرفر (ضع رابط ngrok هنا)</p>
                     <div class="flex gap-2">
-                        <input type="text" id="staff-api-url" placeholder="https://your-ngrok-url.ngrok-free.app (اتركه فارغاً للافتراضي)" 
-                               class="flex-1 text-xs p-2.5 rounded-lg border border-slate-200 focus:border-amber-500 outline-none">
-                        <button onclick="saveStaffApiUrl()" class="bg-amber-500 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-amber-600 transition">
-                            <i class="fas fa-save"></i> حفظ
+                        <input type="text" id="staff-api-url" placeholder="https://xxxx.ngrok-free.app" 
+                               class="flex-1 text-xs p-2.5 rounded-lg border border-red-300 focus:border-red-500 outline-none bg-white">
+                        <button onclick="saveStaffApiUrl()" class="bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-red-700 transition shadow-lg shadow-red-100">
+                            <i class="fas fa-save"></i> حفظ الرابط
                         </button>
                     </div>
-                    <p class="text-[10px] text-slate-400 mt-2">
-                        <i class="fas fa-info-circle mr-1"></i> استخدم رابط <b>ngrok</b> (HTTPS) إذا كنت تشغل السيرفر محلياً والموقع يعمل عبر HTTPS.
+                    <p class="text-[10px] text-red-500 mt-2 font-bold">
+                        <i class="fas fa-exclamation-triangle mr-1"></i> إذا كنت تفتح الموقع من 24seven-ai.com، يجب أن تضع رابط ngrok الذي يظهر في السيرفر الأسود هنا.
                     </p>
                 </div>
             </div>
@@ -2881,7 +2883,11 @@
                     if (!healthResp.ok) throw new Error();
                 } catch (e) {
                     const currentUrl = apiUrlBase;
-                    alert(`❌ تعذر الاتصال بالسيرفر\nالرابط المستهدف: ${currentUrl}/api/health\n\nيرجى التأكد من:\n1. تشغيل ملف webhook_server.py في الخلفية.\n2. إذا كنت تستخدم الموبايل أو نطاق خارجي، تأكد من وضع رابط ngrok الصحيح في "إعدادات السيرفر" بتبويب الموظفين.`);
+                    if (currentUrl.includes('24seven-ai.com')) {
+                        alert(`❌ فشل الاتصال: أنت تحاول الاتصال بموقع 24seven-ai.com نفسه!\n\nيجب عليك وضع رابط مـ ngrok الخاص بك (الذي يظهر في السيرفر الأسود) في خانة "إعدادات السيرفر" الموجودة أعلى جدول الموظفين.\n\nالرابط الحالي الخاطئ: ${currentUrl}`);
+                    } else {
+                        alert(`❌ تعذر الاتصال بالسيرفر\nالرابط المستهدف: ${currentUrl}/api/health\n\nيرجى التأكد من:\n1. تشغيل ملف webhook_server.py في الخلفية.\n2. وضع رابط ngrok الصحيح في "إعدادات السيرفر" بتبويب الموظفين.`);
+                    }
                     btn.disabled = false;
                     btn.innerHTML = '<i class="fas fa-check-circle"></i> إنشاء الحساب وتفعيل الموظف';
                     return;
