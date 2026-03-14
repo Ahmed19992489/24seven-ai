@@ -2844,7 +2844,10 @@
 
                 // 1. التحقق من أن السيرفر يعمل (Health Check)
                 try {
-                    const healthResp = await fetch(`${apiUrlBase}/api/health`, { method: 'GET' });
+                    const healthResp = await fetch(`${apiUrlBase}/api/health`, { 
+                        method: 'GET',
+                        headers: { 'ngrok-skip-browser-warning': 'true' }
+                    });
                     if (!healthResp.ok) throw new Error();
                 } catch (e) {
                     alert(`❌ السيرفر غير متاح (Port 3000).\nيرجى التأكد من تشغيل webhook_server.py وأن البورت 3000 مفتوح في إعدادات السيرفر أو الراوتر.`);
@@ -2858,7 +2861,10 @@
                 // 2. إرسال الطلب الفعلي
                 const response = await fetch(`${apiUrlBase}/admin/create-staff`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
                     body: JSON.stringify({ full_name: fullName, email, password, role })
                 });
 
