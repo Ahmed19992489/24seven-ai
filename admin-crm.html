@@ -3003,7 +3003,7 @@ async function confirmResAssign() {
             const { data: signUpData } = await sbClient.auth.signUp({ email: fakeEmail, password: rawPhone.slice(-6) || '123456' });
             if (signUpData?.user) {
                 clientUserId = signUpData.user.id;
-                await sbClient.from('profiles').upsert({ id: clientUserId, full_name: r.customer_name, phone: rawPhone, wallet_balance: 0 });
+                await sbClient.from('profiles').upsert({ id: clientUserId, full_name: r.customer_name, phone: rawPhone, role: 'user', wallet_balance: 0 });
             }
         }
 

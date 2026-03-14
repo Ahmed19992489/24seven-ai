@@ -14,6 +14,11 @@
         .sidebar-item { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; border-radius: 1rem; margin-bottom: 0.5rem; display: flex; align-items: center; padding: 0.75rem 1rem; color: #64748b; }
         .sidebar-item:hover { background-color: #f1f5f9; color: #0d9488; transform: translateX(-5px); }
         .sidebar-item.active { background-color: #0d9488; color: white; box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3); }
+        @media (max-width: 1024px) {
+            .sidebar-open #sidebar { transform: translateX(0); }
+            .sidebar-open #sidebar-overlay { display: block; opacity: 1; }
+            body.sidebar-open { overflow: hidden; }
+        }
         .input-std { background-color: white; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 0.6rem 1rem; width: 100%; transition: all 0.2s; }
         .input-std:focus { outline: none; border-color: #0d9488; box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.2); }
         ::-webkit-scrollbar { width: 6px; }
@@ -22,8 +27,16 @@
 </head>
 <body class="bg-slate-50 overflow-hidden h-screen flex">
 
+    <!-- Mobile Menu Toggle -->
+    <button id="mobile-menu-toggle" onclick="toggleSidebar()" class="lg:hidden fixed bottom-6 right-6 w-14 h-14 bg-teal-600 text-white rounded-full shadow-2xl z-[60] flex items-center justify-center text-xl hover:scale-110 active:scale-90 transition-all">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Sidebar Overlay -->
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 hidden lg:hidden opacity-0 transition-opacity duration-300"></div>
+
     <!-- Sidebar -->
-    <aside class="w-72 bg-white border-l border-slate-200 flex flex-col p-6 z-50">
+    <aside id="sidebar" class="fixed lg:static inset-y-0 right-0 w-72 bg-white border-l border-slate-200 flex flex-col p-6 z-50 transform translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out shadow-2xl lg:shadow-none">
         <div class="flex items-center gap-3 mb-10 px-2">
             <div class="w-10 h-10 bg-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-teal-200">
                 <i class="fas fa-headset text-white text-xl"></i>
@@ -69,7 +82,7 @@
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-1 relative flex flex-col p-8 overflow-y-auto">
+    <main class="flex-1 relative flex flex-col p-4 md:p-8 overflow-y-auto w-full">
         
         <!-- Tab: Dashboard -->
         <section id="tab-dashboard" class="tab-content block space-y-6">
@@ -367,12 +380,22 @@
             document.getElementById('tab-' + tabId).classList.remove('hidden');
             
             document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
-            document.getElementById('btn-' + tabId).classList.add('active');
+            const activeBtn = document.getElementById('btn-' + tabId);
+            if(activeBtn) activeBtn.classList.add('active');
             
             activeTab = tabId;
             if(tabId === 'performance') loadPerformance();
             if(tabId === 'dashboard') loadSummary();
             if(tabId === 'chat') loadChats();
+
+            // Close sidebar on mobile after selecting tab
+            if (window.innerWidth < 1024) {
+                document.body.classList.remove('sidebar-open');
+            }
+        }
+
+        function toggleSidebar() {
+            document.body.classList.toggle('sidebar-open');
         }
 
         // --- Core UI Logic ---
