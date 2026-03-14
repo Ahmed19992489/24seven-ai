@@ -223,6 +223,9 @@
                     <button type="button" onclick="useReply('بحث')" class="whitespace-nowrap bg-white border border-slate-200 text-[10px] font-bold px-3 py-1 rounded-full hover:bg-teal-50 hover:border-teal-200 transition">🔍 جاري البحث</button>
                     
                     <div class="ml-auto flex gap-2">
+                        <button type="button" onclick="quickBook()" title="بدء حجز جديد لهذا العميل" class="bg-teal-50 text-teal-600 hover:bg-teal-100 font-bold px-3 py-1 rounded-lg text-[10px] flex items-center gap-1 transition">
+                            <i class="fas fa-plus"></i> حجز سريع
+                        </button>
                         <button type="button" onclick="sendBookingInvoice()" title="إرسال فاتورة الحجز" class="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-bold px-3 py-1 rounded-lg text-[10px] flex items-center gap-1 transition">
                             <i class="fas fa-file-invoice-dollar"></i> الفاتورة
                         </button>
@@ -818,6 +821,29 @@
             } else {
                 alert('⚠️ لم يتم العثور على أي حجز مسجل لهذا العميل حالياً.');
             }
+        }
+
+        function quickBook() {
+            if(!activeChatId) return;
+            const chat = groupedChats[activeChatId];
+            
+            // Switch to trips tab
+            showTab('trips');
+            
+            // Open form if hidden
+            const container = document.getElementById('trip-form-container');
+            if(container.classList.contains('hidden')) {
+                toggleTripForm();
+            }
+            
+            // Fill details
+            document.getElementById('t-name').value = chat.name || '';
+            const cleanPhone = activeChatId.replace(/[^0-9]/g, '');
+            document.getElementById('t-phone').value = (cleanPhone.length === 11) ? cleanPhone : (cleanPhone.length === 10 ? '0'+cleanPhone : cleanPhone);
+            
+            // Scroll to form and focus
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            document.getElementById('t-name').focus();
         }
 
         async function handleSend(e) {
