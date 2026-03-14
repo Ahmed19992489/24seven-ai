@@ -380,11 +380,24 @@
                         <p class="text-[10px] text-slate-400 mt-2">💡 إذا كنت تستخدم الموبايل، ضع رابط ngrok الخاص بك هنا.</p>
                     </div>
                 </div>
-                <div class="mt-6">
-                    <button onclick="saveApiSettings()" class="w-full bg-teal-600 text-white font-bold py-3 rounded-2xl hover:bg-teal-700 transition shadow-lg shadow-teal-100">
+                <div class="mt-6 flex gap-3">
+                    <button onclick="saveApiSettings()" class="flex-1 bg-teal-600 text-white font-bold py-3 rounded-2xl hover:bg-teal-700 transition shadow-lg shadow-teal-100">
                         حفظ الإعدادات
                     </button>
+                    <button onclick="testConnection()" class="px-6 bg-slate-100 text-slate-600 font-bold py-3 rounded-2xl hover:bg-slate-200 transition">
+                        فحص الاتصال
+                    </button>
                 </div>
+                <div id="test-status" class="mt-4 text-center text-xs font-bold hidden"></div>
+            </div>
+            
+            <div class="glass-panel p-6 max-w-xl mt-6">
+                <h3 class="font-bold text-slate-800 mb-2">طريقة الاستخدام الأمثل للموبايل:</h3>
+                <ol class="text-xs text-slate-500 list-decimal list-inside space-y-2">
+                    <li>افتح رابط ngrok في متصفح الموبايل (Chrome/Safari) واضغط على <strong>Visit Site</strong>.</li>
+                    <li>ادخل على الرابط التالي: <code class="bg-slate-100 px-1 rounded text-teal-600">https://xxxx.ngrok-free.app/moderator</code></li>
+                    <li>سيفتح لك هذا الموقع محمياً ببياناتك وسيعمل الإرسال بشكل طبيعي جداً.</li>
+                </ol>
             </div>
         </section>
 
@@ -401,11 +414,37 @@
             const saved = localStorage.getItem('mod_api_url');
             if (saved && saved.trim() !== '') return saved.trim().replace(/\/$/, '');
             
-            // Detection: If not localhost, assume the same host but port 3000
-            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            // Auto-detection based on current URL
+            const loc = window.location;
+            if (loc.port === '3000' || loc.pathname.startsWith('/moderator') || loc.pathname.startsWith('/dashboard')) {
+                return loc.origin; // Same server
+            }
+
+            if (loc.hostname === 'localhost' || loc.hostname === '127.0.0.1') {
                 return 'http://localhost:3000';
             } else {
-                return `${window.location.protocol}//${window.location.hostname}:3000`;
+                return `${loc.protocol}//${loc.hostname}:3000`;
+            }
+        }
+
+        async function testConnection() {
+            const statusDiv = document.getElementById('test-status');
+            statusDiv.classList.remove('hidden', 'text-red-500', 'text-teal-600');
+            statusDiv.textContent = 'جاري فحص الاتصال...';
+            
+            try {
+                const url = `${getApiBaseUrl()}/api/health`;
+                const res = await fetch(url, { headers: { 'ngrok-skip-browser-warning': 'true' } });
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    statusDiv.textContent = '✅ الاتصال بالسيرفر يعمل بنجاح!';
+                    statusDiv.classList.add('text-teal-600');
+                } else {
+                    throw new Error('Server responded but status not OK');
+                }
+            } catch (e) {
+                statusDiv.textContent = '❌ فشل الاتصال: ' + e.message;
+                statusDiv.classList.add('text-red-500');
             }
         }
 

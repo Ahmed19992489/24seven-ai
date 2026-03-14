@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, make_response
+from flask import Flask, request, jsonify, make_response, send_from_directory
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import requests
@@ -749,6 +749,19 @@ def debug_fb():
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+# =====================================================
+# 📂 خدمة الملفات (Static File Serving)
+# =====================================================
+@app.route('/dashboard/<path:filename>')
+def serve_dashboard(filename):
+    directory = os.path.join(os.getcwd(), '24Seven_SaaS_Platform')
+    return send_from_directory(directory, filename)
+
+@app.route('/moderator')
+def serve_moderator():
+    directory = os.path.join(os.getcwd(), '24Seven_SaaS_Platform')
+    return send_from_directory(directory, 'moderator.html')
 
 # =====================================================
 # 🚀 تشغيل السيرفر الموحد
