@@ -392,6 +392,7 @@
                 .eq('booking_employee', currentModName);
             
             if(res) {
+                allTrips = res; // Populate global cache for name resolution
                 document.getElementById('stat-count-today').textContent = res.length;
                 const vips = res.filter(r => (r.trip_type || '').toLowerCase().includes('vip')).length;
                 const offers = res.filter(r => (r.trip_type || '').toLowerCase().includes('offer')).length;
@@ -403,6 +404,7 @@
                 document.getElementById('stat-commission-today').textContent = comm + " EGP";
 
                 renderRecentTrips(res.slice(0, 10));
+                regroupAndRender(); // Refresh chat list names if chat is open
             }
         }
 
@@ -427,6 +429,9 @@
         let activeChatId = null;
 
         async function loadChats() {
+            // First ensure we have some trip data for name resolution
+            if(allTrips.length === 0) await loadSummary();
+
             const { data, error } = await sbClient.from('omnichannel_messages').select('*').order('created_at', { ascending: true });
             if (data) {
                 allMessages = data;
@@ -448,9 +453,23 @@
                 }
                 groupedChats[m.sender_id].messages.push(m);
                 groupedChats[m.sender_id].last = m;
-                // Prefer non-Admin name and non-ID name
+                
+                // --- 🧠 Automated Name Resolution Logic ---
+                // 1. Prefer non-Admin, non-ID names from message records
                 if(!m.is_from_admin && m.sender_name && m.sender_name !== m.sender_id) {
                     groupedChats[m.sender_id].name = m.sender_name;
+                }
+                
+                // 2. If name is still an ID (common for past messages), check if we have a trip for this person
+                const currentName = groupedChats[m.sender_id].name;
+                if(!currentName || currentName === m.sender_id) {
+                    // Try to find a trip with this phone number (sender_id is the phone for WhatsApp)
+                    const trip = allTrips.find(t => 
+                        t.customer_phone && t.customer_phone.includes(m.sender_id.replace(/\+/g,''))
+                    );
+                    if(trip && trip.customer_name) {
+                        groupedChats[m.sender_id].name = trip.customer_name;
+                    }
                 }
             });
             renderChatList();
