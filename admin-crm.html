@@ -2764,10 +2764,15 @@
             if (customUrl && customUrl.trim() !== '') {
                 return customUrl.trim().replace(/\/$/, ''); 
             }
-            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            // Auto-detection: if we are on port 3000 or using the catch-all flask routes
+            const loc = window.location;
+            if (loc.port === '3000' || loc.pathname.includes('admin-crm.html') || loc.pathname.includes('moderator') || loc.pathname.includes('dashboard')) {
+                return loc.origin; 
+            }
+            if (loc.hostname === 'localhost' || loc.hostname === '127.0.0.1') {
                 return `http://localhost:3000`;
             } else {
-                return window.location.protocol + "//" + window.location.hostname + ":3000";
+                return loc.origin; // Default to current origin instead of forcing :3000
             }
         }
 
@@ -2875,7 +2880,8 @@
                     });
                     if (!healthResp.ok) throw new Error();
                 } catch (e) {
-                    alert(`❌ السيرفر غير متاح (Port 3000).\nيرجى التأكد من تشغيل webhook_server.py وأن البورت 3000 مفتوح في إعدادات السيرفر أو الراوتر.`);
+                    const currentUrl = apiUrlBase;
+                    alert(`❌ تعذر الاتصال بالسيرفر\nالرابط المستهدف: ${currentUrl}/api/health\n\nيرجى التأكد من:\n1. تشغيل ملف webhook_server.py في الخلفية.\n2. إذا كنت تستخدم الموبايل أو نطاق خارجي، تأكد من وضع رابط ngrok الصحيح في "إعدادات السيرفر" بتبويب الموظفين.`);
                     btn.disabled = false;
                     btn.innerHTML = '<i class="fas fa-check-circle"></i> إنشاء الحساب وتفعيل الموظف';
                     return;
