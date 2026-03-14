@@ -111,9 +111,9 @@ def insert_message_to_supabase(channel, sender_id, sender_name, message_text, is
         print(f"❌ استثناء أثناء حفظ الرسالة في Supabase: {e}")
 
 # =====================================================
-# ⚙️ إعدادات الواتساب (WhatsApp Config)
+# 🛠️ مساعدات (Helper Functions)
 # =====================================================
-WHATSAPP_TOKEN = "EAAPDbwUyvY0BQrm6ZB9qb62LU9hI50ZC9QOfZAO3VPA7ZCSnFSRMCb2kouBRkXu4LiVmRU2ydv1vLl00kKmgTFMN5ULJOpImor7i8oITjicjIjWiOLxTL7yltYrlF0RLxcdU6UNOaIdqo4Ouv0BnQ79OK2sgSLpHY9ZCQs4iRIxcpjnoxr8EWpV4FSgGTzgZDZD"
+WHATSAPP_TOKEN = "EAAPDbwUyvY0BQrm6ZB9qb62LU9hI50ZC9QOfZAO3VPA7ZCSnFSRMCb2kouBRkXu4LiVmRU2ydv1vLl00kKmgTFMN5ULJOpImor7i8oITjicjIjWiOLxTL7yltYrlF0RLxcdU6UNO4Ouv0BnQ79OK2sgSLpHY9ZCQs4iRIxcpjnoxr8EWpV4FSgGTzgZDZD"
 PHONE_ID = "597129733493778"
 VERIFY_TOKEN = "24seven_secret_token"
 SHEET_NAME = "امر حجز عميل"

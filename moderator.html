@@ -661,9 +661,15 @@
             input.value = '';
 
             try {
-                const res = await fetch(`${getApiBaseUrl()}/api/send_reply`, {
+                const targetUrl = `${getApiBaseUrl()}/api/send_reply`;
+                console.log("📤 Sending to:", targetUrl);
+                
+                const res = await fetch(targetUrl, {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
                     body: JSON.stringify({ channel: chat.channel, sender_id: activeChatId, message: text })
                 });
                 
@@ -684,11 +690,12 @@
                         renderChatList();
                     }
                 } else {
-                    alert('❌ فشل إرسال الرسالة، تأكد من إعدادات السيرفر.');
+                    const errText = await res.text();
+                    alert(`❌ فشل إرسال الرسالة\nالسيرفر رد بـ: ${res.status}\nالرابط: ${targetUrl}\n${errText}`);
                 }
             } catch(e) { 
                 console.error(e);
-                alert('❌ خطأ في الاتصال بالسيرفر. يرجى مراجعة إعدادات الـ API.');
+                alert(`❌ خطأ في الاتصال بالسيرفر\nتأكد من فتح رابط ngrok في الموبايل أولاً.\nالرابط المستهدف: ${getApiBaseUrl()}/api/send_reply\nالخطأ: ${e.message}`);
             }
         }
 
