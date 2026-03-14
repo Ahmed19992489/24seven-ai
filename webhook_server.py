@@ -753,10 +753,14 @@ def debug_fb():
 # =====================================================
 # 📂 خدمة الملفات (Static File Serving)
 # =====================================================
-@app.route('/dashboard/<path:filename>')
-def serve_dashboard(filename):
+@app.route('/<path:filename>')
+def serve_any_file(filename):
     directory = os.path.join(os.getcwd(), '24Seven_SaaS_Platform')
-    return send_from_directory(directory, filename)
+    # تأكد أن الملف موجود لتجنب تداخل الروابط
+    if os.path.isfile(os.path.join(directory, filename)):
+        return send_from_directory(directory, filename)
+    # إذا لم يكن ملفاً، قد يكون رابطاً للفلاسك نفسه، نتركه يمر للفلاسك الطبيعي
+    return "Not Found", 404
 
 @app.route('/moderator')
 def serve_moderator():
