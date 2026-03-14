@@ -986,27 +986,68 @@
             btn.textContent = 'جاري الحفظ...';
 
             try {
+                const trip = allTrips.find(x => x.id == currentAssignTripId);
+                if(!trip) throw new Error('تعذر العثور على بيانات الرحلة');
+
                 const driverOpt = driverSelect.options[driverSelect.selectedIndex];
                 const driverName = driverOpt.dataset.name;
                 const driverPhone = driverOpt.dataset.phone;
 
-                const { error } = await sbClient
+                // 1. Find or create client profile
+                const rawPhone = (trip.customer_phone || '').replace(/\D/g, '');
+                let clientUserId = null;
+                const { data: profile } = await sbClient.from('profiles').select('id').eq('phone', rawPhone).maybeSingle();
+                
+                if (profile) {
+                    clientUserId = profile.id;
+                } else {
+                    const fakeEmail = `${rawPhone}@24seven-client.app`;
+                    const { data: signUp } = await sbClient.auth.signUp({ email: fakeEmail, password: rawPhone.slice(-6) || '123456' });
+                    if (signUp?.user) {
+                        clientUserId = signUp.user.id;
+                        await sbClient.from('profiles').upsert({ id: clientUserId, full_name: trip.customer_name, phone: rawPhone, role: 'user', wallet_balance: 0 });
+                    }
+                }
+
+                // 2. Create actual trip record
+                const { data: newTrip, error: tripErr } = await sbClient.from('trips').insert([{
+                    user_id: clientUserId,
+                    driver_id: driverId,
+                    car_id: carId,
+                    pickup_location: trip.pickup_address || '',
+                    dropoff_location: trip.dropoff_address || '',
+                    estimated_price: Number(trip.cost) || 0,
+                    status: 'driver_assigned',
+                    admin_notes: `حجز موديتور: ${currentModName}\nالعميل: ${trip.customer_name}\nالسائق: ${driverName} (${driverPhone})`
+                }]).select().single();
+
+                if (tripErr) throw tripErr;
+
+                // 3. Update reservation status
+                const { error: resErr } = await sbClient
                     .from('google_reservations')
                     .update({ 
-                        driver_id: driverId, 
-                        car_id: carId,
-                        assigned_driver_name: driverName,
-                        assigned_driver_phone: driverPhone,
-                        status: 'confirmed' 
+                        status: 'confirmed',
+                        sql_server_id: String(newTrip.id)
                     })
                     .eq('id', currentAssignTripId);
                 
-                if(!error) {
+                if(!resErr) {
                     alert('✅ تم تعيين الكابتن والسيارة بنجاح!');
                     closeAssignModal();
-                    searchTrips(); // Refresh table
+                    searchTrips(); 
+                    
+                    // Sync to Sheet if possible
+                    try {
+                        sendToGoogleSheet({
+                            action: 'assignDriver',
+                            sheetRow: trip.sheet_row,
+                            driverName: driverName,
+                            driverPhone: driverPhone
+                        });
+                    } catch(e) {}
                 } else {
-                    throw error;
+                    throw resErr;
                 }
             } catch (e) {
                 console.error(e);
@@ -1021,18 +1062,26 @@
             const trip = allTrips.find(x => x.id == tripId);
             if(!trip) return;
             
-            // Logic to switch to chat tab and filter for THIS trip
-            // For now, we'll search by phone to find the client chat
-            const cleanPhone = (trip.customer_phone || '').replace(/\D/g, '');
-            const chatKey = `whatsapp:${cleanPhone}`; // Default to whatsapp as primary
-            
+            const rawPhone = (trip.customer_phone || '').replace(/\D/g, '');
+            if (!rawPhone) { alert('لا يوجد رقم هاتف لهذا العميل'); return; }
+
             showTab('chat');
-            const chatFound = groupedChats[chatKey];
-            if(chatFound) {
-                selectChat(chatKey);
+            
+            // Search intelligently in groupedChats for this phone number
+            let foundKey = null;
+            const searchPart = rawPhone.length > 8 ? rawPhone.slice(-9) : rawPhone; // last 9 digits to skip country code issues
+            
+            for (const key in groupedChats) {
+                if (key.includes(searchPart)) {
+                    foundKey = key;
+                    break;
+                }
+            }
+
+            if(foundKey) {
+                selectChat(foundKey);
             } else {
-                // If not found in current list, we might need a broader search or wait for message
-                alert('جاري البحث عن محادثة العميل...');
+                alert(`لم يتم العثور على محادثة نشطة للرقم ${rawPhone}.\nيرجى التأكد من أن العميل أرسل رسالة مسبقاً.`);
             }
         }
 
