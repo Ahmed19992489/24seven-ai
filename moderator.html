@@ -23,6 +23,8 @@
         .input-std:focus { outline: none; border-color: #0d9488; box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.2); }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="bg-slate-50 overflow-hidden h-screen flex">
@@ -166,6 +168,28 @@
                     <p class="font-bold text-slate-500">اختر محادثة للبدء في الرد</p>
                 </div>
 
+                <!-- Simple Emoji Picker (Hidden) -->
+                <div id="emoji-picker" class="hidden absolute bottom-20 right-4 bg-white border rounded-2xl shadow-2xl p-3 z-20 w-64 grid grid-cols-6 gap-2 animate-in slide-in-from-bottom-5">
+                    <button type="button" onclick="addEmoji('😊')" class="hover:bg-slate-100 p-1 rounded">😊</button>
+                    <button type="button" onclick="addEmoji('👍')" class="hover:bg-slate-100 p-1 rounded">👍</button>
+                    <button type="button" onclick="addEmoji('👋')" class="hover:bg-slate-100 p-1 rounded">👋</button>
+                    <button type="button" onclick="addEmoji('🚕')" class="hover:bg-slate-100 p-1 rounded">🚕</button>
+                    <button type="button" onclick="addEmoji('✅')" class="hover:bg-slate-100 p-1 rounded">✅</button>
+                    <button type="button" onclick="addEmoji('⭐')" class="hover:bg-slate-100 p-1 rounded">⭐</button>
+                    <button type="button" onclick="addEmoji('🙏')" class="hover:bg-slate-100 p-1 rounded">🙏</button>
+                    <button type="button" onclick="addEmoji('❤️')" class="hover:bg-slate-100 p-1 rounded">❤️</button>
+                    <button type="button" onclick="addEmoji('📍')" class="hover:bg-slate-100 p-1 rounded">📍</button>
+                    <button type="button" onclick="addEmoji('⏰')" class="hover:bg-slate-100 p-1 rounded">⏰</button>
+                    <button type="button" onclick="addEmoji('💰')" class="hover:bg-slate-100 p-1 rounded">💰</button>
+                    <button type="button" onclick="addEmoji('🚗')" class="hover:bg-slate-100 p-1 rounded">🚗</button>
+                    <button type="button" onclick="addEmoji('✨')" class="hover:bg-slate-100 p-1 rounded">✨</button>
+                    <button type="button" onclick="addEmoji('🤝')" class="hover:bg-slate-100 p-1 rounded">🤝</button>
+                    <button type="button" onclick="addEmoji('😍')" class="hover:bg-slate-100 p-1 rounded">😍</button>
+                    <button type="button" onclick="addEmoji('📱')" class="hover:bg-slate-100 p-1 rounded">📱</button>
+                    <button type="button" onclick="addEmoji('🏘️')" class="hover:bg-slate-100 p-1 rounded">🏘️</button>
+                    <button type="button" onclick="addEmoji('🗺️')" class="hover:bg-slate-100 p-1 rounded">🗺️</button>
+                </div>
+
                 <div id="chat-header" class="p-4 border-b flex items-center justify-between">
                     <div class="flex items-center gap-3">
                          <button onclick="backToChatList()" class="lg:hidden w-8 h-8 rounded-full bg-slate-100 text-slate-500 mr-1 flex items-center justify-center">
@@ -187,10 +211,28 @@
                     <!-- Messages via JS -->
                 </div>
 
+                <!-- Quick Controls Bar -->
+                <div class="px-4 py-2 border-t bg-slate-50 flex items-center gap-2 overflow-x-auto no-scrollbar">
+                    <button type="button" onclick="toggleEmoji()" class="p-2 text-slate-500 hover:text-teal-600 transition"><i class="far fa-smile text-lg"></i></button>
+                    <div class="h-6 w-px bg-slate-200 mx-1"></div>
+                    
+                    <!-- Saved Replies Quick Access -->
+                    <button type="button" onclick="useReply('ترحيب')" class="whitespace-nowrap bg-white border border-slate-200 text-[10px] font-bold px-3 py-1 rounded-full hover:bg-teal-50 hover:border-teal-200 transition">👋 ترحيب</button>
+                    <button type="button" onclick="useReply('سعر')" class="whitespace-nowrap bg-white border border-slate-200 text-[10px] font-bold px-3 py-1 rounded-full hover:bg-teal-50 hover:border-teal-200 transition">💰 استفسار سعر</button>
+                    <button type="button" onclick="useReply('تأكيد')" class="whitespace-nowrap bg-white border border-slate-200 text-[10px] font-bold px-3 py-1 rounded-full hover:bg-teal-50 hover:border-teal-200 transition">✅ تأكيد حجز</button>
+                    <button type="button" onclick="useReply('بحث')" class="whitespace-nowrap bg-white border border-slate-200 text-[10px] font-bold px-3 py-1 rounded-full hover:bg-teal-50 hover:border-teal-200 transition">🔍 جاري البحث</button>
+                    
+                    <div class="ml-auto flex gap-2">
+                        <button type="button" onclick="sendBookingInvoice()" title="إرسال فاتورة الحجز" class="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-bold px-3 py-1 rounded-lg text-[10px] flex items-center gap-1 transition">
+                            <i class="fas fa-file-invoice-dollar"></i> الفاتورة
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Input Area -->
                 <form id="chat-form" onsubmit="handleSend(event)" class="p-4 border-t flex items-center gap-3 bg-white">
-                    <input type="text" id="chat-input" placeholder="اكتب ردك هنا..." class="input-std">
-                    <button type="submit" class="w-10 h-10 bg-teal-600 text-white rounded-xl shadow-lg shadow-teal-200 flex items-center justify-center hover:scale-110 transition">
+                    <input type="text" id="chat-input" placeholder="اكتب ردك هنا..." class="input-std flex-1">
+                    <button type="submit" class="w-10 h-10 bg-teal-600 text-white rounded-xl shadow-lg shadow-teal-200 flex items-center justify-center hover:scale-110 transition shrink-0">
                         <i class="fas fa-paper-plane"></i>
                     </button>
                 </form>
@@ -727,6 +769,55 @@
                 </div>
             `).join('');
             container.scrollTop = container.scrollHeight;
+        }
+
+        // --- Added Chat Features ---
+        function toggleEmoji() {
+            document.getElementById('emoji-picker').classList.toggle('hidden');
+        }
+
+        function addEmoji(emoji) {
+            const input = document.getElementById('chat-input');
+            input.value += emoji;
+            input.focus();
+            toggleEmoji();
+        }
+
+        function useReply(type) {
+            const input = document.getElementById('chat-input');
+            let text = '';
+            const mod = currentModName || 'موديتور';
+            
+            if(type === 'ترحيب') text = `أهلاً بك يا فندم، أنا ${mod} من شركه 24Seven، كيف يمكنني مساعدتك؟ 😊`;
+            if(type === 'سعر') text = `ممكن توضح لي مكان التحرك ومكان الوصول علشان أقدر أقولك السعر التقريبي؟ 📍`;
+            if(type === 'تأكيد') text = `تم تأكيد حجزك بنجاح ✅، الكابتن هيتواصل معاك قبل الميعاد بـ 15 دقيقة. رحلة سعيدة! 🚕`;
+            if(type === 'بحث') text = `جاري البحث عن أقرب كابتن متاح ليك حالياً 🔍، لحظات وهبلغك بالبيانات. 🙏`;
+
+            input.value = text;
+            input.focus();
+        }
+
+        async function sendBookingInvoice() {
+            if(!activeChatId) return;
+            
+            // Try to find the latest trip for THIS sender_id 
+            const cleanId = activeChatId.replace(/[^0-9]/g, '');
+            const { data, error } = await sbClient
+                .from('google_reservations')
+                .select('*')
+                .or(`customer_phone.eq.${cleanId},customer_phone.eq.0${cleanId}`)
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+            if(data && data.length > 0) {
+                const t = data[0];
+                const invoiceText = `📄 *فاتورة حجز رحلة* 📄\n━━━━━━━━━━━━━━━\n👤 العميل: ${t.customer_name}\n🚗 السيارة: ${t.car_type}\n📅 التاريخ: ${t.trip_date}\n⏰ الوقت: ${t.trip_time}\n📍 من: ${t.pickup_address}\n🏁 إلى: ${t.dropoff_address}\n💰 التكلفة: ${t.cost} جنيه\n━━━━━━━━━━━━━━━\nشكراً لاختيارك 24Seven! ✨`;
+                
+                document.getElementById('chat-input').value = invoiceText;
+                document.getElementById('chat-input').focus();
+            } else {
+                alert('⚠️ لم يتم العثور على أي حجز مسجل لهذا العميل حالياً.');
+            }
         }
 
         async function handleSend(e) {
