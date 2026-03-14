@@ -368,6 +368,7 @@
         const SUPABASE_URL = 'https://wtjwzqvmwnbvjxnmweqq.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY';
         const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwytnzkgXXoLCghH04pjv6DVXkDpqDxMgeLHetSWTtwM7nobk3htLojmsVgmKHo871Caw/exec';
 
         let currentModName = localStorage.getItem('mod_name');
         let currentModId = localStorage.getItem('mod_id');
@@ -800,6 +801,29 @@
             
             if(!error) {
                 alert('✅ تم تسجيل الحجز بنجاح!');
+                
+                // --- Sync to Google Sheet ---
+                try {
+                    sendToGoogleSheet({
+                        tripDate: payload.trip_date || '',
+                        tripTime: payload.trip_time || '',
+                        clientName: payload.customer_name,
+                        phone: payload.customer_phone,
+                        whatsapp: payload.customer_phone, // Fallback to phone
+                        pickup: payload.pickup_address,
+                        dropoff: payload.dropoff_address,
+                        passengers: payload.passengers,
+                        bags: payload.bags,
+                        carType: payload.car_type,
+                        clientStatus: payload.client_status === 'قديم' ? 'عميل قديم' : 'عميل جديد',
+                        price: payload.cost,
+                        email: '', // Not available in moderator prompt
+                        notes: payload.notes || '',
+                        tripType: payload.trip_type,
+                        enteredBy: 'موديتور: ' + currentModName
+                    });
+                } catch(e) { console.error('Sheet Sync Error:', e); }
+
                 document.getElementById('new-trip-form').reset();
                 toggleTripForm();
                 loadSummary(); 
@@ -809,6 +833,16 @@
             }
             btn.disabled = false;
             btn.textContent = 'تأكيد الحجز وحفظه';
+        }
+
+        function sendToGoogleSheet(data) {
+            if (!APPS_SCRIPT_URL) return;
+            fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            }).catch(e => console.log('Sheet error:', e));
         }
 
         async function loadPerformance() {
