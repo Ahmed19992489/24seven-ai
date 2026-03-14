@@ -464,9 +464,14 @@
                 const currentName = groupedChats[m.sender_id].name;
                 if(!currentName || currentName === m.sender_id) {
                     // Try to find a trip with this phone number (sender_id is the phone for WhatsApp)
-                    const trip = allTrips.find(t => 
-                        t.customer_phone && t.customer_phone.includes(m.sender_id.replace(/\+/g,''))
-                    );
+                    // Normalize both IDs for comparison
+                    const cleanSenderId = m.sender_id.replace(/\D/g,'');
+                    const trip = allTrips.find(t => {
+                        if(!t.customer_phone) return false;
+                        const cleanTripPhone = t.customer_phone.replace(/\D/g,'');
+                        return cleanTripPhone.includes(cleanSenderId) || cleanSenderId.includes(cleanTripPhone);
+                    });
+                    
                     if(trip && trip.customer_name) {
                         groupedChats[m.sender_id].name = trip.customer_name;
                     }
