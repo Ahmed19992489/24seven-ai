@@ -386,25 +386,29 @@
             document.getElementById('user-name').textContent = currentModName;
             document.getElementById('user-avatar').textContent = currentModName.charAt(0);
 
-            // Fetch current moderator stats
-            const { data: res } = await sbClient.from('google_reservations')
+            // 1. Fetch ALL trips (or large recent batch) for global name resolution
+            const { data: allRes, error: allErr } = await sbClient.from('google_reservations')
                 .select('*')
-                .eq('booking_employee', currentModName);
+                .order('created_at', { ascending: false })
+                .limit(1000);
             
-            if(res) {
-                allTrips = res; // Populate global cache for name resolution
-                document.getElementById('stat-count-today').textContent = res.length;
-                const vips = res.filter(r => (r.trip_type || '').toLowerCase().includes('vip')).length;
-                const offers = res.filter(r => (r.trip_type || '').toLowerCase().includes('offer')).length;
+            if(allRes) {
+                allTrips = allRes; // Critical for name resolution across all chats
+                
+                // 2. Filter locally for THIS moderator's stats
+                const myRes = allRes.filter(r => r.booking_employee === currentModName);
+                
+                document.getElementById('stat-count-today').textContent = myRes.length;
+                const vips = myRes.filter(r => (r.trip_type || '').toLowerCase().includes('vip')).length;
+                const offers = myRes.filter(r => (r.trip_type || '').toLowerCase().includes('offer')).length;
                 document.getElementById('stat-vip-today').textContent = vips;
                 document.getElementById('stat-offer-today').textContent = offers;
                 
-                // Assume dummy commission logic until user provides real rates
-                const comm = (vips * 15) + (offers * 5); // Example
+                const comm = (vips * 15) + (offers * 5);
                 document.getElementById('stat-commission-today').textContent = comm + " EGP";
 
-                renderRecentTrips(res.slice(0, 10));
-                regroupAndRender(); // Refresh chat list names if chat is open
+                renderRecentTrips(myRes.slice(0, 10));
+                regroupAndRender(); // Refresh chat list with newly resolved names
             }
         }
 
