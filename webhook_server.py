@@ -192,41 +192,51 @@ def clean_phone_strict(phone):
     # نعيد آخر 11 رقم (الموبايل المصري) أو الرقم كاملاً لو كان دولياً
     return clean[-11:] if len(clean) >= 11 else clean
 
-def find_active_row(sheet, sender_phone):
-    print(f"🔎 جاري البحث عن الرحلة النشطة للرقم: {sender_phone} ...")
+def find_active_session(sheet, sender_phone):
+    """البحث عن جلسة نشطة (تأكيد أو تقييم) بناءً على حالة الشيت"""
     try:
         clean_sender = clean_phone_strict(sender_phone)
         all_rows = sheet.get_all_values()
-        # البحث من الأحدث للأقدم
+        
+        # 1. فحص التقييم (Z = index 25) - له الأولوية لو أرسلنا تقييم
         for i in range(len(all_rows)-1, 0, -1):
             row = all_rows[i]
-            if len(row) > 26: 
-                sheet_phone = clean_phone_strict(row[4])
-                status_aa = str(row[26]).strip()
-                # إذا وجدنا تطابق والرقم في حالة "طلب تأكيد"
-                if sheet_phone == clean_sender and "طلب التأكيد" in status_aa:
-                    real_row = i + 1
-                    print(f"🎯 تم العثور على الرحلة النشطة في الصف: {real_row}")
-                    return real_row
+            if len(row) > 25:
+                if clean_phone_strict(row[4]) == clean_sender and "طلب التقييم" in str(row[25]):
+                    return i + 1, "feedback"
+                    
+        # 2. فحص التأكيد (AA = index 26) 
+        for i in range(len(all_rows)-1, 0, -1):
+            row = all_rows[i]
+            if len(row) > 26:
+                if clean_phone_strict(row[4]) == clean_sender and "طلب التأكيد" in str(row[26]):
+                    return i + 1, "confirm"
         
-        # محاولة ثانية: البحث عن آخر حجز لهذا الرقم بغض النظر عن الحالة
-        print("⚠️ لم يتم العثور على رحلة معلقة، سأبحث عن آخر حجز للمستخدم...")
+        # fallback: آخر رحلة (لعمليات عامة)
         for i in range(len(all_rows)-1, 0, -1):
             row = all_rows[i]
             if len(row) > 4:
                 if clean_phone_strict(row[4]) == clean_sender:
-                    return i + 1
-        return -1
+                    return i + 1, "unknown"
+                    
+        return -1, None
     except Exception as e:
-        print(f"❌ خطأ أثناء البحث: {e}")
-        return -1
+        print(f"❌ خطأ في find_active_session: {e}")
+        return -1, None
 
-def handle_confirmation(sender, text):
+def find_active_row(sheet, sender_phone):
+    row, _ = find_active_session(sheet, sender_phone)
+    return row
+
+def handle_confirmation(sender, text, row=None):
     sheet = get_main_sheet()
-    row = find_active_row(sheet, sender)
+    if not row:
+        row, stype = find_active_session(sheet, sender)
+        if stype != "confirm": return # لا نعالج التأكيد لو الجلسة ليست "تأكيد"
+        
     if row != -1:
         text_lower = text.lower()
-        if any(keyword in text_lower for keyword in ["تأكيد", "confirm", "نعم", "وافق", "ok", "yes"]):
+        if any(keyword in text_lower for keyword in ["تأكيد", "confirm", "نعم", "وافق", "ok", "yes", "تمام"]):
             print(f"📝 تسجيل الموافقة في AB{row}...")
             try:
                 sheet.update_acell(f"AB{row}", "وافق ✅") 
@@ -256,13 +266,19 @@ def handle_location_received(sender, msg):
         except Exception as e:
             print(f"❌ فشل الكتابة في الشيت: {e}")
 
-def start_feedback_flow(sender, text):
+def start_feedback_flow(sender, text, row):
+    """البدء في تسجيل التقييم (تسجيل أول إجابة: التقييم العام)"""
     sheet = get_main_sheet()
-    row = find_active_row(sheet, sender)
-    if row != -1:
+    try:
+        # 1. تسجيل التقييم العام في AD (Column 30)
         sheet.update_acell(f"AD{row}", text)
+        # 2. تحديث الحالة في Z لكي لا نكرر البدء
+        sheet.update_acell(f"Z{row}", "جاري التقييم... ⏳")
+        # 3. حفظ الحالة في الذاكرة
         user_state[sender] = {"step": "q2", "row": row, "timestamp": time.time()}
         send_whatsapp_message(sender, "س2: هل كانت السيارة نظيفة؟ (نعم / لا)")
+    except Exception as e:
+        print(f"❌ فشل start_feedback_flow: {e}")
 
 def handle_feedback_flow(sender, text):
     state = user_state[sender]
@@ -273,19 +289,21 @@ def handle_feedback_flow(sender, text):
         if step == "q2":
             sheet.update_acell(f"AE{row}", text)
             user_state[sender]['step'] = "q3"
-            send_whatsapp_message(sender, "س3: تقييمك للكابتن؟")
+            send_whatsapp_message(sender, "س3: تقييمك للكابتن؟ (مثلاً: ممتاز، جيد، ..)")
         elif step == "q3":
             sheet.update_acell(f"AF{row}", text)
             user_state[sender]['step'] = "q4"
-            send_whatsapp_message(sender, "س4: هل ترشحنا لأقاربك؟")
+            send_whatsapp_message(sender, "س4: هل ترشحنا لأقاربك؟ (نعم / لا)")
         elif step == "q4":
             sheet.update_acell(f"AG{row}", text)
             user_state[sender]['step'] = "q5"
             send_whatsapp_message(sender, "س5: (اختياري) هل لديك أي اقتراحات؟")
         elif step == "q5":
             sheet.update_acell(f"AH{row}", text)
+            # تحديث الحالة النهائية في الشيت
+            sheet.update_acell(f"Z{row}", "تم انتهاء التقييم ✅")
             user_state.pop(sender, None)
-            send_whatsapp_message(sender, "شكراً لملاحظاتك ❤️، دمت بود.")
+            send_whatsapp_message(sender, "شكراً لملاحظاتك ❤️، دمت بودنا.")
     except Exception as e:
         print(f"❌ فشل حفظ التقييم: {e}")
 
@@ -336,8 +354,14 @@ def whatsapp_webhook():
                     if sender in user_state:
                          handle_feedback_flow(sender, text_body)
                     elif msg_type in ['text', 'button', 'interactive']:
-                         # إذا لم يكن في وسط تقييم، نفحص هل هي رسالة تأكيد
-                         handle_confirmation(sender, text_body)
+                         # فحص هل هناك جلسة نشطة منتظرة رد (تأكيد أو تقييم في الشيت)
+                         sheet = get_main_sheet()
+                         row_idx, session_type = find_active_session(sheet, sender)
+                         
+                         if session_type == "feedback":
+                              start_feedback_flow(sender, text_body, row_idx)
+                         elif session_type == "confirm":
+                              handle_confirmation(sender, text_body, row_idx)
                     
         except Exception as e:
             print(f"❌ Webhook Error: {e}")
