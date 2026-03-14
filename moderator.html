@@ -457,6 +457,9 @@
         function regroupAndRender() {
             groupedChats = {};
             allMessages.forEach(m => {
+                // --- 🛡️ Filter out junk system/Admin threads ---
+                if (!m.sender_id || m.sender_id === 'Admin') return;
+
                 if(!groupedChats[m.sender_id]) {
                     // Initialize with ID as name fallback, never 'Admin' or 'ش'
                     let initialName = m.sender_id;
@@ -470,13 +473,13 @@
                 
                 // --- 🧠 Automated Name Resolution Logic ---
                 // 1. Prefer non-Admin, non-ID names from message records (if not junk)
-                if(!m.is_from_admin && m.sender_name && m.sender_name !== m.sender_id && !['Admin', 'ش'].includes(m.sender_name)) {
+                if(!m.is_from_admin && m.sender_name && m.sender_name !== m.sender_id && !['Admin', 'ش', 'Messenger User'].includes(m.sender_name)) {
                     groupedChats[m.sender_id].name = m.sender_name;
                 }
                 
                 // 2. If name is still an ID or junk, check trip data
                 const currentName = groupedChats[m.sender_id].name;
-                const isIdOrJunk = !currentName || currentName === m.sender_id || ['Admin', 'ش'].includes(currentName);
+                const isIdOrJunk = !currentName || currentName === m.sender_id || ['Admin', 'ش', 'Messenger User'].includes(currentName);
                 
                 if(isIdOrJunk) {
                     const cleanSenderId = m.sender_id.replace(/\D/g,'');
@@ -491,10 +494,17 @@
                             groupedChats[m.sender_id].name = trip.customer_name;
                         }
                     }
-                    // For Messenger: Matching is harder unless we have a manual link or trip has the name
-                    // We don't change anything for Messenger here yet as PSIDs don't match phones
+                    // For Messenger: Match based on name in message history if exists
                 }
             });
+            
+            // Clean up any empty threads accidentally created
+            Object.keys(groupedChats).forEach(id => {
+                if (!groupedChats[id].messages || groupedChats[id].messages.length === 0) {
+                    delete groupedChats[id];
+                }
+            });
+
             renderChatList();
         }
 
@@ -509,7 +519,10 @@
                     <div class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-500">${c.name?.charAt(0) || '?'}</div>
                     <div class="flex-1 min-w-0">
                         <div class="flex justify-between items-baseline">
-                            <h4 class="text-sm font-bold truncate ${activeChatId === c.id ? 'text-teal-700' : 'text-slate-800'}">${c.name || c.id}</h4>
+                            <h4 class="text-sm font-bold truncate ${activeChatId === c.id ? 'text-teal-700' : 'text-slate-800'}">
+                                ${c.name || c.id}
+                                ${(!c.name || c.name === c.id || c.name === 'Messenger User') ? '<span class="text-[8px] text-amber-500 ml-1">✏️</span>' : ''}
+                            </h4>
                             <span class="text-[9px] text-slate-400">${new Date(c.last.created_at).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}</span>
                         </div>
                         <p class="text-[11px] text-slate-500 truncate">${c.last.message_text}</p>
