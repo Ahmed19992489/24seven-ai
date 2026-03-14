@@ -2799,18 +2799,31 @@
             }
 
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري إنشاء الحساب...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحقق من السيرفر...';
 
             try {
-                // استدعاء الـ API الخلفي لإنشاء الحساب ( Flask server on port 3000 )
-                let apiUrl;
+                let apiUrlBase;
                 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                    apiUrl = `http://localhost:3000/admin/create-staff`;
+                    apiUrlBase = `http://localhost:3000`;
                 } else {
-                    apiUrl = window.location.protocol + "//" + window.location.hostname + ":3000/admin/create-staff";
+                    apiUrlBase = window.location.protocol + "//" + window.location.hostname + ":3000";
                 }
-                
-                const response = await fetch(apiUrl, {
+
+                // 1. التحقق من أن السيرفر يعمل (Health Check)
+                try {
+                    const healthResp = await fetch(`${apiUrlBase}/api/health`, { method: 'GET' });
+                    if (!healthResp.ok) throw new Error();
+                } catch (e) {
+                    alert(`❌ السيرفر غير متاح (Port 3000).\nيرجى التأكد من تشغيل webhook_server.py وأن البورت 3000 مفتوح في إعدادات السيرفر أو الراوتر.`);
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-check-circle"></i> إنشاء الحساب وتفعيل الموظف';
+                    return;
+                }
+
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري إنشاء الحساب...';
+
+                // 2. إرسال الطلب الفعلي
+                const response = await fetch(`${apiUrlBase}/admin/create-staff`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ full_name: fullName, email, password, role })
