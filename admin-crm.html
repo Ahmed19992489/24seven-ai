@@ -621,6 +621,20 @@
                     <p class="text-slate-400 text-xs font-bold uppercase">إجمالي فريق العمل</p>
                     <h3 class="text-3xl font-black mt-2" id="staff-total-count">0</h3>
                 </div>
+                <!-- لوحة إعدادات السيرفر -->
+                <div class="glass-panel p-4 col-span-1 md:col-span-3 border-b-4 border-amber-500">
+                    <p class="text-slate-400 text-xs font-bold uppercase mb-2">إعدادات الاتصال بالسيرفر (API)</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="staff-api-url" placeholder="https://your-ngrok-url.ngrok-free.app (اتركه فارغاً للافتراضي)" 
+                               class="flex-1 text-xs p-2.5 rounded-lg border border-slate-200 focus:border-amber-500 outline-none">
+                        <button onclick="saveStaffApiUrl()" class="bg-amber-500 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-amber-600 transition">
+                            <i class="fas fa-save"></i> حفظ
+                        </button>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-2">
+                        <i class="fas fa-info-circle mr-1"></i> استخدم رابط <b>ngrok</b> (HTTPS) إذا كنت تشغل السيرفر محلياً والموقع يعمل عبر HTTPS.
+                    </p>
+                </div>
             </div>
 
             <div class="glass-panel overflow-hidden">
@@ -2735,9 +2749,33 @@
                 setTimeout(loadOmnichannelChats, 100);
             }
             if (page === 'staff') {
-                setTimeout(loadStaff, 100);
+                setTimeout(() => {
+                    const savedUrl = localStorage.getItem('staff_api_url');
+                    const input = document.getElementById('staff-api-url');
+                    if (input && savedUrl) input.value = savedUrl;
+                    loadStaff();
+                }, 100);
             }
         };
+
+        function getStaffApiBaseUrl() {
+            const customUrl = localStorage.getItem('staff_api_url');
+            if (customUrl && customUrl.trim() !== '') {
+                return customUrl.trim().replace(/\/$/, ''); 
+            }
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                return `http://localhost:3000`;
+            } else {
+                return window.location.protocol + "//" + window.location.hostname + ":3000";
+            }
+        }
+
+        function saveStaffApiUrl() {
+            const url = document.getElementById('staff-api-url').value;
+            localStorage.setItem('staff_api_url', url);
+            alert('✅ تم حفظ إعدادات السيرفر بنجاح.');
+            loadStaff();
+        }
 
         // ==========================================
         // 👮 إدارة الموظفين (Staff Management)
@@ -2802,12 +2840,7 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحقق من السيرفر...';
 
             try {
-                let apiUrlBase;
-                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                    apiUrlBase = `http://localhost:3000`;
-                } else {
-                    apiUrlBase = window.location.protocol + "//" + window.location.hostname + ":3000";
-                }
+                const apiUrlBase = getStaffApiBaseUrl();
 
                 // 1. التحقق من أن السيرفر يعمل (Health Check)
                 try {
