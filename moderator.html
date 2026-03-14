@@ -15,7 +15,7 @@
         .sidebar-item:hover { background-color: #f1f5f9; color: #0d9488; transform: translateX(-5px); }
         .sidebar-item.active { background-color: #0d9488; color: white; box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3); }
         .input-std { background-color: white; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 0.6rem 1rem; width: 100%; transition: all 0.2s; }
-        .input-std:focus { outline: none; border-color: #0d9488; ring: 2px; ring-color: #0d9488; }
+        .input-std:focus { outline: none; border-color: #0d9488; box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.2); }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
@@ -189,13 +189,17 @@
 
             <!-- Search Area -->
             <div class="glass-panel p-6 mb-6">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="relative">
-                        <input type="text" id="trip-search-input" placeholder="رقم الهاتف أو اسم العميل..." class="input-std pr-10">
+                <div class="flex flex-wrap gap-4 items-center">
+                    <div class="relative flex-1 min-w-[300px]">
+                        <input type="text" id="trip-search-input" oninput="quickFilterTrips()" placeholder="بحث سريع بالاسم، الهاتف، أو المسار..." class="input-std pr-10">
                         <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
                     </div>
-                    <button onclick="searchTrips()" class="bg-slate-800 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-slate-900 transition">بحث سريع</button>
-                    <div id="search-results-count" class="flex items-center text-xs text-slate-400 font-bold px-4"></div>
+                    <div class="flex gap-2">
+                        <button onclick="filterByDate('today')" id="filter-today" class="px-5 py-2.5 rounded-xl font-bold bg-slate-100 text-slate-600 hover:bg-teal-50 hover:text-teal-600 transition">رحلات اليوم</button>
+                        <button onclick="filterByDate('tomorrow')" id="filter-tomorrow" class="px-5 py-2.5 rounded-xl font-bold bg-slate-100 text-slate-600 hover:bg-teal-50 hover:text-teal-600 transition">رحلات غداً ⏰</button>
+                        <button onclick="searchTrips()" class="px-6 py-2.5 rounded-xl font-bold bg-slate-800 text-white hover:bg-slate-900 transition">بحث متقدم</button>
+                    </div>
+                    <div id="search-results-count" class="text-xs text-slate-400 font-bold px-2"></div>
                 </div>
             </div>
 
@@ -215,6 +219,21 @@
                         <input type="text" id="t-phone" required class="input-std" placeholder="01xxxxxxxxx">
                     </div>
                     <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-2">نوع العميل</label>
+                        <select id="t-client-status" class="input-std">
+                            <option value="جديد">عميل جديد</option>
+                            <option value="قديم">عميل قديم</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-2">نوع السيارة</label>
+                        <select id="t-car-type" class="input-std">
+                            <option value="سيدان">سيدان (عادية)</option>
+                            <option value="SUV">SUV (عائلية)</option>
+                            <option value="Van">Van (فان)</option>
+                        </select>
+                    </div>
+                    <div>
                         <label class="block text-xs font-bold text-slate-400 mb-2">نوع الرحلة</label>
                         <select id="t-type" class="input-std">
                             <option value="Offer">Offer (عرض)</option>
@@ -223,12 +242,12 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-2">من (نقطة التحرك)</label>
-                        <input type="text" id="t-from" required class="input-std" placeholder="العنوان بالتفصيل">
+                        <label class="block text-xs font-bold text-slate-400 mb-2">عدد الأفراد</label>
+                        <input type="number" id="t-passengers" class="input-std" placeholder="1" min="1">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-2">إلى (نقطة الوصول)</label>
-                        <input type="text" id="t-to" required class="input-std" placeholder="العنوان بالتفصيل">
+                        <label class="block text-xs font-bold text-slate-400 mb-2">عدد الشنط</label>
+                        <input type="number" id="t-bags" class="input-std" placeholder="0" min="0">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-400 mb-2">التاريخ</label>
@@ -239,8 +258,20 @@
                         <input type="time" id="t-time" required class="input-std">
                     </div>
                     <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-2">من (نقطة التحرك)</label>
+                        <input type="text" id="t-from" required class="input-std" placeholder="العنوان بالتفصيل">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-2">إلى (نقطة الوصول)</label>
+                        <input type="text" id="t-to" required class="input-std" placeholder="العنوان بالتفصيل">
+                    </div>
+                    <div>
                         <label class="block text-xs font-bold text-slate-400 mb-2">السعر المتفق عليه</label>
                         <input type="number" id="t-cost" required class="input-std" placeholder="0.00">
+                    </div>
+                    <div class="md:col-span-2 lg:col-span-3">
+                        <label class="block text-xs font-bold text-slate-400 mb-2">ملاحظات إضافية</label>
+                        <textarea id="t-notes" class="input-std h-20" placeholder="أي تفاصيل أخرى..."></textarea>
                     </div>
                     <div class="lg:col-span-3 flex justify-end">
                         <button type="submit" id="t-submit" class="bg-teal-600 text-white px-10 py-3 rounded-xl font-bold shadow-lg shadow-teal-100 hover:scale-105 transition">تأكيد الحجز وحفظه</button>
@@ -415,8 +446,10 @@
                 }
                 groupedChats[m.sender_id].messages.push(m);
                 groupedChats[m.sender_id].last = m;
-                // Never take 'Admin' as group name
-                if(!m.is_from_admin) groupedChats[m.sender_id].name = m.sender_name;
+                // Prefer non-Admin name and non-ID name
+                if(!m.is_from_admin && m.sender_name && m.sender_name !== m.sender_id) {
+                    groupedChats[m.sender_id].name = m.sender_name;
+                }
             });
             renderChatList();
         }
@@ -484,9 +517,59 @@
         }
 
         // --- Trip Management Logic ---
+        let allTrips = []; // Cache for local filtering
+
         function toggleTripForm() {
             const container = document.getElementById('trip-form-container');
             container.classList.toggle('hidden');
+        }
+
+        function quickFilterTrips() {
+            const query = document.getElementById('trip-search-input').value.toLowerCase();
+            if(!query && allTrips.length === 0) return;
+            
+            const filtered = allTrips.filter(t => 
+                (t.customer_name || '').toLowerCase().includes(query) ||
+                (t.customer_phone || '').includes(query) ||
+                (t.pickup_address || '').toLowerCase().includes(query) ||
+                (t.dropoff_address || '').toLowerCase().includes(query)
+            );
+            renderTripsTable(filtered);
+            document.getElementById('search-results-count').textContent = `تم تصفية ${filtered.length} نتيجة`;
+        }
+
+        async function filterByDate(type) {
+            const btnT = document.getElementById('filter-today');
+            const btnTom = document.getElementById('filter-tomorrow');
+            
+            btnT.classList.remove('bg-teal-600', 'text-white');
+            btnTom.classList.remove('bg-teal-600', 'text-white');
+            
+            let dateStr = "";
+            const now = new Date();
+            if(type === 'today') {
+                dateStr = now.toISOString().split('T')[0];
+                btnT.classList.add('bg-teal-600', 'text-white');
+            } else {
+                const tomorrow = new Date(now);
+                tomorrow.setDate(now.getDate() + 1);
+                dateStr = tomorrow.toISOString().split('T')[0];
+                btnTom.classList.add('bg-teal-600', 'text-white');
+            }
+
+            const resultsCount = document.getElementById('search-results-count');
+            resultsCount.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحميل...';
+
+            const { data, error } = await sbClient.from('google_reservations')
+                .select('*')
+                .eq('trip_date', dateStr)
+                .order('trip_time', { ascending: true });
+            
+            if(data) {
+                allTrips = data;
+                resultsCount.textContent = `تم العثور على ${data.length} رحلة لـ ${type === 'today' ? 'اليوم' : 'الغد'}`;
+                renderTripsTable(data);
+            }
         }
 
         async function searchTrips() {
@@ -498,11 +581,12 @@
 
             const { data, error } = await sbClient.from('google_reservations')
                 .select('*')
-                .or(`customer_name.ilike.%${query}%,customer_phone.ilike.%${query}%`)
+                .or(`customer_name.ilike.%${query}%,customer_phone.ilike.%${query}%,pickup_address.ilike.%${query}%,dropoff_address.ilike.%${query}%`)
                 .order('trip_date', { ascending: false })
-                .limit(50);
+                .limit(100);
             
             if(data) {
+                allTrips = data;
                 resultsCount.textContent = `تم العثور على ${data.length} نتيجة`;
                 renderTripsTable(data);
             } else {
@@ -513,24 +597,44 @@
         function renderTripsTable(trips) {
             const tbody = document.getElementById('trips-table-body');
             tbody.innerHTML = trips.map(t => `
-                <tr class="border-b hover:bg-slate-50 transition">
-                    <td class="p-4 font-bold text-slate-700">${t.customer_name || '---'}</td>
-                    <td class="p-4 text-xs text-slate-500">${t.pickup_address?.substring(0,25)}... ➝ ${t.dropoff_address?.substring(0,25)}...</td>
+                <tr class="border-b hover:bg-slate-50 transition border-r-4 ${t.client_status === 'قديم' ? 'border-r-blue-400' : 'border-r-teal-400'}">
+                    <td class="p-4">
+                        <div class="font-bold text-slate-700">${t.customer_name || '---'}</div>
+                        <div class="text-[10px] text-slate-400">${t.customer_phone || ''} | ${t.client_status || 'جديد'}</div>
+                    </td>
+                    <td class="p-4">
+                        <div class="text-xs text-slate-600 font-bold">${t.pickup_address?.substring(0,30)}...</div>
+                        <div class="text-[10px] text-slate-400">إلى: ${t.dropoff_address?.substring(0,30)}...</div>
+                    </td>
                     <td class="p-4 text-center text-xs">
-                        <span class="font-bold">${t.trip_date || '--'}</span><br>
-                        <span class="opacity-50">${t.trip_time || '--'}</span>
+                        <span class="font-black text-slate-700">${t.trip_date || '--'}</span><br>
+                        <span class="bg-slate-100 px-1.5 py-0.5 rounded mt-1 inline-block">${t.trip_time || '--'}</span>
                     </td>
                     <td class="p-4 text-center">
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-black ${t.trip_type?.includes('VIP') ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}">${t.trip_type || 'نقل'}</span>
+                        <div class="px-2 py-0.5 rounded-full text-[10px] font-black inline-block ${t.trip_type?.includes('VIP') ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}">${t.trip_type || 'نقل'}</div>
+                        <div class="text-[9px] text-slate-400 mt-1">${t.car_type || ''} | ${t.passengers || 1}👤 | ${t.bags || 0}🧳</div>
                     </td>
                     <td class="p-4 text-center">
                         <span class="px-2 py-0.5 rounded-full text-[10px] bg-slate-100 text-slate-600 font-bold">${t.status || 'معلق'}</span>
                     </td>
-                    <td class="p-4 text-center">
-                        <button onclick="navigator.clipboard.writeText('${t.customer_phone}'); alert('تم نسخ الرقم')" class="text-teal-600 hover:text-teal-800"><i class="fas fa-phone"></i></button>
+                    <td class="p-4 text-center flex gap-2 justify-center">
+                        <button onclick="copyTripDetails('${t.id}')" title="نسخ بيانات الرحلة" class="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 hover:bg-teal-600 hover:text-white transition flex items-center justify-center">
+                            <i class="fas fa-copy text-xs"></i>
+                        </button>
+                        <button onclick="window.open('https://wa.me/${t.customer_phone?.replace(/\D/g,'')}')" class="w-8 h-8 rounded-lg bg-slate-100 text-green-600 hover:bg-green-600 hover:text-white transition flex items-center justify-center">
+                            <i class="fab fa-whatsapp text-xs"></i>
+                        </button>
                     </td>
                 </tr>
             `).join('');
+        }
+
+        function copyTripDetails(id) {
+            const t = allTrips.find(x => x.id == id);
+            if(!t) return;
+            const text = `🚕 *تفاصيل الحجز* 🚕\n👤 العميل: ${t.customer_name}\n📱 الهاتف: ${t.customer_phone}\n📅 التاريخ: ${t.trip_date}\n⏰ الوقت: ${t.trip_time}\n📍 من: ${t.pickup_address}\n🏁 إلى: ${t.dropoff_address}\n👥 الركاب: ${t.passengers}\n🧳 الشنط: ${t.bags}\n🚗 السيارة: ${t.car_type}\n💰 السعر: ${t.cost} EGP\n📝 ملاحظات: ${t.notes || 'لا يوجد'}`;
+            navigator.clipboard.writeText(text);
+            alert('تم نسخ بيانات الرحلة بنجاح!');
         }
 
         async function createNewTrip(e) {
@@ -542,12 +646,17 @@
             const payload = {
                 customer_name: document.getElementById('t-name').value,
                 customer_phone: document.getElementById('t-phone').value,
+                client_status: document.getElementById('t-client-status').value, // جديد/قديم
+                car_type: document.getElementById('t-car-type').value,
                 trip_type: document.getElementById('t-type').value,
-                pickup_address: document.getElementById('t-from').value,
-                dropoff_address: document.getElementById('t-to').value,
+                passengers: document.getElementById('t-passengers').value || 1,
+                bags: document.getElementById('t-bags').value || 0,
                 trip_date: document.getElementById('t-date').value,
                 trip_time: document.getElementById('t-time').value,
+                pickup_address: document.getElementById('t-from').value,
+                dropoff_address: document.getElementById('t-to').value,
                 cost: document.getElementById('t-cost').value,
+                notes: document.getElementById('t-notes').value,
                 booking_employee: currentModName,
                 status: 'pending'
             };
@@ -558,7 +667,8 @@
                 alert('✅ تم تسجيل الحجز بنجاح!');
                 document.getElementById('new-trip-form').reset();
                 toggleTripForm();
-                loadSummary(); // Refresh dashboard stats
+                loadSummary(); 
+                searchTrips(); // Refresh the list if searching
             } else {
                 alert('❌ خطأ في الحفظ: ' + error.message);
             }
