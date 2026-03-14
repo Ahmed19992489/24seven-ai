@@ -491,6 +491,28 @@
             }
         }
 
+        // --- Heartbeat & Activity Tracking ---
+        async function updateHeartbeat() {
+            if(!currentModId) return;
+            try {
+                // We'll try to update 'last_seen'. If column doesn't exist, it will fail silently in console.
+                await sbClient
+                    .from('profiles')
+                    .update({ last_seen: new Date().toISOString() })
+                    .eq('id', currentModId);
+            } catch(e) { console.error("Heartbeat error:", e); }
+        }
+        
+        // Update heartbeat immediately and then every 2 minutes
+        updateHeartbeat();
+        setInterval(updateHeartbeat, 120000);
+
+        // --- Notification Sound ---
+        const notificationSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3'); 
+        function playNotify() {
+            notificationSound.play().catch(e => console.log("Sound play blocked by browser"));
+        }
+
         function toggleSidebar() {
             document.body.classList.toggle('sidebar-open');
         }
@@ -566,12 +588,29 @@
             // --- 🛡️ Prevent Multiple Subscriptions ---
             if (chatSubscription) return; // Already subscribed
 
-            chatSubscription = sbClient.channel('mod-chat').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'omnichannel_messages' }, payload => {
-                console.log("🆕 New message received via Realtime:", payload.new);
-                allMessages.push(payload.new);
-                regroupAndRender();
-                if(activeChatId === payload.new.sender_id) renderMessages();
-            }).subscribe();
+            chatSubscription = sbClient.channel('omni-realtime')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'omnichannel_messages' }, payload => {
+                    console.log("🆕 New message received via Realtime:", payload.new);
+                    
+                    // Check if message already exists (prevent duplicates from Echo + Manual Insert)
+                    if (allMessages.find(m => m.id === payload.new.id)) return;
+                    
+                    allMessages.push(payload.new);
+                    regroupAndRender();
+                    
+                    if(activeChatId === payload.new.sender_id) {
+                        renderMessages();
+                        // Scroll to bottom
+                        const container = document.getElementById('chat-messages');
+                        container.scrollTop = container.scrollHeight;
+                    }
+                    
+                    // Play sound for incoming customer messages
+                    if (!payload.new.is_from_admin) {
+                        playNotify();
+                    }
+                })
+                .subscribe();
         }
 
         function regroupAndRender() {
@@ -709,7 +748,12 @@
                         'Content-Type': 'application/json',
                         'ngrok-skip-browser-warning': 'true'
                     },
-                    body: JSON.stringify({ channel: chat.channel, sender_id: activeChatId, message: text })
+                    body: JSON.stringify({ 
+                        channel: chat.channel, 
+                        sender_id: activeChatId, 
+                        message: text,
+                        mod_name: currentModName // Pass current moderator name
+                    })
                 });
                 
                 if (res.ok) {

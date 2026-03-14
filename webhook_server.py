@@ -606,6 +606,7 @@ def send_omnichannel_reply():
     channel = data.get('channel', '').lower()
     sender_id = data.get('sender_id')
     message = data.get('message')
+    mod_name = data.get('mod_name', 'Admin') # Get moderator name
 
     if not channel or not sender_id or not message:
         return jsonify({"status": "error", "message": "Missing parameters"}), 400
@@ -638,7 +639,7 @@ def send_omnichannel_reply():
         insert_message_to_supabase(
             channel='whatsapp',
             sender_id=sender_id,
-            sender_name="Admin",
+            sender_name=mod_name, # Use custom name
             message_text=message,
             is_from_admin=True
         )
