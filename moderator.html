@@ -149,12 +149,14 @@
                     <p class="font-bold text-slate-500">اختر محادثة للبدء في الرد</p>
                 </div>
 
-                <!-- Chat Header -->
                 <div id="chat-header" class="p-4 border-b flex items-center justify-between">
                     <div class="flex items-center gap-3">
                          <div id="chat-avatar" class="w-10 h-10 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold">?</div>
                          <div>
-                            <p id="chat-name" class="font-bold text-slate-800">اسم العميل</p>
+                            <div class="flex items-center gap-2">
+                                <p id="chat-name" class="font-bold text-slate-800">اسم العميل</p>
+                                <button onclick="promptEditName()" class="text-slate-300 hover:text-teal-600 transition text-[10px]"><i class="fas fa-edit"></i></button>
+                            </div>
                             <p id="chat-status" class="text-[10px] text-teal-600 font-bold">متصل الآن</p>
                          </div>
                     </div>
@@ -513,6 +515,36 @@
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ channel: chat.channel, sender_id: activeChatId, message: text })
                 });
+            } catch(e) { console.error(e); }
+        }
+
+        async function promptEditName() {
+            if(!activeChatId) return;
+            const currentName = document.getElementById('chat-name').textContent;
+            const newName = prompt('أدخل الاسم الجديد للعميل:', currentName);
+            if(newName && newName !== currentName) {
+                await updateChatName(activeChatId, newName);
+            }
+        }
+
+        async function updateChatName(senderId, newName) {
+            try {
+                const { error } = await sbClient
+                    .from('omnichannel_messages')
+                    .update({ sender_name: newName })
+                    .eq('sender_id', senderId);
+                
+                if(!error) {
+                    alert('✅ تم تحديث الاسم بنجاح!');
+                    // Update local cache
+                    allMessages.forEach(m => {
+                        if(m.sender_id === senderId) m.sender_name = newName;
+                    });
+                    regroupAndRender();
+                    openChat(senderId);
+                } else {
+                    alert('❌ فشل تحديث الاسم: ' + error.message);
+                }
             } catch(e) { console.error(e); }
         }
 
