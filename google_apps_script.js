@@ -103,8 +103,26 @@ function updateDriverInSheet(data) {
     const sheet = ss.getSheetByName(SHEET_TAB);
     if (!sheet) throw new Error('الشيت غير موجود');
 
-    const rowNum = parseInt(data.sheetRow);
-    if (!rowNum || rowNum < 2) throw new Error('رقم الصف غير صحيح: ' + data.sheetRow);
+    let rowNum = parseInt(data.sheetRow);
+    
+    // Fallback: Find row by SQL_ID (Column U / 21) if sheetRow is missing
+    if (!rowNum || rowNum < 2) {
+        const sqlId = data.sqlId;
+        if (sqlId) {
+            const lastRow = sheet.getLastRow();
+            if (lastRow > 1) {
+                const sqlIds = sheet.getRange(2, 21, lastRow - 1, 1).getValues();
+                for (let i = 0; i < sqlIds.length; i++) {
+                    if (String(sqlIds[i][0]) === String(sqlId)) {
+                        rowNum = i + 2;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    if (!rowNum || rowNum < 2) throw new Error('رقم الصف غير صحيح أو لم يتم العثور على الحجز: ' + (data.sheetRow || data.sqlId));
 
     sheet.getRange(rowNum, 22).setValue(data.driverName || '');
     sheet.getRange(rowNum, 23).setNumberFormat('@');

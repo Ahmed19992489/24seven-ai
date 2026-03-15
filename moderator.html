@@ -992,8 +992,10 @@
                 if(!trip) throw new Error('تعذر العثور على بيانات الرحلة');
 
                 const driverOpt = driverSelect.options[driverSelect.selectedIndex];
-                const driverName = driverOpt.dataset.name;
-                const driverPhone = driverOpt.dataset.phone;
+                const driverName = driverOpt?.dataset?.name || 'كابتن معتمد';
+                const driverPhone = driverOpt?.dataset?.phone || '';
+
+                console.log('👷 Selected Driver:', { driverId, driverName, driverPhone });
 
                 // 1. Find or create client profile
                 const rawPhone = (trip.customer_phone || '').replace(/\D/g, '');
@@ -1081,10 +1083,11 @@
 
                     // --- 6. Sync to Google Sheet ---
                     try {
-                        console.log('📊 Syncing to sheet:', { sheetRow: trip.sheet_row, driverName, driverPhone });
+                        console.log('📊 Syncing to sheet:', { sheetRow: trip.sheet_row, sqlId: newTrip.id, driverName, driverPhone });
                         sendToGoogleSheet({
                             action: 'assignDriver',
                             sheetRow: trip.sheet_row,
+                            sqlId: newTrip.id,
                             driverName: driverName,
                             driverPhone: driverPhone
                         });
