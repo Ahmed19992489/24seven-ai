@@ -1033,19 +1033,62 @@
                     .eq('id', currentAssignTripId);
                 
                 if(!resErr) {
-                    alert('✅ تم تعيين الكابتن والسيارة بنجاح!');
-                    closeAssignModal();
-                    searchTrips(); 
-                    
-                    // Sync to Sheet if possible
+                    // --- 4. Notify Captain (App) ---
                     try {
+                        const { data: carInfo } = await sbClient.from('cars').select('brand,model,plate_number').eq('id', carId).single();
+                        await sbClient.from('chat_messages').insert([{
+                            trip_id: newTrip.id,
+                            sender_role: 'admin',
+                            sender_id: 'admin',
+                            sender_name: 'الإدارة',
+                            message: `🎯 مرحباً كابتن ${driverName}!\n\nتم تعيينك على رحلة جديدة:\n📍 من: ${trip.pickup_address || ''}\n🏁 إلى: ${trip.dropoff_address || ''}\n💰 قيمة الرحلة: ${Number(trip.cost || 0).toLocaleString()} EGP\n🚗 السيارة: ${carInfo?.brand || ''} ${carInfo?.model || ''} (${carInfo?.plate_number || ''})\n\n✅ تواصل مع العميل من خلال الدردشة فقط`,
+                            message_type: 'system'
+                        }]);
+                    } catch(e) { console.error('Captain Notify Error:', e); }
+
+                    // --- 5. Notify Client (WhatsApp/Messenger) ---
+                    try {
+                        const clientMsg = `✅ تم تعيين الكابتن لرحلتك!\n🚕 الكابتن: ${driverName}\n📱 هاتف: ${driverPhone}\n🚗 السيارة: ${trip.car_type || ''}\n📍 المسار: ${trip.pickup_address} ➝ ${trip.dropoff_address}\n\nنتمنى لك رحلة سعيدة! ✨`;
+                        
+                        // Try to find an active chat to get the correct channel/id
+                        let targetChannel = 'whatsapp';
+                        let targetSenderId = rawPhone;
+                        
+                        const searchPart = rawPhone.length > 8 ? rawPhone.slice(-9) : rawPhone;
+                        for (const key in groupedChats) {
+                            if (key.includes(searchPart)) {
+                                targetChannel = groupedChats[key].channel;
+                                targetSenderId = groupedChats[key].sender_id;
+                                break;
+                            }
+                        }
+
+                        await fetch(`${getApiBaseUrl()}/api/send_reply`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+                            body: JSON.stringify({
+                                channel: targetChannel,
+                                sender_id: targetSenderId,
+                                message: clientMsg,
+                                mod_name: currentModName
+                            })
+                        });
+                    } catch(e) { console.error('Client Notify Error:', e); }
+
+                    // --- 6. Sync to Google Sheet ---
+                    try {
+                        console.log('📊 Syncing to sheet:', { sheetRow: trip.sheet_row, driverName, driverPhone });
                         sendToGoogleSheet({
                             action: 'assignDriver',
                             sheetRow: trip.sheet_row,
                             driverName: driverName,
                             driverPhone: driverPhone
                         });
-                    } catch(e) {}
+                    } catch(e) { console.error('Sheet Sync Error:', e); }
+
+                    alert('✅ تم تعيين الكابتن!\n\n📤 تم إرسال البيانات للعميل ولتطبيق الكابتن وجوجل شيت بنجاح.');
+                    closeAssignModal();
+                    searchTrips(); 
                 } else {
                     throw resErr;
                 }
