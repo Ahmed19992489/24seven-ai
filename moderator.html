@@ -488,18 +488,20 @@
 
         function getApiBaseUrl() {
             const saved = localStorage.getItem('mod_api_url');
-            if (saved && saved.trim() !== '') return saved.trim().replace(/\/$/, '');
+            if (saved && saved.trim() !== '') {
+                return saved.trim().replace(/\/$/, '').replace(/\/moderator$/, '').replace(/\/dashboard$/, '');
+            }
             
             // Auto-detection based on current URL
             const loc = window.location;
             if (loc.port === '3000' || loc.pathname.startsWith('/moderator') || loc.pathname.startsWith('/dashboard')) {
-                return loc.origin; // Same server
+                return loc.origin; // Same server (clean origin)
             }
 
             if (loc.hostname === 'localhost' || loc.hostname === '127.0.0.1') {
                 return 'http://localhost:3000';
             } else {
-                return `${loc.protocol}//${loc.hostname}:3000`;
+                return `${loc.protocol}//${loc.hostname}${loc.port ? ':' + loc.port : ''}`;
             }
         }
 
@@ -1023,12 +1025,14 @@
 
                 if (tripErr) throw tripErr;
 
-                // 3. Update reservation status
+                // 3. Update reservation status in Supabase (including driver info)
                 const { error: resErr } = await sbClient
                     .from('google_reservations')
                     .update({ 
                         status: 'confirmed',
-                        sql_server_id: String(newTrip.id)
+                        sql_server_id: String(newTrip.id),
+                        modified_driver_name: driverName,
+                        modified_driver_phone: driverPhone
                     })
                     .eq('id', currentAssignTripId);
                 
