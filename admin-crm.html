@@ -3068,10 +3068,10 @@ async function confirmResAssign() {
             message_type: 'system'
         }]);
 
-        // 4. تحديث google_reservations
+        // 4. تحديث google_reservations (لا نستبدل الـ SQL_ID الأصلي)
         await sbClient.from('google_reservations').update({
             status: 'تم تعيين كابتن',
-            sql_server_id: String(newTrip.id)
+            // sql_server_id: String(newTrip.id) 
         }).eq('sheet_row', r.sheet_row);
 
         // 5. تحديث جوجل شيت - أعمدة 22-23 (اسم السائق ورقمه)
@@ -3083,7 +3083,7 @@ async function confirmResAssign() {
                 action: 'assignDriver', 
                 sheetRow: r.sheet_row, 
                 webId: r.id,             // Supabase Reservation ID (Column Q)
-                sqlId: newTrip.id,        // Supabase Trip ID (Column U fallback)
+                sqlId: r.sql_server_id,   // REAL SQL ID (Column U - e.g. 9178)
                 driverName, 
                 driverPhone 
             })

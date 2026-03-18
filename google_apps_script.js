@@ -85,15 +85,19 @@ function updateDriverInSheet(data) {
     let rowNum = parseInt(data.sheetRow);
     const webId = data.webId;
     const sqlId = data.sqlId;
+    
+    Logger.log('🔍 Processing Assign: RowHint=' + rowNum + ', WebID=' + webId + ', SQLID=' + sqlId);
 
     // PRIMARY SEARCH: By Web_ID (Column Q / 17) - Most Reliable
     if ((!rowNum || rowNum < 2) && webId) {
+        Logger.log('   -> Searching by WebID in Column Q...');
         const lastRow = sheet.getLastRow();
         if (lastRow > 1) {
             const values = sheet.getRange(2, 17, lastRow - 1, 1).getValues();
             for (let i = 0; i < values.length; i++) {
                 if (String(values[i][0]).trim() === String(webId).trim()) {
                     rowNum = i + 2;
+                    Logger.log('   ✅ Found by WebID at row ' + rowNum);
                     break;
                 }
             }
@@ -102,19 +106,30 @@ function updateDriverInSheet(data) {
 
     // SECONDARY SEARCH: By SQL_ID (Column U / 21) - Fallback
     if ((!rowNum || rowNum < 2) && sqlId) {
+        Logger.log('   -> Searching by SQLID in Column U...');
         const lastRow = sheet.getLastRow();
         if (lastRow > 1) {
             const values = sheet.getRange(2, 21, lastRow - 1, 1).getValues();
             for (let i = 0; i < values.length; i++) {
-                if (String(values[i][0]).trim() === String(sqlId).trim()) {
+                const currentVal = String(values[i][0]).trim();
+                const targetVal = String(sqlId).trim();
+                if (currentVal === targetVal && targetVal !== "") {
                     rowNum = i + 2;
+                    Logger.log('   ✅ Found by SQLID at row ' + rowNum);
                     break;
                 }
             }
         }
     }
 
+    // FINAL FALLBACK: Validate sheetRow hint if provided but other searches skipped
+    if (rowNum >= 2) {
+       Logger.log('   -> Validating row ' + rowNum);
+       // Optional: Verify if this is indeed the right row?
+    }
+
     if (!rowNum || rowNum < 2) {
+        Logger.log('   ❌ NOT FOUND');
         throw new Error('تعذر العثور على الحجز (Web_ID: ' + webId + ', SQL_ID: ' + sqlId + ')');
     }
 
@@ -122,5 +137,5 @@ function updateDriverInSheet(data) {
     sheet.getRange(rowNum, 23).setNumberFormat('@');
     sheet.getRange(rowNum, 23).setValue(String(data.driverPhone || ''));
 
-    Logger.log('✅ Updated row ' + rowNum + ' with driver ' + data.driverName);
+    Logger.log('✨ SUCCESS: Updated row ' + rowNum + ' for driver ' + data.driverName);
 }

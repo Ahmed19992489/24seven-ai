@@ -1027,12 +1027,12 @@
 
                 if (tripErr) throw tripErr;
 
-                // 3. Update reservation status in Supabase (including driver info)
+                // 3. Update reservation status in Supabase (don't overwrite original sql_server_id)
                 const { error: resErr } = await sbClient
                     .from('google_reservations')
                     .update({ 
                         status: 'confirmed',
-                        sql_server_id: String(newTrip.id),
+                        // sql_server_id: String(newTrip.id), // DON'T OVERWRITE - Keep the original SQL ID (9178 etc.)
                         modified_driver_name: driverName,
                         modified_driver_phone: driverPhone
                     })
@@ -1083,12 +1083,12 @@
 
                     // --- 6. Sync to Google Sheet ---
                     try {
-                        console.log('📊 Syncing to sheet:', { sheetRow: trip.sheet_row, webId: trip.id, sqlId: newTrip.id, driverName, driverPhone });
+                        console.log('📊 Syncing to sheet:', { sheetRow: trip.sheet_row, webId: trip.id, sqlId: trip.sql_server_id, driverName, driverPhone });
                         sendToGoogleSheet({
                             action: 'assignDriver',
                             sheetRow: trip.sheet_row,
-                            webId: trip.id,         // Supabase Reservation ID (Column Q)
-                            sqlId: newTrip.id,     // Supabase Trip ID (Column U fallback)
+                            webId: trip.id,                // Supabase ID (Column Q)
+                            sqlId: trip.sql_server_id,      // REAL SQL ID (Column U - e.g. 9178)
                             driverName: driverName,
                             driverPhone: driverPhone
                         });
