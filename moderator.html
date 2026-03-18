@@ -1081,26 +1081,31 @@
                         });
                     } catch(e) { console.error('Client Notify Error:', e); }
                     // --- 6. Sync to Google Sheet ---
+                    let sheetSyncOk = false;
                     try {
                         console.log('📊 Syncing to sheet:', { sheetRow: trip.sheet_row, webId: trip.id, sqlId: trip.sql_server_id, driverName, driverPhone });
-                        sendToGoogleSheet({
+                        const sheetRes = await sendToGoogleSheet({
                             action: 'assignDriver',
                             sheetRow: trip.sheet_row,
                             webId: trip.id,                // Supabase ID (Column Q)
                             sqlId: trip.sql_server_id,      // REAL SQL ID (Column U - e.g. 9178)
                             driverName: driverName,
                             driverPhone: driverPhone
-                        }).then(res => {
-                            if (res && res.success) {
-                                console.log('✅ Sheet Sync Success');
-                            } else {
-                                console.error('❌ Sheet Sync Failed:', res ? res.error : 'No response');
-                                showNotification('تنبيه: تم التعيين في السيستم ولكن فشل التزامن مع جوجل شيت', 'warning');
-                            }
                         });
+                        console.log('📊 Sheet response:', JSON.stringify(sheetRes));
+                        if (sheetRes && sheetRes.success) {
+                            console.log('✅ Sheet Sync Success');
+                            sheetSyncOk = true;
+                        } else {
+                            console.error('❌ Sheet Sync Failed:', sheetRes ? sheetRes.error : 'No response');
+                        }
                     } catch(e) { console.error('Sheet Sync Error:', e); }
 
-                    alert('✅ تم تعيين الكابتن!\n\n📤 تم إرسال البيانات للعميل ولتطبيق الكابتن وجوجل شيت بنجاح.');
+                    if (sheetSyncOk) {
+                        alert('✅ تم تعيين الكابتن!\n\n📤 تم إرسال البيانات للعميل ولتطبيق الكابتن وجوجل شيت بنجاح.');
+                    } else {
+                        alert('⚠️ تم تعيين الكابتن في النظام!\n\nلكن فشل التحديث في جوجل شيت. تحقق من الإعدادات أو أعد المحاولة.');
+                    }
                     closeAssignModal();
                     searchTrips(); 
                 } else {
