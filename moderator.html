@@ -484,7 +484,7 @@
         const SUPABASE_URL = 'https://wtjwzqvmwnbvjxnmweqq.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY';
         const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxYUehLwTfnlh1nJcjCXY05PHR6MQf_rOG66Dc4VUp1ib9gTYSErt_4Ah8-PX6QqwcF/exec';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxy7ISTRktFxaCII1LQUp8iVi2KgUQUb_enpib30EwuSJNOjnRaf6tuNWXr3l6JyoT1QQ/exec';
 
         function getApiBaseUrl() {
             const saved = localStorage.getItem('mod_api_url');
@@ -1355,12 +1355,14 @@
 
         function sendToGoogleSheet(data) {
             if (!APPS_SCRIPT_URL) return;
+            // استخدام fetch مع cors لضمان وصول البيانات بشكل صحيح لـ Apps Script
             fetch(APPS_SCRIPT_URL, {
                 method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
+                // أحياناً no-cors تسبب مشاكل في وصول الـ Body لـ Apps Script
+                // سنستخدم cors ونقبل أن الرد قد يحظر (لكن البيانات ستصل)
+                headers: { 'Content-Type': 'text/plain' }, // Apps Script يفضل استقبالها كـ text ثم JSON.parse
                 body: JSON.stringify(data)
-            }).catch(e => console.log('Sheet error:', e));
+            }).catch(e => console.log('Sheet Sync Error:', e));
         }
 
         async function loadPerformance() {

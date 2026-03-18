@@ -104,29 +104,32 @@ function updateDriverInSheet(data) {
     if (!sheet) throw new Error('الشيت غير موجود');
 
     let rowNum = parseInt(data.sheetRow);
-    
-    // Fallback: Find row by SQL_ID (Column U / 21) if sheetRow is missing
-    if (!rowNum || rowNum < 2) {
-        const sqlId = data.sqlId;
-        if (sqlId) {
-            const lastRow = sheet.getLastRow();
-            if (lastRow > 1) {
-                const sqlIds = sheet.getRange(2, 21, lastRow - 1, 1).getValues();
-                for (let i = 0; i < sqlIds.length; i++) {
-                    if (String(sqlIds[i][0]) === String(sqlId)) {
-                        rowNum = i + 2;
-                        break;
-                    }
+    const sqlId = data.sqlId;
+
+    // Fallback search by SQL_ID (Column U / 21)
+    if ((!rowNum || rowNum < 2) && sqlId) {
+        const lastRow = sheet.getLastRow();
+        if (lastRow > 1) {
+            const values = sheet.getRange(2, 21, lastRow - 1, 1).getValues();
+            for (let i = 0; i < values.length; i++) {
+                const rowVal = String(values[i][0]).trim();
+                const targetId = String(sqlId).trim();
+                if (rowVal === targetId && targetId !== "") {
+                    rowNum = i + 2;
+                    break;
                 }
             }
         }
     }
 
-    if (!rowNum || rowNum < 2) throw new Error('رقم الصف غير صحيح أو لم يتم العثور على الحجز: ' + (data.sheetRow || data.sqlId));
+    if (!rowNum || rowNum < 2) {
+        throw new Error('تعذر العثور على الحجز (Row: ' + data.sheetRow + ', SQL_ID: ' + sqlId + ')');
+    }
 
+    // Update Columns V (22) and W (23)
     sheet.getRange(rowNum, 22).setValue(data.driverName || '');
-    sheet.getRange(rowNum, 23).setNumberFormat('@');
-    sheet.getRange(rowNum, 23).setValue(data.driverPhone || '');
+    sheet.getRange(rowNum, 23).setNumberFormat('@'); // Force text for phone
+    sheet.getRange(rowNum, 23).setValue(String(data.driverPhone || ''));
 
-    Logger.log('✅ تعيين السائق: ' + data.driverName + ' في صف ' + rowNum);
+    Logger.log('✅ Updated row ' + rowNum + ' with driver ' + data.driverName);
 }
