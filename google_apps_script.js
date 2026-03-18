@@ -82,14 +82,15 @@ function updateDriverInSheet(data) {
     const sheet = ss.getSheetByName(SHEET_TAB);
     if (!sheet) throw new Error('الشيت غير موجود');
 
-    let rowNum = parseInt(data.sheetRow);
     const webId = data.webId;
     const sqlId = data.sqlId;
+    const rowHint = parseInt(data.sheetRow);
+    let rowNum = 0;
     
-    Logger.log('🔍 Processing Assign: RowHint=' + rowNum + ', WebID=' + webId + ', SQLID=' + sqlId);
+    Logger.log('🔍 Processing Assign: RowHint=' + rowHint + ', WebID=' + webId + ', SQLID=' + sqlId);
 
-    // PRIMARY SEARCH: By Web_ID (Column Q / 17) - Most Reliable
-    if ((!rowNum || rowNum < 2) && webId) {
+    // 1. PRIMARY SEARCH: By Web_ID (Column Q / 17) - Highly reliable for newer records
+    if (webId) {
         Logger.log('   -> Searching by WebID in Column Q...');
         const lastRow = sheet.getLastRow();
         if (lastRow > 1) {
@@ -104,8 +105,8 @@ function updateDriverInSheet(data) {
         }
     }
 
-    // SECONDARY SEARCH: By SQL_ID (Column U / 21) - Fallback
-    if ((!rowNum || rowNum < 2) && sqlId) {
+    // 2. SECONDARY SEARCH: By SQL_ID (Column U / 21) - Crucial for old/synced records
+    if (!rowNum && sqlId) {
         Logger.log('   -> Searching by SQLID in Column U...');
         const lastRow = sheet.getLastRow();
         if (lastRow > 1) {
@@ -122,20 +123,25 @@ function updateDriverInSheet(data) {
         }
     }
 
-    // FINAL FALLBACK: Validate sheetRow hint if provided but other searches skipped
-    if (rowNum >= 2) {
-       Logger.log('   -> Validating row ' + rowNum);
-       // Optional: Verify if this is indeed the right row?
+    // 3. TERTIARY FALLBACK: Trust the rowHint if IDs failed (last resort)
+    if (!rowNum && rowHint >= 2) {
+        Logger.log('   ⚠️ No ID match. Using rowHint: ' + rowHint);
+        rowNum = rowHint;
     }
 
     if (!rowNum || rowNum < 2) {
         Logger.log('   ❌ NOT FOUND');
-        throw new Error('تعذر العثور على الحجز (Web_ID: ' + webId + ', SQL_ID: ' + sqlId + ')');
+        throw new Error('تعذر العثور على الحجز (Web_ID: ' + webId + ', SQL_ID: ' + sqlId + ') - تأكد من وجود المعرف في الشيت');
+    }
+
+    // Final check to prevent writing to a random row if index is too high
+    if (rowNum > sheet.getLastRow() + 10) {
+         throw new Error('رقم الصف المكتشف (' + rowNum + ') غير منطقي مقارنة بحجم الشيت');
     }
 
     sheet.getRange(rowNum, 22).setValue(data.driverName || '');
     sheet.getRange(rowNum, 23).setNumberFormat('@');
     sheet.getRange(rowNum, 23).setValue(String(data.driverPhone || ''));
 
-    Logger.log('✨ SUCCESS: Updated row ' + rowNum + ' for driver ' + data.driverName);
+    Logger.log('✨ SUCCESS: Updated row ' + rowNum);
 }
