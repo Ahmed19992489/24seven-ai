@@ -1080,7 +1080,6 @@
                             })
                         });
                     } catch(e) { console.error('Client Notify Error:', e); }
-
                     // --- 6. Sync to Google Sheet ---
                     try {
                         console.log('📊 Syncing to sheet:', { sheetRow: trip.sheet_row, webId: trip.id, sqlId: trip.sql_server_id, driverName, driverPhone });
@@ -1091,6 +1090,13 @@
                             sqlId: trip.sql_server_id,      // REAL SQL ID (Column U - e.g. 9178)
                             driverName: driverName,
                             driverPhone: driverPhone
+                        }).then(res => {
+                            if (res && res.success) {
+                                console.log('✅ Sheet Sync Success');
+                            } else {
+                                console.error('❌ Sheet Sync Failed:', res ? res.error : 'No response');
+                                showNotification('تنبيه: تم التعيين في السيستم ولكن فشل التزامن مع جوجل شيت', 'warning');
+                            }
                         });
                     } catch(e) { console.error('Sheet Sync Error:', e); }
 
@@ -1358,15 +1364,17 @@
         }
 
         function sendToGoogleSheet(data) {
-            if (!APPS_SCRIPT_URL) return;
-            // استخدام fetch مع cors لضمان وصول البيانات بشكل صحيح لـ Apps Script
-            fetch(APPS_SCRIPT_URL, {
+            if (!APPS_SCRIPT_URL) return Promise.resolve({ success: false, error: 'URL missing' });
+            return fetch(APPS_SCRIPT_URL, {
                 method: 'POST',
-                // أحياناً no-cors تسبب مشاكل في وصول الـ Body لـ Apps Script
-                // سنستخدم cors ونقبل أن الرد قد يحظر (لكن البيانات ستصل)
-                headers: { 'Content-Type': 'text/plain' }, // Apps Script يفضل استقبالها كـ text ثم JSON.parse
+                headers: { 'Content-Type': 'text/plain' },
                 body: JSON.stringify(data)
-            }).catch(e => console.log('Sheet Sync Error:', e));
+            })
+            .then(res => res.json())
+            .catch(e => {
+                console.error('Sheet Sync Network Error:', e);
+                return { success: false, error: e.message };
+            });
         }
 
         async function loadPerformance() {

@@ -3087,7 +3087,21 @@ async function confirmResAssign() {
                 driverName, 
                 driverPhone 
             })
-        }).catch(() => {});
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.success) {
+                console.log('✅ Sheet updated:', res);
+                Swal.fire('تم!', 'تم تحديث بيانات السائق في الشيت بنجاح', 'success');
+            } else {
+                console.error('❌ Sheet Error:', res.error);
+                Swal.fire('تنبيه', 'تم التعيين في السرفر ولكن: ' + (res.error || 'تعذر العثور على الصف في الشيت'), 'warning');
+            }
+        })
+        .catch(err => {
+            console.error('❌ Fetch Error:', err);
+            Swal.fire('خطأ اتصال', 'تعذر الوصول لمحرك المزامنة للتحديث في الشيت', 'error');
+        });
 
         closeResModal();
         alert(`✅ تم تعيين كابتن ${driverName} بنجاح!\nتم إرسال إشعار للكابتن`);
