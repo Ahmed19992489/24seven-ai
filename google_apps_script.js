@@ -10,7 +10,10 @@ function doPost(e) {
         const data = JSON.parse(e.postData.contents);
         
         if (data.action === 'assignDriver') {
-            updateDriverInSheet(data);
+            var debugInfo = updateDriverInSheet(data);
+            return ContentService
+                .createTextOutput(JSON.stringify({ success: true, debug: debugInfo }))
+                .setMimeType(ContentService.MimeType.JSON);
         } else {
             appendBookingToSheet(data);
         }
@@ -156,5 +159,13 @@ function updateDriverInSheet(data) {
       ""                              // Col 25 (Y) - نفرغها ليقوم python بإرسال الرسائل
     ]]);
 
-    Logger.log('✨ SUCCESS: Updated row ' + rowNum + ' with driver: ' + driverName);
+    // Return debug info
+    var lastRow = sheet.getLastRow();
+    var verifyVal = sheet.getRange(rowNum, 22).getValue();
+    return {
+      foundRow: rowNum,
+      lastRow: lastRow,
+      wrote: driverName,
+      verified: String(verifyVal)
+    };
 }
