@@ -3082,7 +3082,8 @@ async function confirmResAssign() {
             body: JSON.stringify({ 
                 action: 'assignDriver', 
                 sheetRow: r.sheet_row, 
-                sqlId: newTrip.id, 
+                webId: r.id,             // Supabase Reservation ID (Column Q)
+                sqlId: newTrip.id,        // Supabase Trip ID (Column U fallback)
                 driverName, 
                 driverPhone 
             })

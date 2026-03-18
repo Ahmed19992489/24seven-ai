@@ -1083,11 +1083,12 @@
 
                     // --- 6. Sync to Google Sheet ---
                     try {
-                        console.log('📊 Syncing to sheet:', { sheetRow: trip.sheet_row, sqlId: newTrip.id, driverName, driverPhone });
+                        console.log('📊 Syncing to sheet:', { sheetRow: trip.sheet_row, webId: trip.id, sqlId: newTrip.id, driverName, driverPhone });
                         sendToGoogleSheet({
                             action: 'assignDriver',
                             sheetRow: trip.sheet_row,
-                            sqlId: newTrip.id,
+                            webId: trip.id,         // Supabase Reservation ID (Column Q)
+                            sqlId: newTrip.id,     // Supabase Trip ID (Column U fallback)
                             driverName: driverName,
                             driverPhone: driverPhone
                         });
@@ -1315,19 +1316,22 @@
                 status: 'pending'
             };
 
-            const { data, error } = await sbClient.from('google_reservations').insert([payload]);
+            const { data: insertedRows, error } = await sbClient.from('google_reservations').insert([payload]).select();
             
-            if(!error) {
+            if(!error && insertedRows && insertedRows.length > 0) {
+                const newRes = insertedRows[0];
                 alert('✅ تم تسجيل الحجز بنجاح!');
                 
                 // --- Sync to Google Sheet ---
                 try {
                     sendToGoogleSheet({
+                        action: 'appendBooking',
+                        webId: newRes.id,       // Supabase ID (Column Q)
                         tripDate: payload.trip_date || '',
                         tripTime: payload.trip_time || '',
                         clientName: payload.customer_name,
                         phone: payload.customer_phone,
-                        whatsapp: payload.customer_phone, // Fallback to phone
+                        whatsapp: payload.customer_phone,
                         pickup: payload.pickup_address,
                         dropoff: payload.dropoff_address,
                         passengers: payload.passengers,
@@ -1335,7 +1339,7 @@
                         carType: payload.car_type,
                         clientStatus: payload.client_status === 'قديم' ? 'عميل قديم' : 'عميل جديد',
                         price: payload.cost,
-                        email: '', // Not available in moderator prompt
+                        email: '',
                         notes: payload.notes || '',
                         tripType: payload.trip_type,
                         enteredBy: 'موديتور: ' + currentModName
