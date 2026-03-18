@@ -139,9 +139,22 @@ function updateDriverInSheet(data) {
          throw new Error('رقم الصف المكتشف (' + rowNum + ') غير منطقي مقارنة بحجم الشيت');
     }
 
-    sheet.getRange(rowNum, 22).setValue(data.driverName || '');
+    // 5. Update data - Columns 22 (V) through 25 (Y)
+    var driverName = data.driverName || '';
+    var driverPhone = String(data.driverPhone || '');
+    var amountPaid = data.amountPaid || '';
+    
+    // Set phone column as text format first
     sheet.getRange(rowNum, 23).setNumberFormat('@');
-    sheet.getRange(rowNum, 23).setValue(String(data.driverPhone || ''));
+    
+    // Write all 4 columns at once
+    var updateRange = sheet.getRange(rowNum, 22, 1, 4);
+    updateRange.setValues([[
+      driverName,                     // Col 22 (V) - اسم السائق
+      driverPhone,                    // Col 23 (W) - هاتف السائق
+      amountPaid,                     // Col 24 (X) - النقدية المستلمة
+      ""                              // Col 25 (Y) - نفرغها ليقوم python بإرسال الرسائل
+    ]]);
 
-    Logger.log('✨ SUCCESS: Updated row ' + rowNum);
+    Logger.log('✨ SUCCESS: Updated row ' + rowNum + ' with driver: ' + driverName);
 }
