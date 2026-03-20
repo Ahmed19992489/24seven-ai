@@ -1,53 +1,70 @@
-from fastapi import FastAPI, Body, HTTPException
-import requests
+import json
 import os
-from dotenv import load_dotenv
+import urllib.request
+import urllib.error
 
-# تحميل متغيرات البيئة (يعمل محلياً وفي Vercel)
-load_dotenv()
-
-app = FastAPI()
-
-# 🔑 Anthropic API Key
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-
-@app.post("/api/ai_chat")
-async def ai_chat_handler(payload: dict = Body(...)):
+def handler(request):
     """
-    نقطة اتصال ذكاء اصطناعي مخصصة لـ Vercel
+    نسخة مبسطة جداً لضمان العمل على Vercel بدون مشاكل مكتبات
     """
-    if not ANTHROPIC_API_KEY:
-        return {"answer": "❌ خطأ: لم يتم ضبط مفتاح ANTHROPIC_API_KEY في إعدادات السيرفر."}
+    # 🔑 Anthropic API Key
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
 
-    system_prompt = payload.get("system", "أنت مساعد ذكي لشركة ليموزين.")
-    messages = payload.get("messages", [])
-    max_tokens = payload.get("max_tokens", 1000)
+    if request.method != "POST":
+        return {
+            "statusCode": 405,
+            "body": json.dumps({"answer": "Only POST allowed"})
+        }
 
-    url = "https://api.anthropic.com/v1/messages"
-    headers = {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json"
-    }
-    
-    data = {
-        "model": "claude-3-haiku-20240307",
-        "max_tokens": max_tokens,
-        "system": system_prompt,
-        "messages": messages
-    }
+    if not api_key:
+        return {
+            "statusCode": 200,
+            "body": json.dumps({"answer": "❌ خطأ المبرمج: لم يتم ضبط ANTHROPIC_API_KEY على Vercel."})
+        }
 
     try:
-        response = requests.post(url, headers=headers, json=data)
-        if response.status_code != 200:
-            return {"answer": f"❌ خطأ من Claude API: {response.text}"}
+        # قراءة البيانات من الطلب
+        body_unicode = request.body.decode('utf-8')
+        payload = json.loads(body_unicode)
         
-        resp_json = response.json()
-        answer = resp_json['content'][0]['text']
-        return {"answer": answer}
-    
-    except Exception as e:
-        return {"answer": f"❌ خطأ في الاتصال: {str(e)}"}
+        system_prompt = payload.get("system", "أنت مساعد ذكي لشركة ليموزين.")
+        messages = payload.get("messages", [])
+        
+        url = "https://api.anthropic.com/v1/messages"
+        headers = {
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json"
+        }
+        
+        data = json.dumps({
+            "model": "claude-3-haiku-20240307",
+            "max_tokens": 1000,
+            "system": system_prompt,
+            "messages": messages
+        }).encode('utf-8')
 
-# تأكيد التشغيل كدالة Vercel
-handler = app
+        req = urllib.request.Request(url, data=data, headers=headers, method='POST')
+        
+        with urllib.request.urlopen(req) as response:
+            resp_data = response.read().decode('utf-8')
+            resp_json = json.loads(resp_data)
+            answer = resp_json['content'][0]['text']
+            
+            return {
+                "statusCode": 200,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({"answer": answer})
+            }
+
+    except urllib.error.HTTPError as e:
+        err_msg = e.read().decode('utf-8')
+        return {
+            "statusCode": 200,
+            "body": json.dumps({"answer": f"❌ خطأ من Claude: {err_msg}"})
+        }
+    except Exception as e:
+        return {
+            "statusCode": 200,
+            "body": json.dumps({"answer": f"❌ خطأ داخلي: {str(e)}"})
+        }
