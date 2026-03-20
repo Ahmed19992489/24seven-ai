@@ -3328,17 +3328,20 @@ async function confirmResAssign() {
 
             try {
                 const contextData = await gatherAiContext();
-                const systemPrompt = `أنت مساعد إداري للمدير في شركة 24Seven لليموزين بمصر.
-أنت خبير في تحليل البيانات وتقديم النصائح الاستراتيجية.
-إليك بيانات الشركة الحية:
+                const systemPrompt = `أنت مساعد إداري ذكي لشركة "24Seven لليموزين".
+أنت تتحدث بلهجة مصرية مهذبة وعملية (زي مدير مكتب بشوش).
+مهمتك تحليل البيانات الحية المقدمة لك والرد على استفسارات المدير بدقة وأدب.
+
+إليك البيانات الحالية من النظام:
 ${contextData}
 
-القواعد:
-1. رد باللهجة المصرية المحترمة والعملية.
-2. كن دقيقاً جداً في الأرقام (لا تخترع أرقاماً).
-3. إذا سألك عن "ماذا نفعل" اقترح تطوير المسارات الأكثر طلباً أو مكافأة الموظفين الأكثر إنتاجاً.
-4. الإجابة قصيرة ومفيدة.
-5. لا تذكر أنك موديل لغوي، أنت جزء من نظام 24Seven.`;
+تعليمات الرد:
+1. استخدم الأسماء والبيانات المذكورة في التقرير (مثل أسماء العملاء، الرحلات الأخيرة، الأرباح).
+2. إذا سألك عن "بيانات اليوم"، فصّل له ماذا حدث (كم حجز، كم رحلة، كم إيراد) بناءً على القوائم المرسلة.
+3. كن موجزاً ولكن مفيداً جداً. لا تكرر البيانات بشكل ممل، بل لخصها بذكاء.
+4. اقترح حلولاً استباقية (مثلاً: "عندنا حجوزات كتير معلقة، محتاجين نوجه الموظفين يخلصوها").
+5. لا تذكر أبداً أنك موديل لغوي أو AI، أنت المساعد الخاص بـ 24Seven.
+6. الأرقام يجب أن تكون دقيقة 100% كما وردت في البيانات.`;
 
                 aiChatHistory.push({ role: 'user', content: question });
                 if (aiChatHistory.length > 10) aiChatHistory = aiChatHistory.slice(-10);
@@ -3382,34 +3385,73 @@ ${contextData}
         }
 
         async function gatherAiContext() {
-            const today = new Date().toISOString().split('T')[0];
-            const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+            const now = new Date();
+            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const todayIso = startOfToday.toISOString();
+            const monthStartIso = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
             
-            let report = `بيانات اليوم (${today}):\n`;
+            let report = `### تقرير البيانات اللحظية (${now.toLocaleDateString('ar-EG')})\n\n`;
             
             try {
-                // 1. رحلات اليوم
-                const { data: todayTrips } = await sbClient.from('trips').select('status, estimated_price').gte('created_at', today);
-                report += `- إجمالي رحلات العمليات: ${todayTrips?.length || 0}\n`;
-                
-                // 2. الحجوزات (Orders)
-                const { data: orders } = await sbClient.from('google_reservations').select('*').gte('created_at', monthStart);
-                report += `إحصائيات الشهر:\n- إجمالي الحجوزات: ${orders?.length || 0}\n`;
-                
-                // 3. أداء الموظفين
-                const empStats = {};
-                orders.forEach(o => {
-                    const name = o.booking_employee || 'Unknown';
-                    empStats[name] = (empStats[name] || 0) + 1;
-                });
-                report += `- أداء الموظفين: ${JSON.stringify(empStats)}\n`;
+                // جلب كافة البيانات في وقت واحد للسرعة
+                const [tripsRes, ordersRes, latestRes, latestTrips, vaultsRes, monthStats, driversCount] = await Promise.all([
+                    sbClient.from('trips').select('status, estimated_price').gte('created_at', todayIso),
+                    sbClient.from('google_reservations').select('status, cost, booking_employee').gte('created_at', todayIso),
+                    sbClient.from('google_reservations').select('customer_name, pickup_address, dropoff_address, cost, status, trip_date, booking_employee').order('created_at', { ascending: false }).limit(7),
+                    sbClient.from('trips').select('manual_client_name, pickup_location, dropoff_location, status, estimated_price').order('created_at', { ascending: false }).limit(5),
+                    sbClient.from('vaults').select('name, balance'),
+                    sbClient.from('google_reservations').select('booking_employee').gte('created_at', monthStartIso),
+                    sbClient.from('drivers').select('id', { count: 'exact', head: true })
+                ]);
 
-                // 4. الخزائن
-                const { data: vaults } = await sbClient.from('vaults').select('name, balance');
-                report += `الخزائن:\n`;
-                vaults.forEach(v => report += `- ${v.name}: ${v.balance} EGP\n`);
+                const todayTrips = tripsRes.data || [];
+                const todayOrders = ordersRes.data || [];
+                
+                const todayRev = todayTrips.reduce((s, t) => s + (Number(t.estimated_price) || 0), 0);
+                const pendingOrders = todayOrders.filter(o => !o.status || o.status === 'pending').length;
 
-            } catch(e) { report += `(خطأ في جلب بعض البيانات)\n`; }
+                report += `💰 إيرادات العمليات الجارية اليوم: ${todayRev} EGP\n`;
+                report += `📑 حجوزات جديدة أضيفت اليوم: ${todayOrders.length} ${pendingOrders > 0 ? `(منها ${pendingOrders} معلقة ⚠️)` : ''}\n`;
+                report += `🚗 رحلات العمليات اليوم: ${todayTrips.length}\n`;
+                report += `👥 شركاء النجاح (السائقين): ${driversCount.count || 0}\n\n`;
+
+                if (latestRes.data && latestRes.data.length > 0) {
+                    report += `📋 آخر 7 حجوزات مضافة (CRM):\n`;
+                    latestRes.data.forEach(r => {
+                        const route = (r.pickup_address || '').split(',')[0] + " ➝ " + (r.dropoff_address || '').split(',')[0];
+                        report += `- ${r.customer_name}: ${route} [${r.cost} EGP] (${r.status || 'Pending'}) - موظف: ${r.booking_employee || '?'}\n`;
+                    });
+                }
+
+                if (latestTrips.data && latestTrips.data.length > 0) {
+                    report += `\n🚗 آخر 5 عمليات (غرفة العمليات):\n`;
+                    latestTrips.data.forEach(t => {
+                        const route = (t.pickup_location || '').split(',')[0] + " ➝ " + (t.dropoff_location || '').split(',')[0];
+                        report += `- ${t.manual_client_name || 'عميل'}: ${route} [${t.status}] ${t.estimated_price} EGP\n`;
+                    });
+                }
+
+                if (monthStats.data) {
+                    const stats = {};
+                    monthStats.data.forEach(o => {
+                        const n = o.booking_employee || 'غير مسمى';
+                        stats[n] = (stats[n] || 0) + 1;
+                    });
+                    report += `\n🏆 الترتيب الحالي للموظفين (هذا الشهر):\n`;
+                    Object.entries(stats).sort((a,b) => b[1] - a[1]).slice(0, 3).forEach(([name, count]) => {
+                        report += `- ${name}: ${count} حجز\n`;
+                    });
+                }
+
+                if (vaultsRes.data) {
+                    report += `\n💰 حالة الخزائن:\n`;
+                    vaultsRes.data.forEach(v => report += `- ${v.name}: ${v.balance} EGP\n`);
+                }
+
+            } catch(e) { 
+                report += `\n⚠️ (عذراً، حدث خطأ في تحديث البيانات اللحظية، البيانات التالية قد تكون عامة).\n`; 
+                console.error("Context Gather Error:", e);
+            }
             return report;
         }
     </script>
