@@ -3348,7 +3348,8 @@ ${contextData}
 تعليمات الرد:
 1. استخدم الأسماء والبيانات المذكورة في التقرير (مثل أسماء العملاء، الرحلات الأخيرة، الأرباح).
 2. إذا سألك عن عدد رحلات يوم معين (تاريخ محدد)، ستجد التفاصيل الكاملة لهذا اليوم في قسم "📍 تفاصيل الحجوزات المجدولة ليوم (...)". استخدم هذه الأسماء والبيانات حصراً ولا تخمن أسماءً أخرى.
-3. إذا وجدت أسماء مثل (Learnify) في أي بيانات، تجاهلها تماماً ولا تذكرها في ردك.
+3. إذا سألك عن "السائقين"، استخدم حصراً القائمة الموجودة في قسم "👥 السائقين المسجلين بالسيستم". لا تخلط أبداً بين أسماء العملاء وأسماء السائقين. إذا لم تجد اسماً في قائمة السائقين، فهو ليس سائقاً.
+4. إذا وجدت أسماء مثل (Learnify) في أي بيانات، تجاهلها تماماً ولا تذكرها في ردك.
 4. كن موجزاً ولكن مفيداً جداً. لا تكرر البيانات بشكل ممل، بل لخصها بذكاء.
 5. لا تذكر أبداً أنك موديل لغوي أو AI، أنت المساعد الخاص بـ 24Seven.
 6. إذا لم تجد بيانات ليوم معين، قل بوضوح: "لا توجد رحلات مجدولة لهذا التاريخ في النظام حالياً".`;
@@ -3410,12 +3411,12 @@ ${contextData}
             
             try {
                 // 1. جلب البيانات اللحظية (دائماً تحديث)
-                const [tripsRes, ordersRes, latestTrips, vaultsRes, driversCount] = await Promise.all([
+                const [tripsRes, ordersRes, latestTrips, vaultsRes, driversRes] = await Promise.all([
                     sbClient.from('trips').select('status, estimated_price').gte('created_at', todayIso),
                     sbClient.from('google_reservations').select('status, cost, booking_employee').gte('created_at', todayIso),
                     sbClient.from('trips').select('manual_client_name, pickup_location, dropoff_location, status, estimated_price').order('created_at', { ascending: false }).limit(5),
                     sbClient.from('vaults').select('name, balance'),
-                    sbClient.from('drivers').select('id', { count: 'exact', head: true })
+                    sbClient.from('drivers').select('name, phone')
                 ]);
 
                 // 2. جلب وتلخيص التاريخ الكامل
@@ -3475,6 +3476,11 @@ ${contextData}
                 if (lastAdded) {
                     report += `\n📋 آخر 10 حجوزات تم إدخالها للنظام حديثاً:\n`;
                     lastAdded.forEach(r => report += `- ${r.customer_name}: من ${r.pickup_address} إلى ${r.dropoff_address} [تاريخ الرحلة: ${r.trip_date}]\n`);
+                }
+
+                if (driversRes.data) {
+                    report += `\n👥 السائقين المسجلين بالسيستم:\n`;
+                    driversRes.data.forEach(d => report += `- ${d.name} (${d.phone})\n`);
                 }
 
                 if (vaultsRes.data) {
