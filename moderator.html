@@ -67,6 +67,10 @@
                 <i class="fas fa-medal w-6"></i>
                 <span class="font-bold">الأداء والعمولات</span>
             </div>
+            <div onclick="showTab('ai-assistant')" id="btn-ai-assistant" class="sidebar-item" style="background:linear-gradient(135deg,#0f766e15,#6366f115);border:1px solid #6366f130;">
+                <i class="fas fa-robot w-6 text-indigo-500"></i>
+                <span class="font-bold text-indigo-700">المساعد الذكي 🤖</span>
+            </div>
             <div onclick="showTab('settings')" id="btn-settings" class="sidebar-item">
                 <i class="fas fa-cog w-6"></i>
                 <span class="font-bold">إعدادات السيرفر</span>
@@ -211,6 +215,19 @@
                     <!-- Messages via JS -->
                 </div>
 
+                <!-- AI Reply Suggester Panel -->
+                <div id="ai-suggest-panel" class="hidden px-4 py-3 border-t bg-indigo-50 border-indigo-100">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-[11px] font-bold text-indigo-700 flex items-center gap-1"><i class="fas fa-robot"></i> اقتراح AI للرد</span>
+                        <button onclick="hideAiSuggest()" class="text-slate-400 hover:text-red-500 text-xs"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div id="ai-suggest-text" class="text-sm text-slate-700 bg-white rounded-xl p-3 border border-indigo-200 mb-2 min-h-[40px] whitespace-pre-wrap"></div>
+                    <div class="flex gap-2">
+                        <button onclick="useAiSuggestion()" class="flex-1 bg-indigo-600 text-white text-xs font-bold py-1.5 rounded-lg hover:bg-indigo-700 transition">✅ استخدام هذا الرد</button>
+                        <button onclick="generateAiReply()" class="flex-1 bg-white border border-indigo-300 text-indigo-700 text-xs font-bold py-1.5 rounded-lg hover:bg-indigo-50 transition">🔄 اقترح رد آخر</button>
+                    </div>
+                </div>
+
                 <!-- Quick Controls Bar -->
                 <div class="px-4 py-2 border-t bg-slate-50 flex items-center gap-2 overflow-x-auto no-scrollbar">
                     <button type="button" onclick="toggleEmoji()" class="p-2 text-slate-500 hover:text-teal-600 transition"><i class="far fa-smile text-lg"></i></button>
@@ -223,6 +240,9 @@
                     <button type="button" onclick="useReply('بحث')" class="whitespace-nowrap bg-white border border-slate-200 text-[10px] font-bold px-3 py-1 rounded-full hover:bg-teal-50 hover:border-teal-200 transition">🔍 جاري البحث</button>
                     
                     <div class="ml-auto flex gap-2">
+                        <button type="button" onclick="generateAiReply()" title="اقتراح رد بالذكاء الاصطناعي" class="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-bold px-3 py-1 rounded-lg text-[10px] flex items-center gap-1 transition">
+                            <i class="fas fa-robot"></i> AI رد
+                        </button>
                         <button type="button" onclick="quickBook()" title="بدء حجز جديد لهذا العميل" class="bg-teal-50 text-teal-600 hover:bg-teal-100 font-bold px-3 py-1 rounded-lg text-[10px] flex items-center gap-1 transition">
                             <i class="fas fa-plus"></i> حجز سريع
                         </button>
@@ -233,7 +253,7 @@
                 </div>
 
                 <!-- Input Area -->
-                <form id="chat-form" onsubmit="handleSend(event)" class="p-4 border-t flex items-center gap-3 bg-white">
+                <form id="chat-form" onsubmit="handleSendWithCoaching(event)" class="p-4 border-t flex items-center gap-3 bg-white">
                     <input type="text" id="chat-input" placeholder="اكتب ردك هنا..." class="input-std flex-1">
                     <button type="submit" class="w-10 h-10 bg-teal-600 text-white rounded-xl shadow-lg shadow-teal-200 flex items-center justify-center hover:scale-110 transition shrink-0">
                         <i class="fas fa-paper-plane"></i>
@@ -399,6 +419,58 @@
             </div>
         </div>
 
+        <!-- ====== Coaching Feedback Panel (Popup) ====== -->
+        <div id="coaching-panel" class="fixed bottom-24 left-6 w-80 bg-white rounded-2xl shadow-2xl border border-purple-200 z-[200] hidden" style="max-height:400px;overflow-y:auto;">
+            <div class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-3 rounded-t-2xl flex items-center justify-between">
+                <span class="font-bold text-sm flex items-center gap-2"><i class="fas fa-graduation-cap"></i> مساعد الكوتش 🎓</span>
+                <button onclick="document.getElementById('coaching-panel').classList.add('hidden')" class="text-purple-200 hover:text-white"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="coaching-content" class="p-4 text-sm text-slate-700 space-y-3">
+                <div class="text-center text-slate-400 text-xs py-4">أرسل رسالة لعميل وسيظهر التحليل هنا</div>
+            </div>
+        </div>
+
+        <!-- Tab: Admin AI Assistant -->
+        <section id="tab-ai-assistant" class="tab-content hidden h-full flex flex-col" style="max-height:calc(100vh - 60px);">
+            <header class="mb-4 flex items-center justify-between shrink-0">
+                <div>
+                    <h2 class="text-2xl font-black text-slate-800 flex items-center gap-2"><i class="fas fa-robot text-indigo-500"></i> المساعد الذكي</h2>
+                    <p class="text-slate-500 text-sm mt-1">اسألني عن أي بيانات في السايت أو الشيت وسأجيب فوراً 🧠</p>
+                </div>
+                <button onclick="clearAiChat()" class="text-xs text-slate-400 hover:text-red-500 transition bg-slate-100 px-3 py-1.5 rounded-lg"><i class="fas fa-trash ml-1"></i>مسح المحادثة</button>
+            </header>
+
+            <!-- Context chips -->
+            <div class="flex flex-wrap gap-2 mb-4 shrink-0">
+                <button onclick="askAi('كم رحلة عندنا اليوم؟')" class="text-[11px] bg-indigo-50 border border-indigo-200 text-indigo-700 px-3 py-1 rounded-full hover:bg-indigo-100 transition font-bold">🗓️ رحلات اليوم</button>
+                <button onclick="askAi('كم إجمالي الإيرادات الأسبوع ده؟')" class="text-[11px] bg-teal-50 border border-teal-200 text-teal-700 px-3 py-1 rounded-full hover:bg-teal-100 transition font-bold">💰 إيرادات الأسبوع</button>
+                <button onclick="askAi('إيه أكتر مسار محجوز؟')" class="text-[11px] bg-amber-50 border border-amber-200 text-amber-700 px-3 py-1 rounded-full hover:bg-amber-100 transition font-bold">📍 أكتر مسار</button>
+                <button onclick="askAi('كم عدد العملاء الجدد هذا الشهر؟')" class="text-[11px] bg-purple-50 border border-purple-200 text-purple-700 px-3 py-1 rounded-full hover:bg-purple-100 transition font-bold">👥 عملاء جدد</button>
+                <button onclick="askAi('اعرضلي قائمة السائقين المتاحين')" class="text-[11px] bg-slate-100 border border-slate-200 text-slate-700 px-3 py-1 rounded-full hover:bg-slate-200 transition font-bold">🚗 السائقين</button>
+                <button onclick="askAi('ماهي أسعار الرحلات الحالية؟')" class="text-[11px] bg-orange-50 border border-orange-200 text-orange-700 px-3 py-1 rounded-full hover:bg-orange-100 transition font-bold">💵 الأسعار</button>
+            </div>
+
+            <!-- Chat area -->
+            <div id="ai-chat-messages" class="flex-1 overflow-y-auto space-y-3 mb-4 p-1"
+                style="scrollbar-width:thin;scrollbar-color:#cbd5e1 transparent;">
+                <!-- Welcome message -->
+                <div class="flex justify-start">
+                    <div class="max-w-[85%] bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-2xl rounded-tl-none px-4 py-3 text-sm text-slate-700">
+                        <p class="font-bold text-indigo-700 mb-1">🤖 مرحباً بك في المساعد الذكي!</p>
+                        <p>أنا هنا أساعدك تعرف كل حاجة عن رحلاتك وعملاؤك وأداء الشركة. اسألني بالعربية العادية! 😊</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input -->
+            <div class="flex gap-3 shrink-0">
+                <input type="text" id="ai-chat-input" placeholder="اسألني أي سؤال بالعربية..." onkeypress="if(event.key==='Enter')askAiFromInput()" class="flex-1 bg-white border border-slate-200 rounded-2xl px-4 py-3 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition">
+                <button onclick="askAiFromInput()" class="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 shrink-0">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </section>
+
         <!-- Tab: Performance (Commissions) -->
         <section id="tab-performance" class="tab-content hidden h-full space-y-6">
             <header class="mb-6">
@@ -484,7 +556,7 @@
         const SUPABASE_URL = 'https://wtjwzqvmwnbvjxnmweqq.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY';
         const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw6IFk6q7jc3AKGhJ7q-NRYE6N3Db8LIx_RPWrktxwDyMrYHiAUayhZYrOjlytGcrCu/exec';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
 
         function getApiBaseUrl() {
             const saved = localStorage.getItem('mod_api_url');
@@ -1335,7 +1407,7 @@
                 
                 // --- Sync to Google Sheet ---
                 try {
-                    sendToGoogleSheet({
+                    const sheetResult = await sendToGoogleSheet({
                         action: 'appendBooking',
                         webId: newRes.id,       // Supabase ID (Column Q)
                         tripDate: payload.trip_date || '',
@@ -1355,11 +1427,20 @@
                         tripType: payload.trip_type,
                         enteredBy: 'موديتور: ' + currentModName
                     });
-                } catch(e) { console.error('Sheet Sync Error:', e); }
+                    if (sheetResult && !sheetResult.success) {
+                        console.error('❌ Sheet sync failed:', sheetResult.error);
+                        alert('⚠️ تم حفظ الحجز في النظام لكن فشلت المزامنة مع جوجل شيت!\nالخطأ: ' + (sheetResult.error || 'غير معروف'));
+                    } else {
+                        console.log('✅ Sheet sync successful');
+                    }
+                } catch(e) { 
+                    console.error('❌ Sheet Sync Error:', e);
+                    alert('⚠️ تم حفظ الحجز في النظام لكن فشلت المزامنة مع جوجل شيت!\nالخطأ: ' + e.message);
+                }
 
                 document.getElementById('new-trip-form').reset();
                 toggleTripForm();
-                loadSummary(); 
+                await loadSummary(); 
                 searchTrips(); // Refresh the list if searching
             } else {
                 alert('❌ خطأ في الحفظ: ' + error.message);
@@ -1383,8 +1464,39 @@
         }
 
         async function loadPerformance() {
-            // ... (previous)
-            document.getElementById('expected-salary').textContent = "--- EGP";
+            try {
+                const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+                const { data: bookings } = await sbClient.from('google_reservations')
+                    .select('*')
+                    .eq('booking_employee', currentModName)
+                    .gte('created_at', monthStart);
+
+                if (bookings) {
+                    const total = bookings.length;
+                    const vip = bookings.filter(b => (b.trip_type || '').toLowerCase().includes('vip')).length;
+                    const airport = bookings.filter(b => (b.trip_type || '').toLowerCase().includes('مطار') || (b.trip_type || '').toLowerCase().includes('airport')).length;
+
+                    document.getElementById('performance-stats').innerHTML = `
+                        <div class="grid grid-cols-3 gap-4 mb-4">
+                            <div class="bg-indigo-50 p-4 rounded-2xl text-center border border-indigo-100 shadow-sm">
+                                <p class="text-[10px] font-bold text-indigo-400 uppercase mb-1">إجمالي حجوزاتك</p>
+                                <p class="text-2xl font-black text-indigo-700">${total}</p>
+                            </div>
+                            <div class="bg-amber-50 p-4 rounded-2xl text-center border border-amber-100 shadow-sm">
+                                <p class="text-[10px] font-bold text-amber-500 uppercase mb-1">حجوزات VIP</p>
+                                <p class="text-2xl font-black text-amber-700">${vip}</p>
+                            </div>
+                            <div class="bg-blue-50 p-4 rounded-2xl text-center border border-blue-100 shadow-sm">
+                                <p class="text-[10px] font-bold text-blue-500 uppercase mb-1">رحلات المطار</p>
+                                <p class="text-2xl font-black text-blue-700">${airport}</p>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('expected-salary').textContent = (total * 10) + " EGP (تقديري)"; 
+                }
+            } catch (e) {
+                console.error('Performance Load Error:', e);
+            }
         }
 
         function logout() {
@@ -1396,6 +1508,337 @@
         document.addEventListener('DOMContentLoaded', () => {
              showTab('dashboard');
         });
+
+        // ============================================================
+        //  🤖 Claude AI Engine - مشترك بين كل الأدوار الذكية
+        // ============================================================
+        const CLAUDE_MODEL = 'claude-3-haiku-20240307';
+
+        async function callClaude(systemPrompt, userMessage, maxTokens = 600) {
+            const proxyUrl = `${getApiBaseUrl()}/api/ai_chat`;
+            const response = await fetch(proxyUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'ngrok-skip-browser-warning': 'true'
+                },
+                body: JSON.stringify({
+                    system: systemPrompt,
+                    max_tokens: maxTokens,
+                    messages: [{ role: 'user', content: userMessage }]
+                })
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || `HTTP ${response.status}`);
+            }
+            if (!data.answer) throw new Error('لم تصل إجابة من AI');
+            return data.answer;
+        }
+
+        // ============================================================
+        //  🎯 Feature 2: AI Reply Suggester
+        // ============================================================
+        let lastAiSuggestion = '';
+
+        async function generateAiReply() {
+            if (!activeChatId) return;
+
+            const panel = document.getElementById('ai-suggest-panel');
+            const textEl = document.getElementById('ai-suggest-text');
+            panel.classList.remove('hidden');
+            textEl.innerHTML = '<i class="fas fa-circle-notch fa-spin text-indigo-400"></i> جاري توليد الرد...';
+
+            const chat = groupedChats[activeChatId];
+            const lastMessages = (chat?.messages || []).slice(-6).map(m =>
+                `${m.is_from_admin ? 'موديتور' : 'عميل'}: ${m.message_text}`
+            ).join('\n');
+
+            const systemPrompt = `أنت مساعد لـ موديتور في شركة ليموزين فاخرة اسمها 24Seven في مصر.
+مهمتك: اقتراح رد احترافي ومتعاطف على رسالة العميل بالعربية.
+القواعد:
+- الرد قصير وعملي (3-4 جمل بالحد الأقصى)
+- لهجة مصرية محترمة وودية
+- لا تضيف أي شرح أو مقدمة، فقط نص الرد المباشر
+- استخدم 1-2 إيموجي مناسبة
+- أنت تمثل الشركة وليس نفسك`;
+
+            try {
+                const suggestion = await callClaude(systemPrompt, `السياق:\n${lastMessages}\n\nاقترح الرد المناسب:`);
+                lastAiSuggestion = suggestion;
+                textEl.textContent = suggestion;
+            } catch (e) {
+                textEl.innerHTML = `<span class="text-red-500">❌ خطأ: ${e.message}</span>`;
+            }
+        }
+
+        function useAiSuggestion() {
+            if (!lastAiSuggestion) return;
+            document.getElementById('chat-input').value = lastAiSuggestion;
+            document.getElementById('chat-input').focus();
+            hideAiSuggest();
+        }
+
+        function hideAiSuggest() {
+            document.getElementById('ai-suggest-panel').classList.add('hidden');
+            lastAiSuggestion = '';
+        }
+
+        // ============================================================
+        //  🎓 Feature 3: Coaching Assistant - يحلل ردود المودراتور
+        // ============================================================
+        async function analyzeModeratorReply(sentMessage, chatContext) {
+            const coachingPanel = document.getElementById('coaching-panel');
+            const coachingContent = document.getElementById('coaching-content');
+            
+            coachingPanel.classList.remove('hidden');
+            coachingContent.innerHTML = '<div class="text-center py-3"><i class="fas fa-circle-notch fa-spin text-purple-500 text-xl"></i><p class="text-xs text-slate-400 mt-2">جاري تحليل الرد...</p></div>';
+
+            const systemPrompt = `أنت كوتش متخصص في خدمة العملاء وشركات الليموزين.
+مهمتك: تحليل رد موديتور وتقديم تغذية راجعة تعليمية بالعربية.
+
+قدّم تحليلك في هذا الشكل بالضبط (بدون علامة * أو markdown):
+📊 التقييم: [ممتاز / جيد / يمكن تحسينه]
+✅ نقاط القوة: [جملة واحدة]
+💡 تحسين مقترح: [نسخة أفضل من الرد في جملتين]
+📚 نصيحة: [نصيحة علمية قصيرة عن التواصل الفعّال]`;
+
+            try {
+                const analysis = await callClaude(
+                    systemPrompt,
+                    `سياق المحادثة:\n${chatContext}\n\nالرد الذي أرسله الموديتور:\n"${sentMessage}"\n\nقدّم التحليل:`,
+                    500
+                );
+                
+                coachingContent.innerHTML = `
+                    <div class="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">${analysis}</div>
+                    <button onclick="document.getElementById('coaching-panel').classList.add('hidden')" 
+                        class="mt-3 w-full text-xs text-slate-400 hover:text-slate-600 py-1 border-t border-slate-100 pt-2 transition">
+                        إغلاق ✕
+                    </button>`;
+            } catch (e) {
+                coachingContent.innerHTML = `<p class="text-red-400 text-xs">خطأ في التحليل: ${e.message}</p>`;
+            }
+        }
+
+        // Override handleSend to also trigger coaching after sending
+        async function handleSendWithCoaching(e) {
+            const inputEl = document.getElementById('chat-input');
+            const sentText = inputEl.value.trim();
+            
+            await handleSend(e);
+            
+            // بعد الإرسال، جهّز السياق وحلّل الرد
+            if (sentText && activeChatId) {
+                const chat = groupedChats[activeChatId];
+                const context = (chat?.messages || []).slice(-5).map(m =>
+                    `${m.is_from_admin ? 'موديتور' : 'عميل'}: ${m.message_text}`
+                ).join('\n');
+                // تحليل بعد ثانية واحدة حتى لا يتعارض مع الإرسال
+                setTimeout(() => analyzeModeratorReply(sentText, context), 1500);
+            }
+        }
+
+        // ============================================================
+        //  💬 Feature 4: Admin AI Assistant Tab
+        // ============================================================
+        let aiChatHistory = [];
+
+        function clearAiChat() {
+            aiChatHistory = [];
+            const container = document.getElementById('ai-chat-messages');
+            container.innerHTML = `
+                <div class="flex justify-start">
+                    <div class="max-w-[85%] bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-2xl rounded-tl-none px-4 py-3 text-sm text-slate-700">
+                        <p class="font-bold text-indigo-700 mb-1">🤖 تمت إعادة المحادثة</p>
+                        <p>اسألني أي سؤال عن الرحلات أو العملاء أو الأداء! 😊</p>
+                    </div>
+                </div>`;
+        }
+
+        function askAiFromInput() {
+            const input = document.getElementById('ai-chat-input');
+            const question = input.value.trim();
+            if (!question) return;
+            input.value = '';
+            askAi(question);
+        }
+
+        async function askAi(question) {
+            // إضافة سؤال المستخدم في الـ UI
+            appendAiMessage(question, 'user');
+            
+            // Loading bubble
+            const loadingId = 'loading-' + Date.now();
+            appendAiMessage('<i class="fas fa-circle-notch fa-spin"></i> جاري التفكير...', 'bot', loadingId);
+
+            try {
+                // جلب البيانات الحية من Supabase
+                const contextData = await gatherContextData();
+
+                const systemPrompt = `أنت مساعد إداري ذكي لشركة 24Seven للليموزين في مصر.
+لديك وصول كامل لبيانات الشركة الحية التالية:
+${contextData}
+
+قواعد الإجابة:
+- أجب بالعربية المصرية البسيطة والمباشرة
+- استخدم أرقام دقيقة من البيانات المقدمة
+- إذا لم يكن السؤال موجوداً في البيانات، قل ذلك بصراحة
+- استخدم الإيموجي لتحسين القراءة
+- الإجابة موجزة وعملية (5-7 جمل بالحد الأقصى)
+- لا تقل "بناءً على البيانات" أو أي مقدمات، ابدأ مباشرة بالإجابة`;
+
+                // إضافة الرسالة لتاريخ المحادثة
+                aiChatHistory.push({ role: 'user', content: question });
+                if (aiChatHistory.length > 10) aiChatHistory = aiChatHistory.slice(-10);
+
+                const proxyUrl = `${getApiBaseUrl()}/api/ai_chat`;
+                const response = await fetch(proxyUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify({
+                        system: systemPrompt,
+                        max_tokens: 700,
+                        messages: aiChatHistory
+                    })
+                });
+
+                const data = await response.json();
+
+                // تحقق من نجاح الطلب
+                if (!response.ok) {
+                    const errorMsg = data?.error || `HTTP ${response.status}`;
+                    throw new Error(`خطأ من السيرفر: ${errorMsg}`);
+                }
+
+                const answer = data.answer;
+                if (!answer) {
+                    throw new Error('لم تصل إجابة من الـ AI - حاول مرة أخرى');
+                }
+                
+                aiChatHistory.push({ role: 'assistant', content: answer });
+
+                // استبدال loading bubble بالإجابة
+                const loadingEl = document.getElementById(loadingId);
+                if (loadingEl) {
+                    loadingEl.innerHTML = answer.replace(/\n/g, '<br>');
+                }
+
+            } catch (e) {
+                const loadingEl = document.getElementById(loadingId);
+                if (loadingEl) {
+                    loadingEl.innerHTML = `<span class="text-red-500">❌ خطأ: ${e.message}</span>`;
+                }
+            }
+
+            // Scroll to bottom
+            const container = document.getElementById('ai-chat-messages');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function appendAiMessage(text, role, id = null) {
+            const container = document.getElementById('ai-chat-messages');
+            const isUser = role === 'user';
+            const div = document.createElement('div');
+            div.className = `flex ${isUser ? 'justify-end' : 'justify-start'}`;
+            div.innerHTML = `
+                <div ${id ? 'id="' + id + '"' : ''} class="max-w-[85%] ${isUser
+                    ? 'bg-teal-600 text-white rounded-2xl rounded-tr-none'
+                    : 'bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-tl-none shadow-sm'
+                } px-4 py-3 text-sm leading-relaxed">${text}</div>`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function gatherContextData() {
+            const today = new Date().toISOString().split('T')[0];
+            const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+            const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+
+            let context = `📅 التاريخ اليوم: ${today}\n\n`;
+
+            try {
+                // رحلات اليوم
+                const { data: todayTrips } = await sbClient.from('google_reservations')
+                    .select('customer_name, pickup_address, dropoff_address, trip_time, cost, status, car_type, trip_type, booking_employee')
+                    .eq('trip_date', today)
+                    .order('trip_time', { ascending: true });
+
+                if (todayTrips) {
+                    context += `🗓️ رحلات اليوم (${todayTrips.length} رحلة):\n`;
+                    todayTrips.forEach(t => {
+                        context += `  - ${t.customer_name || '?'} | ${t.pickup_address?.split(',')[0] || '?'} ➝ ${t.dropoff_address?.split(',')[0] || '?'} | ${t.trip_time || '--'} | ${t.cost || 0} جنيه | ${t.status || 'معلق'}\n`;
+                    });
+                    const todayRevenue = todayTrips.reduce((s, t) => s + (Number(t.cost) || 0), 0);
+                    context += `💰 إجمالي إيرادات اليوم: ${todayRevenue} جنيه\n\n`;
+                }
+
+                // رحلات الأسبوع
+                const { data: weekTrips } = await sbClient.from('google_reservations')
+                    .select('cost, trip_type, pickup_address, dropoff_address, customer_phone, customer_name, created_at')
+                    .gte('trip_date', weekAgo)
+                    .lte('trip_date', today);
+
+                if (weekTrips) {
+                    const weekRevenue = weekTrips.reduce((s, t) => s + (Number(t.cost) || 0), 0);
+                    const vipCount = weekTrips.filter(t => (t.trip_type || '').toLowerCase().includes('vip')).length;
+                    
+                    // أكتر مسار
+                    const routeCount = {};
+                    weekTrips.forEach(t => {
+                        const route = `${t.pickup_address?.split(',')[0] || '?'} ➝ ${t.dropoff_address?.split(',')[0] || '?'}`;
+                        routeCount[route] = (routeCount[route] || 0) + 1;
+                    });
+                    const topRoute = Object.entries(routeCount).sort((a, b) => b[1] - a[1])[0];
+
+                    context += `📊 إحصائيات الأسبوع:\n`;
+                    context += `  - إجمالي الرحلات: ${weekTrips.length}\n`;
+                    context += `  - إجمالي الإيرادات: ${weekRevenue} جنيه\n`;
+                    context += `  - رحلات VIP: ${vipCount}\n`;
+                    if (topRoute) context += `  - أكتر مسار: ${topRoute[0]} (${topRoute[1]} مرات)\n`;
+                    context += '\n';
+                }
+
+                // عملاء الشهر الجديد
+                const { data: monthTrips } = await sbClient.from('google_reservations')
+                    .select('customer_phone, client_status')
+                    .gte('created_at', monthStart);
+                if (monthTrips) {
+                    const newClients = monthTrips.filter(t => t.client_status === 'جديد' || t.client_status === 'عميل جديد').length;
+                    context += `👥 عملاء الشهر الحالي: ${monthTrips.length} رحلة | ${newClients} عملاء جدد\n\n`;
+                }
+
+                // السائقين
+                const { data: drivers } = await sbClient.from('drivers').select('name, phone').order('name');
+                if (drivers && drivers.length > 0) {
+                    context += `🚗 السائقين المتاحين (${drivers.length}):\n`;
+                    drivers.forEach(d => context += `  - ${d.name} (${d.phone})\n`);
+                    context += '\n';
+                }
+
+                // الأسعار
+                const { data: pricing } = await sbClient.from('pricing_tiers').select('*').order('car_type').order('min_km');
+                if (pricing && pricing.length > 0) {
+                    const carTypes = [...new Set(pricing.map(p => p.car_type))];
+                    context += `💵 جدول الأسعار:\n`;
+                    carTypes.forEach(car => {
+                        const tiers = pricing.filter(p => p.car_type === car);
+                        context += `  ${car}: فتح ${tiers[0]?.base_price || 0} جنيه`;
+                        tiers.forEach(t => context += ` | ${t.min_km}-${t.max_km}كم: ${t.price_per_km} جنيه/كم`);
+                        context += '\n';
+                    });
+                }
+
+            } catch (e) {
+                context += `⚠️ خطأ في جلب بعض البيانات: ${e.message}\n`;
+            }
+
+            return context;
+        }
+
     </script>
 </body>
 </html>

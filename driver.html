@@ -10,6 +10,9 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Outfit:wght@700&display=swap"
         rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <link rel="apple-touch-icon" href="images/icon-192x192.png">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <style>
@@ -352,34 +355,34 @@
             <h2 class="text-lg font-bold mb-4 text-white"><i class="fas fa-wallet text-green-400 ml-2"></i>حسابي</h2>
             <div id="finance-content">
                 <div class="glass p-4 mb-4">
-                    <div class="grid grid-cols-3 gap-3 mb-4">
+                    <div class="grid grid-cols-2 gap-3 mb-4">
                         <div class="fin-stat">
                             <p class="text-[10px] text-slate-400 mb-1">إجمالي الرحلات</p>
                             <p id="fin-total-trips" class="font-bold text-white font-num text-lg">0</p>
                             <p class="text-[10px] text-slate-500">رحلة</p>
                         </div>
                         <div class="fin-stat">
-                            <p class="text-[10px] text-green-400 mb-1">المستحق</p>
-                            <p id="fin-due" class="font-bold text-green-400 font-num text-lg">0</p>
-                            <p class="text-[10px] text-slate-500">جنيه</p>
-                        </div>
-                        <div class="fin-stat">
-                            <p class="text-[10px] text-red-400 mb-1">الخصومات</p>
-                            <p id="fin-deductions" class="font-bold text-red-400 font-num text-lg">0</p>
+                            <p class="text-[10px] text-slate-400 mb-1">النقدية المحصلة</p>
+                            <p id="fin-cash" class="font-bold text-white font-num text-lg">0</p>
                             <p class="text-[10px] text-slate-500">جنيه</p>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-2 gap-3 mb-4">
                         <div class="fin-stat">
-                            <p class="text-[10px] text-amber-400 mb-1">السلف</p>
-                            <p id="fin-advances" class="font-bold text-amber-400 font-num text-xl">0</p>
+                            <p class="text-[10px] text-red-400 mb-1">عمولة الشركة</p>
+                            <p id="fin-commission" class="font-bold text-red-400 font-num text-lg">0</p>
                             <p class="text-[10px] text-slate-500">جنيه</p>
                         </div>
-                        <div class="fin-stat border border-green-500/30">
-                            <p class="text-[10px] text-green-300 mb-1">🏆 الصافي</p>
-                            <p id="fin-net" class="font-bold text-green-300 font-num text-xl">0</p>
+                        <div class="fin-stat">
+                            <p class="text-[10px] text-amber-400 mb-1">سلف وخصومات</p>
+                            <p id="fin-deductions" class="font-bold text-amber-400 font-num text-lg">0</p>
                             <p class="text-[10px] text-slate-500">جنيه</p>
                         </div>
+                    </div>
+                    <div class="fin-stat border border-green-500/30">
+                        <p class="text-[10px] text-green-300 mb-1">🏆 الصافي للكابتن</p>
+                        <p id="fin-net" class="font-bold text-green-300 font-num text-2xl">0</p>
+                        <p class="text-[10px] text-slate-500">جنيه</p>
                     </div>
                 </div>
                 <h3 class="text-sm font-bold text-slate-300 mb-3">سجل الرحلات المنتهية</h3>
@@ -472,25 +475,115 @@
             const list = document.getElementById('driver-trips-list');
             list.innerHTML = '<p class="text-center text-slate-400 py-8"><i class="fas fa-spinner fa-spin ml-2"></i>جاري التحميل...</p>';
 
-            const { data: trips } = await sb.from('trips')
-                .select('*, cars:cars!fk_trips_car(*)')
-                .eq('driver_id', currentDriver.id)
-                .in('status', ['driver_assigned', 'completed', 'trip_ended'])
-                .order('created_at', { ascending: false });
+            let allCards = [];
 
-            if (!trips || trips.length === 0) {
+            // === مصدر 1: رحلات من جدول trips (النظام القديم) ===
+            try {
+                const { data: trips } = await sb.from('trips')
+                    .select('*, cars:cars!fk_trips_car(*)')
+                    .eq('driver_id', currentDriver.id)
+                    .in('status', ['driver_assigned', 'completed', 'trip_ended'])
+                    .order('created_at', { ascending: false });
+
+                if (trips && trips.length > 0) {
+                    const userIds = trips.map(t => t.user_id).filter(Boolean);
+                    let profilesMap = {};
+                    if (userIds.length > 0) {
+                        const { data: profiles } = await sb.from('profiles').select('id, full_name').in('id', userIds);
+                        if (profiles) profiles.forEach(p => profilesMap[p.id] = p);
+                    }
+                    allCards.push(...trips.map(t => ({ type: 'trip', html: renderTripCard(t, profilesMap), date: t.created_at })));
+                }
+            } catch(e) { console.error('Error loading trips:', e); }
+
+            // === مصدر 2: رحلات من google_reservations (الشيت) ===
+            try {
+                // البحث بعدة صيغ لرقم الهاتف
+                const driverPhone = currentDriver.phone.replace(/\D/g, '');
+                const phoneSuffix = driverPhone.length > 8 ? driverPhone.slice(-9) : driverPhone;
+
+                const { data: sheetTrips } = await sb.from('google_reservations')
+                    .select('*')
+                    .or(`modified_driver_phone.ilike.%${phoneSuffix}%`)
+                    .order('trip_date', { ascending: false })
+                    .limit(30);
+
+                if (sheetTrips && sheetTrips.length > 0) {
+                    allCards.push(...sheetTrips.map(t => ({ type: 'sheet', html: renderSheetTripCard(t), date: t.trip_date || t.created_at })));
+                }
+            } catch(e) { console.error('Error loading sheet trips:', e); }
+
+            if (allCards.length === 0) {
                 list.innerHTML = '<div class="text-center py-16 text-slate-500"><i class="fas fa-inbox text-5xl mb-3 block opacity-30"></i><p>لا توجد رحلات حالياً</p></div>';
                 return;
             }
 
-            const userIds = trips.map(t => t.user_id).filter(Boolean);
-            let profilesMap = {};
-            if (userIds.length > 0) {
-                const { data: profiles } = await sb.from('profiles').select('id, full_name').in('id', userIds);
-                if (profiles) profiles.forEach(p => profilesMap[p.id] = p);
-            }
+            list.innerHTML = allCards.map(c => c.html).join('');
+        }
 
-            list.innerHTML = trips.map(t => renderTripCard(t, profilesMap)).join('');
+        // عرض رحلة من google_reservations (الشيت)
+        function renderSheetTripCard(t) {
+            const clientName = t.customer_name || 'عميل';
+            const pickup = (t.pickup_address || '').substring(0, 40);
+            const dropoff = (t.dropoff_address || '').substring(0, 40);
+            const tripDate = t.trip_date || '--';
+            const tripTime = t.trip_time || '--';
+            const price = t.cost || 0;
+            const pax = t.passengers || '1';
+            const bags = t.bags || '0';
+            const carType = t.car_type || '--';
+            const tripType = t.trip_type || '--';
+            const clientPhone = t.customer_phone || '';
+            const status = t.status || 'pending';
+            
+            const isActive = !['completed', 'trip_ended', 'cancelled'].includes(status);
+            const statusColor = isActive ? 'text-blue-400 bg-blue-500/10 border-blue-500/30' : 'text-slate-400 bg-slate-700/30 border-slate-600/30';
+            const statusText = isActive ? '🟢 نشطة' : '✅ مكتملة';
+
+            const whatsappLink = clientPhone ? `https://wa.me/2${clientPhone.replace(/\D/g, '')}` : '#';
+
+            return `
+            <div class="glass p-4 mb-3">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="stage-badge ${statusColor} text-xs">${statusText}</span>
+                    <span class="font-bold font-num text-blue-400 text-lg">${price} EGP</span>
+                </div>
+
+                <div class="bg-slate-800/60 rounded-xl p-3 mb-3 space-y-2">
+                    <div class="flex items-start gap-2">
+                        <i class="fas fa-circle-dot text-green-500 text-[10px] mt-1 flex-shrink-0"></i>
+                        <p class="text-xs text-slate-200 leading-tight">${pickup}</p>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <i class="fas fa-location-dot text-red-500 text-[10px] mt-1 flex-shrink-0"></i>
+                        <p class="text-xs text-slate-200 leading-tight">${dropoff}</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 mb-3 text-center">
+                    <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">📅 التاريخ</p><p class="text-[11px] text-white font-num">${tripDate}</p></div>
+                    <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">⏰ الوقت</p><p class="text-[11px] text-white font-num">${tripTime}</p></div>
+                    <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">🚗 النوع</p><p class="text-[11px] text-white">${carType}</p></div>
+                    <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">👥 أفراد</p><p class="text-[11px] text-white">${pax}</p></div>
+                    <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">🧳 شنط</p><p class="text-[11px] text-white">${bags}</p></div>
+                    <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">🔄 الاتجاه</p><p class="text-[11px] text-white">${tripType}</p></div>
+                </div>
+
+                <div class="flex items-center justify-between pt-3 border-t border-slate-700/60">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 bg-blue-600/20 border border-blue-500/30 rounded-full flex items-center justify-center text-sm">👤</div>
+                        <div>
+                            <p class="text-xs font-bold text-white">${clientName}</p>
+                            <p class="text-[10px] text-slate-400">${clientPhone}</p>
+                        </div>
+                    </div>
+                    ${clientPhone ? `
+                    <a href="${whatsappLink}" target="_blank"
+                        class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1">
+                        <i class="fab fa-whatsapp"></i> واتساب
+                    </a>` : ''}
+                </div>
+            </div>`;
         }
 
         function renderTripCard(t, profilesMap) {
@@ -959,40 +1052,49 @@
         async function loadFinancePage() {
             if (!currentDriver) return;
 
-            // جلب البيانات المالية (المستحق والسلف) من المشتريات/المصروفات الخاصة بالكابتن
+            // جلب البيانات المالية الخاصة بالكابتن لاحتساب السلف والخصومات والعمولة
             const { data: expenses } = await sb.from('expenses').select('*').eq('related_driver_id', currentDriver.id);
-            let due = 0; let advances = 0; let deductions = 0; let settlements = 0;
+            let advances = 0; let deductions = 0; let settlements = 0; let totalCommission = 0;
             if (expenses) {
                 expenses.forEach(e => {
                     const amt = Number(e.amount) || 0;
-                    if (e.category === 'رواتب') {
-                        due += amt;
-                    } else if (e.category === 'سلفة') {
+                    if (e.category === 'سلفة') {
                         advances += amt;
                     } else if (e.category === 'تسوية') {
                         settlements += amt;
-                    } else {
-                        deductions += amt; // خصم، غرامة أو أي شيء آخر
+                    } else if (e.category === 'عمولات') {
+                        totalCommission += amt; // تم الحصول عليها بناءً على إدخال الإدارة اليدوي لكل رحلة
+                    } else if (e.category !== 'رواتب') {
+                        deductions += amt; // خصم أو غرامة
                     }
                 });
             }
+            const totalDeductions = advances + deductions - settlements;
 
             // جلب الرحلات المنتهية للكابتن
             const { data: trips } = await sb.from('trips')
-                .select('id, estimated_price, status, admin_notes, created_at, pickup_location, dropoff_location')
+                .select('id, estimated_price, final_price, status, admin_notes, created_at, pickup_location, dropoff_location')
                 .eq('driver_id', currentDriver.id)
                 .in('status', ['completed', 'trip_ended'])
                 .order('created_at', { ascending: false });
 
             const totalTrips = trips?.length || 0;
-            // الحساب الصحيح: المستحق (الإيراد) - السلف - المخصومات - التسويات
-            const net = due - advances - deductions - settlements;
+            let totalCash = 0;
+
+            if (trips) {
+                trips.forEach(t => {
+                    const price = parseFloat(t.final_price) || parseFloat(t.estimated_price) || 0;
+                    totalCash += price;
+                });
+            }
+
+            const net = totalCash - totalCommission - totalDeductions;
 
             document.getElementById('fin-total-trips').textContent = totalTrips;
-            document.getElementById('fin-due').textContent = due;
-            document.getElementById('fin-advances').textContent = advances;
-            document.getElementById('fin-deductions').textContent = deductions;
-            document.getElementById('fin-net').textContent = net;
+            document.getElementById('fin-cash').textContent = totalCash.toFixed(2);
+            document.getElementById('fin-commission').textContent = totalCommission.toFixed(2);
+            document.getElementById('fin-deductions').textContent = totalDeductions.toFixed(2);
+            document.getElementById('fin-net').textContent = net.toFixed(2);
 
             // عرض قائمة الرحلات
             const finList = document.getElementById('fin-trips-list');
@@ -1399,6 +1501,16 @@
         // فحص التنبيهات كل 5 دقائق
         setInterval(checkUpcomingTrips, 5 * 60 * 1000);
 
+        // تسجيل Service Worker للـ PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then(reg => {
+                    console.log('Service Worker registered', reg);
+                }).catch(err => {
+                    console.log('Service Worker registration failed', err);
+                });
+            });
+        }
     </script>
 
 </body>

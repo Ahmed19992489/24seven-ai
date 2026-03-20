@@ -1330,10 +1330,27 @@
             const { data } = await sb.from('pricing_tiers').select('*'); if (data) pricingRules = data;
             const { data: p } = await sb.from('profiles').select('*').eq('id', user.id).single();
             if (p) {
-                document.getElementById('header-user-name').innerText = p.full_name;
+                let displayName = p.full_name;
+                // لو الاسم لا يزال عامّاً (عميل XXXX)، حاول جلب الاسم الحقيقي من الحجوزات
+                if (displayName && displayName.startsWith('عميل ') && p.phone) {
+                    try {
+                        const cleanedPhone = p.phone.replace(/^0+/, '');
+                        const { data: reservations } = await sb.from('google_reservations')
+                            .select('customer_name')
+                            .or(`customer_phone.ilike.%${cleanedPhone}%,customer_phone.ilike.%${p.phone}%`)
+                            .order('created_at', { ascending: false })
+                            .limit(1);
+                        if (reservations && reservations.length > 0 && reservations[0].customer_name) {
+                            displayName = reservations[0].customer_name;
+                            // تحديث الاسم في البروفايل أيضاً
+                            await sb.from('profiles').update({ full_name: displayName }).eq('id', user.id);
+                        }
+                    } catch(e) { console.log('Name auto-fix error:', e); }
+                }
+                document.getElementById('header-user-name').innerText = displayName;
                 document.getElementById('header-balance').innerText = p.wallet_balance;
                 document.getElementById('wallet-page-balance').innerText = p.wallet_balance;
-                document.getElementById('guest-name').value = p.full_name;
+                document.getElementById('guest-name').value = displayName;
                 document.getElementById('guest-phone').value = p.phone;
             }
         }
@@ -1508,7 +1525,7 @@
         // ==========================================
         // إرسال بيانات الحجز إلى جوجل شيت
         // ==========================================
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw6IFk6q7jc3AKGhJ7q-NRYE6N3Db8LIx_RPWrktxwDyMrYHiAUayhZYrOjlytGcrCu/exec';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
 
         function sendToGoogleSheet(data) {
             if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'PASTE_YOUR_APPS_SCRIPT_URL_HERE') return;
@@ -1534,34 +1551,93 @@
 
             try {
                 // 2. Fetch pending reservations from 'google_reservations' using phone
-                const { data: profile } = await sb.from('profiles').select('phone').eq('id', user.id).single();
+                const { data: profile } = await sb.from('profiles').select('phone, email').eq('id', user.id).single();
                 const userPhone = profile?.phone;
+                const userEmail = profile?.email || user.email || '';
 
-                if (userPhone && userPhone.length >= 10) {
-                    const cleanUserPhone = userPhone.replace(/\D/g, '');
-                    const { data: sheetRes } = await sb
+                let sheetResAll = [];
+
+                if (userPhone && userPhone.length >= 8) {
+                    // بناء قائمة من التنسيقات المحتملة للهاتف
+                    const cleanPhone = userPhone.replace(/\D/g, '');
+                    const phoneVariants = new Set();
+                    phoneVariants.add(cleanPhone);                          // 01xxxxxxxxx
+                    if (cleanPhone.startsWith('0')) {
+                        phoneVariants.add(cleanPhone.slice(1));              // 1xxxxxxxxx
+                        phoneVariants.add('20' + cleanPhone.slice(1));       // 201xxxxxxxxx
+                    } else if (cleanPhone.startsWith('20')) {
+                        phoneVariants.add(cleanPhone.slice(2));              // 1xxxxxxxxx
+                        phoneVariants.add('0' + cleanPhone.slice(2));        // 01xxxxxxxxx
+                    } else {
+                        phoneVariants.add('0' + cleanPhone);                 // 0 + rest
+                        phoneVariants.add('20' + cleanPhone);                // 20 + rest
+                    }
+
+                    // بناء شرط ilike لكل تنسيق
+                    const orParts = [...phoneVariants].flatMap(v => [
+                        `customer_phone.ilike.%${v}%`,
+                        `whatsapp_num.ilike.%${v}%`
+                    ]).join(',');
+
+                    console.log('🔍 Searching trips with phone variants:', [...phoneVariants]);
+
+                    const { data: sheetRes, error: sheetErr } = await sb
                         .from('google_reservations')
                         .select('*')
-                        .or(`customer_phone.ilike.%${cleanUserPhone}%,whatsapp_num.ilike.%${cleanUserPhone}%`)
-                        .neq('status', 'driver_assigned');
+                        .or(orParts);
 
-                    if (sheetRes && sheetRes.length > 0) {
-                        const pendingTrips = sheetRes.map(r => ({
-                            id: 'gr_' + r.id, 
-                            status: 'pending',
-                            pickup_location: r.pickup_address || 'انتظار التأكيد',
-                            dropoff_location: r.dropoff_address || 'انتظار التأكيد',
-                            estimated_price: r.cost || 0,
-                            created_at: r.created_at || new Date().toISOString(),
-                            drivers: null,
-                            cars: null,
-                            admin_notes: `تاريخ الرحلة: ${r.trip_date || '--'} الساعة ${r.trip_time || '--'}`
-                        }));
-                        allTrips = [...allTrips, ...pendingTrips];
+                    if (sheetErr) console.log('Sheet reservations error:', sheetErr.message);
+                    if (sheetRes) {
+                        console.log(`✅ Found ${sheetRes.length} sheet reservations for phone`);
+                        sheetResAll = sheetRes;
                     }
                 }
+
+                // 3. Fallback: بحث بالإيميل لو ما فيش هاتف أو ما لقى نتائج
+                if (sheetResAll.length === 0 && userEmail && userEmail.includes('@')) {
+                    const { data: emailRes } = await sb
+                        .from('google_reservations')
+                        .select('*')
+                        .ilike('email', `%${userEmail}%`);
+                    if (emailRes && emailRes.length > 0) {
+                        console.log(`✅ Found ${emailRes.length} sheet reservations by email`);
+                        sheetResAll = emailRes;
+                    }
+                }
+
+                if (sheetResAll.length > 0) {
+                    // إزالة التكرارات (نفس الـ id)
+                    const existingGrIds = new Set(allTrips.map(t => t.id));
+                    const pendingTrips = sheetResAll
+                        .filter(r => !existingGrIds.has('gr_' + r.id))
+                        .map(r => {
+                            let driverInfo = null;
+                            if (r.modified_driver_name && r.modified_driver_name.trim()) {
+                                driverInfo = {
+                                    name: r.modified_driver_name.trim(),
+                                    phone: r.modified_driver_phone || ''
+                                };
+                            }
+                            let tripStatus = r.status || 'pending';
+                            if (driverInfo && tripStatus === 'pending') tripStatus = 'driver_assigned';
+                            if (r.status === 'confirmed') tripStatus = 'approved';
+
+                            return {
+                                id: 'gr_' + r.id,
+                                status: tripStatus,
+                                pickup_location: r.pickup_address || 'انتظار التأكيد',
+                                dropoff_location: r.dropoff_address || 'انتظار التأكيد',
+                                estimated_price: r.cost || 0,
+                                created_at: r.created_at || new Date().toISOString(),
+                                drivers: driverInfo,
+                                cars: null,
+                                admin_notes: `تاريخ الرحلة: ${r.trip_date || '--'} الساعة ${r.trip_time || '--'}`
+                            };
+                        });
+                    allTrips = [...allTrips, ...pendingTrips];
+                }
             } catch (err) {
-                console.log('Error fetching sheet reservations', err);
+                console.log('Error fetching sheet reservations:', err);
             }
 
             // Sort all trips by newest first
@@ -1883,12 +1959,26 @@
                     return;
                 }
 
-                // إنشاء profile برقم الهاتف
+                // إنشاء profile برقم الهاتف - نبحث عن الاسم الحقيقي من الحجوزات
                 if (signUpData?.user) {
+                    let realName = 'عميل ' + rawPhone.slice(-4);
+                    try {
+                        // البحث عن اسم العميل من أحدث حجز في google_reservations
+                        const cleanedPhone = rawPhone.replace(/^0+/, '');
+                        const { data: reservations } = await sb.from('google_reservations')
+                            .select('customer_name, customer_phone')
+                            .or(`customer_phone.ilike.%${cleanedPhone}%,customer_phone.ilike.%${rawPhone}%`)
+                            .order('created_at', { ascending: false })
+                            .limit(1);
+                        if (reservations && reservations.length > 0 && reservations[0].customer_name) {
+                            realName = reservations[0].customer_name;
+                        }
+                    } catch(e) { console.log('Name lookup error:', e); }
+
                     await sb.from('profiles').upsert({
                         id: signUpData.user.id,
                         phone: rawPhone,
-                        full_name: 'عميل ' + rawPhone.slice(-4),
+                        full_name: realName,
                         wallet_balance: 0
                     });
 

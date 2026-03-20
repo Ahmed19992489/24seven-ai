@@ -201,6 +201,14 @@
                 class="sidebar-item p-3 rounded-lg flex items-center gap-3">
                 <i class="fas fa-user-shield w-5 text-center text-red-600"></i> إدارة الموظفين
             </div>
+            
+            <!-- 🤖 رابط المساعد الذكي AI (جديد) -->
+            <div onclick="showPage('ai-assistant')" id="nav-ai-assistant"
+                class="sidebar-item p-3 rounded-lg flex items-center gap-3 bg-indigo-50 border-r-4 border-indigo-600 group">
+                <i class="fas fa-robot w-5 text-center text-indigo-600 group-hover:animate-bounce"></i>
+                <span class="font-bold text-indigo-900">المساعد الذكي AI</span>
+                <span class="mr-auto bg-indigo-600 text-[9px] px-1.5 py-0.5 rounded text-white animate-pulse">PRO</span>
+            </div>
             <div onclick="showPage('coupons')" id="nav-coupons"
                 class="sidebar-item p-3 rounded-lg flex items-center gap-3">
                 <i class="fas fa-ticket-alt w-5 text-center text-pink-600"></i> كوبونات الخصم
@@ -745,6 +753,47 @@
             </div>
         </div>
 
+        <!-- 🤖 المساعد الذكي AI -->
+        <section id="page-ai-assistant" class="page-section hidden h-full flex flex-col">
+            <div class="flex flex-col h-full space-y-4">
+                <div class="flex items-center justify-between mb-2">
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-800">المساعد الذكي <span class="text-indigo-600 italic">24Seven AI</span></h2>
+                        <p class="text-xs text-slate-500 font-bold mt-1">اسألني أي شيء عن شركتك وأرباحك وموظفيك 🚀</p>
+                    </div>
+                    <button onclick="clearAiChat()" class="text-xs font-bold text-slate-400 hover:text-red-500 transition border border-slate-200 px-3 py-1.5 rounded-lg">
+                        <i class="fas fa-redo-alt ml-1"></i> تصفير المحادثة
+                    </button>
+                </div>
+                
+                <div id="ai-chat-messages" class="flex-1 overflow-y-auto space-y-4 p-4 bg-slate-50 rounded-2xl border border-slate-200 min-h-[400px]">
+                    <div class="flex justify-start">
+                        <div class="max-w-[85%] bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-2xl rounded-tl-none px-4 py-3 text-sm text-slate-700">
+                            <p class="font-bold text-indigo-700 mb-1">🤖 أهلاً بك يا مدير!</p>
+                            <p>أنا مساعدك الذكي المرتبط ببيانات الشركة لحظة بلحظة. يمكنني إعطاءك تقارير عن:</p>
+                            <ul class="list-disc list-inside mt-2 space-y-1 text-[13px]">
+                                <li>عدد رحلات اليوم وأي كباتن شغالين.</li>
+                                <li>أداء الموظفين ومين أكتر واحد دخل حجوزات.</li>
+                                <li>تحليل الأرباح والخزن لهذا الشهر.</li>
+                                <li>اقتراحات لتطوير الشغل بناءً على المسارات الأكثر طلباً.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="relative mt-2">
+                    <input type="text" id="ai-chat-input" 
+                        onkeypress="if(event.key === 'Enter') askAiFromInput()"
+                        placeholder="اسألني: 'كم دخلنا في أخر أسبوع؟' أو 'مين أكتر سواق اشتغل اليوم؟'"
+                        class="w-full bg-white border-2 border-slate-100 focus:border-indigo-500 pr-4 pl-32 py-4 rounded-2xl shadow-sm outline-none transition font-bold text-slate-700">
+                    <div class="absolute left-2 top-2 flex gap-1">
+                        <button onclick="askAiFromInput()" class="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition shadow-md">
+                            إرسال <i class="fas fa-paper-plane mr-1"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
     <div id="assign-modal"
@@ -800,6 +849,15 @@
                     <label class="text-xs font-bold text-red-500">🔧 صيانة (تلقائي: المسافة × 0.6)</label>
                     <p id="comp-maintenance-display" class="font-bold text-red-600 mt-1">0 EGP</p>
                 </div>
+
+                <!-- قسم أداء الموظفين (جديد) -->
+                <div id="staff-performance-card" class="bg-indigo-50 p-3 rounded-lg border border-indigo-200 text-xs hidden">
+                    <p class="font-bold text-indigo-800 text-sm mb-2">🏆 أداء الموظفين (هذا الشهر):</p>
+                    <div id="staff-performance-list" class="space-y-1">
+                        <!-- سيتم التعبئة بالجافا سكريبت -->
+                    </div>
+                </div>
+
                 <div class="bg-green-50 p-3 rounded-lg border border-green-200 text-xs space-y-1" id="comp-summary">
                     <p class="font-bold text-green-800 text-sm mb-2">📊 التوزيع:</p>
                     <div class="flex justify-between"><span>🔵 خزنة السواقين (يومية):</span><span id="sum-wage"
@@ -1043,6 +1101,13 @@
             if (pageId === 'ratings') loadRatings();
             if (pageId === 'coupons') loadCouponsPage();
             if (pageId === 'staff') loadStaff();
+            if (pageId === 'ai-assistant') {
+                 // No specific load needed, but good to scroll to bottom
+                 setTimeout(() => {
+                    const box = document.getElementById('ai-chat-messages');
+                    if(box) box.scrollTop = box.scrollHeight;
+                 }, 100);
+            }
         }
 
         async function loadDashboard() {
@@ -1056,6 +1121,45 @@
                 document.getElementById('kpi-main-vault').innerText = `${main.balance} EGP`;
                 document.getElementById('kpi-maint-vault').innerText = `${maint.balance} EGP`;
                 document.getElementById('kpi-cars-salary').innerText = `${cars.balance} EGP`;
+            }
+
+            // تحميل أداء الموظفين
+            loadStaffStats();
+        }
+
+        async function loadStaffStats() {
+            try {
+                const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+                const { data: res } = await sbClient.from('google_reservations')
+                    .select('booking_employee, trip_type')
+                    .gte('created_at', monthStart);
+
+                if (res && res.length > 0) {
+                    const stats = {};
+                    res.forEach(r => {
+                        const emp = r.booking_employee || 'غير محدد';
+                        if (!stats[emp]) stats[emp] = { total: 0, vip: 0 };
+                        stats[emp].total++;
+                        if ((r.trip_type || '').toLowerCase().includes('vip')) stats[emp].vip++;
+                    });
+
+                    const list = document.getElementById('staff-performance-list');
+                    const card = document.getElementById('staff-performance-card');
+                    list.innerHTML = Object.entries(stats)
+                        .sort((a,b) => b[1].total - a[1].total)
+                        .map(([name, s]) => `
+                            <div class="flex justify-between items-center border-b border-indigo-100 pb-1">
+                                <span class="font-bold text-slate-700">${name}</span>
+                                <div class="flex gap-2">
+                                    <span class="bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded font-bold">${s.total} حجز</span>
+                                    <span class="bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded font-bold">${s.vip} VIP</span>
+                                </div>
+                            </div>
+                        `).join('');
+                    card.classList.remove('hidden');
+                }
+            } catch (e) {
+                console.error('Staff Stats Error:', e);
             }
         }
 
@@ -1258,7 +1362,9 @@
             if (commission > 0) {
                 const vid = await getVaultIdByName('خزنة العمولات');
                 if (vid) { const { data: v } = await sbClient.from('vaults').select('balance').eq('id', vid).single(); await sbClient.from('vaults').update({ balance: (v.balance || 0) + commission }).eq('id', vid); }
-                await sbClient.from('expenses').insert([{ title: `عمولة #${tripLabel}`, amount: commission, category: 'عمولات', related_trip_id: tripId }]);
+                const expData = { title: `عمولة #${tripLabel}`, amount: commission, category: 'عمولات', related_trip_id: tripId };
+                if (trip.driver_id) expData.related_driver_id = trip.driver_id;
+                await sbClient.from('expenses').insert([expData]);
             }
 
             // 4. بنزين + كروت → مصروف تشغيل (سجل فقط)
@@ -2226,7 +2332,7 @@
         // ==========================================
         // إرسال بيانات الحجز إلى جوجل شيت
         // ==========================================
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw6IFk6q7jc3AKGhJ7q-NRYE6N3Db8LIx_RPWrktxwDyMrYHiAUayhZYrOjlytGcrCu/exec';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
 
         function sendToAdminSheet(data) {
             if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'PASTE_YOUR_APPS_SCRIPT_URL_HERE') return;
@@ -2474,9 +2580,9 @@
                 
                 omniGroupedChats[msg.sender_id].messages.push(msg);
                 omniGroupedChats[msg.sender_id].last_message = msg;
-                omniGroupedChats[msg.sender_id].channel = msg.channel; // التحديث لآخر قناة استخدمها
+                omniGroupedChats[msg.sender_id].channel = msg.channel;
                 // 🛑 لا تجعل اسم العميل يتغير إلى Admin إذا كانت الرسالة من الموظف
-                if (!msg.is_from_admin && msg.sender_name) {
+                if (!msg.is_from_admin && msg.sender_name && msg.sender_name !== 'Messenger User') {
                     omniGroupedChats[msg.sender_id].sender_name = msg.sender_name;
                 }
                 
@@ -2484,6 +2590,77 @@
                     omniGroupedChats[msg.sender_id].unread_count++;
                 }
             });
+
+            // 🔄 حل أسماء "Messenger User" من الحجوزات عبر أرقام الهواتف في الرسائل
+            Object.values(omniGroupedChats).forEach(chat => {
+                if (chat.sender_name === 'Messenger User' || chat.sender_name === chat.sender_id) {
+                    // البحث عن رقم هاتف مصري في رسائل العميل
+                    const clientMsgs = chat.messages.filter(m => !m.is_from_admin);
+                    for (const m of clientMsgs) {
+                        const phoneMatch = (m.message_text || '').match(/01[0-9]{9}/);
+                        if (phoneMatch) {
+                            chat._phone_hint = phoneMatch[0];
+                            break;
+                        }
+                    }
+                }
+            });
+
+            // جلب الأسماء الحقيقية من الحجوزات (async - سيتم تحديث الواجهة بعد الانتهاء)
+            resolveMessengerNames();
+        }
+
+        async function resolveMessengerNames() {
+            const chatsToResolve = Object.values(omniGroupedChats).filter(c => 
+                c.sender_name === 'Messenger User' || c.sender_name === c.sender_id
+            );
+            if (chatsToResolve.length === 0) return;
+
+            let anyResolved = false;
+            for (const chat of chatsToResolve) {
+                let foundName = null;
+
+                // مصدر 1: البحث عن "👤 الاسم: ..." أو "👤 العميل: ..." في رسائل البوت
+                for (const m of chat.messages) {
+                    const txt = m.message_text || '';
+                    // البحث في ملخصات الحجز ورسائل التأكيد
+                    const namePatterns = [
+                        /👤\s*(?:الاسم|العميل)\s*[:：]\s*(.+)/,
+                        /الاسم\s*[:：]\s*(.+)/
+                    ];
+                    for (const pattern of namePatterns) {
+                        const match = txt.match(pattern);
+                        if (match) {
+                            const candidate = match[1].trim().split('\n')[0].trim();
+                            if (candidate && candidate !== '?' && candidate !== '...' && candidate !== 'العميل' && candidate.length > 1 && candidate.length < 50) {
+                                foundName = candidate;
+                                break;
+                            }
+                        }
+                    }
+                    if (foundName) break;
+                }
+
+                // مصدر 2: البحث عن رقم هاتف في رسائل العميل ثم جلب الاسم من الحجوزات
+                if (!foundName && chat._phone_hint) {
+                    try {
+                        const { data } = await sbClient.from('google_reservations')
+                            .select('customer_name')
+                            .ilike('customer_phone', `%${chat._phone_hint}%`)
+                            .order('created_at', { ascending: false })
+                            .limit(1);
+                        if (data && data.length > 0 && data[0].customer_name) {
+                            foundName = data[0].customer_name;
+                        }
+                    } catch(e) { }
+                }
+
+                if (foundName) {
+                    chat.sender_name = foundName;
+                    anyResolved = true;
+                }
+            }
+            if (anyResolved) renderOmniChatList();
         }
 
         function renderOmniChatList() {
@@ -3075,7 +3252,7 @@ async function confirmResAssign() {
         }).eq('sheet_row', r.sheet_row);
 
         // 5. تحديث جوجل شيت - أعمدة 22-23 (اسم السائق ورقمه)
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw6IFk6q7jc3AKGhJ7q-NRYE6N3Db8LIx_RPWrktxwDyMrYHiAUayhZYrOjlytGcrCu/exec';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
         fetch(APPS_SCRIPT_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain' },
@@ -3113,7 +3290,115 @@ async function confirmResAssign() {
         btn.disabled = false; btn.textContent = 'تعيين الكابتن';
     }
 }
-</script>
+        // ============================================================
+        //  🤖 Claude AI Assistant Logic
+        // ============================================================
+        let aiChatHistory = [];
 
+        function clearAiChat() {
+            aiChatHistory = [];
+            const container = document.getElementById('ai-chat-messages');
+            container.innerHTML = `
+                <div class="flex justify-start">
+                    <div class="max-w-[85%] bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-2xl rounded-tl-none px-4 py-3 text-sm text-slate-700">
+                        <p class="font-bold text-indigo-700 mb-1">🤖 تمت إعادة المحادثة</p>
+                        <p>اسألني أي سؤال عن الرحلات أو العملاء أو الأداء! 😊</p>
+                    </div>
+                </div>`;
+        }
+
+        function askAiFromInput() {
+            const input = document.getElementById('ai-chat-input');
+            const question = input.value.trim();
+            if (!question) return;
+            input.value = '';
+            askAi(question);
+        }
+
+        async function askAi(question) {
+            appendAiMessage(question, 'user');
+            const loadingId = 'loading-' + Date.now();
+            appendAiMessage('<i class="fas fa-circle-notch fa-spin"></i> جاري قراءة بيانات الشركة والرد...', 'bot', loadingId);
+
+            try {
+                const contextData = await gatherAiContext();
+                const systemPrompt = `أنت مساعد إداري للمدير في شركة 24Seven لليموزين بمصر.
+أنت خبير في تحليل البيانات وتقديم النصائح الاستراتيجية.
+إليك بيانات الشركة الحية:
+${contextData}
+
+القواعد:
+1. رد باللهجة المصرية المحترمة والعملية.
+2. كن دقيقاً جداً في الأرقام (لا تخترع أرقاماً).
+3. إذا سألك عن "ماذا نفعل" اقترح تطوير المسارات الأكثر طلباً أو مكافأة الموظفين الأكثر إنتاجاً.
+4. الإجابة قصيرة ومفيدة.
+5. لا تذكر أنك موديل لغوي، أنت جزء من نظام 24Seven.`;
+
+                aiChatHistory.push({ role: 'user', content: question });
+                if (aiChatHistory.length > 10) aiChatHistory = aiChatHistory.slice(-10);
+
+                const response = await fetch(`${getStaffApiBaseUrl()}/api/ai_chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+                    body: JSON.stringify({ system: systemPrompt, messages: aiChatHistory })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'فشل الاتصال بسيرفر الذكاء الاصطناعي');
+
+                const answer = data.answer;
+                aiChatHistory.push({ role: 'assistant', content: answer });
+
+                const loadingEl = document.getElementById(loadingId);
+                if (loadingEl) loadingEl.innerHTML = answer.replace(/\n/g, '<br>');
+            } catch (e) {
+                const loadingEl = document.getElementById(loadingId);
+                if (loadingEl) loadingEl.innerHTML = `<span class="text-red-500 italic">❌ خطأ: ${e.message}</span>`;
+            }
+        }
+
+        function appendAiMessage(text, role, id = null) {
+            const container = document.getElementById('ai-chat-messages');
+            const isUser = role === 'user';
+            const div = document.createElement('div');
+            div.className = `flex ${isUser ? 'justify-end' : 'justify-start'}`;
+            div.innerHTML = `
+                <div ${id ? 'id="' + id + '"' : ''} class="max-w-[85%] ${isUser ? 'bg-indigo-600 text-white rounded-2xl rounded-tr-none' : 'bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-tl-none shadow-sm'} px-4 py-3 text-sm leading-relaxed">${text}</div>`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function gatherAiContext() {
+            const today = new Date().toISOString().split('T')[0];
+            const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+            
+            let report = `بيانات اليوم (${today}):\n`;
+            
+            try {
+                // 1. رحلات اليوم
+                const { data: todayTrips } = await sbClient.from('trips').select('status, estimated_price').gte('created_at', today);
+                report += `- إجمالي رحلات العمليات: ${todayTrips?.length || 0}\n`;
+                
+                // 2. الحجوزات (Orders)
+                const { data: orders } = await sbClient.from('google_reservations').select('*').gte('created_at', monthStart);
+                report += `إحصائيات الشهر:\n- إجمالي الحجوزات: ${orders?.length || 0}\n`;
+                
+                // 3. أداء الموظفين
+                const empStats = {};
+                orders.forEach(o => {
+                    const name = o.booking_employee || 'Unknown';
+                    empStats[name] = (empStats[name] || 0) + 1;
+                });
+                report += `- أداء الموظفين: ${JSON.stringify(empStats)}\n`;
+
+                // 4. الخزائن
+                const { data: vaults } = await sbClient.from('vaults').select('name, balance');
+                report += `الخزائن:\n`;
+                vaults.forEach(v => report += `- ${v.name}: ${v.balance} EGP\n`);
+
+            } catch(e) { report += `(خطأ في جلب بعض البيانات)\n`; }
+            return report;
+        }
+    </script>
 </body>
 </html>

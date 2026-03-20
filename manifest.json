@@ -1,0 +1,22 @@
+{
+  "name": "24Seven Captain",
+  "short_name": "24Seven",
+  "description": "تطبيق كباتن 24Seven ليموزين",
+  "start_url": "/driver.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#1e293b",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "images/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "images/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
