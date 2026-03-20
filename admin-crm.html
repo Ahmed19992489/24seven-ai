@@ -781,16 +781,22 @@
                     </div>
                 </div>
 
-                <div class="relative mt-2">
-                    <input type="text" id="ai-chat-input" 
-                        onkeypress="if(event.key === 'Enter') askAiFromInput()"
-                        placeholder="اسألني: 'كم دخلنا في أخر أسبوع؟' أو 'مين أكتر سواق اشتغل اليوم؟'"
-                        class="w-full bg-white border-2 border-slate-100 focus:border-indigo-500 pr-4 pl-32 py-4 rounded-2xl shadow-sm outline-none transition font-bold text-slate-700">
-                    <div class="absolute left-2 top-2 flex gap-1">
-                        <button onclick="askAiFromInput()" class="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition shadow-md">
-                            إرسال <i class="fas fa-paper-plane mr-1"></i>
-                        </button>
+                <div class="relative mt-2 flex flex-col gap-2">
+                    <div class="relative w-full">
+                        <input type="text" id="ai-chat-input" 
+                            onkeypress="if(event.key === 'Enter') askAiFromInput()"
+                            placeholder="اسألني: 'كم دخلنا في أخر أسبوع؟' أو 'مين أكتر سواق اشتغل اليوم؟'"
+                            class="w-full bg-white border-2 border-slate-100 focus:border-indigo-500 pr-4 pl-32 py-4 rounded-2xl shadow-sm outline-none transition font-bold text-slate-700">
+                        <div class="absolute left-2 top-2 flex gap-1">
+                            <button onclick="askAiFromInput()" class="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition shadow-md">
+                                إرسال <i class="fas fa-paper-plane mr-1"></i>
+                            </button>
+                        </div>
                     </div>
+                    <p class="text-[10px] text-slate-400 text-center">
+                        ⚠️ إذا لم يستجب المساعد، تأكد من وضع رابط ngrok في 
+                        <a href="javascript:showPage('staff')" class="text-indigo-600 underline">إعدادات الموظفين</a>
+                    </p>
                 </div>
             </div>
         </section>
@@ -3353,7 +3359,14 @@ ${contextData}
                 if (loadingEl) loadingEl.innerHTML = answer.replace(/\n/g, '<br>');
             } catch (e) {
                 const loadingEl = document.getElementById(loadingId);
-                if (loadingEl) loadingEl.innerHTML = `<span class="text-red-500 italic">❌ خطأ: ${e.message}</span>`;
+                const apiUrl = getStaffApiBaseUrl();
+                let errMsg = e.message;
+                
+                if (apiUrl.includes('24seven-ai.com')) {
+                    errMsg = `يجب ضبط رابط السيرفر (ngrok) أولاً للتمكن من الرد. اذهب لقسم "إدارة الموظفين" واضف الرابط هناك.`;
+                }
+                
+                if (loadingEl) loadingEl.innerHTML = `<span class="text-red-500 italic font-bold">❌ ${errMsg}</span>`;
             }
         }
 
