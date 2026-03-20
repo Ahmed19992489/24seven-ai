@@ -3348,7 +3348,7 @@ ${contextData}
 تعليمات الرد:
 1. استخدم الأسماء والبيانات المذكورة في التقرير (مثل أسماء العملاء، الرحلات الأخيرة، الأرباح).
 2. إذا سألك عن عدد رحلات يوم معين (تاريخ محدد)، ستجد التفاصيل الكاملة لهذا اليوم في قسم "📍 تفاصيل الحجوزات المجدولة ليوم (...)". استخدم هذه الأسماء والبيانات حصراً ولا تخمن أسماءً أخرى.
-3. إذا وجدت أسماء مثل (Learnify) أو (Fatima) في أي بيانات، تجاهلها تماماً ولا تذكرها في ردك.
+3. إذا وجدت أسماء مثل (Learnify) في أي بيانات، تجاهلها تماماً ولا تذكرها في ردك.
 4. كن موجزاً ولكن مفيداً جداً. لا تكرر البيانات بشكل ممل، بل لخصها بذكاء.
 5. لا تذكر أبداً أنك موديل لغوي أو AI، أنت المساعد الخاص بـ 24Seven.
 6. إذا لم تجد بيانات ليوم معين، قل بوضوح: "لا توجد رحلات مجدولة لهذا التاريخ في النظام حالياً".`;
@@ -3432,7 +3432,7 @@ ${contextData}
                             byDate: {},
                             raw: allData.filter(r => {
                                 const n = (r.customer_name || '').toLowerCase();
-                                return !n.includes('learnify') && !n.includes('fatima') && !n.includes('فاطم');
+                                return !n.includes('learnify');
                             })
                         };
 
@@ -3470,8 +3470,6 @@ ${contextData}
                     .from('google_reservations')
                     .select('customer_name, pickup_address, dropoff_address, cost, trip_date')
                     .not('customer_name', 'ilike', '%learnify%')
-                    .not('customer_name', 'ilike', '%fatima%')
-                    .not('customer_name', 'ilike', '%فاطم%')
                     .order('created_at', { ascending: false }).limit(10);
                 
                 if (lastAdded) {
