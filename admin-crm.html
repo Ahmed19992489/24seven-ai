@@ -3338,10 +3338,11 @@ ${contextData}
 تعليمات الرد:
 1. استخدم الأسماء والبيانات المذكورة في التقرير (مثل أسماء العملاء، الرحلات الأخيرة، الأرباح).
 2. إذا سألك عن "بيانات اليوم"، فصّل له ماذا حدث (كم حجز، كم رحلة، كم إيراد) بناءً على القوائم المرسلة.
-3. كن موجزاً ولكن مفيداً جداً. لا تكرر البيانات بشكل ممل، بل لخصها بذكاء.
-4. اقترح حلولاً استباقية (مثلاً: "عندنا حجوزات كتير معلقة، محتاجين نوجه الموظفين يخلصوها").
-5. لا تذكر أبداً أنك موديل لغوي أو AI، أنت المساعد الخاص بـ 24Seven.
-6. الأرقام يجب أن تكون دقيقة 100% كما وردت في البيانات.`;
+3. إذا سألك عن عدد رحلات يوم معين (تاريخ محدد)، ابحث عنه أولاً في قسم "📊 ملخص الحجوزات التاريخي" واستخدم الرقم المكتوب هناك بدقة.
+4. كن موجزاً ولكن مفيداً جداً. لا تكرر البيانات بشكل ممل، بل لخصها بذكاء.
+5. اقترح حلولاً استباقية (مثلاً: "عندنا حجوزات كتير معلقة، محتاجين نوجه الموظفين يخلصوها").
+6. لا تذكر أبداً أنك موديل لغوي أو AI، أنت المساعد الخاص بـ 24Seven.
+7. الأرقام يجب أن تكون دقيقة 100% كما وردت في البيانات.`;
 
                 aiChatHistory.push({ role: 'user', content: question });
                 if (aiChatHistory.length > 10) aiChatHistory = aiChatHistory.slice(-10);
@@ -3384,62 +3385,110 @@ ${contextData}
             container.scrollTop = container.scrollHeight;
         }
 
+        let allReservationsCache = null;
+        let lastCacheTime = 0;
+
         async function gatherAiContext() {
             const now = new Date();
             const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const todayIso = startOfToday.toISOString();
+            const todaySolo = now.toISOString().split('T')[0];
             const monthStartIso = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
             
-            let report = `### تقرير البيانات اللحظية (${now.toLocaleDateString('ar-EG')})\n\n`;
+            // تحديث الكاش كل 5 دقائق أو لو كان فارغاً
+            const shouldRefresh = !allReservationsCache || (now - lastCacheTime > 300000);
+            
+            let report = `### تقرير البيانات الشامل (${now.toLocaleDateString('ar-EG')})\n\n`;
             
             try {
-                // جلب كافة البيانات في وقت واحد للسرعة
-                const [tripsRes, ordersRes, latestRes, latestTrips, vaultsRes, monthStats, driversCount] = await Promise.all([
+                // 1. جلب البيانات اللحظية (دائماً تحديث)
+                const [tripsRes, ordersRes, latestTrips, vaultsRes, driversCount] = await Promise.all([
                     sbClient.from('trips').select('status, estimated_price').gte('created_at', todayIso),
                     sbClient.from('google_reservations').select('status, cost, booking_employee').gte('created_at', todayIso),
-                    sbClient.from('google_reservations').select('customer_name, pickup_address, dropoff_address, cost, status, trip_date, booking_employee').order('created_at', { ascending: false }).limit(7),
                     sbClient.from('trips').select('manual_client_name, pickup_location, dropoff_location, status, estimated_price').order('created_at', { ascending: false }).limit(5),
                     sbClient.from('vaults').select('name, balance'),
-                    sbClient.from('google_reservations').select('booking_employee').gte('created_at', monthStartIso),
                     sbClient.from('drivers').select('id', { count: 'exact', head: true })
                 ]);
 
+                // 2. جلب وتلخيص التاريخ الكامل (إذا لزم التحديث)
+                if (shouldRefresh) {
+                    try {
+                        const { data: allData, error: allErr } = await sbClient
+                            .from('google_reservations')
+                            .select('trip_date, cost, status, booking_employee, customer_name')
+                            .order('created_at', { ascending: false })
+                            .limit(2000); 
+
+                        if (allErr) throw allErr;
+
+                        if (allData) {
+                            const stats = {
+                                total: allData.length,
+                                byDate: {},
+                                byEmployee: {},
+                                totalRevenue: 0
+                            };
+
+                            allData.forEach(r => {
+                                // تجاهل بيانات الاختبار
+                                const name = (r.customer_name || '').toLowerCase();
+                                if (name.includes('learnify') || name.includes('fatima') || name.includes('فاطم')) return;
+
+                                const d = r.trip_date || 'غير محدد';
+                                stats.byDate[d] = (stats.byDate[d] || 0) + 1;
+                                
+                                const emp = r.booking_employee || 'غير مسمى';
+                                stats.byEmployee[emp] = (stats.byEmployee[emp] || 0) + 1;
+                                
+                                stats.totalRevenue += (Number(r.cost) || 0);
+                            });
+                            
+                            allReservationsCache = stats;
+                            lastCacheTime = now;
+                            console.log("✅ Cache updated with", allReservationsCache.total, "records");
+                        }
+                    } catch (err) {
+                        report += `⚠️ (فشل جلب الأرشيف: ${err.message})\n`;
+                        console.error("Cache Update Fail:", err);
+                    }
+                }
+
                 const todayTrips = tripsRes.data || [];
                 const todayOrders = ordersRes.data || [];
-                
                 const todayRev = todayTrips.reduce((s, t) => s + (Number(t.estimated_price) || 0), 0);
-                const pendingOrders = todayOrders.filter(o => !o.status || o.status === 'pending').length;
 
-                report += `💰 إيرادات العمليات الجارية اليوم: ${todayRev} EGP\n`;
-                report += `📑 حجوزات جديدة أضيفت اليوم: ${todayOrders.length} ${pendingOrders > 0 ? `(منها ${pendingOrders} معلقة ⚠️)` : ''}\n`;
-                report += `🚗 رحلات العمليات اليوم: ${todayTrips.length}\n`;
-                report += `👥 شركاء النجاح (السائقين): ${driversCount.count || 0}\n\n`;
+                report += `💰 إحصائيات سريعة لليوم (تم إضافتها اليوم ${todaySolo}):\n`;
+                report += `- حجوزات جديدة: ${todayOrders.length}\n`;
+                report += `- إيرادات اليوم: ${todayRev} EGP\n\n`;
 
-                if (latestRes.data && latestRes.data.length > 0) {
-                    report += `📋 آخر 7 حجوزات مضافة (CRM):\n`;
-                    latestRes.data.forEach(r => {
+                if (allReservationsCache) {
+                    report += `📊 ملخص الأرشيف التاريخي (بناءً على تاريخ الرحلة):\n`;
+                    // عرض كافة التواريخ
+                    const sortedDates = Object.keys(allReservationsCache.byDate).sort((a,b) => b.localeCompare(a));
+                    if (sortedDates.length === 0) {
+                        report += `- لا توجد بيانات تاريخية مؤرشفة بعد الفلترة.\n`;
+                    } else {
+                        sortedDates.forEach(d => {
+                            report += `- ${d}: ${allReservationsCache.byDate[d]} حجز\n`;
+                        });
+                    }
+
+                    report += `\n🏆 أداء الموظفين (إجمالي تاريخي):\n`;
+                    Object.entries(allReservationsCache.byEmployee)
+                        .sort((a,b) => b[1] - a[1])
+                        .slice(0, 10)
+                        .forEach(([name, count]) => report += `- ${name}: ${count} حجز\n`);
+                        
+                    report += `\n📈 إجمالي السجلات في الأرشيف المتاح: ${allReservationsCache.total}\n`;
+                }
+
+                // 3. آخر 10 حجوزات بالتفصيل
+                const { data: latestDetail } = await sbClient.from('google_reservations').select('customer_name, pickup_address, dropoff_address, cost, status, trip_date, booking_employee').order('created_at', { ascending: false }).limit(10);
+                if (latestDetail) {
+                    report += `\n📋 آخر 10 حجوزات تم إضافتها (تفاصيل):\n`;
+                    latestDetail.forEach(r => {
                         const route = (r.pickup_address || '').split(',')[0] + " ➝ " + (r.dropoff_address || '').split(',')[0];
-                        report += `- ${r.customer_name}: ${route} [${r.cost} EGP] (${r.status || 'Pending'}) - موظف: ${r.booking_employee || '?'}\n`;
-                    });
-                }
-
-                if (latestTrips.data && latestTrips.data.length > 0) {
-                    report += `\n🚗 آخر 5 عمليات (غرفة العمليات):\n`;
-                    latestTrips.data.forEach(t => {
-                        const route = (t.pickup_location || '').split(',')[0] + " ➝ " + (t.dropoff_location || '').split(',')[0];
-                        report += `- ${t.manual_client_name || 'عميل'}: ${route} [${t.status}] ${t.estimated_price} EGP\n`;
-                    });
-                }
-
-                if (monthStats.data) {
-                    const stats = {};
-                    monthStats.data.forEach(o => {
-                        const n = o.booking_employee || 'غير مسمى';
-                        stats[n] = (stats[n] || 0) + 1;
-                    });
-                    report += `\n🏆 الترتيب الحالي للموظفين (هذا الشهر):\n`;
-                    Object.entries(stats).sort((a,b) => b[1] - a[1]).slice(0, 3).forEach(([name, count]) => {
-                        report += `- ${name}: ${count} حجز\n`;
+                        report += `- ${r.customer_name}: ${route} [${r.cost} EGP] تاريخ الرحلة: ${r.trip_date}\n`;
                     });
                 }
 
@@ -3449,7 +3498,7 @@ ${contextData}
                 }
 
             } catch(e) { 
-                report += `\n⚠️ (عذراً، حدث خطأ في تحديث البيانات اللحظية، البيانات التالية قد تكون عامة).\n`; 
+                report += `\n⚠️ خطأ في معالجة البيانات التاريخية.\n`; 
                 console.error("Context Gather Error:", e);
             }
             return report;
