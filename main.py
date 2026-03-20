@@ -7,13 +7,17 @@ from app import models
 from app.database import engine, get_db
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# تحميل متغيرات البيئة من ملف .env
+load_dotenv()
 
 # --- 1. تحديد المسار الرئيسي للمشروع بدقة (Absolute Path) ---
 BASE_DIR = Path(__file__).resolve().parent
 
 # --- استيراد الروابط (APIs) ---
 # تأكد من وجود مجلد app/api وبداخله هذه الملفات
-from app.api import search, export, auth, suggestions, admin, payments, chat
+from app.api import search, export, auth, suggestions, admin, payments, chat, ai
 
 # إنشاء جداول قاعدة البيانات
 models.Base.metadata.create_all(bind=engine)
@@ -64,6 +68,7 @@ app.include_router(suggestions.router, prefix="/ai", tags=["AI Engine"])
 app.include_router(admin.router, prefix="/admin", tags=["Admin Dashboard"])
 app.include_router(payments.router, prefix="/payments", tags=["Payments"])
 app.include_router(chat.router, prefix="/chat", tags=["Customer Support Chat"])
+app.include_router(ai.router, prefix="/api", tags=["AI Dashboard Helpers"])
 
 # ==========================================
 #  نظام التوجيه والواجهات (Frontend Routing)
