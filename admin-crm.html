@@ -3053,18 +3053,23 @@
                     adminMsg += `\n📋 الإجمالي: ${totalBookings} حجز من ${reports.length} موظف`;
                 }
 
-                // 5. إرسال للأدمن عبر ngrok (أو عرض للنسخ اليدوي)
-                const ngrokUrl = localStorage.getItem('staff_api_url') || '';
+                // 5. إرسال مباشر لواتساب عبر Facebook Cloud API
+                const WA_TOKEN = 'EAAPDbwUyvY0BQrm6ZB9qb62LU9hI50ZC9QOfZAO3VPA7ZCSnFSRMCb2kouBRkXu4LiVmRU2ydv1vLl00kKmgTFMN5ULJOpImor7i8oITjicjIjWiOLxTL7yltYrlF0RLxcdU6UNOaIdqo4Ouv0BnQ79OK2sgSLpHY9ZCQs4iRIxcpjnoxr8EWpV4FSgGTzgZDZD';
+                const WA_PHONE_ID = '597129733493778';
                 let adminSent = false;
-                if (ngrokUrl) {
-                    try {
-                        const r = await fetch(`${ngrokUrl}/chat/send_omnichannel`, {
-                            method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ channel: 'whatsapp', sender_id: '201121748885', message: adminMsg })
-                        });
-                        adminSent = r.ok;
-                    } catch(e) { adminSent = false; }
-                }
+                try {
+                    const waRes = await fetch(`https://graph.facebook.com/v17.0/${WA_PHONE_ID}/messages`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${WA_TOKEN}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            messaging_product: 'whatsapp',
+                            to: '201121748885',
+                            type: 'text',
+                            text: { body: adminMsg }
+                        })
+                    });
+                    adminSent = waRes.ok;
+                } catch(e) { adminSent = false; }
 
                 // 6. عرض النتائج
                 document.getElementById('daily-report-results').classList.remove('hidden');
