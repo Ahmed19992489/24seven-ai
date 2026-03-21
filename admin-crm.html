@@ -3449,15 +3449,53 @@ ${contextData}
                             carDesc = `${trip.cars.brand} ${trip.cars.model} [${trip.cars.plate_number}]`;
                         }
 
-                        // تقدير وقت الانتهاء من مسافات المدن الحقيقية
+                        // ===== وقت البداية الفعلي للرحلة (بالأولوية الصحيحة) =====
+                        // الأولوية 1: trip_time من google_reservations (الشيت) - الأدق دائماً
+                        // الأولوية 2: استخراج الوقت من admin_notes في trips
+                        // الأولوية 3: created_at كآخر ملاذ
                         let durationMsg = '';
-                        const startTime = trip?.created_at ? new Date(trip.created_at) : (gr?.trip_date ? new Date(gr.trip_date + ' ' + (gr.trip_time || '00:00')) : null);
-                        if (startTime) {
-                            // خريطة المسافات الشاملة لكل المحافظات المصرية (بالكيلومتر من/إلى الإسكندرية وبين المدن الرئيسية)
-                        // المصدر: خرائط جوجل - الطريق الدولي الصحراوي / الساحلي
+                        let startTimeDisplay = 'غير مسجل';
+                        let startTime = null;
+
+                        // البحث في google_reservations عن أي سجل مرتبط بالمسار والسائق
+                        const grForTrip = gr || activeGr.find(g => {
+                            const gPickup = (g.pickup_address || '').toLowerCase();
+                            const gDropoff = (g.dropoff_address || '').toLowerCase();
+                            return gPickup.includes(pickup.split(' ')[0].toLowerCase()) && 
+                                   gDropoff.includes(dropoff.split(' ')[0].toLowerCase());
+                        });
+
+                        if (grForTrip?.trip_date && grForTrip?.trip_time) {
+                            // الأفضل: وقت الرحلة الفعلي من الشيت
+                            const dateStr = grForTrip.trip_date;
+                            const timeStr = grForTrip.trip_time.replace(/[^\d:]/g,'').trim();
+                            try {
+                                startTime = new Date(dateStr + 'T' + (timeStr.includes(':') ? timeStr : timeStr + ':00'));
+                                startTimeDisplay = `${grForTrip.trip_date} الساعة ${grForTrip.trip_time} (من الشيت)`;
+                            } catch(e) {}
+                        }
+
+                        if (!startTime && trip?.admin_notes) {
+                            // الثاني: استخراج التاريخ والوقت من الملاحظات
+                            const dateMatch = trip.admin_notes.match(/(\d{4}-\d{2}-\d{2})/);
+                            const timeMatch = trip.admin_notes.match(/(\d{1,2}:\d{2})/);
+                            if (dateMatch && timeMatch) {
+                                try {
+                                    startTime = new Date(dateMatch[1] + 'T' + timeMatch[1]);
+                                    startTimeDisplay = `${dateMatch[1]} الساعة ${timeMatch[1]} (من الملاحظات)`;
+                                } catch(e) {}
+                            }
+                        }
+
+                        if (!startTime && trip?.created_at) {
+                            // الأخير: وقت تسجيل الحجز (ليس وقت الرحلة الفعلي)
+                            startTime = new Date(trip.created_at);
+                            startTimeDisplay = `${startTime.toLocaleDateString('ar-EG')} ${startTime.getHours()}:${startTime.getMinutes().toString().padStart(2,'0')} (وقت الحجز - ليس وقت الانطلاق)`;
+                        }
+
+                        // ===== حساب المسافة والوقت المتوقع =====
                         const EGYPT_DISTANCES = {
-                            // من الإسكندرية
-                            'الإسكندرية_القاهرة': 220, 'اسكندريه_القاهره': 220, 'alex_cairo': 220,
+                            'الإسكندرية_القاهرة': 220, 'اسكندريه_القاهره': 220,
                             'الإسكندرية_الجيزة': 230, 'الإسكندرية_طنطا': 95, 'الإسكندرية_المنصورة': 160,
                             'الإسكندرية_دمنهور': 65, 'الإسكندرية_بنها': 145, 'الإسكندرية_الزقازيق': 195,
                             'الإسكندرية_بورسعيد': 310, 'الإسكندرية_السويس': 330, 'الإسكندرية_الإسماعيلية': 285,
@@ -3465,29 +3503,23 @@ ${contextData}
                             'الإسكندرية_سيوة': 560, 'الإسكندرية_أسوان': 1100, 'الإسكندرية_لكسور': 900,
                             'الإسكندرية_أسيوط': 550, 'الإسكندرية_سوهاج': 700, 'الإسكندرية_قنا': 800,
                             'الإسكندرية_الفيوم': 320, 'الإسكندرية_بني سويف': 370, 'الإسكندرية_المنيا': 435,
-                            // من القاهرة
                             'القاهرة_الإسكندرية': 220, 'القاهرة_شرم الشيخ': 510, 'القاهرة_الغردقة': 490,
                             'القاهرة_أسوان': 890, 'القاهرة_لكسور': 670, 'القاهرة_السويس': 135,
                             'القاهرة_بورسعيد': 220, 'القاهرة_الإسماعيلية': 130, 'القاهرة_مرسى مطروح': 510,
                             'القاهرة_المنيا': 250, 'القاهرة_أسيوط': 380, 'القاهرة_سوهاج': 490,
                             'القاهرة_قنا': 600, 'القاهرة_الفيوم': 130, 'القاهرة_بني سويف': 135,
-                            // مطارات ومناطق بالإسكندرية
                             'مطار برج العرب_سان ستيفانو': 55, 'مطار برج العرب_سيدي بشر': 55,
                             'مطار برج العرب_الإسكندرية': 45, 'مطار برج العرب_العجمي': 35,
                             'مطار برج العرب_اسكوت': 20, 'مطار برج العرب_المنتزه': 60,
                             'مطار القاهرة_القاهرة': 25, 'مطار القاهرة_الإسكندرية': 240,
                             'مطار القاهرة_مدينة نصر': 10, 'مطار القاهرة_الجيزة': 35,
                         };
-                        
-                        // دالة ذكية للبحث في خريطة المسافات
                         function findDistance(origin, dest) {
-                            const normalize = s => (s||'').trim().toLowerCase()
-                                .replace('الإسكندرية','اسكندريه').replace('إسكندريه','اسكندريه')
-                                .replace('اسكندريه','اسكندريه').replace('alexandria','اسكندريه')
-                                .replace('القاهره','القاهرة').replace('cairo','القاهرة')
-                                .replace('مطار البرج','مطار برج العرب').replace('برج العرب','مطار برج العرب');
-                            const o = normalize(origin), d = normalize(dest);
-                            // بحث مباشر
+                            const n = s => (s||'').trim().toLowerCase()
+                                .replace(/الإسكندرية|إسكندريه|إسكندرية|اسكندريه/g,'اسكندريه')
+                                .replace(/القاهره/g,'القاهرة')
+                                .replace(/مطار البرج|برج العرب/g,'مطار برج العرب');
+                            const o = n(origin), d = n(dest);
                             for (const [key, km] of Object.entries(EGYPT_DISTANCES)) {
                                 const [f, t] = key.split('_');
                                 if ((o.includes(f)||f.includes(o)) && (d.includes(t)||t.includes(d))) return km;
@@ -3495,22 +3527,20 @@ ${contextData}
                             }
                             return null;
                         }
+                        const distKm = trip?.distance_km || findDistance(pickup, dropoff);
 
-                        const pickupLower = pickup.toLowerCase();
-                        const dropoffLower = dropoff.toLowerCase();
-                        let distKm = trip?.distance_km || findDistance(pickup, dropoff);
-
-                        if (distKm) {
-                            const AVG_SPEED = 90; // كم/ساعة (طرق سريعة مصرية)
+                        if (startTime && distKm) {
+                            const AVG_SPEED = 90;
                             const mins = Math.round((distKm / AVG_SPEED) * 60);
                             const estEnd = new Date(startTime.getTime() + mins * 60 * 1000);
                             const hh = estEnd.getHours().toString().padStart(2,'0');
                             const mm = estEnd.getMinutes().toString().padStart(2,'0');
-                            const hrsTag = Math.floor(mins/60) > 0 ? `${Math.floor(mins/60)}س ${mins%60}د` : `${mins}د`;
-                            durationMsg = ` | 📍 المسافة: ~${Math.round(distKm)}كم (~${hrsTag}) | ⏰ وصول تقريبي: ${hh}:${mm}`;
+                            const hrsTag = Math.floor(mins/60) > 0 ? `${Math.floor(mins/60)} ساعة ${mins%60} دقيقة` : `${mins} دقيقة`;
+                            durationMsg = ` | ⏰ وقت الانطلاق: ${startTimeDisplay} | 📍 المسافة: ~${Math.round(distKm)}كم | ⌛ المدة: ${hrsTag} | 🏁 الوصول المتوقع: ${hh}:${mm}`;
+                        } else if (startTime) {
+                            durationMsg = ` | ⏰ وقت الانطلاق: ${startTimeDisplay} | ⚠️ المسافة غير متاحة في الخريطة`;
                         } else {
-                            durationMsg = ` | ⚠️ المسافة غير موجودة في قاعدة بيانات المسارات`;
-                        }
+                            durationMsg = ` | ⚠️ لم يُسجَّل وقت الانطلاق في بيانات الرحلة`;
                         }
 
                         activeReport += `- الكابتن ${d.name}: في رحلة حالياً من [${pickup}] إلى [${dropoff}]. السيارة: (${carDesc}). الحالة: (${stage}). ${loc ? `الموقع: ${loc}` : ''}${durationMsg}\n`;
