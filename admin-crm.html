@@ -3411,12 +3411,14 @@ ${contextData}
             
             try {
                 // 1. جلب البيانات اللحظية (دائماً تحديث)
-                const [tripsRes, ordersRes, latestTrips, vaultsRes, driversRes] = await Promise.all([
+                const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+                const [tripsRes, ordersRes, latestTrips, vaultsRes, driversRes, monthTripsRes] = await Promise.all([
                     sbClient.from('trips').select('status, estimated_price').gte('created_at', todayIso),
                     sbClient.from('google_reservations').select('status, cost, booking_employee').gte('created_at', todayIso),
                     sbClient.from('trips').select('manual_client_name, pickup_location, dropoff_location, status, estimated_price').order('created_at', { ascending: false }).limit(5),
                     sbClient.from('vaults').select('name, balance'),
-                    sbClient.from('drivers').select('name, phone')
+                    sbClient.from('drivers').select('name, phone'),
+                    sbClient.from('google_reservations').select('customer_phone, client_status').gte('created_at', monthStart)
                 ]);
 
                 // 2. جلب وتلخيص التاريخ الكامل
@@ -3455,14 +3457,17 @@ ${contextData}
                     const dates = Object.keys(allReservationsCache.byDate).sort((a,b) => b.localeCompare(a)).slice(0, 30);
                     dates.forEach(d => report += `- ${d}: ${allReservationsCache.byDate[d]} حجز\n`);
                     
-                    // إحصائيات الشهر الحالي (مزامنة مع الموديتور)
-                    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-                    const monthRecords = allReservationsCache.raw.filter(r => (r.trip_date || r.created_at) >= monthStart);
-                    const newClients = monthRecords.filter(r => (r.client_status === 'جديد' || r.client_status === 'عميل جديد')).length;
+                    // إحصائيات الشهر الحالي (مطابقة تماماً للموديتور)
+                    let monthTotal = 0;
+                    let monthNew = 0;
+                    if (monthTripsRes.data) {
+                        monthTotal = monthTripsRes.data.length;
+                        monthNew = monthTripsRes.data.filter(r => (r.client_status === 'جديد' || r.client_status === 'عميل جديد')).length;
+                    }
                     
-                    report += `\n📅 ملخص الشهر الحالي:\n`;
-                    report += `- إجمالي الرحلات: ${monthRecords.length}\n`;
-                    report += `- العملاء الجدد: ${newClients}\n`;
+                    report += `\n📅 ملخص الشهر الحالي (منذ ${monthStart}):\n`;
+                    report += `- إجمالي الرحلات: ${monthTotal}\n`;
+                    report += `- العملاء الجدد: ${monthNew}\n`;
 
                     if (targetDate && allReservationsCache.byDate[targetDate]) {
                         report += `\n📍 تفاصيل الحجوزات المجدولة ليوم (${targetDate}):\n`;
