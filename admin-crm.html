@@ -3412,7 +3412,7 @@ ${contextData}
             try {
                 // 1. جلب البيانات اللحظية (دائماً تحديث)
                 const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-                const [tripsRes, ordersRes, latestTrips, vaultsRes, driversRes, monthTripsRes, activeTripsRes, activeGrRes, ratingsRes, allCarsRes, unpaidTripsRes] = await Promise.all([
+                const [tripsRes, ordersRes, latestTrips, vaultsRes, driversRes, monthTripsRes, activeTripsRes, activeGrRes, ratingsRes, allCarsRes, unpaidTripsRes, pricingRes] = await Promise.all([
                     sbClient.from('trips').select('status, estimated_price, created_at').gte('created_at', todayIso),
                     sbClient.from('google_reservations').select('status, cost, booking_employee').gte('created_at', todayIso),
                     sbClient.from('trips').select('manual_client_name, pickup_location, dropoff_location, status, estimated_price').order('created_at', { ascending: false }).limit(5),
@@ -3423,7 +3423,8 @@ ${contextData}
                     sbClient.from('google_reservations').select('id, modified_driver_name, pickup_address, dropoff_address, location_link, status, car_type, trip_time, trip_date').neq('status', 'completed').not('modified_driver_name', 'is', null).limit(10),
                     sbClient.from('trip_ratings').select('driver_rating, car_rating, service_rating').limit(50),
                     sbClient.from('cars').select('brand, model, plate_number'),
-                    sbClient.from('trips').select('estimated_price').eq('payment_status', 'unpaid')
+                    sbClient.from('trips').select('estimated_price').eq('payment_status', 'unpaid'),
+                    sbClient.from('pricing_tiers').select('car_type, min_km, max_km, base_price, price_per_km').order('car_type').order('min_km')
                 ]);
 
                 // 3. تحليل السائقين والرحلات الجارية
@@ -3452,41 +3453,64 @@ ${contextData}
                         let durationMsg = '';
                         const startTime = trip?.created_at ? new Date(trip.created_at) : (gr?.trip_date ? new Date(gr.trip_date + ' ' + (gr.trip_time || '00:00')) : null);
                         if (startTime) {
-                            // خريطة المسافات الحقيقية بين المدن المصرية (كيلومتر فعلي)
-                            const CITY_DISTANCES = [
-                                { from: ['اسكندرية', 'اسكندريه', 'الاسكندرية', 'الاسكندريه', 'alex'], to: ['القاهرة', 'القاهره', 'طرة', 'هليوبوليس', 'cairo'], km: 220 },
-                                { from: ['القاهرة', 'القاهره', 'cairo'], to: ['اسكندرية', 'اسكندريه', 'الاسكندرية', 'الاسكندريه', 'alex'], km: 220 },
-                                { from: ['مطار القاهرة', 'مطار القاهره', 'cairo airport'], to: ['اسكندرية', 'اسكندريه', 'الاسكندرية', 'الاسكندريه'], km: 240 },
-                                { from: ['اسكندرية', 'اسكندريه', 'الاسكندرية', 'الاسكندريه'], to: ['مطار القاهرة', 'مطار القاهره', 'cairo airport'], km: 240 },
-                                { from: ['مطار برج العرب', 'مطار البرج', 'برج العرب', 'borg'], to: ['اسكوت', 'سيدي بشر', 'سان ستيفانو', 'العجمي', 'المنتزه', 'الشاطبي'], km: 20 },
-                                { from: ['مطار البرج', 'مطار برج العرب', 'برج العرب'], to: ['اسكندرية', 'اسكندريه', 'الاسكندرية'], km: 45 },
-                                { from: ['مطار القاهرة', 'مطار القاهره', 'cairo airport'], to: ['مدينة نصر', 'هليوبوليس', 'مصر الجديدة'], km: 10 },
-                                { from: ['مطار القاهرة', 'مطار القاهره'], to: ['الدقي', 'المهندسين', 'الزمالك', 'وسط البلد'], km: 25 },
-                            ];
-
-                            const pickupLower = pickup.toLowerCase();
-                            const dropoffLower = dropoff.toLowerCase();
-                            let distKm = trip?.distance_km || null;
-
-                            if (!distKm) {
-                                // ابحث في خريطة المسافات
-                                for (const route of CITY_DISTANCES) {
-                                    const fromMatch = route.from.some(f => pickupLower.includes(f.toLowerCase()) || f.toLowerCase().includes(pickupLower));
-                                    const toMatch = route.to.some(t => dropoffLower.includes(t.toLowerCase()) || t.toLowerCase().includes(dropoffLower));
-                                    if (fromMatch && toMatch) { distKm = route.km; break; }
-                                }
+                            // خريطة المسافات الشاملة لكل المحافظات المصرية (بالكيلومتر من/إلى الإسكندرية وبين المدن الرئيسية)
+                        // المصدر: خرائط جوجل - الطريق الدولي الصحراوي / الساحلي
+                        const EGYPT_DISTANCES = {
+                            // من الإسكندرية
+                            'الإسكندرية_القاهرة': 220, 'اسكندريه_القاهره': 220, 'alex_cairo': 220,
+                            'الإسكندرية_الجيزة': 230, 'الإسكندرية_طنطا': 95, 'الإسكندرية_المنصورة': 160,
+                            'الإسكندرية_دمنهور': 65, 'الإسكندرية_بنها': 145, 'الإسكندرية_الزقازيق': 195,
+                            'الإسكندرية_بورسعيد': 310, 'الإسكندرية_السويس': 330, 'الإسكندرية_الإسماعيلية': 285,
+                            'الإسكندرية_شرم الشيخ': 700, 'الإسكندرية_الغردقة': 750, 'الإسكندرية_مرسى مطروح': 300,
+                            'الإسكندرية_سيوة': 560, 'الإسكندرية_أسوان': 1100, 'الإسكندرية_لكسور': 900,
+                            'الإسكندرية_أسيوط': 550, 'الإسكندرية_سوهاج': 700, 'الإسكندرية_قنا': 800,
+                            'الإسكندرية_الفيوم': 320, 'الإسكندرية_بني سويف': 370, 'الإسكندرية_المنيا': 435,
+                            // من القاهرة
+                            'القاهرة_الإسكندرية': 220, 'القاهرة_شرم الشيخ': 510, 'القاهرة_الغردقة': 490,
+                            'القاهرة_أسوان': 890, 'القاهرة_لكسور': 670, 'القاهرة_السويس': 135,
+                            'القاهرة_بورسعيد': 220, 'القاهرة_الإسماعيلية': 130, 'القاهرة_مرسى مطروح': 510,
+                            'القاهرة_المنيا': 250, 'القاهرة_أسيوط': 380, 'القاهرة_سوهاج': 490,
+                            'القاهرة_قنا': 600, 'القاهرة_الفيوم': 130, 'القاهرة_بني سويف': 135,
+                            // مطارات ومناطق بالإسكندرية
+                            'مطار برج العرب_سان ستيفانو': 55, 'مطار برج العرب_سيدي بشر': 55,
+                            'مطار برج العرب_الإسكندرية': 45, 'مطار برج العرب_العجمي': 35,
+                            'مطار برج العرب_اسكوت': 20, 'مطار برج العرب_المنتزه': 60,
+                            'مطار القاهرة_القاهرة': 25, 'مطار القاهرة_الإسكندرية': 240,
+                            'مطار القاهرة_مدينة نصر': 10, 'مطار القاهرة_الجيزة': 35,
+                        };
+                        
+                        // دالة ذكية للبحث في خريطة المسافات
+                        function findDistance(origin, dest) {
+                            const normalize = s => (s||'').trim().toLowerCase()
+                                .replace('الإسكندرية','اسكندريه').replace('إسكندريه','اسكندريه')
+                                .replace('اسكندريه','اسكندريه').replace('alexandria','اسكندريه')
+                                .replace('القاهره','القاهرة').replace('cairo','القاهرة')
+                                .replace('مطار البرج','مطار برج العرب').replace('برج العرب','مطار برج العرب');
+                            const o = normalize(origin), d = normalize(dest);
+                            // بحث مباشر
+                            for (const [key, km] of Object.entries(EGYPT_DISTANCES)) {
+                                const [f, t] = key.split('_');
+                                if ((o.includes(f)||f.includes(o)) && (d.includes(t)||t.includes(d))) return km;
+                                if ((d.includes(f)||f.includes(d)) && (o.includes(t)||t.includes(o))) return km;
                             }
+                            return null;
+                        }
 
-                            if (distKm) {
-                                const AVG_SPEED_KMH = 80; // متوسط السرعة على الطرق السريعة المصرية
-                                const tripDurHours = distKm / AVG_SPEED_KMH;
-                                const estEnd = new Date(startTime.getTime() + tripDurHours * 60 * 60 * 1000);
-                                const hh = estEnd.getHours().toString().padStart(2,'0');
-                                const mm = estEnd.getMinutes().toString().padStart(2,'0');
-                                durationMsg = ` (المسافة: ~${Math.round(distKm)}كم، الانتهاء تقريباً: ${hh}:${mm})`;
-                            } else {
-                                durationMsg = ` (الوقت غير محدد - المسافة غير متاحة)`;
-                            }
+                        const pickupLower = pickup.toLowerCase();
+                        const dropoffLower = dropoff.toLowerCase();
+                        let distKm = trip?.distance_km || findDistance(pickup, dropoff);
+
+                        if (distKm) {
+                            const AVG_SPEED = 90; // كم/ساعة (طرق سريعة مصرية)
+                            const mins = Math.round((distKm / AVG_SPEED) * 60);
+                            const estEnd = new Date(startTime.getTime() + mins * 60 * 1000);
+                            const hh = estEnd.getHours().toString().padStart(2,'0');
+                            const mm = estEnd.getMinutes().toString().padStart(2,'0');
+                            const hrsTag = Math.floor(mins/60) > 0 ? `${Math.floor(mins/60)}س ${mins%60}د` : `${mins}د`;
+                            durationMsg = ` | 📍 المسافة: ~${Math.round(distKm)}كم (~${hrsTag}) | ⏰ وصول تقريبي: ${hh}:${mm}`;
+                        } else {
+                            durationMsg = ` | ⚠️ المسافة غير موجودة في قاعدة بيانات المسارات`;
+                        }
                         }
 
                         activeReport += `- الكابتن ${d.name}: في رحلة حالياً من [${pickup}] إلى [${dropoff}]. السيارة: (${carDesc}). الحالة: (${stage}). ${loc ? `الموقع: ${loc}` : ''}${durationMsg}\n`;
@@ -3537,7 +3561,48 @@ ${contextData}
                 
                 report += debtReport;
 
-                // 7. جلب وتلخيص التاريخ الكامل
+                // 7. مرجع أسعار الشركة الكامل (Pricing Reference)
+                const pricingData = pricingRes.data || [];
+                if (pricingData.length > 0) {
+                    let pricingReport = `\n📋 مرجع أسعار الكيلومتر (Pricing Tiers):\n`;
+                    const pricingByType = pricingData.reduce((acc, r) => {
+                        if (!acc[r.car_type]) acc[r.car_type] = [];
+                        acc[r.car_type].push(r);
+                        return acc;
+                    }, {});
+                    Object.entries(pricingByType).forEach(([type, tiers]) => {
+                        pricingReport += `- نوع "${type}": `;
+                        pricingReport += tiers.map(t => `${t.min_km}-${t.max_km}كم بـ ${t.price_per_km} جنيه/كم (فتح: ${t.base_price})`).join(' | ');
+                        pricingReport += '\n';
+                    });
+                    report += pricingReport;
+                }
+
+                // 8. مرجع المسافات الشامل لكل محافظات مصر (Distance Reference)
+                const distanceRef = `
+🗺️ مرجع المسافات بين المحافظات المصرية (من الإسكندرية):
+- القاهرة/الجيزة: 220-230كم (~2.5 ساعة)
+- طنطا: 95كم (~1 ساعة)
+- المنصورة: 160كم (~2 ساعة)
+- دمنهور: 65كم (~45 دقيقة)
+- المنيا: 435كم (~5 ساعات)
+- بني سويف: 370كم (~4 ساعات)
+- أسيوط: 550كم (~6 ساعات)
+- سوهاج: 700كم (~7.5 ساعات)
+- قنا/الأقصر: 800-900كم (~9-10 ساعات)
+- أسوان: 1100كم (~12 ساعة)
+- مرسى مطروح: 300كم (~3.5 ساعات)
+- بورسعيد: 310كم (~3.5 ساعات)
+- الغردقة: 750كم (~8 ساعات)
+- شرم الشيخ: 700كم (~8 ساعات)
+- مطار البرج←اسكوت: 20كم (~15 دقيقة)
+- مطار البرج←الإسكندرية المدينة: 45كم (~30 دقيقة)
+- مطار القاهرة←الإسكندرية: 240كم (~2.5 ساعة)
+(المتوسط: 90كم/ساعة على الطرق السريعة)
+`;
+                report += distanceRef;
+
+                // 9. جلب وتلخيص التاريخ الكامل
                 if (shouldRefresh) {
                     const { data: allData, error: allErr } = await sbClient
                         .from('google_reservations')
