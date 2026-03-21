@@ -3448,17 +3448,45 @@ ${contextData}
                             carDesc = `${trip.cars.brand} ${trip.cars.model} [${trip.cars.plate_number}]`;
                         }
 
-                        // تقدير وقت الانتهاء
+                        // تقدير وقت الانتهاء من مسافات المدن الحقيقية
                         let durationMsg = '';
                         const startTime = trip?.created_at ? new Date(trip.created_at) : (gr?.trip_date ? new Date(gr.trip_date + ' ' + (gr.trip_time || '00:00')) : null);
                         if (startTime) {
-                            let estHours = 2; // افتراضي
-                            const route = (pickup + dropoff).toLowerCase();
-                            if (route.includes('مطار') || route.includes('airport')) estHours = 1.5;
-                            if (route.includes('اسكندرية') || route.includes('alex')) estHours = 3;
-                            if (route.includes('القاهرة') && route.includes('اسكندرية')) estHours = 3.5;
-                            const estEnd = new Date(startTime.getTime() + estHours * 60 * 60 * 1000);
-                            durationMsg = ` (البدء: ${startTime.getHours()}:${startTime.getMinutes()} | الانتهاء تقريباً: ${estEnd.getHours()}:${estEnd.getMinutes()})`;
+                            // خريطة المسافات الحقيقية بين المدن المصرية (كيلومتر فعلي)
+                            const CITY_DISTANCES = [
+                                { from: ['اسكندرية', 'اسكندريه', 'الاسكندرية', 'الاسكندريه', 'alex'], to: ['القاهرة', 'القاهره', 'طرة', 'هليوبوليس', 'cairo'], km: 220 },
+                                { from: ['القاهرة', 'القاهره', 'cairo'], to: ['اسكندرية', 'اسكندريه', 'الاسكندرية', 'الاسكندريه', 'alex'], km: 220 },
+                                { from: ['مطار القاهرة', 'مطار القاهره', 'cairo airport'], to: ['اسكندرية', 'اسكندريه', 'الاسكندرية', 'الاسكندريه'], km: 240 },
+                                { from: ['اسكندرية', 'اسكندريه', 'الاسكندرية', 'الاسكندريه'], to: ['مطار القاهرة', 'مطار القاهره', 'cairo airport'], km: 240 },
+                                { from: ['مطار برج العرب', 'مطار البرج', 'برج العرب', 'borg'], to: ['اسكوت', 'سيدي بشر', 'سان ستيفانو', 'العجمي', 'المنتزه', 'الشاطبي'], km: 20 },
+                                { from: ['مطار البرج', 'مطار برج العرب', 'برج العرب'], to: ['اسكندرية', 'اسكندريه', 'الاسكندرية'], km: 45 },
+                                { from: ['مطار القاهرة', 'مطار القاهره', 'cairo airport'], to: ['مدينة نصر', 'هليوبوليس', 'مصر الجديدة'], km: 10 },
+                                { from: ['مطار القاهرة', 'مطار القاهره'], to: ['الدقي', 'المهندسين', 'الزمالك', 'وسط البلد'], km: 25 },
+                            ];
+
+                            const pickupLower = pickup.toLowerCase();
+                            const dropoffLower = dropoff.toLowerCase();
+                            let distKm = trip?.distance_km || null;
+
+                            if (!distKm) {
+                                // ابحث في خريطة المسافات
+                                for (const route of CITY_DISTANCES) {
+                                    const fromMatch = route.from.some(f => pickupLower.includes(f.toLowerCase()) || f.toLowerCase().includes(pickupLower));
+                                    const toMatch = route.to.some(t => dropoffLower.includes(t.toLowerCase()) || t.toLowerCase().includes(dropoffLower));
+                                    if (fromMatch && toMatch) { distKm = route.km; break; }
+                                }
+                            }
+
+                            if (distKm) {
+                                const AVG_SPEED_KMH = 80; // متوسط السرعة على الطرق السريعة المصرية
+                                const tripDurHours = distKm / AVG_SPEED_KMH;
+                                const estEnd = new Date(startTime.getTime() + tripDurHours * 60 * 60 * 1000);
+                                const hh = estEnd.getHours().toString().padStart(2,'0');
+                                const mm = estEnd.getMinutes().toString().padStart(2,'0');
+                                durationMsg = ` (المسافة: ~${Math.round(distKm)}كم، الانتهاء تقريباً: ${hh}:${mm})`;
+                            } else {
+                                durationMsg = ` (الوقت غير محدد - المسافة غير متاحة)`;
+                            }
                         }
 
                         activeReport += `- الكابتن ${d.name}: في رحلة حالياً من [${pickup}] إلى [${dropoff}]. السيارة: (${carDesc}). الحالة: (${stage}). ${loc ? `الموقع: ${loc}` : ''}${durationMsg}\n`;
