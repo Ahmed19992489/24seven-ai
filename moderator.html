@@ -252,9 +252,25 @@
                     </div>
                 </div>
 
+                <!-- AI Reply Suggestion Banner -->
+                <div id="ai-suggestion-bar" class="hidden px-4 py-2 bg-indigo-50 border-t border-indigo-100">
+                    <div class="flex items-start gap-2">
+                        <span class="text-indigo-500 text-xs font-black mt-0.5">🤖 اقتراح AI:</span>
+                        <p id="ai-suggestion-text" class="text-xs text-indigo-700 flex-1 leading-relaxed"></p>
+                        <div class="flex gap-1 shrink-0">
+                            <button onclick="acceptAiSuggestion()" class="text-[10px] bg-indigo-600 text-white px-2 py-1 rounded-lg font-bold hover:bg-indigo-700 transition">✓ قبول</button>
+                            <button onclick="dismissAiSuggestion()" class="text-[10px] bg-slate-200 text-slate-600 px-2 py-1 rounded-lg font-bold hover:bg-slate-300 transition">✕</button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Input Area -->
                 <form id="chat-form" onsubmit="handleSendWithCoaching(event)" class="p-4 border-t flex items-center gap-3 bg-white">
                     <input type="text" id="chat-input" placeholder="اكتب ردك هنا..." class="input-std flex-1">
+                    <button type="button" onclick="suggestAiReply()" title="اقتراح رد بالذكاء الاصطناعي" class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center hover:bg-indigo-200 transition shrink-0 relative group">
+                        🤖
+                        <span class="absolute -top-9 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition whitespace-nowrap">اقتراح رد ذكي</span>
+                    </button>
                     <button type="submit" class="w-10 h-10 bg-teal-600 text-white rounded-xl shadow-lg shadow-teal-200 flex items-center justify-center hover:scale-110 transition shrink-0">
                         <i class="fas fa-paper-plane"></i>
                     </button>
@@ -281,9 +297,14 @@
                         <input type="text" id="trip-search-input" oninput="quickFilterTrips()" placeholder="بحث سريع بالاسم، الهاتف، أو المسار..." class="input-std pr-10">
                         <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
                     </div>
-                    <div class="flex gap-2">
+                    <div class="flex gap-2 flex-wrap items-center">
                         <button onclick="filterByDate('today')" id="filter-today" class="px-5 py-2.5 rounded-xl font-bold bg-slate-100 text-slate-600 hover:bg-teal-50 hover:text-teal-600 transition">رحلات اليوم</button>
                         <button onclick="filterByDate('tomorrow')" id="filter-tomorrow" class="px-5 py-2.5 rounded-xl font-bold bg-slate-100 text-slate-600 hover:bg-teal-50 hover:text-teal-600 transition">رحلات غداً ⏰</button>
+                        <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-1.5">
+                            <i class="fas fa-calendar-alt text-teal-500 text-sm"></i>
+                            <input type="date" id="custom-date-filter" onchange="filterByCustomDate(this.value)" class="text-sm font-bold text-slate-700 outline-none bg-transparent cursor-pointer" title="فلترة بتاريخ مخصص">
+                            <button onclick="clearDateFilter()" id="clear-date-btn" class="hidden text-xs text-red-400 hover:text-red-600 font-bold" title="إزالة الفلتر">✕</button>
+                        </div>
                         <button onclick="searchTrips()" class="px-6 py-2.5 rounded-xl font-bold bg-slate-800 text-white hover:bg-slate-900 transition">بحث متقدم</button>
                     </div>
                     <div id="search-results-count" class="text-xs text-slate-400 font-bold px-2"></div>
@@ -803,7 +824,19 @@
                             groupedChats[m.sender_id].name = trip.customer_name;
                         }
                     }
-                    // For Messenger: Match based on name in message history if exists
+                    // For Messenger: Match based on messenger_sender_id or customer name from reservations
+                    if(m.channel === 'messenger') {
+                        const trip = allTrips.find(t =>
+                            t.messenger_sender_id === m.sender_id ||
+                            t.facebook_id === m.sender_id
+                        );
+                        if(trip && trip.customer_name && !['Admin', 'ش', 'Messenger User'].includes(trip.customer_name)) {
+                            groupedChats[m.sender_id].name = trip.customer_name;
+                        }
+                        // Try localStorage for manually-set names
+                        const savedName = localStorage.getItem(`chat_name_${m.sender_id}`);
+                        if(savedName) groupedChats[m.sender_id].name = savedName;
+                    }
                 }
             });
             
@@ -1298,6 +1331,28 @@
             }
         }
 
+        async function filterByCustomDate(dateStr) {
+            if (!dateStr) return;
+            document.getElementById('filter-today')?.classList.remove('bg-teal-600', 'text-white');
+            document.getElementById('filter-tomorrow')?.classList.remove('bg-teal-600', 'text-white');
+            document.getElementById('clear-date-btn')?.classList.remove('hidden');
+            const resultsCount = document.getElementById('search-results-count');
+            resultsCount.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحميل...';
+            const { data } = await sbClient.from('google_reservations').select('*').eq('trip_date', dateStr).order('trip_time', { ascending: true });
+            if (data) {
+                allTrips = data;
+                const displayDate = new Date(dateStr + 'T12:00:00').toLocaleDateString('ar-EG', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+                resultsCount.innerHTML = `<span class="text-teal-600 font-black">📅 ${displayDate}</span> — ${data.length} رحلة`;
+                renderTripsTable(data);
+            }
+        }
+
+        function clearDateFilter() {
+            document.getElementById('custom-date-filter').value = '';
+            document.getElementById('clear-date-btn')?.classList.add('hidden');
+            document.getElementById('search-results-count').textContent = '';
+        }
+
         async function searchTrips() {
             const query = document.getElementById('trip-search-input').value.trim();
             if(!query) return;
@@ -1640,6 +1695,62 @@
         }
 
         // ============================================================
+        // 🤖 AI Reply Suggestion Functions
+        // ============================================================
+        async function suggestAiReply() {
+            if (!activeChatId) return;
+            const chat = groupedChats[activeChatId];
+            if (!chat) return;
+
+            // آخر رسالة من العميل
+            const lastClientMsg = [...(chat.messages || [])].reverse().find(m => !m.is_from_admin);
+            if (!lastClientMsg) return;
+
+            const bar = document.getElementById('ai-suggestion-bar');
+            const textEl = document.getElementById('ai-suggestion-text');
+            bar.classList.remove('hidden');
+            textEl.textContent = '⏳ جاري التفكير...';
+
+            // سياق المحادثة (آخر 6 رسائل)
+            const recentContext = (chat.messages || []).slice(-6).map(m =>
+                `${m.is_from_admin ? 'موديتور' : 'عميل'}: ${m.message_text}`
+            ).join('\n');
+
+            const prompt = `أنت موديتور متخصص في شركة ليموزين 24Seven. راجع المحادثة التالية واقترح رداً مهنياً ومختصراً باللغة العربية على آخر رسالة العميل.
+المحادثة:
+${recentContext}
+
+الرسالة المطلوب الرد عليها: "${lastClientMsg.message_text}"
+
+اقترح رداً مناسباً فقط بدون أي شرح زائد.`;
+
+            try {
+                const res = await fetch('/api/ai-proxy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: [{ role: 'user', content: prompt }], max_tokens: 200 })
+                });
+                const data = await res.json();
+                const suggestion = data.content?.[0]?.text || data.reply || 'لم أستطع إنشاء اقتراح.';
+                textEl.textContent = suggestion;
+            } catch (err) {
+                textEl.textContent = '⚠️ تعذر الاتصال بالذكاء الاصطناعي.';
+            }
+        }
+
+        function acceptAiSuggestion() {
+            const suggestion = document.getElementById('ai-suggestion-text')?.textContent;
+            if (suggestion && suggestion !== '⏳ جاري التفكير...') {
+                document.getElementById('chat-input').value = suggestion;
+                document.getElementById('chat-input').focus();
+            }
+            dismissAiSuggestion();
+        }
+
+        function dismissAiSuggestion() {
+            document.getElementById('ai-suggestion-bar')?.classList.add('hidden');
+        }
+
         //  💬 Feature 4: Admin AI Assistant Tab
         // ============================================================
         let aiChatHistory = [];
