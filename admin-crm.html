@@ -3412,21 +3412,22 @@ ${contextData}
             try {
                 // 1. جلب البيانات اللحظية (دائماً تحديث)
                 const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-                const [tripsRes, ordersRes, latestTrips, vaultsRes, driversRes, monthTripsRes, activeTripsRes, activeGrRes, ratingsRes, allCarsRes] = await Promise.all([
-                    sbClient.from('trips').select('status, estimated_price').gte('created_at', todayIso),
+                const [tripsRes, ordersRes, latestTrips, vaultsRes, driversRes, monthTripsRes, activeTripsRes, activeGrRes, ratingsRes, allCarsRes, unpaidTripsRes] = await Promise.all([
+                    sbClient.from('trips').select('status, estimated_price, created_at').gte('created_at', todayIso),
                     sbClient.from('google_reservations').select('status, cost, booking_employee').gte('created_at', todayIso),
                     sbClient.from('trips').select('manual_client_name, pickup_location, dropoff_location, status, estimated_price').order('created_at', { ascending: false }).limit(5),
                     sbClient.from('vaults').select('name, balance'),
                     sbClient.from('drivers').select('id, name, phone'),
                     sbClient.from('google_reservations').select('customer_phone, client_status, booking_employee').gte('created_at', monthStart),
-                    sbClient.from('trips').select('id, driver_id, pickup_location, dropoff_location, stage_status, status, car_id, cars(brand, model, plate_number)').eq('status', 'driver_assigned'),
-                    sbClient.from('google_reservations').select('id, modified_driver_name, pickup_address, dropoff_address, location_link, status, car_type').neq('status', 'completed').not('modified_driver_name', 'is', null).limit(10),
+                    sbClient.from('trips').select('id, driver_id, pickup_location, dropoff_location, stage_status, status, car_id, created_at, cars(brand, model, plate_number)').eq('status', 'driver_assigned'),
+                    sbClient.from('google_reservations').select('id, modified_driver_name, pickup_address, dropoff_address, location_link, status, car_type, trip_time, trip_date').neq('status', 'completed').not('modified_driver_name', 'is', null).limit(10),
                     sbClient.from('trip_ratings').select('driver_rating, car_rating, service_rating').limit(50),
-                    sbClient.from('cars').select('brand, model, plate_number')
+                    sbClient.from('cars').select('brand, model, plate_number'),
+                    sbClient.from('trips').select('estimated_price').eq('payment_status', 'unpaid')
                 ]);
 
                 // 3. تحليل السائقين والرحلات الجارية
-                let activeReport = `\n🚗 تتبع السائقين والرحلات الجارية:\n`;
+                let activeReport = `\n🚗 تتبع السائقين والرحلات الجارية (تقديرات الوقت):\n`;
                 const drivers = driversRes.data || [];
                 const activeTrips = activeTripsRes.data || [];
                 const activeGr = activeGrRes.data || [];
@@ -3447,7 +3448,20 @@ ${contextData}
                             carDesc = `${trip.cars.brand} ${trip.cars.model} [${trip.cars.plate_number}]`;
                         }
 
-                        activeReport += `- الكابتن ${d.name}: في رحلة حالياً من [${pickup}] إلى [${dropoff}]. السيارة: (${carDesc}). الحالة: (${stage}). ${loc ? `الموقع اللحظي: ${loc}` : ''}\n`;
+                        // تقدير وقت الانتهاء
+                        let durationMsg = '';
+                        const startTime = trip?.created_at ? new Date(trip.created_at) : (gr?.trip_date ? new Date(gr.trip_date + ' ' + (gr.trip_time || '00:00')) : null);
+                        if (startTime) {
+                            let estHours = 2; // افتراضي
+                            const route = (pickup + dropoff).toLowerCase();
+                            if (route.includes('مطار') || route.includes('airport')) estHours = 1.5;
+                            if (route.includes('اسكندرية') || route.includes('alex')) estHours = 3;
+                            if (route.includes('القاهرة') && route.includes('اسكندرية')) estHours = 3.5;
+                            const estEnd = new Date(startTime.getTime() + estHours * 60 * 60 * 1000);
+                            durationMsg = ` (البدء: ${startTime.getHours()}:${startTime.getMinutes()} | الانتهاء تقريباً: ${estEnd.getHours()}:${estEnd.getMinutes()})`;
+                        }
+
+                        activeReport += `- الكابتن ${d.name}: في رحلة حالياً من [${pickup}] إلى [${dropoff}]. السيارة: (${carDesc}). الحالة: (${stage}). ${loc ? `الموقع: ${loc}` : ''}${durationMsg}\n`;
                     } else {
                         activeReport += `- الكابتن ${d.name}: متاح (لا توجد رحلة نشطة حالياً).\n`;
                     }
@@ -3455,6 +3469,7 @@ ${contextData}
                 report += activeReport;
 
                 // 4. تقارير ذكاء الأعمال (Business Intelligence)
+                // ...
                 const ratings = ratingsRes.data || [];
                 let avgDriver = ratings.length ? (ratings.reduce((acc, r) => acc + r.driver_rating, 0) / ratings.length).toFixed(1) : 'لا يوجد تقييمات';
                 let avgService = ratings.length ? (ratings.reduce((acc, r) => acc + r.service_rating, 0) / ratings.length).toFixed(1) : 'لا يوجد تقييمات';
@@ -3482,7 +3497,19 @@ ${contextData}
                 });
                 report += fleetReport;
 
-                // 6. جلب وتلخيص التاريخ الكامل
+                // 6. مديونيات الشركة والتحليل المالي (Debts)
+                const unpaid = unpaidTripsRes.data || [];
+                const totalUnpaid = unpaid.reduce((acc, t) => acc + (t.estimated_price || 0), 0);
+                const driverVault = vaultsRes.data?.find(v => v.name.includes('سواقين'))?.balance || 0;
+                
+                let debtReport = `\n💰 ملخص المديونيات والحسابات المعلقة:\n`;
+                debtReport += `- إجمالي المبالغ المستحقة (الرحلات غير المدفوعة Unpaid): ${totalUnpaid} جنيه.\n`;
+                debtReport += `- رصيد عهدة السائقين (خزنة السواقين): ${driverVault} جنيه.\n`;
+                debtReport += `- ملاحظة: أي مبلغ في حالة Unpaid يعتبر ديناً مسجلاً على السائق أو العميل حتى يتم تحصيله.\n`;
+                
+                report += debtReport;
+
+                // 7. جلب وتلخيص التاريخ الكامل
                 if (shouldRefresh) {
                     const { data: allData, error: allErr } = await sbClient
                         .from('google_reservations')
