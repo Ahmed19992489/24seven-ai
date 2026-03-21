@@ -3412,15 +3412,16 @@ ${contextData}
             try {
                 // 1. جلب البيانات اللحظية (دائماً تحديث)
                 const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-                const [tripsRes, ordersRes, latestTrips, vaultsRes, driversRes, monthTripsRes, activeTripsRes, activeGrRes] = await Promise.all([
+                const [tripsRes, ordersRes, latestTrips, vaultsRes, driversRes, monthTripsRes, activeTripsRes, activeGrRes, ratingsRes] = await Promise.all([
                     sbClient.from('trips').select('status, estimated_price').gte('created_at', todayIso),
                     sbClient.from('google_reservations').select('status, cost, booking_employee').gte('created_at', todayIso),
                     sbClient.from('trips').select('manual_client_name, pickup_location, dropoff_location, status, estimated_price').order('created_at', { ascending: false }).limit(5),
                     sbClient.from('vaults').select('name, balance'),
                     sbClient.from('drivers').select('id, name, phone'),
-                    sbClient.from('google_reservations').select('customer_phone, client_status').gte('created_at', monthStart),
+                    sbClient.from('google_reservations').select('customer_phone, client_status, booking_employee').gte('created_at', monthStart),
                     sbClient.from('trips').select('id, driver_id, pickup_location, dropoff_location, stage_status, status, car_id, cars(brand, model, plate_number)').eq('status', 'driver_assigned'),
-                    sbClient.from('google_reservations').select('id, modified_driver_name, pickup_address, dropoff_address, location_link, status, car_type').neq('status', 'completed').not('modified_driver_name', 'is', null).limit(10)
+                    sbClient.from('google_reservations').select('id, modified_driver_name, pickup_address, dropoff_address, location_link, status, car_type').neq('status', 'completed').not('modified_driver_name', 'is', null).limit(10),
+                    sbClient.from('trip_ratings').select('driver_rating, car_rating, service_rating').limit(50)
                 ]);
 
                 // 3. تحليل السائقين والرحلات الجارية
@@ -3452,7 +3453,26 @@ ${contextData}
                 });
                 report += activeReport;
 
-                // 4. جلب وتلخيص التاريخ الكامل (2. سابقاً)
+                // 4. تقارير ذكاء الأعمال (Business Intelligence)
+                const ratings = ratingsRes.data || [];
+                let avgDriver = ratings.length ? (ratings.reduce((acc, r) => acc + r.driver_rating, 0) / ratings.length).toFixed(1) : 'لا يوجد تقييمات';
+                let avgService = ratings.length ? (ratings.reduce((acc, r) => acc + r.service_rating, 0) / ratings.length).toFixed(1) : 'لا يوجد تقييمات';
+
+                const employees = (monthTripsRes.data || []).reduce((acc, r) => {
+                    const emp = r.booking_employee || 'Unknown';
+                    acc[emp] = (acc[emp] || 0) + 1;
+                    return acc;
+                }, {});
+                const topEmployees = Object.entries(employees).sort((a,b) => b[1] - a[1]).slice(0, 3);
+                
+                let biReport = `\n⭐ تجربة العملاء وجوانب الأداء:\n`;
+                biReport += `- متوسط تقييم السائقين: ${avgDriver} / 5\n`;
+                biReport += `- متوسط جودة الخدمة: ${avgService} / 5\n`;
+                biReport += `- أكثر الموظفين حجزاً هذا الشهر: ${topEmployees.map(e => `${e[0]} (${e[1]})`).join(', ')}\n`;
+                
+                report += biReport;
+
+                // 5. جلب وتلخيص التاريخ الكامل
                 if (shouldRefresh) {
                     const { data: allData, error: allErr } = await sbClient
                         .from('google_reservations')
