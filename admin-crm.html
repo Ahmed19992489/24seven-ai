@@ -3419,8 +3419,8 @@ ${contextData}
                     sbClient.from('vaults').select('name, balance'),
                     sbClient.from('drivers').select('id, name, phone'),
                     sbClient.from('google_reservations').select('customer_phone, client_status').gte('created_at', monthStart),
-                    sbClient.from('trips').select('id, driver_id, pickup_location, dropoff_location, stage_status, status').eq('status', 'driver_assigned'),
-                    sbClient.from('google_reservations').select('id, modified_driver_name, pickup_address, dropoff_address, location_link, status').neq('status', 'completed').not('modified_driver_name', 'is', null).limit(10)
+                    sbClient.from('trips').select('id, driver_id, pickup_location, dropoff_location, stage_status, status, car_id, cars(brand, model, plate_number)').eq('status', 'driver_assigned'),
+                    sbClient.from('google_reservations').select('id, modified_driver_name, pickup_address, dropoff_address, location_link, status, car_type').neq('status', 'completed').not('modified_driver_name', 'is', null).limit(10)
                 ]);
 
                 // 3. تحليل السائقين والرحلات الجارية
@@ -3438,7 +3438,14 @@ ${contextData}
                         const dropoff = (trip?.dropoff_location || gr?.dropoff_address || '').split(',')[0];
                         const stage = trip?.stage_status || 'نظام الشيت';
                         const loc = gr?.location_link || '';
-                        activeReport += `- الكابتن ${d.name}: في رحلة حالياً من [${pickup}] إلى [${dropoff}]. الحالة: (${stage}). ${loc ? `الموقع اللحظي: ${loc}` : ''}\n`;
+                        
+                        // بيانات السيارة
+                        let carDesc = gr?.car_type || 'غير محدد';
+                        if (trip?.cars) {
+                            carDesc = `${trip.cars.brand} ${trip.cars.model} [${trip.cars.plate_number}]`;
+                        }
+
+                        activeReport += `- الكابتن ${d.name}: في رحلة حالياً من [${pickup}] إلى [${dropoff}]. السيارة: (${carDesc}). الحالة: (${stage}). ${loc ? `الموقع اللحظي: ${loc}` : ''}\n`;
                     } else {
                         activeReport += `- الكابتن ${d.name}: متاح (لا توجد رحلة نشطة حالياً).\n`;
                     }
