@@ -3423,7 +3423,7 @@ ${contextData}
                 if (shouldRefresh) {
                     const { data: allData, error: allErr } = await sbClient
                         .from('google_reservations')
-                        .select('trip_date, cost, status, booking_employee, customer_name, pickup_address, dropoff_address')
+                        .select('trip_date, cost, status, booking_employee, customer_name, pickup_address, dropoff_address, client_status, created_at')
                         .order('created_at', { ascending: false })
                         .limit(2500); 
 
@@ -3455,7 +3455,15 @@ ${contextData}
                     const dates = Object.keys(allReservationsCache.byDate).sort((a,b) => b.localeCompare(a)).slice(0, 30);
                     dates.forEach(d => report += `- ${d}: ${allReservationsCache.byDate[d]} حجز\n`);
                     
-                    // إذا كان هناك تاريخ مستهدف (مثلاً 18/3)، اعرض تفاصيله الكاملة
+                    // إحصائيات الشهر الحالي (مزامنة مع الموديتور)
+                    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+                    const monthRecords = allReservationsCache.raw.filter(r => (r.trip_date || r.created_at) >= monthStart);
+                    const newClients = monthRecords.filter(r => (r.client_status === 'جديد' || r.client_status === 'عميل جديد')).length;
+                    
+                    report += `\n📅 ملخص الشهر الحالي:\n`;
+                    report += `- إجمالي الرحلات: ${monthRecords.length}\n`;
+                    report += `- العملاء الجدد: ${newClients}\n`;
+
                     if (targetDate && allReservationsCache.byDate[targetDate]) {
                         report += `\n📍 تفاصيل الحجوزات المجدولة ليوم (${targetDate}):\n`;
                         const dayRecords = allReservationsCache.raw.filter(r => r.trip_date === targetDate);
