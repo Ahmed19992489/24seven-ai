@@ -3071,6 +3071,7 @@
                     .from('profiles')
                     .select('*', { count: 'exact' })
                     .in('role', ['admin', 'moderator'])
+                    .not('email', 'is', null)
                     .order('created_at', { ascending: false });
 
                 if (error) throw error;
