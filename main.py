@@ -17,7 +17,7 @@ BASE_DIR = Path(__file__).resolve().parent
 
 # --- استيراد الروابط (APIs) ---
 # تأكد من وجود مجلد app/api وبداخله هذه الملفات
-from app.api import search, export, auth, suggestions, admin, payments, chat, ai
+from app.api import search, export, auth, suggestions, admin, payments, chat, ai, daily_report
 
 # إنشاء جداول قاعدة البيانات
 models.Base.metadata.create_all(bind=engine)
@@ -69,6 +69,7 @@ app.include_router(admin.router, prefix="/admin", tags=["Admin Dashboard"])
 app.include_router(payments.router, prefix="/payments", tags=["Payments"])
 app.include_router(chat.router, prefix="/chat", tags=["Customer Support Chat"])
 app.include_router(ai.router, prefix="/api", tags=["AI Dashboard Helpers"])
+app.include_router(daily_report.router, prefix="/api/reports", tags=["Daily Reports"])
 
 # ==========================================
 #  نظام التوجيه والواجهات (Frontend Routing)
