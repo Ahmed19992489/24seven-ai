@@ -3412,16 +3412,40 @@ ${contextData}
             try {
                 // 1. جلب البيانات اللحظية (دائماً تحديث)
                 const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-                const [tripsRes, ordersRes, latestTrips, vaultsRes, driversRes, monthTripsRes] = await Promise.all([
+                const [tripsRes, ordersRes, latestTrips, vaultsRes, driversRes, monthTripsRes, activeTripsRes, activeGrRes] = await Promise.all([
                     sbClient.from('trips').select('status, estimated_price').gte('created_at', todayIso),
                     sbClient.from('google_reservations').select('status, cost, booking_employee').gte('created_at', todayIso),
                     sbClient.from('trips').select('manual_client_name, pickup_location, dropoff_location, status, estimated_price').order('created_at', { ascending: false }).limit(5),
                     sbClient.from('vaults').select('name, balance'),
-                    sbClient.from('drivers').select('name, phone'),
-                    sbClient.from('google_reservations').select('customer_phone, client_status').gte('created_at', monthStart)
+                    sbClient.from('drivers').select('id, name, phone'),
+                    sbClient.from('google_reservations').select('customer_phone, client_status').gte('created_at', monthStart),
+                    sbClient.from('trips').select('id, driver_id, pickup_location, dropoff_location, stage_status, status').eq('status', 'driver_assigned'),
+                    sbClient.from('google_reservations').select('id, modified_driver_name, pickup_address, dropoff_address, location_link, status').neq('status', 'completed').not('modified_driver_name', 'is', null).limit(10)
                 ]);
 
-                // 2. جلب وتلخيص التاريخ الكامل
+                // 3. تحليل السائقين والرحلات الجارية
+                let activeReport = `\n🚗 تتبع السائقين والرحلات الجارية:\n`;
+                const drivers = driversRes.data || [];
+                const activeTrips = activeTripsRes.data || [];
+                const activeGr = activeGrRes.data || [];
+
+                drivers.forEach(d => {
+                    const trip = activeTrips.find(t => t.driver_id === d.id);
+                    const gr = activeGr.find(g => (g.modified_driver_name || '').includes(d.name));
+
+                    if (trip || gr) {
+                        const pickup = (trip?.pickup_location || gr?.pickup_address || '').split(',')[0];
+                        const dropoff = (trip?.dropoff_location || gr?.dropoff_address || '').split(',')[0];
+                        const stage = trip?.stage_status || 'نظام الشيت';
+                        const loc = gr?.location_link || '';
+                        activeReport += `- الكابتن ${d.name}: في رحلة حالياً من [${pickup}] إلى [${dropoff}]. الحالة: (${stage}). ${loc ? `الموقع اللحظي: ${loc}` : ''}\n`;
+                    } else {
+                        activeReport += `- الكابتن ${d.name}: متاح (لا توجد رحلة نشطة حالياً).\n`;
+                    }
+                });
+                report += activeReport;
+
+                // 4. جلب وتلخيص التاريخ الكامل (2. سابقاً)
                 if (shouldRefresh) {
                     const { data: allData, error: allErr } = await sbClient
                         .from('google_reservations')
