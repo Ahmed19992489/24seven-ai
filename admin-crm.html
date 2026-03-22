@@ -2600,10 +2600,18 @@
         function groupOmniMessages() {
             omniGroupedChats = {};
             allOmniMessages.forEach(msg => {
+                // Ignore system messages where sender_id is literally 'Admin'
+                if (!msg.sender_id || msg.sender_id === 'Admin') return;
+
                 if(!omniGroupedChats[msg.sender_id]) {
+                    let sName = msg.sender_name || msg.sender_id;
+                    // Don't set the main chat name to 'Admin' or 'ش' based on employee replies
+                    if (sName === 'Admin' || sName === 'ش') {
+                        sName = msg.sender_id;
+                    }
                     omniGroupedChats[msg.sender_id] = {
                         sender_id: msg.sender_id,
-                        sender_name: msg.sender_name || msg.sender_id,
+                        sender_name: sName,
                         channel: msg.channel,
                         messages: [],
                         last_message: null,
@@ -2614,8 +2622,9 @@
                 omniGroupedChats[msg.sender_id].messages.push(msg);
                 omniGroupedChats[msg.sender_id].last_message = msg;
                 omniGroupedChats[msg.sender_id].channel = msg.channel;
-                // 🛑 لا تجعل اسم العميل يتغير إلى Admin إذا كانت الرسالة من الموظف
-                if (!msg.is_from_admin && msg.sender_name && msg.sender_name !== 'Messenger User') {
+                
+                // تحديث اسم العميل من رسائله هو فقط (وليس من رسائل الموظف)
+                if (!msg.is_from_admin && msg.sender_name && msg.sender_name !== msg.sender_id && msg.sender_name !== 'Messenger User' && msg.sender_name !== 'Admin' && msg.sender_name !== 'ش') {
                     omniGroupedChats[msg.sender_id].sender_name = msg.sender_name;
                 }
                 
