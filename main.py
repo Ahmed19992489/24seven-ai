@@ -81,6 +81,160 @@ app.include_router(ai.router, prefix="/api", tags=["AI Dashboard Helpers"])
 app.include_router(daily_report.router, prefix="/api/reports", tags=["Daily Reports"])
 
 # ==========================================
+# 🌐 Omnichannel Direct Endpoints (No Auth Needed)
+# Used by moderator.html on production (Render)
+# ==========================================
+import requests as _req
+
+_WA_TOKEN = "EAAPDbwUyvY0BQrm6ZB9qb62LU9hI50ZC9QOfZAO3VPA7ZCSnFSRMCb2kouBRkXu4LiVmRU2ydv1vLl00kKmgTFMN5ULJOpImor7i8oITjicjIjWiOLxTL7yltYrlF0RLxcdU6UNOaIdqo4Ouv0BnQ79OK2sgSLpHY9ZCQs4iRIxcpjnoxr8EWpV4FSgGTzgZDZD"
+_PHONE_ID = "597129733493778"
+_FB_TOKEN = "EAAPDbwUyvY0BQ3KLTieXWMHZAJZC92eQI9sBwEISipvaaVR9hoteMHWhx0fi8mSXIC4TnTiBHpykmsv6HyAkYK4yQUyQv81ZCF7EZA5CEZAKwPqhfl3jjmaN5muRSk1ZCpNh7OXAQ8Ey3ilMhBmjPvQpLRlzMD8MbYWChOdFxwiFKgPNAqJhg6aVZBR25rvIvChgw1vusjBwHZAeveEMSHpaQ9ps"
+_SB_URL = "https://wtjwzqvmwnbvjxnmweqq.supabase.co"
+_SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY"
+_SB_HEADERS = {"apikey": _SB_KEY, "Authorization": f"Bearer {_SB_KEY}", "Content-Type": "application/json"}
+
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok", "server": "24seven-render"}
+
+@app.post("/api/send_reply")
+async def send_reply_direct(data: dict):
+    """نقطة إرسال موحدة للموديتور - واتساب وماسنجر - تعمل مباشرة من Render بدون ngrok"""
+    channel = (data.get("channel") or "").lower()
+    sender_id = data.get("sender_id", "")
+    message = data.get("message", "")
+    mod_name = data.get("mod_name", "Admin")
+
+    if not channel or not sender_id or not message:
+        return {"status": "error", "detail": "Missing parameters"}
+
+    # --- إرسال الرسالة ---
+    if channel == "whatsapp":
+        url = f"https://graph.facebook.com/v17.0/{_PHONE_ID}/messages"
+        headers = {"Authorization": f"Bearer {_WA_TOKEN}", "Content-Type": "application/json"}
+        payload = {"messaging_product": "whatsapp", "to": sender_id, "type": "text", "text": {"body": message}}
+        try:
+            r = _req.post(url, headers=headers, json=payload, timeout=10)
+            if r.status_code not in [200, 201]:
+                print(f"❌ WA Send failed: {r.text}")
+        except Exception as e:
+            print(f"❌ WA exception: {e}")
+
+    elif channel == "messenger":
+        url = f"https://graph.facebook.com/v18.0/me/messages?access_token={_FB_TOKEN}"
+        payload = {"recipient": {"id": sender_id}, "message": {"text": message}}
+        try:
+            r = _req.post(url, headers={"Content-Type": "application/json"}, json=payload, timeout=10)
+            if r.status_code != 200:
+                print(f"❌ Messenger Send failed: {r.text}")
+        except Exception as e:
+            print(f"❌ Messenger exception: {e}")
+
+    # --- حفظ الرسالة في Supabase ---
+    sb_payload = {
+        "channel": channel,
+        "sender_id": sender_id,
+        "sender_name": mod_name,
+        "message_text": message,
+        "is_from_admin": True,
+        "read_by_admin": True
+    }
+    try:
+        _req.post(f"{_SB_URL}/rest/v1/omnichannel_messages", headers=_SB_HEADERS, json=sb_payload, timeout=5)
+    except Exception as e:
+        print(f"❌ Supabase save exception: {e}")
+
+    return {"status": "success"}
+
+# ==========================================
+# 📥 WhatsApp Webhook - رسائل واتساب الواردة
+# يستقبل الرسائل مباشرة من Meta على الـ production server
+# ==========================================
+_WA_VERIFY_TOKEN = "24seven_secret_token"
+
+@app.get("/webhook")
+async def verify_whatsapp_webhook(
+    hub_mode: str = None,
+    hub_challenge: str = None,
+    hub_verify_token: str = None
+):
+    """تحقق من webhook Meta لواتساب"""
+    from fastapi import Query
+    from fastapi.responses import PlainTextResponse
+    if hub_verify_token == _WA_VERIFY_TOKEN and hub_mode == "subscribe":
+        return PlainTextResponse(hub_challenge or "")
+    return PlainTextResponse("Forbidden", status_code=403)
+
+@app.post("/webhook")
+async def receive_whatsapp_webhook(request: Request):
+    """استقبال رسائل واتساب الواردة وحفظها في Supabase"""
+    try:
+        data = await request.json()
+        if not data.get("entry"):
+            return {"status": "ok"}
+
+        changes = data["entry"][0].get("changes", [{}])[0].get("value", {})
+        messages = changes.get("messages", [])
+
+        for msg in messages:
+            sender = msg.get("from", "")
+            msg_type = msg.get("type", "text")
+            text_body = ""
+
+            if msg_type == "text":
+                text_body = msg.get("text", {}).get("body", "")
+            elif msg_type == "interactive":
+                inter = msg.get("interactive", {})
+                text_body = inter.get("button_reply", inter.get("list_reply", {})).get("title", "")
+            elif msg_type == "button":
+                text_body = msg.get("button", {}).get("text", "")
+            elif msg_type == "location":
+                loc = msg.get("location", {})
+                text_body = f"📍 لوكيشن: {loc.get('latitude')}, {loc.get('longitude')}"
+
+            if not text_body:
+                continue
+
+            print(f"[WA→Render] from {sender}: {text_body}")
+
+            # تحديد اسم المرسل
+            sender_name = sender
+            try:
+                clean = sender.replace("+", "").replace("0020", "20")
+                local = clean[2:] if clean.startswith("20") else clean
+                r_name = _req.get(
+                    f"{_SB_URL}/rest/v1/google_reservations",
+                    headers=_SB_HEADERS,
+                    params={"customer_phone": f"ilike.%{local}%", "select": "customer_name", "limit": "1"},
+                    timeout=5
+                )
+                if r_name.status_code == 200:
+                    rows = r_name.json()
+                    if rows and rows[0].get("customer_name"):
+                        sender_name = rows[0]["customer_name"]
+            except Exception:
+                pass
+
+            # حفظ في Supabase
+            _req.post(
+                f"{_SB_URL}/rest/v1/omnichannel_messages",
+                headers=_SB_HEADERS,
+                json={
+                    "channel": "whatsapp",
+                    "sender_id": sender,
+                    "sender_name": sender_name,
+                    "message_text": text_body,
+                    "is_from_admin": False,
+                    "read_by_admin": False
+                },
+                timeout=5
+            )
+    except Exception as e:
+        print(f"[WA-Webhook Error]: {e}")
+
+    return {"status": "ok"}
+
+# ==========================================
 #  نظام التوجيه والواجهات (Frontend Routing)
 # ==========================================
 
