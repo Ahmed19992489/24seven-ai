@@ -18,6 +18,7 @@ BASE_DIR = Path(__file__).resolve().parent
 # --- استيراد الروابط (APIs) ---
 # تأكد من وجود مجلد app/api وبداخله هذه الملفات
 from app.api import search, export, auth, suggestions, admin, payments, chat, ai, daily_report
+from app.api.scheduler import start_scheduler, stop_scheduler
 
 # إنشاء جداول قاعدة البيانات
 models.Base.metadata.create_all(bind=engine)
@@ -27,6 +28,14 @@ app = FastAPI(
     description="Professional SaaS Platform.",
     version="2.6.0"
 )
+
+@app.on_event("startup")
+async def startup_event():
+    start_scheduler()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    stop_scheduler()
 
 # --- 2. إعدادات CORS (السماح بالاتصال من أي مكان) ---
 app.add_middleware(
