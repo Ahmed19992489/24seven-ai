@@ -265,8 +265,13 @@
                 </div>
 
                 <!-- Input Area -->
-                <form id="chat-form" onsubmit="handleSendWithCoaching(event)" class="p-4 border-t flex items-center gap-3 bg-white">
+                <!-- Input Area -->
+                <form id="chat-form" onsubmit="handleSend(event)" class="p-4 border-t flex items-center gap-3 bg-white">
                     <input type="text" id="chat-input" placeholder="اكتب ردك هنا..." class="input-std flex-1">
+                    <button type="button" onclick="manualCoachAnalyze()" title="تحليل الرسالة (مساعد الكوتش)" class="w-10 h-10 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center hover:bg-purple-200 transition shrink-0 relative group">
+                        🎓
+                        <span class="absolute -top-9 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition whitespace-nowrap">تحليل الكوتش</span>
+                    </button>
                     <button type="button" onclick="suggestAiReply()" title="اقتراح رد بالذكاء الاصطناعي" class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center hover:bg-indigo-200 transition shrink-0 relative group">
                         🤖
                         <span class="absolute -top-9 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition whitespace-nowrap">اقتراح رد ذكي</span>
@@ -1679,23 +1684,25 @@
             }
         }
 
-        async function handleSendWithCoaching(e) {
+        async function manualCoachAnalyze() {
             const inputEl = document.getElementById('chat-input');
-            const sentText = inputEl.value.trim();
+            const draftText = inputEl.value.trim();
             
-            // ننتظر نتيجة الإرسال الفعلية (true إذا نجح፣ false إذا فشل)
-            const success = await handleSend(e);
-            
-            // لا تظهر الكوتش إلا إذا تم الإرسال بنجاح
-            if (success && sentText && activeChatId) {
-                const chat = groupedChats[activeChatId];
-                const context = (chat?.messages || []).slice(-5).map(m =>
-                    `${m.is_from_admin ? 'موديتور' : 'عميل'}: ${m.message_text}`
-                ).join('\n');
-                
-                // تحليل بعد ثانية لعدم التعارض مع الواجهة
-                setTimeout(() => analyzeModeratorReply(sentText, context), 1000);
+            if (!activeChatId) {
+                alert('يرجى اختيار محادثة وأول كتابة رسالة لتحليلها');
+                return;
             }
+            if (!draftText) {
+                alert('يرجى كتابة رسالة في صندوق النص لتحليلها قبل الإرسال');
+                return;
+            }
+            
+            const chat = groupedChats[activeChatId];
+            const context = (chat?.messages || []).slice(-5).map(m =>
+                `${m.is_from_admin ? 'موديتور' : 'عميل'}: ${m.message_text}`
+            ).join('\n');
+            
+            analyzeModeratorReply(draftText, context);
         }
 
         // ============================================================
@@ -1720,13 +1727,19 @@
                 `${m.is_from_admin ? 'موديتور' : 'عميل'}: ${m.message_text}`
             ).join('\n');
 
-            const prompt = `أنت موديتور متخصص في شركة ليموزين 24Seven. راجع المحادثة التالية واقترح رداً مهنياً ومختصراً باللغة العربية على آخر رسالة العميل.
-المحادثة:
+            const prompt = `أنت موظف خدمة عملاء ممتاز ومحترف في شركة ليموزين "24Seven" في مصر.
+مهامك الوحيدة هي: تأكيد حجوزات رحلات الليموزين (مطار، محافظات، مشاوير خاصة)، والإجابة على استفسارات الأسعار والسيارات فقط.
+القواعد الصارمة:
+1. الرد يجب أن يكون بالعامية المصرية الراقية والمحترمة.
+2. الرد يجب أن يكون قصيراً وعملياً (مباشرة نص الرد بدون أي مقدمات أو شرح إضافي).
+3. إياك تقديم أي معلومات أو خدمات خارج مجال السيارات والليموزين، وإذا سأل العميل في مجال آخر اعتذر بلطف وأكد أننا شركة ليموزين فقط.
+
+سياق المحادثة:
 ${recentContext}
 
-الرسالة المطلوب الرد عليها: "${lastClientMsg.message_text}"
+رسالة العميل المطلوب الرد عليها: "${lastClientMsg.message_text}"
 
-اقترح رداً مناسباً فقط بدون أي شرح زائد.`;
+اكتب الرد المناسب فوراً:`;
 
             try {
                 const proxyUrl = `${getApiBaseUrl()}/api/ai_chat`;
@@ -1795,17 +1808,18 @@ ${recentContext}
                 // جلب البيانات الحية من Supabase
                 const contextData = await gatherContextData();
 
-                const systemPrompt = `أنت مساعد إداري ذكي لشركة 24Seven للليموزين في مصر.
+                const systemPrompt = `أنت مساعد إداري ذكي متخصص حصرياً في شركة 24Seven لليموزين وتأجير السيارات في مصر.
 لديك وصول كامل لبيانات الشركة الحية التالية:
 ${contextData}
 
-قواعد الإجابة:
-- أجب بالعربية المصرية البسيطة والمباشرة
-- استخدم أرقام دقيقة من البيانات المقدمة
-- إذا لم يكن السؤال موجوداً في البيانات، قل ذلك بصراحة
-- استخدم الإيموجي لتحسين القراءة
-- الإجابة موجزة وعملية (5-7 جمل بالحد الأقصى)
-- لا تقل "بناءً على البيانات" أو أي مقدمات، ابدأ مباشرة بالإجابة`;
+قواعد الإجابة الصارمة:
+- أجب بالعربية المصرية البسيطة والمباشرة.
+- استخدم أرقام واسماء دقيقة من البيانات المقدمة فقط.
+- إياك الإجابة عن أي أسئلة خارج مجال الليموزين والسيارات، بل اعتذر وأكد تخصصك.
+- إذا لم تكن البيانات كافية أو السؤال غير موجود بها، قل ذلك بصراحة.
+- استخدم الإيموجي لتحسين القراءة.
+- الإجابة موجزة وعملية (5-7 جمل بالحد الأقصى).
+- لا تقل "بناءً على البيانات" أو أي مقدمات، ابدأ مباشرة بالإجابة.`;
 
                 // إضافة الرسالة لتاريخ المحادثة
                 aiChatHistory.push({ role: 'user', content: question });
