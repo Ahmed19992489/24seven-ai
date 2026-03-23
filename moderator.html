@@ -1017,21 +1017,19 @@
                 });
                 
                 if (res.ok) {
-                    // Update local UI immediately for WhatsApp (Messenger relies on Echo)
-                    if (chat.channel === 'whatsapp') {
-                        const newMsg = {
-                            sender_id: 'admin',
-                            sender_name: 'Admin',
-                            message_text: text,
-                            is_from_admin: true,
-                            created_at: new Date().toISOString(),
-                            channel: 'whatsapp'
-                        };
-                        chat.messages.push(newMsg);
-                        allMessages.push(newMsg);
-                        renderMessages();
-                        renderChatList();
-                    }
+                    // Update local UI immediately for both channels
+                    const newMsg = {
+                        sender_id: 'admin',
+                        sender_name: 'Admin',
+                        message_text: text,
+                        is_from_admin: true,
+                        created_at: new Date().toISOString(),
+                        channel: chat.channel
+                    };
+                    chat.messages.push(newMsg);
+                    allMessages.push(newMsg);
+                    renderMessages();
+                    renderChatList();
                     return true;
                 } else {
                     const errText = await res.text();

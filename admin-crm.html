@@ -2904,7 +2904,10 @@
 
                 const res = await fetch(apiUrl, {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
                     body: JSON.stringify({
                         channel: channel,
                         sender_id: senderId,
@@ -2917,7 +2920,7 @@
                     throw new Error(errorTxt);
                 }
 
-                // إضافة الرسالة للواجهة كشكل مبدئي قبل ما تيجي من الـ Realtime لتسريع تجربة المستخدم
+                // إضافة الرسالة للواجهة كشكل مبدئي لتسريع تجربة المستخدم (بدون انتظار Realtime)
                 const tempMsg = {
                     id: 'temp_' + Date.now(),
                     channel: channel,
@@ -2927,10 +2930,12 @@
                     created_at: new Date().toISOString()
                 };
                 
-                // لن نضطر لإضافتها هنا لو الـ Realtime سريع، لكن تحسباً عشان ما تحسش ببطء
-                // allOmniMessages.push(tempMsg);
-                // appendOmniMessage(tempMsg);
-                // scrollToOmniBottom();
+                allOmniMessages.push(tempMsg);
+                if (omniGroupedChats[senderId]) {
+                    omniGroupedChats[senderId].messages.push(tempMsg);
+                }
+                appendOmniMessage(tempMsg);
+                scrollToOmniBottom();
                 
                 input.value = '';
             } catch(e) {
