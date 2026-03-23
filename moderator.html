@@ -988,7 +988,7 @@
             e.preventDefault();
             const input = document.getElementById('chat-input');
             const text = input.value.trim();
-            if(!text || !activeChatId) return;
+            if(!text || !activeChatId) return false;
             
             const chat = groupedChats[activeChatId];
             input.value = '';
@@ -1027,13 +1027,16 @@
                         renderMessages();
                         renderChatList();
                     }
+                    return true;
                 } else {
                     const errText = await res.text();
                     alert(`❌ فشل إرسال الرسالة\nالسيرفر رد بـ: ${res.status}\nالرابط: ${targetUrl}\n${errText}`);
+                    return false;
                 }
             } catch(e) { 
                 console.error(e);
                 alert(`❌ خطأ في الاتصال بالسيرفر\nتأكد من فتح رابط ngrok في الموبايل أولاً.\nالرابط المستهدف: ${getApiBaseUrl()}/api/send_reply\nالخطأ: ${e.message}`);
+                return false;
             }
         }
 
@@ -1667,7 +1670,7 @@
                 
                 coachingContent.innerHTML = `
                     <div class="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">${analysis}</div>
-                    <button onclick="document.getElementById('coaching-panel').classList.add('hidden')" 
+                    <button type="button" onclick="document.getElementById('coaching-panel').classList.add('hidden')" 
                         class="mt-3 w-full text-xs text-slate-400 hover:text-slate-600 py-1 border-t border-slate-100 pt-2 transition">
                         إغلاق ✕
                     </button>`;
@@ -1676,21 +1679,22 @@
             }
         }
 
-        // Override handleSend to also trigger coaching after sending
         async function handleSendWithCoaching(e) {
             const inputEl = document.getElementById('chat-input');
             const sentText = inputEl.value.trim();
             
-            await handleSend(e);
+            // ننتظر نتيجة الإرسال الفعلية (true إذا نجح፣ false إذا فشل)
+            const success = await handleSend(e);
             
-            // بعد الإرسال، جهّز السياق وحلّل الرد
-            if (sentText && activeChatId) {
+            // لا تظهر الكوتش إلا إذا تم الإرسال بنجاح
+            if (success && sentText && activeChatId) {
                 const chat = groupedChats[activeChatId];
                 const context = (chat?.messages || []).slice(-5).map(m =>
                     `${m.is_from_admin ? 'موديتور' : 'عميل'}: ${m.message_text}`
                 ).join('\n');
-                // تحليل بعد ثانية واحدة حتى لا يتعارض مع الإرسال
-                setTimeout(() => analyzeModeratorReply(sentText, context), 1500);
+                
+                // تحليل بعد ثانية لعدم التعارض مع الواجهة
+                setTimeout(() => analyzeModeratorReply(sentText, context), 1000);
             }
         }
 
@@ -1725,13 +1729,17 @@ ${recentContext}
 اقترح رداً مناسباً فقط بدون أي شرح زائد.`;
 
             try {
-                const res = await fetch('/api/ai-proxy', {
+                const proxyUrl = `${getApiBaseUrl()}/api/ai_chat`;
+                const res = await fetch(proxyUrl, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
                     body: JSON.stringify({ messages: [{ role: 'user', content: prompt }], max_tokens: 200 })
                 });
                 const data = await res.json();
-                const suggestion = data.content?.[0]?.text || data.reply || 'لم أستطع إنشاء اقتراح.';
+                const suggestion = data.answer || data.content?.[0]?.text || data.reply || 'لم أستطع إنشاء اقتراح.';
                 textEl.textContent = suggestion;
             } catch (err) {
                 textEl.textContent = '⚠️ تعذر الاتصال بالذكاء الاصطناعي.';
