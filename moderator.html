@@ -796,9 +796,9 @@
                 if (!m.sender_id || m.sender_id === 'Admin') return;
 
                 if(!groupedChats[m.sender_id]) {
-                    // Initialize with ID as name fallback, never 'Admin' or 'ش'
+                    // Initialize with ID (which is the Number for WA)
                     let initialName = m.sender_id;
-                    if (m.sender_name && m.sender_name !== m.sender_id && !['Admin', 'ش'].includes(m.sender_name)) {
+                    if (m.channel === 'messenger' && !m.is_from_admin && m.sender_name && m.sender_name !== m.sender_id && !['Admin', 'ش', 'Messenger User'].includes(m.sender_name)) {
                         initialName = m.sender_name;
                     }
                     groupedChats[m.sender_id] = { id: m.sender_id, name: initialName, channel: m.channel, messages: [], last: m };
@@ -807,30 +807,22 @@
                 groupedChats[m.sender_id].last = m;
                 
                 // --- 🧠 Automated Name Resolution Logic ---
-                // 1. Prefer non-Admin, non-ID names from message records (if not junk)
-                if(!m.is_from_admin && m.sender_name && m.sender_name !== m.sender_id && !['Admin', 'ش', 'Messenger User'].includes(m.sender_name)) {
-                    groupedChats[m.sender_id].name = m.sender_name;
+                // WhatsApp: Always force it to be the number (sender_id) as per user request
+                if(m.channel === 'whatsapp') {
+                    groupedChats[m.sender_id].name = m.sender_id;
                 }
                 
-                // 2. If name is still an ID or junk, check trip data
-                const currentName = groupedChats[m.sender_id].name;
-                const isIdOrJunk = !currentName || currentName === m.sender_id || ['Admin', 'ش', 'Messenger User'].includes(currentName);
-                
-                if(isIdOrJunk) {
-                    const cleanSenderId = m.sender_id.replace(/\D/g,'');
-                    // For WhatsApp: Match based on phone number
-                    if(m.channel === 'whatsapp' && cleanSenderId.length >= 8) {
-                        const trip = allTrips.find(t => {
-                            if(!t.customer_phone) return false;
-                            const cleanTripPhone = t.customer_phone.replace(/\D/g,'');
-                            return cleanTripPhone.includes(cleanSenderId) || cleanSenderId.includes(cleanTripPhone);
-                        });
-                        if(trip && trip.customer_name && !['Admin', 'ش'].includes(trip.customer_name)) {
-                            groupedChats[m.sender_id].name = trip.customer_name;
-                        }
+                // Messenger: Try to find a real name from customer messages
+                if(m.channel === 'messenger') {
+                    if(!m.is_from_admin && m.sender_name && m.sender_name !== m.sender_id && !['Admin', 'ش', 'Messenger User'].includes(m.sender_name)) {
+                        groupedChats[m.sender_id].name = m.sender_name;
                     }
-                    // For Messenger: Match based on messenger_sender_id or customer name from reservations
-                    if(m.channel === 'messenger') {
+                    
+                    // If name is still an ID or junk for Messenger, check trip data or local storage
+                    const currentName = groupedChats[m.sender_id].name;
+                    const isIdOrJunk = !currentName || currentName === m.sender_id || ['Admin', 'ش', 'Messenger User'].includes(currentName);
+                    
+                    if(isIdOrJunk) {
                         const trip = allTrips.find(t =>
                             t.messenger_sender_id === m.sender_id ||
                             t.facebook_id === m.sender_id
@@ -841,6 +833,11 @@
                         // Try localStorage for manually-set names
                         const savedName = localStorage.getItem(`chat_name_${m.sender_id}`);
                         if(savedName) groupedChats[m.sender_id].name = savedName;
+                        
+                        // Fallback completely
+                        if(!groupedChats[m.sender_id].name || groupedChats[m.sender_id].name === m.sender_id) {
+                            groupedChats[m.sender_id].name = 'Messenger User';
+                        }
                     }
                 }
             });

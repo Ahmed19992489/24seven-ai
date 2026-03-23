@@ -2604,10 +2604,9 @@
                 if (!msg.sender_id || msg.sender_id === 'Admin') return;
 
                 if(!omniGroupedChats[msg.sender_id]) {
-                    let sName = msg.sender_name || msg.sender_id;
-                    // Don't set the main chat name to 'Admin' or 'ش' based on employee replies
-                    if (sName === 'Admin' || sName === 'ش') {
-                        sName = msg.sender_id;
+                    let sName = msg.sender_id;
+                    if (msg.channel === 'messenger' && !msg.is_from_admin && msg.sender_name && msg.sender_name !== msg.sender_id && !['Admin', 'ش', 'Messenger User'].includes(msg.sender_name)) {
+                        sName = msg.sender_name;
                     }
                     omniGroupedChats[msg.sender_id] = {
                         sender_id: msg.sender_id,
@@ -2624,7 +2623,9 @@
                 omniGroupedChats[msg.sender_id].channel = msg.channel;
                 
                 // تحديث اسم العميل من رسائله هو فقط (وليس من رسائل الموظف)
-                if (!msg.is_from_admin && msg.sender_name && msg.sender_name !== msg.sender_id && msg.sender_name !== 'Messenger User' && msg.sender_name !== 'Admin' && msg.sender_name !== 'ش') {
+                if (msg.channel === 'whatsapp') {
+                    omniGroupedChats[msg.sender_id].sender_name = msg.sender_id;
+                } else if (msg.channel === 'messenger' && !msg.is_from_admin && msg.sender_name && msg.sender_name !== msg.sender_id && !['Messenger User', 'Admin', 'ش'].includes(msg.sender_name)) {
                     omniGroupedChats[msg.sender_id].sender_name = msg.sender_name;
                 }
                 
