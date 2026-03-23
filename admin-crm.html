@@ -2552,13 +2552,17 @@
 
         async function loadOmnichannelChats() {
             try {
-                // جلب كل الرسائل
+                // جلب أحدث الرسائل (أحدث 1000 رسالة لتفادي مشكلة الحد الافتراضي من Supabase)
                 const { data, error } = await sbClient
                     .from('omnichannel_messages')
                     .select('*')
-                    .order('created_at', { ascending: true }); // نجلب الأقدم للأحدث لنرتبهم صح
+                    .order('created_at', { ascending: false })
+                    .limit(1000); 
                 
                 if (error) throw error;
+                
+                // عكس الترتيب ليكون الأقدم أولاً (التسلسل الطبيعي للشات)
+                if (data) data.reverse();
                 
                 allOmniMessages = data || [];
                 groupOmniMessages();

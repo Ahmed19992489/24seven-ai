@@ -755,9 +755,15 @@
             // First ensure we have some trip data for name resolution
             if(allTrips.length === 0) await loadSummary();
 
-            const { data, error } = await sbClient.from('omnichannel_messages').select('*').order('created_at', { ascending: true });
+            // جلب أحدث 1000 رسالة وعكس ترتيبها
+            const { data, error } = await sbClient
+                .from('omnichannel_messages')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(1000);
+                
             if (data) {
-                allMessages = data;
+                allMessages = data.reverse();
                 regroupAndRender();
             }
 
@@ -1016,7 +1022,8 @@
                 if (res.ok) {
                     // Update local UI immediately for both channels
                     const newMsg = {
-                        sender_id: 'admin',
+                        id: 'temp_' + Date.now(),
+                        sender_id: activeChatId, // Fixed: use customer ID instead of 'admin'
                         sender_name: 'Admin',
                         message_text: text,
                         is_from_admin: true,
