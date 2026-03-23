@@ -2900,9 +2900,7 @@
 
             try {
                 // استدعاء הـ API الموحد للإرسال عبر (WhatsApp/Messenger)
-                const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-                                ? 'http://localhost:3000/api/send_reply' 
-                                : '/api/send_reply';
+                const apiUrl = `${getStaffApiBaseUrl()}/api/send_reply`;
 
                 const res = await fetch(apiUrl, {
                     method: 'POST',
