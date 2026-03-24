@@ -2330,7 +2330,12 @@
                 // جلب إيميل العميل
                 const { data: { user: authUser } } = await sb.auth.getUser();
                 const clientEmail = authUser?.email || '';
-                if (!clientEmail) { console.log('لا يوجد إيميل للعميل'); return; }
+                
+                // منع الإرسال إذا كان الإيميل وهمياً (تسجيل دخول برقم الهاتف)
+                if (!clientEmail || clientEmail.includes('@24seven-client.app')) { 
+                    console.log('لا يوجد إيميل حقيقي للعميل (مسجل برقم الهاتف)'); 
+                    return; 
+                }
 
                 const { data: profile } = await sb.from('profiles').select('full_name').eq('id', user.id).single();
                 const clientName = profile?.full_name || 'عزيزنا العميل';

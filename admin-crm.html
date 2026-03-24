@@ -1643,7 +1643,7 @@
             }).eq('id', tid);
 
             // جلب بيانات الكابتن والسيارة
-            const { data: driverInfo } = await sbClient.from('drivers').select('name').eq('id', did).single();
+            const { data: driverInfo } = await sbClient.from('drivers').select('name, phone').eq('id', did).single();
             const { data: carInfo } = await sbClient.from('cars').select('brand, model, plate_number').eq('id', cid).single();
 
             // إرسال رسالة تنبيه في الشات للكابتن
@@ -1659,6 +1659,22 @@
                 message: `🎯 مرحباً كابتن ${driverInfo?.name || ''}!\n\nتم تعيينك على رحلة جديدة:\n📍 من: ${pickup}\n🏁 إلى: ${dropoff}\n💰 قيمة الرحلة: ${price} EGP\n🚗 السيارة: ${carInfo?.brand || ''} ${carInfo?.model || ''} (${carInfo?.plate_number || ''})\n\n✅ تواصل مع العميل من خلال الدردشة فقط\n📸 لا تنسى تصوير السيارة قبل الخروج من الجراش`,
                 message_type: 'system'
             }]);
+
+            // 🌐 محاولة إرسال التعيين لـ Google Sheets للتزامن وإرسال الواتساب
+            try {
+                const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
+                // Fire and forget (لا نعطل الواجهة لو فشل الشيت)
+                fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({
+                        action: 'assignDriver',
+                        webId: tid, // ID رحلة السايت
+                        driverName: driverInfo?.name || '',
+                        driverPhone: driverInfo?.phone || ''
+                    })
+                }).catch(e => console.error("Sheet Sync Error:", e));
+            } catch (err) {}
 
             document.getElementById('assign-modal').style.display = 'none';
             alert(`✅ تم تعيين الكابتن ${driverInfo?.name || ''} وإرسال إشعار له`);
