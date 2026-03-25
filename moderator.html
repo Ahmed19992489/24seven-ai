@@ -59,6 +59,10 @@
                 <span class="font-bold">المراسلات</span>
                 <span id="chat-badge" class="hidden mr-auto bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">0</span>
             </div>
+            <div onclick="showTab('trip-chats')" id="btn-trip-chats" class="sidebar-item">
+                <i class="fas fa-car-side w-6"></i>
+                <span class="font-bold">دردشة الرحلات</span>
+            </div>
             <div onclick="showTab('trips')" id="btn-trips" class="sidebar-item">
                 <i class="fas fa-route w-6"></i>
                 <span class="font-bold">الحجوزات</span>
@@ -280,6 +284,49 @@
                         <i class="fas fa-paper-plane"></i>
                     </button>
                 </form>
+            </div>
+        </section>
+
+        <!-- Tab: Trip Chats -->
+        <section id="tab-trip-chats" class="tab-content hidden h-full flex flex-col">
+            <div class="flex items-center gap-3 mb-6">
+                <h2 class="text-2xl font-bold">💬 دردشة الرحلات</h2>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4" style="height:75vh">
+                <!-- قائمة المحادثات -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+                    <div class="p-3 bg-blue-50 border-b text-xs font-bold text-blue-700">🚗 محادثات الرحلات النشطة</div>
+                    <div id="mod-chats-list" class="flex-1 overflow-y-auto divide-y h-full max-h-full">
+                        <p class="text-center text-gray-400 p-6">جاري التحميل...</p>
+                    </div>
+                </div>
+                <!-- نافذة المحادثة -->
+                <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col relative h-full">
+                    <div id="mod-chat-header" class="p-4 border-b bg-gray-50 flex justify-between items-center" style="display:none;">
+                        <div>
+                            <p class="font-bold text-gray-700" id="mod-chat-header-name">اختر محادثة</p>
+                            <p class="text-xs text-gray-400" id="mod-chat-route"></p>
+                        </div>
+                        <button onclick="document.getElementById('mod-edit-dest-modal').style.display='flex';" id="mod-edit-dest-btn" class="bg-amber-100 text-amber-700 hover:bg-amber-200 px-3 py-1.5 rounded-lg text-xs font-bold border border-amber-200 transition flex items-center gap-1">
+                            <i class="fas fa-edit"></i> تعديل السعر/الوجهة
+                        </button>
+                    </div>
+                    <div id="mod-no-chat-header" class="p-4 border-b bg-gray-50 flex items-center">
+                        <p class="font-bold text-gray-700">اختر محادثة من القائمة</p>
+                    </div>
+                    <div id="mod-chat-messages" class="flex-1 overflow-y-auto p-4 flex flex-col gap-2 bg-gray-50" style="direction:rtl">
+                        <div class="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 z-10" id="mod-no-chat">
+                            <div class="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center text-slate-400 text-2xl mb-4">
+                                <i class="fas fa-car-side"></i>
+                            </div>
+                            <p class="text-slate-500 font-bold">اختر رحلة لعرض المحادثة</p>
+                        </div>
+                    </div>
+                    <div id="mod-chat-input-bar" class="p-3 border-t flex gap-2 bg-white rounded-b-xl relative z-20" style="display:none">
+                        <input type="text" id="mod-chat-input" placeholder="تدخل كمشرف..." class="flex-1 border rounded-full px-4 py-2 text-sm outline-none focus:border-blue-500" onkeypress="if(event.key==='Enter')sendModMessage()">
+                        <button onclick="sendModMessage()" class="bg-blue-600 hover:bg-blue-700 text-white w-10 h-10 rounded-full flex items-center justify-center transition transform hover:scale-105 shadow-md"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -577,6 +624,27 @@
 
     </main>
 
+    <!-- نافذة تعديل الوجهة (للمشرف) -->
+    <div id="mod-edit-dest-modal" class="fixed inset-0 bg-black/50 hidden flex-col items-center justify-center z-[9000] backdrop-blur-sm p-4 h-full w-full">
+        <div class="bg-white p-6 rounded-2xl w-full max-w-[400px] shadow-2xl relative">
+            <h3 class="font-bold text-lg mb-4 text-amber-700 border-b pb-2"><i class="fas fa-map-marker-alt"></i> تعديل الوجهة والسعر</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs font-bold text-slate-500 block mb-1">الوجهة الجديدة</label>
+                    <input type="text" id="mod-edit-dest-input" class="input-std">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500 block mb-1">السعر الجديد (EGP)</label>
+                    <input type="number" id="mod-edit-price-input" class="input-std font-bold text-blue-600">
+                </div>
+            </div>
+            <div class="flex gap-2 mt-6">
+                <button onclick="confirmModDestChange()" class="flex-1 bg-amber-600 text-white rounded-lg py-2 font-bold hover:bg-amber-700 transition">تأكيد التعديل</button>
+                <button onclick="document.getElementById('mod-edit-dest-modal').style.display='none'" class="flex-1 border border-slate-200 rounded-lg py-2 font-bold text-slate-600 hover:bg-slate-50 transition">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // --- Supabase Config ---
         const SUPABASE_URL = 'https://wtjwzqvmwnbvjxnmweqq.supabase.co';
@@ -652,6 +720,7 @@
                 document.getElementById('api-url-input').value = localStorage.getItem('mod_api_url') || '';
             }
             if(tabId === 'dashboard') loadSummary();
+            if(tabId === 'trip-chats') loadModChats();
             if(tabId === 'chat') {
                 loadChats();
                 // Ensure list is visible on mobile when opening tab
@@ -2091,6 +2160,233 @@ ${contextData}
             }
 
             return context;
+        }
+
+        // ==========================================
+        // نظام الدردشة للرحلات - الموديتور
+        // ==========================================
+        let modCurrentTripId = null;
+        let modChatSub = null;
+
+        async function loadModChats() {
+            const list = document.getElementById('mod-chats-list');
+            list.innerHTML = '<p class="text-center text-gray-400 p-6"><i class="fas fa-spinner fa-spin"></i></p>';
+
+            const { data: trips } = await sbClient.from('trips')
+                .select('*, drivers:drivers!fk_trips_driver(name), cars:cars!fk_trips_car(brand)')
+                .eq('status', 'driver_assigned')
+                .order('created_at', { ascending: false });
+
+            if (!trips || trips.length === 0) {
+                list.innerHTML = '<p class="text-center text-gray-400 p-6">لا توجد محادثات رحلات نشطة</p>';
+                return;
+            }
+
+            const userIds = trips.map(t => t.user_id).filter(Boolean);
+            let profilesMap = {};
+            if (userIds.length > 0) {
+                const { data: profiles } = await sbClient.from('profiles').select('id, full_name').in('id', userIds);
+                if (profiles) profiles.forEach(p => profilesMap[p.id] = p);
+            }
+
+            let html = '';
+            for (const t of trips) {
+                let clientName = profilesMap[t.user_id]?.full_name || 'عميل';
+                if (t.manual_client_name) clientName = t.manual_client_name;
+                if (t.admin_notes && t.admin_notes.includes('حجز هاتفي')) {
+                    const nm = t.admin_notes.match(/العميل: (.*?)[\n(]/);
+                    if (nm) clientName = nm[1].trim();
+                }
+                const driverName = t.drivers?.name || 'كابتن';
+
+                const { data: lastMsg } = await sbClient.from('chat_messages')
+                    .select('message, sender_role, created_at').eq('trip_id', t.id)
+                    .order('created_at', { ascending: false }).limit(1);
+                const preview = lastMsg?.[0]?.message || 'لا توجد رسائل';
+                const roleLabel = lastMsg?.[0]?.sender_role === 'client' ? 'العميل' : lastMsg?.[0]?.sender_role === 'driver' ? 'الكابتن' : lastMsg?.[0]?.sender_role === 'admin' ? 'الإدارة' : '';
+
+                const isActive = modCurrentTripId == t.id;
+                html += `
+                <div onclick="openModChat('${t.id}', '${clientName}', '${driverName}', '${(t.pickup_location || '').split(',')[0]}', '${(t.dropoff_location || '').split(',')[0]}')" 
+                     class="p-3 cursor-pointer hover:bg-blue-50 transition ${isActive ? 'bg-blue-50 border-r-4 border-blue-500' : ''}">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="font-bold text-sm text-gray-800">👤 ${clientName}</p>
+                            <p class="text-[10px] text-gray-400">🚗 ${driverName}</p>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1 truncate">${roleLabel ? roleLabel + ': ' : ''}${preview}</p>
+                </div>`;
+            }
+            list.innerHTML = html;
+        }
+
+        async function openModChat(tripId, clientName, driverName, from, to) {
+            modCurrentTripId = tripId;
+            document.getElementById('mod-no-chat-header').style.display = 'none';
+            document.getElementById('mod-no-chat').style.display = 'none';
+            document.getElementById('mod-chat-header').style.display = 'flex';
+            document.getElementById('mod-chat-input-bar').style.display = 'flex';
+            
+            document.getElementById('mod-chat-header-name').innerHTML = `👤 ${clientName} ↔ 🚗 ${driverName}`;
+            document.getElementById('mod-chat-route').innerHTML = `${from} ➝ ${to}`;
+
+            document.getElementById('mod-edit-dest-input').value = to || '';
+            const { data: trip } = await sbClient.from('trips').select('estimated_price').eq('id', tripId).single();
+            if (trip) document.getElementById('mod-edit-price-input').value = trip.estimated_price || 0;
+
+            await loadModChatMessages(tripId);
+            subscribeModChat(tripId);
+            loadModChats();
+        }
+
+        async function loadModChatMessages(tripId) {
+            const container = document.getElementById('mod-chat-messages');
+            const { data: messages } = await sbClient.from('chat_messages').select('*').eq('trip_id', tripId).order('created_at', { ascending: true });
+            
+            Array.from(container.children).forEach(c => {
+                if (c.id !== 'mod-no-chat') c.remove();
+            });
+
+            if (!messages || messages.length === 0) {
+                const empty = document.createElement('p');
+                empty.className = 'text-center text-gray-400 py-8';
+                empty.id = 'mod-empty-msgs';
+                empty.textContent = 'لا توجد رسائل بعد';
+                container.appendChild(empty);
+                return;
+            }
+            messages.forEach(m => appendModMsg(m));
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function appendModMsg(msg) {
+            const container = document.getElementById('mod-chat-messages');
+            const emptyPlaceholder = document.getElementById('mod-empty-msgs');
+            if (emptyPlaceholder) emptyPlaceholder.remove();
+
+            const div = document.createElement('div');
+            div.style.animation = 'fadeIn 0.3s ease';
+            div.style.maxWidth = '80%';
+            div.style.padding = '8px 14px';
+            div.style.borderRadius = '12px';
+            div.style.fontSize = '0.85rem';
+            div.style.lineHeight = '1.5';
+            div.style.wordWrap = 'break-word';
+            div.style.marginBottom = '8px';
+
+            if (msg.sender_role === 'client') {
+                div.style.background = '#fef3c7';
+                div.style.alignSelf = 'flex-start';
+                div.innerHTML = `<span style="font-size:10px;color:#92400e;display:block;margin-bottom:2px">👤 العميل: ${msg.sender_name}</span>`;
+            } else if (msg.sender_role === 'driver') {
+                div.style.background = '#dbeafe';
+                div.style.alignSelf = 'flex-end';
+                div.innerHTML = `<span style="font-size:10px;color:#1e40af;display:block;margin-bottom:2px">🚗 الكابتن: ${msg.sender_name}</span>`;
+            } else if (msg.sender_role === 'admin') {
+                div.style.background = '#ede9fe';
+                div.style.alignSelf = 'center';
+                div.style.textAlign = 'center';
+                div.style.border = '1px solid #c4b5fd';
+                div.innerHTML = `<span style="font-size:10px;color:#6d28d9;display:block;margin-bottom:2px">🛡️ المشرف</span>`;
+            } else {
+                div.style.background = '#f1f5f9';
+                div.style.alignSelf = 'center';
+            }
+
+            if (msg.message_type === 'location') {
+                div.innerHTML += `📍 <a href="https://maps.google.com/?q=${msg.location_lat},${msg.location_lng}" target="_blank" style="color:#2563eb;text-decoration:underline">فتح الموقع</a>`;
+            } else if (msg.message_type === 'admin_request' && msg.message.includes('يطلب تغيير الوجهة إلى:')) {
+                const match = msg.message.match(/إلى:\s*(.*)/);
+                const newD = match ? match[1].trim() : '';
+                div.innerHTML += `<div class="bg-orange-50 p-2 rounded border border-orange-200 mt-1">
+                    <p class="font-bold text-orange-800 text-xs mb-2 text-center">🚨 طلب تغيير وجهة</p>
+                    <p class="text-xs text-orange-700 mb-3 text-center">الكابتن يطلب تغيير الوجهة إلى:<br><strong>${newD}</strong></p>
+                    <div class="flex gap-2 justify-center">
+                        <button onclick="respondModDestChange('${msg.trip_id}', '${newD}', true)" class="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-green-700 w-full">✅ موافقة</button>
+                        <button onclick="respondModDestChange('${msg.trip_id}', '${newD}', false)" class="bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-700 w-full">❌ رفض</button>
+                    </div>
+                </div>`;
+            } else {
+                div.innerHTML += msg.message;
+            }
+
+            const time = document.createElement('span');
+            time.style.cssText = 'display:block;font-size:9px;margin-top:4px;opacity:0.5';
+            time.textContent = new Date(msg.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+            div.appendChild(time);
+
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendModMessage() {
+            const input = document.getElementById('mod-chat-input');
+            const message = input.value.trim();
+            if (!message || !modCurrentTripId) return;
+            input.value = '';
+            try {
+                await sbClient.from('chat_messages').insert([{
+                    trip_id: modCurrentTripId,
+                    sender_role: 'admin',
+                    sender_id: 'moderator',
+                    sender_name: 'المشرف',
+                    message: message,
+                    message_type: 'text'
+                }]);
+            } catch (error) {
+                alert('فشل إرسال الرسالة: ' + error.message);
+            }
+        }
+
+        function subscribeModChat(tripId) {
+            if (modChatSub) sbClient.removeChannel(modChatSub);
+            modChatSub = sbClient.channel('chat-mod-' + tripId)
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: 'trip_id=eq.' + tripId }, (payload) => {
+                    appendModMsg(payload.new);
+                }).subscribe();
+        }
+
+        async function confirmModDestChange() {
+            if (!modCurrentTripId) return;
+            const newDest = document.getElementById('mod-edit-dest-input').value.trim();
+            const newPrice = Number(document.getElementById('mod-edit-price-input').value) || 0;
+
+            if (!newDest || newPrice <= 0) return alert('يرجى إدخال الوجهة والسعر بشكل صحيح');
+
+            try {
+                const { error } = await sbClient.from('trips')
+                    .update({ dropoff_location: newDest, estimated_price: newPrice })
+                    .eq('id', modCurrentTripId);
+                if (error) throw error;
+
+                await sbClient.from('chat_messages').insert([{
+                    trip_id: modCurrentTripId, sender_role: 'system', sender_id: 'system', sender_name: 'النظام',
+                    message: `✅ تم تعديل الوجهة من الإشراف.\nالوجهة: ${newDest}\nالسعر: ${newPrice} EGP`, message_type: 'system'
+                }]);
+
+                document.getElementById('mod-edit-dest-modal').style.display = 'none';
+                
+                const routeP = document.getElementById('mod-chat-route');
+                if (routeP) {
+                    const parts = routeP.textContent.split('➝');
+                    if (parts.length === 2) routeP.textContent = `${parts[0].trim()} ➝ ${newDest}`;
+                }
+                alert('✅ تم تعديل الوجهة بنجاح وإشعار الكابتن والعميل');
+            } catch (err) { alert('❌ خطأ: ' + err.message); }
+        }
+
+        async function respondModDestChange(tripId, newDest, isApproved) {
+            if (!confirm(`متأكد من ${isApproved ? 'الموافقة على' : 'رفض'} الوجهة؟`)) return;
+            try {
+                if (isApproved) await sbClient.from('trips').update({ dropoff_location: newDest }).eq('id', tripId);
+                const msg = isApproved ? `✅ المشرف يوافق على تغيير الوجهة إلى: ${newDest}` : `❌ المشرف يرفض الوجهة المطلوبة.`;
+                await sbClient.from('chat_messages').insert([{
+                    trip_id: tripId, sender_role: 'admin', sender_id: 'moderator', sender_name: 'المشرف',
+                    message: msg, message_type: 'system'
+                }]);
+                alert('✅ تم الرد على الطلب');
+            } catch (err) { alert('❌ خطأ: ' + err.message); }
         }
 
     </script>
