@@ -1547,7 +1547,21 @@
                 .order('created_at', { ascending: false });
 
             let allTrips = [];
-            if (!error && trips) allTrips = [...trips];
+            if (!error && trips) {
+                allTrips = trips.map(t => {
+                    let tDate = '--', tTime = '--', pax = '--', bags = '--';
+                    if (t.admin_notes) {
+                        const dMatch = t.admin_notes.match(/📅\s*([^-]+)\s*-\s*([^\n]+)/);
+                        if (dMatch) { tDate = dMatch[1].trim(); tTime = dMatch[2].trim(); }
+                        const pMatch = t.admin_notes.match(/👥\s*(\d+)/);
+                        if (pMatch) pax = pMatch[1];
+                        const bMatch = t.admin_notes.match(/🧳\s*(\d+)/);
+                        if (bMatch) bags = bMatch[1];
+                    }
+                    t.details = { date: tDate, time: tTime, pax, bags, car: t.car_type || (t.cars ? t.cars.model : '--') };
+                    return t;
+                });
+            }
 
             try {
                 // 2. Fetch pending reservations from 'google_reservations' using phone
@@ -1610,6 +1624,7 @@
                     const existingGrIds = new Set(allTrips.map(t => t.id));
                     const existingTripsIds = new Set(allTrips.map(t => String(t.id)));
                     const pendingTrips = sheetResAll
+                        .filter(r => r.booking_employee !== 'ويب سايت') // [FIX] Prevent duplicates since they are already in the trips table
                         .filter(r => !existingTripsIds.has(String(r.sql_server_id)))
                         .filter(r => !existingGrIds.has('gr_' + r.id))
                         .map(r => {
@@ -1633,7 +1648,14 @@
                                 created_at: r.created_at || new Date().toISOString(),
                                 drivers: driverInfo,
                                 cars: null,
-                                admin_notes: `تاريخ الرحلة: ${r.trip_date || '--'} الساعة ${r.trip_time || '--'}`
+                                admin_notes: `تاريخ الرحلة: ${r.trip_date || '--'} الساعة ${r.trip_time || '--'}`,
+                                details: {
+                                    date: r.trip_date || '--',
+                                    time: r.trip_time || '--',
+                                    pax: r.passengers || '--',
+                                    bags: r.bags || '--',
+                                    car: r.car_type || '--'
+                                }
                             };
                         });
                     allTrips = [...allTrips, ...pendingTrips];
@@ -1711,13 +1733,34 @@
                     </div>`;
                 }
 
+                let detailsHtml = '';
+                if (t.details) {
+                    detailsHtml = `
+                    <div class="mt-4 bg-slate-800/80 p-3 rounded-xl border border-slate-700/50 shadow-inner">
+                        <div class="flex justify-between items-center mb-2 border-b border-slate-700/50 pb-2">
+                            <p class="text-[11px] text-slate-300 font-bold" dir="ltr">
+                                <i class="fas fa-calendar-alt mr-1 text-slate-400"></i>${t.details.date} <span class="text-amber-500 mx-1 font-black">•</span> ${t.details.time}
+                            </p>
+                            <span class="bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded text-[10px] font-bold shadow-sm">🚗 ${t.details.car}</span>
+                        </div>
+                        <div class="flex gap-4 text-[10px] text-slate-400 font-bold">
+                            <p><i class="fas fa-users ml-1 text-slate-500"></i>${t.details.pax} أفراد</p>
+                            <p><i class="fas fa-suitcase ml-1 text-slate-500"></i>${t.details.bags} شنط</p>
+                        </div>
+                    </div>`;
+                }
+
                 return `
                 <div class="glass-card p-4 trip-card animate-fade-in-up mb-4 border border-slate-700/50">
                     <div class="flex justify-between items-start mb-2">
                         <span class="trip-status-badge ${statusClass}">${statusText}</span>
                         <span class="font-bold font-num ${statusColor}">${t.estimated_price} EGP</span>
                     </div>
-                    <div class="mt-6"><p class="text-xs text-slate-300 font-bold">${t.pickup_location}</p><p class="text-xs text-slate-300 font-bold mt-2">${t.dropoff_location}</p></div>
+                    <div class="mt-4">
+                        <p class="text-xs text-slate-300 font-bold flex items-start"><i class="fas fa-map-marker-alt text-amber-500 ml-2 mt-1"></i><span class="flex-1">${t.pickup_location}</span></p>
+                        <p class="text-xs text-slate-300 font-bold mt-3 flex items-start"><i class="fas fa-flag-checkered text-blue-500 ml-2 mt-1"></i><span class="flex-1">${t.dropoff_location}</span></p>
+                    </div>
+                    ${detailsHtml}
                     ${driverHtml}
                     ${ratingHtml}
                 </div>`;
