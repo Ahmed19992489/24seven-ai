@@ -774,15 +774,35 @@
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'omnichannel_messages' }, payload => {
                     console.log("🆕 New message received via Realtime:", payload.new);
                     
-                    // Check if message already exists (prevent duplicates from Echo + Manual Insert)
+                    // Check if message already exists by real ID
                     if (allMessages.find(m => m.id === payload.new.id)) return;
+                    
+                    // [FIX] Normalize the incoming sender_id to match grouped keys
+                    const incomingNormalized = (payload.new.channel === 'whatsapp') 
+                        ? normalizeWhatsAppId(payload.new.sender_id) 
+                        : payload.new.sender_id;
+                    
+                    // [FIX] Check for temp admin messages (added locally by handleSend)
+                    if (payload.new.is_from_admin) {
+                        const tempIdx = allMessages.findIndex(m => 
+                            m.id && String(m.id).startsWith('temp_') && 
+                            (m.sender_id === payload.new.sender_id || 
+                             (m.channel === 'whatsapp' && normalizeWhatsAppId(m.sender_id) === incomingNormalized)) &&
+                            m.message_text === payload.new.message_text
+                        );
+                        if (tempIdx !== -1) {
+                            allMessages[tempIdx] = payload.new;
+                            regroupAndRender();
+                            if(activeChatId === incomingNormalized) renderMessages();
+                            return;
+                        }
+                    }
                     
                     allMessages.push(payload.new);
                     regroupAndRender();
                     
-                    if(activeChatId === payload.new.sender_id) {
+                    if(activeChatId === incomingNormalized) {
                         renderMessages();
-                        // Scroll to bottom
                         const container = document.getElementById('chat-messages');
                         container.scrollTop = container.scrollHeight;
                     }
@@ -795,38 +815,67 @@
                 .subscribe();
         }
 
+        // [FIX] Normalize WhatsApp IDs to merge duplicates (201xxx, 1xxx, 01xxx → same chat)
+        function normalizeWhatsAppId(sid) {
+            if (!sid) return sid;
+            let clean = sid.replace(/\D/g, '');
+            // Egyptian numbers: remove country code 20 prefix → keep last 10 digits
+            if (clean.length >= 11 && clean.startsWith('20')) {
+                clean = clean.substring(2); // 201121748885 → 1121748885
+            }
+            if (clean.length === 11 && clean.startsWith('0')) {
+                clean = clean.substring(1); // 01121748885 → 1121748885  
+            }
+            return clean;
+        }
+
+        // Map from original sender_id to normalized key
+        let idToNormalizedKey = {};
+
         function regroupAndRender() {
             groupedChats = {};
+            idToNormalizedKey = {};
+            
             allMessages.forEach(m => {
                 // --- 🛡️ Filter out junk system/Admin threads ---
                 if (!m.sender_id || m.sender_id === 'Admin') return;
 
-                if(!groupedChats[m.sender_id]) {
-                    // Initialize with ID (which is the Number for WA)
-                    let initialName = m.sender_id;
+                // [FIX] Determine the grouping key - normalize WhatsApp phone numbers
+                let groupKey = m.sender_id;
+                if (m.channel === 'whatsapp' && !m.is_from_admin) {
+                    groupKey = normalizeWhatsAppId(m.sender_id);
+                }
+                // For admin messages in WhatsApp, also normalize the sender_id (which is actually the client ID)
+                if (m.channel === 'whatsapp' && m.is_from_admin) {
+                    groupKey = normalizeWhatsAppId(m.sender_id);
+                }
+                
+                // Track mapping from original ID to normalized key
+                idToNormalizedKey[m.sender_id] = groupKey;
+
+                if(!groupedChats[groupKey]) {
+                    let initialName = groupKey;
                     if (m.channel === 'messenger' && !m.is_from_admin && m.sender_name && m.sender_name !== m.sender_id && !['Admin', 'ش', 'Messenger User'].includes(m.sender_name)) {
                         initialName = m.sender_name;
                     }
-                    groupedChats[m.sender_id] = { id: m.sender_id, name: initialName, channel: m.channel, messages: [], last: m };
+                    groupedChats[groupKey] = { id: groupKey, originalIds: new Set(), name: initialName, channel: m.channel, messages: [], last: m };
                 }
-                groupedChats[m.sender_id].messages.push(m);
-                groupedChats[m.sender_id].last = m;
+                groupedChats[groupKey].originalIds.add(m.sender_id);
+                groupedChats[groupKey].messages.push(m);
+                groupedChats[groupKey].last = m;
                 
                 // --- 🧠 Automated Name Resolution Logic ---
-                // WhatsApp: Always force it to be the number (sender_id) as per user request
                 if(m.channel === 'whatsapp') {
-                    groupedChats[m.sender_id].name = m.sender_id;
+                    groupedChats[groupKey].name = groupKey;
                 }
                 
-                // Messenger: Try to find a real name from customer messages
                 if(m.channel === 'messenger') {
                     if(!m.is_from_admin && m.sender_name && m.sender_name !== m.sender_id && !['Admin', 'ش', 'Messenger User'].includes(m.sender_name)) {
-                        groupedChats[m.sender_id].name = m.sender_name;
+                        groupedChats[groupKey].name = m.sender_name;
                     }
                     
-                    // If name is still an ID or junk for Messenger, check trip data or local storage
-                    const currentName = groupedChats[m.sender_id].name;
-                    const isIdOrJunk = !currentName || currentName === m.sender_id || ['Admin', 'ش', 'Messenger User'].includes(currentName);
+                    const currentName = groupedChats[groupKey].name;
+                    const isIdOrJunk = !currentName || currentName === m.sender_id || currentName === groupKey || ['Admin', 'ش', 'Messenger User'].includes(currentName);
                     
                     if(isIdOrJunk) {
                         const trip = allTrips.find(t =>
@@ -834,15 +883,13 @@
                             t.facebook_id === m.sender_id
                         );
                         if(trip && trip.customer_name && !['Admin', 'ش', 'Messenger User'].includes(trip.customer_name)) {
-                            groupedChats[m.sender_id].name = trip.customer_name;
+                            groupedChats[groupKey].name = trip.customer_name;
                         }
-                        // Try localStorage for manually-set names
-                        const savedName = localStorage.getItem(`chat_name_${m.sender_id}`);
-                        if(savedName) groupedChats[m.sender_id].name = savedName;
+                        const savedName = localStorage.getItem(`chat_name_${m.sender_id}`) || localStorage.getItem(`chat_name_${groupKey}`);
+                        if(savedName) groupedChats[groupKey].name = savedName;
                         
-                        // Fallback completely
-                        if(!groupedChats[m.sender_id].name || groupedChats[m.sender_id].name === m.sender_id) {
-                            groupedChats[m.sender_id].name = 'Messenger User';
+                        if(!groupedChats[groupKey].name || groupedChats[groupKey].name === m.sender_id || groupedChats[groupKey].name === groupKey) {
+                            groupedChats[groupKey].name = 'Messenger User';
                         }
                     }
                 }
@@ -906,17 +953,29 @@
             }
         }
 
+        function getSenderLabel(m) {
+            if (!m.is_from_admin) return '';
+            const name = m.sender_name || 'Admin';
+            // Identify: Bot, specific moderator, or generic Admin
+            if (name === 'Bot' || name === 'بوت') return '🤖 بوت';
+            if (name === 'Admin' || name === 'admin') return '👤 الإدارة';
+            return `👤 ${name}`;
+        }
+
         function renderMessages() {
             const container = document.getElementById('chat-messages');
             const chat = groupedChats[activeChatId];
-            container.innerHTML = chat.messages.map(m => `
+            container.innerHTML = chat.messages.map(m => {
+                const senderLabel = getSenderLabel(m);
+                return `
                 <div class="flex ${m.is_from_admin ? 'justify-end' : 'justify-start'}">
                     <div class="max-w-[75%] rounded-2xl px-4 py-2 text-sm ${m.is_from_admin ? 'bg-teal-600 text-white rounded-tr-none' : 'bg-white border text-slate-800 rounded-tl-none shadow-sm'}">
+                        ${senderLabel ? `<p class="text-[10px] font-bold mb-1 opacity-80">${senderLabel}</p>` : ''}
                         <p class="whitespace-pre-wrap">${m.message_text}</p>
                         <p class="text-[9px] mt-1 opacity-70 ${m.is_from_admin ? 'text-right' : 'text-left'}">${new Date(m.created_at).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}</p>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
             container.scrollTop = container.scrollHeight;
         }
 
@@ -1005,6 +1064,15 @@
                 const targetUrl = `${getApiBaseUrl()}/api/send_reply`;
                 console.log("📤 Sending to:", targetUrl);
                 
+                // [FIX] Resolve normalized ID to original sender_id for WhatsApp API
+                let apiSenderId = activeChatId;
+                if (chat.channel === 'whatsapp' && chat.originalIds && chat.originalIds.size > 0) {
+                    // Pick the longest original ID (most likely has country code)
+                    const originals = Array.from(chat.originalIds);
+                    apiSenderId = originals.reduce((a, b) => a.length >= b.length ? a : b);
+                    console.log(`📤 Resolved ${activeChatId} → ${apiSenderId} for API`);
+                }
+                
                 const res = await fetch(targetUrl, {
                     method: 'POST',
                     headers: {
@@ -1013,7 +1081,7 @@
                     },
                     body: JSON.stringify({ 
                         channel: chat.channel, 
-                        sender_id: activeChatId, 
+                        sender_id: apiSenderId, 
                         message: text,
                         mod_name: currentModName // Pass current moderator name
                     })
@@ -1023,8 +1091,8 @@
                     // Update local UI immediately for both channels
                     const newMsg = {
                         id: 'temp_' + Date.now(),
-                        sender_id: activeChatId, // Fixed: use customer ID instead of 'admin'
-                        sender_name: 'Admin',
+                        sender_id: apiSenderId,
+                        sender_name: currentModName || 'Admin', // [FIX] Show actual moderator name
                         message_text: text,
                         is_from_admin: true,
                         created_at: new Date().toISOString(),
@@ -1146,8 +1214,8 @@
                 const { error: resErr } = await sbClient
                     .from('google_reservations')
                     .update({ 
-                        status: 'confirmed',
-                        // sql_server_id: String(newTrip.id), // DON'T OVERWRITE - Keep the original SQL ID (9178 etc.)
+                        status: 'driver_assigned',
+                        sql_server_id: String(newTrip.id),
                         modified_driver_name: driverName,
                         modified_driver_phone: driverPhone
                     })
@@ -1240,25 +1308,76 @@
             if(!trip) return;
             
             const rawPhone = (trip.customer_phone || '').replace(/\D/g, '');
-            if (!rawPhone) { alert('لا يوجد رقم هاتف لهذا العميل'); return; }
 
+            // Ensure chats are loaded
+            if(Object.keys(groupedChats).length === 0) {
+                await loadChats();
+            }
+            
             showTab('chat');
             
-            // Search intelligently in groupedChats for this phone number
             let foundKey = null;
-            const searchPart = rawPhone.length > 8 ? rawPhone.slice(-9) : rawPhone; // last 9 digits to skip country code issues
+
+            // 1. Try Messenger sender ID from trip data (highest priority)
+            const messengerIds = [
+                trip.messenger_sender_id,
+                trip.facebook_id
+            ].filter(Boolean);
             
-            for (const key in groupedChats) {
-                if (key.includes(searchPart)) {
-                    foundKey = key;
+            for (const msId of messengerIds) {
+                if (groupedChats[msId]) {
+                    foundKey = msId;
                     break;
                 }
             }
 
+            // 2. Try WhatsApp phone number (multiple format variations)
+            if (!foundKey && rawPhone) {
+                const searchVariants = [];
+                
+                // Original number
+                searchVariants.push(rawPhone);
+                
+                // With country code 20
+                if (rawPhone.startsWith('0')) {
+                    searchVariants.push('20' + rawPhone.substring(1)); // 01xxx → 201xxx
+                }
+                if (rawPhone.startsWith('1') && !rawPhone.startsWith('20')) {
+                    searchVariants.push('20' + rawPhone); // 1xxx → 201xxx
+                }
+                
+                // Last 9 digits (fallback for country code mismatches)
+                const last9 = rawPhone.length > 8 ? rawPhone.slice(-9) : rawPhone;
+                
+                for (const key in groupedChats) {
+                    // Exact match first
+                    if (searchVariants.includes(key)) {
+                        foundKey = key;
+                        break;
+                    }
+                    // Partial match (last 9 digits)
+                    if (key.includes(last9)) {
+                        foundKey = key;
+                        break;
+                    }
+                }
+            }
+
+            // 3. Search in all messages for phone number mentions (Messenger clients who shared their phone)
+            if (!foundKey && rawPhone) {
+                const last9 = rawPhone.length > 8 ? rawPhone.slice(-9) : rawPhone;
+                for (const m of allMessages) {
+                    if (m.message_text && m.message_text.includes(last9) && groupedChats[m.sender_id]) {
+                        foundKey = m.sender_id;
+                        break;
+                    }
+                }
+            }
+
             if(foundKey) {
-                selectChat(foundKey);
+                openChat(foundKey);
             } else {
-                alert(`لم يتم العثور على محادثة نشطة للرقم ${rawPhone}.\nيرجى التأكد من أن العميل أرسل رسالة مسبقاً.`);
+                alert(`لم يتم العثور على محادثة نشطة لهذا العميل.\nالرقم: ${rawPhone || 'غير متوفر'}\nيرجى التأكد من أن العميل أرسل رسالة مسبقاً عبر الواتساب أو الماسنجر.`);
             }
         }
 

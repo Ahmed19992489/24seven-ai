@@ -31,6 +31,29 @@ SUPABASE_URL = "https://wtjwzqvmwnbvjxnmweqq.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY"
 SB_HEADERS = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
 
+def insert_template_to_supabase(sender_id, template_name, params):
+    """إدراج تقرير الواتساب في Supabase للظهور في المحادثات"""
+    msg_text = f"[{template_name}]\n"
+    if template_name == "daily_team_report":
+        msg_text = f"📊 تقرير الفريق ({params[0]})\nحجوزات: {params[1]} | موظفين: {params[2]}\n{params[3]}"
+    elif template_name == "daily_employee_report":
+        msg_text = f"👤 تقرير الموظف ({params[0]})\n{params[1]} - حجوزات: {params[2]} | إيرادات: {params[3]} | عملاء جدد: {params[4]}\nالتقييم: {params[5]}"
+    else:
+        msg_text += " | ".join(params)
+
+    url = f"{SUPABASE_URL}/rest/v1/omnichannel_messages"
+    data = {
+        "channel": "whatsapp",
+        "sender_id": str(sender_id),
+        "sender_name": "System",
+        "message_text": msg_text,
+        "is_from_admin": True
+    }
+    try:
+        requests.post(url, headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Content-Type": "application/json", "Prefer": "return=minimal"}, json=data, timeout=5)
+    except Exception as e:
+        print(f"Supabase Insert Error: {e}")
+
 
 def send_template(phone: str, template_name: str, params: list) -> bool:
     """إرسال رسالة واتساب بالقالب المعتمد"""
@@ -52,10 +75,12 @@ def send_template(phone: str, template_name: str, params: list) -> bool:
         result = r.json()
         if r.ok and result.get("messages"):
             print(f"✅ WA sent to {phone} via {template_name}")
+            # [FIX] Save the sent report template to Supabase
+            insert_template_to_supabase("+" + phone, template_name, params)
             return True
         else:
             print(f"❌ WA error to {phone}: {result.get('error', result)}")
-            return False
+            return int(False)
     except Exception as e:
         print(f"❌ WA exception: {e}")
         return False

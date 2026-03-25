@@ -1606,9 +1606,11 @@
                 }
 
                 if (sheetResAll.length > 0) {
-                    // إزالة التكرارات (نفس الـ id)
+                    // إزالة التكرارات (نفس الـ id أو مرتبطة بـ sql_server_id)
                     const existingGrIds = new Set(allTrips.map(t => t.id));
+                    const existingTripsIds = new Set(allTrips.map(t => String(t.id)));
                     const pendingTrips = sheetResAll
+                        .filter(r => !existingTripsIds.has(String(r.sql_server_id)))
                         .filter(r => !existingGrIds.has('gr_' + r.id))
                         .map(r => {
                             let driverInfo = null;
@@ -1619,8 +1621,8 @@
                                 };
                             }
                             let tripStatus = r.status || 'pending';
-                            if (driverInfo && tripStatus === 'pending') tripStatus = 'driver_assigned';
-                            if (r.status === 'confirmed') tripStatus = 'approved';
+                            if (driverInfo && (tripStatus === 'pending' || tripStatus === 'تم تعيين كابتن' || tripStatus === 'confirmed')) tripStatus = 'driver_assigned';
+                            if (r.status === 'confirmed' && !driverInfo) tripStatus = 'approved';
 
                             return {
                                 id: 'gr_' + r.id,
@@ -1671,7 +1673,7 @@
                 let statusColor = 'text-amber-500';
 
                 if (t.status === 'approved') { statusClass = 'status-approved'; statusText = 'مقبولة'; statusColor = 'text-green-500'; }
-                if (t.status === 'driver_assigned') { statusClass = 'status-driver_assigned'; statusText = 'الكابتن في الطريق'; statusColor = 'text-blue-500'; }
+                if (t.status === 'driver_assigned' || t.status === 'تم تعيين كابتن') { statusClass = 'status-driver_assigned'; statusText = 'الكابتن في الطريق'; statusColor = 'text-blue-500'; }
                 if (t.status === 'completed' || t.status === 'trip_ended') { statusClass = 'status-completed'; statusText = 'مكتملة'; statusColor = 'text-slate-400'; }
 
                 let driverHtml = '';

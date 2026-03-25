@@ -3441,10 +3441,12 @@ async function confirmResAssign() {
             message_type: 'system'
         }]);
 
-        // 4. تحديث google_reservations (لا نستبدل الـ SQL_ID الأصلي)
+        // 4. تحديث google_reservations مع ربطها برحلة السيستم الجديدة وحفظ بيانات الكابتن لحظياً
         await sbClient.from('google_reservations').update({
-            status: 'تم تعيين كابتن',
-            // sql_server_id: String(newTrip.id) 
+            status: 'driver_assigned',
+            sql_server_id: String(newTrip.id),
+            modified_driver_name: driverName,
+            modified_driver_phone: driverPhone
         }).eq('sheet_row', r.sheet_row);
 
         // 5. تحديث جوجل شيت - أعمدة 22-23 (اسم السائق ورقمه)
