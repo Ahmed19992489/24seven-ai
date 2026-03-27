@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 
 <head>
@@ -2729,29 +2729,29 @@
         // ==========================================
         // ⭐ خدمة العملاء (Support Chat Widget)
         // ==========================================
-        let isSupportChatOpen = false;
-        let supportChatChannel = null;
+        let isWidgetChatOpen = false;
+        let widgetChatChannel = null;
 
-        function toggleSupportChat() {
+        function toggleWidgetChat() {
             if (!user) {
                 alert('يجب تسجيل الدخول أولاً للتواصل مع خدمة العملاء.');
                 return;
             }
-            const win = document.getElementById('support-chat-window');
-            isSupportChatOpen = !isSupportChatOpen;
-            if (isSupportChatOpen) {
+            const win = document.getElementById('widget-chat-window');
+            isWidgetChatOpen = !isWidgetChatOpen;
+            if (isWidgetChatOpen) {
                 win.classList.remove('hidden');
-                document.getElementById('support-chat-badge').classList.add('hidden');
-                loadSupportMessages(); // Load immediately when opened
-                initSupportChatListener(); // Ensure listener is active
+                document.getElementById('widget-chat-badge').classList.add('hidden');
+                loadWidgetMessages(); // Load immediately when opened
+                initWidgetChatListener(); // Ensure listener is active
             } else {
                 win.classList.add('hidden');
             }
         }
 
-        async function loadSupportMessages() {
+        async function loadWidgetMessages() {
             if (!user) return;
-            const container = document.getElementById('support-chat-messages');
+            const container = document.getElementById('widget-chat-messages');
 
             try {
                 const { data: msgs, error } = await sb.from('support_chats')
@@ -2777,7 +2777,7 @@
                         </div>
                     `;
                 } else {
-                    msgs.forEach(m => renderSupportMessage(m, false));
+                    msgs.forEach(m => renderWidgetMessage(m, false));
                 }
                 container.scrollTop = container.scrollHeight;
             } catch (err) {
@@ -2785,8 +2785,8 @@
             }
         }
 
-        function renderSupportMessage(m, autoScroll = true) {
-            const container = document.getElementById('support-chat-messages');
+        function renderWidgetMessage(m, autoScroll = true) {
+            const container = document.getElementById('widget-chat-messages');
             const timeStr = new Date(m.created_at || new Date()).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
             
             if (m.sender_role === 'client') {
@@ -2814,9 +2814,9 @@
             if (autoScroll) container.scrollTop = container.scrollHeight;
         }
 
-        async function sendSupportMessage() {
+        async function sendWidgetMessage() {
             if (!user) return;
-            const input = document.getElementById('support-chat-input');
+            const input = document.getElementById('widget-chat-input');
             const msgText = input.value.trim();
             if (!msgText) return;
 
@@ -2828,7 +2828,7 @@
                 sender_role: 'client',
                 created_at: new Date().toISOString()
             };
-            renderSupportMessage(tempMsg, true);
+            renderWidgetMessage(tempMsg, true);
 
             try {
                 const { error } = await sb.from('support_chats').insert([{
@@ -2844,9 +2844,9 @@
             }
         }
 
-        function initSupportChatListener() {
-            if (!user || supportChatChannel) return;
-            supportChatChannel = sb.channel('support-chat-' + user.id)
+        function initWidgetChatListener() {
+            if (!user || widgetChatChannel) return;
+            widgetChatChannel = sb.channel('widget-chat-' + user.id)
                 .on('postgres_changes', { 
                     event: 'INSERT', 
                     schema: 'public', 
@@ -2855,10 +2855,10 @@
                 }, (payload) => {
                     const newMsg = payload.new;
                     if (newMsg.sender_role !== 'client') {
-                        if (isSupportChatOpen) {
-                            renderSupportMessage(newMsg, true);
+                        if (isWidgetChatOpen) {
+                            renderWidgetMessage(newMsg, true);
                         } else {
-                            const badge = document.getElementById('support-chat-badge');
+                            const badge = document.getElementById('widget-chat-badge');
                             badge.classList.remove('hidden');
                             badge.textContent = '!';
                             addNotification('رد جديد من خدمة العملاء 💬');
@@ -2872,7 +2872,7 @@
     <!-- Floating Customer Support Chat -->
     <div id="support-chat-widget" class="fixed bottom-6 left-6 z-[99] flex flex-col items-start" style="direction: rtl;">
         <!-- Chat Window (Hidden by default) -->
-        <div id="support-chat-window" class="hidden w-80 max-w-[90vw] h-96 max-h-[70vh] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col mb-4 overflow-hidden origin-bottom-left transition-all duration-300">
+        <div id="widget-chat-window" class="hidden w-80 max-w-[90vw] h-96 max-h-[70vh] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col mb-4 overflow-hidden origin-bottom-left transition-all duration-300">
             <!-- Header -->
             <div class="bg-gradient-to-l from-indigo-700 to-indigo-500 p-4 text-white flex justify-between items-center shadow-md pb-6 relative">
                 <div class="flex items-center gap-3">
@@ -2884,7 +2884,7 @@
                         <p class="text-[10px] text-indigo-100 font-medium">نرد عليك خلال دقائق ⚡</p>
                     </div>
                 </div>
-                <button onclick="toggleSupportChat()" class="text-white bg-indigo-800/40 hover:bg-indigo-800/80 rounded-full w-8 h-8 flex items-center justify-center transition">
+                <button onclick="toggleWidgetChat()" class="text-white bg-indigo-800/40 hover:bg-indigo-800/80 rounded-full w-8 h-8 flex items-center justify-center transition">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -2893,25 +2893,25 @@
             <div class="-mt-4 h-5 bg-slate-50 rounded-t-3xl relative z-10 w-full mb-[-1px]"></div>
 
             <!-- Messages Area -->
-            <div id="support-chat-messages" class="flex-1 overflow-y-auto px-4 pb-4 bg-slate-50 flex flex-col gap-3 relative scroll-smooth overflow-x-hidden">
+            <div id="widget-chat-messages" class="flex-1 overflow-y-auto px-4 pb-4 bg-slate-50 flex flex-col gap-3 relative scroll-smooth overflow-x-hidden">
                 <!-- Messages will be injected here -->
             </div>
             
             <!-- Input Area -->
             <div class="p-3 bg-white border-t border-slate-100 flex gap-2 items-center">
-                <input type="text" id="support-chat-input" placeholder="اكتب رسالتك..." 
+                <input type="text" id="widget-chat-input" placeholder="اكتب رسالتك..." 
                        class="flex-1 bg-slate-100 border-none rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition shadow-inner"
-                       onkeypress="if(event.key==='Enter') sendSupportMessage()">
-                <button onclick="sendSupportMessage()" class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex justify-center items-center hover:bg-indigo-700 transition transform hover:scale-105 shadow-md flex-shrink-0">
+                       onkeypress="if(event.key==='Enter') sendWidgetMessage()">
+                <button onclick="sendWidgetMessage()" class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex justify-center items-center hover:bg-indigo-700 transition transform hover:scale-105 shadow-md flex-shrink-0">
                     <i class="fas fa-paper-plane mr-1"></i>
                 </button>
             </div>
         </div>
 
         <!-- Floating Button -->
-        <button id="support-chat-btn" onclick="toggleSupportChat()" class="w-14 h-14 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-full shadow-[0_10px_25px_rgba(79,70,229,0.5)] flex justify-center items-center text-xl hover:scale-110 active:scale-95 transition-all duration-300 relative border-2 border-white">
+        <button id="widget-chat-btn" onclick="toggleWidgetChat()" class="w-14 h-14 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-full shadow-[0_10px_25px_rgba(79,70,229,0.5)] flex justify-center items-center text-xl hover:scale-110 active:scale-95 transition-all duration-300 relative border-2 border-white">
             <i class="fas fa-headphones-alt"></i>
-            <span id="support-chat-badge" class="hidden absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex justify-center items-center rounded-full border border-white animate-pulse">!</span>
+            <span id="widget-chat-badge" class="hidden absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex justify-center items-center rounded-full border border-white animate-pulse">!</span>
         </button>
     </div>
 </body>
