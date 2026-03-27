@@ -2409,31 +2409,104 @@
             if (adminChatSub) sbClient.removeChannel(adminChatSub);
             adminChatSub = sbClient.channel('chat-admin-' + tripId)
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: 'trip_id=eq.' + tripId }, (payload) => {
+                    // تجاهل رسائل الإدارة نفسها - لأنها ظهرت فوراً بالـ Optimistic UI
+                    if (payload.new.sender_role === 'admin') return;
                     appendAdminMsg(payload.new);
                 }).subscribe();
         }
 
         async function respondDestChange(tripId, newDest, isApproved) {
-            if (!confirm(`هل أنت متأكد من ${isApproved ? 'الموافقة على' : 'رفض'} الوجهة الجديدة (${newDest})؟`)) return;
+            if (!isApproved) {
+                if (!confirm('هل أنت متأكد من رفض طلب تغيير الوجهة؟')) return;
+                try {
+                    await sbClient.from('chat_messages').insert([{
+                        trip_id: tripId, sender_role: 'admin', sender_id: 'admin', sender_name: 'الإدارة',
+                        message: '❌ الإدارة رفضت طلب تغيير الوجهة.', message_type: 'system'
+                    }]);
+                    appendAdminMsg({
+                        sender_role: 'system', sender_name: 'النظام',
+                        message: 'تم رفض طلب تغيير الوجهة بواسطة الإدارة.', created_at: new Date().toISOString()
+                    });
+                    alert('✅ تم إرسال الرفض للكابتن');
+                } catch (err) { alert('❌ خطأ: ' + err.message); }
+                return;
+            }
+
+            // فتح نافذة إدخال السعر الإضافي
+            const modal = document.createElement('div');
+            modal.id = 'dest-price-modal';
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+            modal.innerHTML = `
+                <div style="background:white;border-radius:16px;padding:24px;max-width:400px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                    <h3 style="text-align:center;font-weight:bold;font-size:1.1rem;margin-bottom:8px;">✅ موافقة على تغيير الوجهة</h3>
+                    <p style="text-align:center;font-size:0.8rem;color:#64748b;margin-bottom:16px;">الوجهة الجديدة: <strong>${newDest}</strong></p>
+                    <div style="margin-bottom:12px;">
+                        <label style="display:block;font-size:0.75rem;color:#64748b;margin-bottom:4px;">💰 السعر الإضافي للنقطة الإضافية (جنيه)</label>
+                        <input id="dest-extra-price" type="number" min="0" value="0" style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:10px;font-size:1rem;outline:none;text-align:center;font-weight:bold;">
+                    </div>
+                    <div id="dest-price-preview" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px;margin-bottom:16px;text-align:center;font-size:0.8rem;color:#16a34a;">
+                        جاري تحميل السعر الأصلي...
+                    </div>
+                    <div style="display:flex;gap:10px;">
+                        <button onclick="document.getElementById('dest-price-modal').remove()" style="flex:1;padding:10px;border-radius:10px;background:#f1f5f9;border:none;cursor:pointer;font-weight:bold;font-size:0.85rem;">إلغاء</button>
+                        <button onclick="confirmDestApproval('${tripId}', '${newDest}')" style="flex:1;padding:10px;border-radius:10px;background:#16a34a;color:white;border:none;cursor:pointer;font-weight:bold;font-size:0.85rem;">تأكيد الموافقة</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            // تحميل السعر الحالي للرحلة
+            const { data: trip } = await sbClient.from('trips').select('estimated_price').eq('id', tripId).single();
+            const originalPrice = parseFloat(trip?.estimated_price) || 0;
+            document.getElementById('dest-price-preview').innerHTML = `السعر الأصلي: <strong>${originalPrice} EGP</strong>`;
+            
+            // تحديث المعاينة عند تغيير القيمة
+            document.getElementById('dest-extra-price').addEventListener('input', function() {
+                const extra = parseFloat(this.value) || 0;
+                const total = originalPrice + extra;
+                document.getElementById('dest-price-preview').innerHTML = `السعر الأصلي: <strong>${originalPrice}</strong> + الإضافي: <strong>${extra}</strong> = الإجمالي: <strong style="color:#15803d;font-size:1.1rem;">${total} EGP</strong>`;
+            });
+        }
+
+        async function confirmDestApproval(tripId, newDest) {
+            const extraPrice = parseFloat(document.getElementById('dest-extra-price').value) || 0;
+            const btn = document.querySelector('#dest-price-modal button:last-child');
+            if (btn) { btn.disabled = true; btn.textContent = '⏳ جاري الحفظ...'; }
+
             try {
-                if (isApproved) {
-                    await sbClient.from('trips').update({ dropoff_location: newDest }).eq('id', tripId);
-                }
-                const msg = isApproved ? `✅ الإدارة وافقت على تغيير الوجهة إلى: ${newDest}` : `❌ الإدارة رفضت طلب تغيير الوجهة.`;
+                // جلب السعر الحالي
+                const { data: trip } = await sbClient.from('trips').select('estimated_price').eq('id', tripId).single();
+                const originalPrice = parseFloat(trip?.estimated_price) || 0;
+                const newTotal = originalPrice + extraPrice;
+
+                // تحديث الرحلة بالوجهة الجديدة والسعر المحدث
+                await sbClient.from('trips').update({ 
+                    dropoff_location: newDest, 
+                    estimated_price: newTotal 
+                }).eq('id', tripId);
+
+                // إرسال رسالة نظام في الشات
+                const sysMsg = extraPrice > 0
+                    ? `✅ الإدارة وافقت على تغيير الوجهة إلى: ${newDest}\n💰 تم إضافة ${extraPrice} جنيه (السعر الجديد: ${newTotal} EGP)`
+                    : `✅ الإدارة وافقت على تغيير الوجهة إلى: ${newDest} (بدون تكلفة إضافية)`;
+
                 await sbClient.from('chat_messages').insert([{
                     trip_id: tripId, sender_role: 'admin', sender_id: 'admin', sender_name: 'الإدارة',
-                    message: msg, message_type: 'system'
+                    message: sysMsg, message_type: 'system'
                 }]);
 
-                // إضافة رسالة للنظام في الشات
                 appendAdminMsg({
-                    trip_id: tripId, sender_role: 'system', sender_name: 'النظام',
-                    message: `تم ${isApproved ? 'الموافقة على' : 'رفض'} طلب تغيير الوجهة بواسطة الإدارة.`, created_at: new Date().toISOString()
+                    sender_role: 'system', sender_name: 'النظام',
+                    message: sysMsg, created_at: new Date().toISOString()
                 });
 
-                alert('✅ تم إرسال الرد للكابتن');
-                if (isApproved) loadOperations();
-            } catch (err) { alert('❌ خطأ: ' + err.message); }
+                document.getElementById('dest-price-modal').remove();
+                alert('✅ تم الموافقة وتحديث السعر بنجاح!');
+                loadOperations();
+            } catch (err) {
+                if (btn) { btn.disabled = false; btn.textContent = 'تأكيد الموافقة'; }
+                alert('❌ خطأ: ' + err.message);
+            }
         }
 
         // ==========================================
