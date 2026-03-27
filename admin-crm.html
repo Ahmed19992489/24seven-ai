@@ -2033,29 +2033,115 @@
             input.value = '';
             try {
                 if (adminChatMode === 'support' && adminCurrentSupportUserId) {
-                    // إرسال رد خدمة العملاء
-                    await sbClient.from('support_chats').insert([{
+                    const newMsg = {
                         user_id: adminCurrentSupportUserId,
                         sender_role: 'admin',
-                        message: message
-                    }]);
-                    openSupportChat(adminCurrentSupportUserId, document.getElementById('admin-chat-header').querySelector('p')?.textContent || 'عميل');
+                        message: message,
+                        created_at: new Date().toISOString()
+                    };
+                    // إظهار الرسالة فوراً (Optimistic UI)
+                    const container = document.getElementById('admin-chat-messages');
+                    const placeholder = container.querySelector('p.text-center');
+                    if (placeholder) placeholder.remove();
+                    
+                    const div = document.createElement('div');
+                    div.style.cssText = `max-width:80%;padding:10px 14px;border-radius:12px;font-size:0.85rem;line-height:1.5;word-wrap:break-word;margin-bottom:4px;background:#ede9fe;align-self:flex-end;margin-right:auto;`;
+                    div.innerHTML = `<span style="font-size:10px;color:#6d28d9;display:block;margin-bottom:3px">🛡️ الإدارة</span>${message}`;
+                    const t = document.createElement('span');
+                    t.style.cssText = 'display:block;font-size:9px;margin-top:4px;opacity:0.5;';
+                    t.textContent = new Date(newMsg.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+                    div.appendChild(t);
+                    container.appendChild(div);
+                    container.scrollTop = container.scrollHeight;
+
+                    // إرسال الدعم الفني
+                    await sbClient.from('support_chats').insert([newMsg]);
                 } else if (adminCurrentTripId) {
-                    // إرسال رسالة رحلة عادي
-                    await sbClient.from('chat_messages').insert([{
+                    const newMsg = {
                         trip_id: adminCurrentTripId,
                         sender_role: 'admin',
                         sender_id: 'admin',
                         sender_name: 'الإدارة',
                         message: message,
-                        message_type: 'text'
-                    }]);
+                        message_type: 'text',
+                        created_at: new Date().toISOString()
+                    };
+                    // إظهار الرسالة فوراً للواجهة
+                    appendAdminMsg(newMsg);
+                    // إرسال رسالة رحلة
+                    await sbClient.from('chat_messages').insert([newMsg]);
                 }
             } catch (error) {
                 console.error('Error sending message:', error);
                 alert('فشل إرسال الرسالة');
             }
         }
+        
+        let globalOmniCountAdmin = 0;
+        let globalSupportCountAdmin = 0;
+        let globalTripChatCountAdmin = 0;
+
+        // نظام مزامنة احتياطي شامل تحسباً لتعطل WebSockets
+        setInterval(async () => {
+            // -- تحديث القوائم الجانبية بذكاء --
+            const { count: sCount } = await sbClient.from('support_chats').select('*', { count: 'exact', head: true });
+            if (sCount !== undefined && sCount > globalSupportCountAdmin) {
+                globalSupportCountAdmin = sCount;
+                if (typeof loadSupportChatsSilent === 'function') loadSupportChatsSilent();
+            }
+
+            const { count: tCount } = await sbClient.from('chat_messages').select('*', { count: 'exact', head: true });
+            if (tCount !== undefined && tCount > globalTripChatCountAdmin) {
+                globalTripChatCountAdmin = tCount;
+                if (typeof loadAdminChats === 'function') loadAdminChats();
+            }
+
+            const { count: oCount } = await sbClient.from('omnichannel_messages').select('*', { count: 'exact', head: true });
+            if (oCount !== undefined && oCount > globalOmniCountAdmin) {
+                globalOmniCountAdmin = oCount;
+                if (typeof groupOmniMessages === 'function' && typeof renderOmniChatList === 'function') {
+                    const { data: fullMsgs } = await sbClient.from('omnichannel_messages').select('*').order('created_at', { ascending: false }).limit(1000);
+                    if (fullMsgs) {
+                        allOmniMessages = fullMsgs.reverse();
+                        groupOmniMessages();
+                        renderOmniChatList();
+                    }
+                }
+            }
+
+            // -- تحديث الشاشات المفتوحة للمحادثة --
+            // 1. Polling لرحلات الشات القديم أو الدعم المفتوح
+            const adminMsgContainer = document.getElementById('admin-chat-messages');
+            if (adminMsgContainer && adminMsgContainer.offsetParent !== null) {
+                if (adminChatMode === 'support' && adminCurrentSupportUserId) {
+                    const { data: msgs } = await sbClient.from('support_chats').select('id').eq('user_id', adminCurrentSupportUserId);
+                    const currentMsgCount = adminMsgContainer.querySelectorAll('div[style*="border-radius"]').length;
+                    if (msgs && msgs.length > currentMsgCount) {
+                        openSupportChat(adminCurrentSupportUserId, document.getElementById('admin-chat-header').querySelector('p')?.textContent || 'عميل');
+                    }
+                } else if (adminCurrentTripId) {
+                    const { data: msgs } = await sbClient.from('chat_messages').select('id').eq('trip_id', adminCurrentTripId);
+                    const currentMsgCount = adminMsgContainer.querySelectorAll('div[style*="border-radius"]').length;
+                    if (msgs && msgs.length > currentMsgCount) {
+                        loadAdminChatMessages(adminCurrentTripId);
+                    }
+                }
+            }
+            
+            // 2. Polling للمحادثات الموحدة Omnichannel المفتوحة
+            const omniContainer = document.getElementById('omni-chat-messages');
+            if (omniContainer && omniContainer.offsetParent !== null && typeof omniActiveSenderId !== 'undefined' && omniActiveSenderId) {
+                const { data: msgs } = await sbClient.from('omnichannel_messages').select('id').eq('sender_id', omniActiveSenderId);
+                const currentMsgCount = omniContainer.children.length;
+                if (msgs && msgs.length > currentMsgCount) {
+                    omniContainer.innerHTML = '';
+                    if (omniGroupedChats[omniActiveSenderId]) {
+                        omniGroupedChats[omniActiveSenderId].messages.forEach(m => appendOmniMessage(m));
+                    }
+                    scrollToOmniBottom();
+                }
+            }
+        }, 3000);
 
         // ==========================================
         // خدمة العملاء (Support Chat)

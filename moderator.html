@@ -2375,15 +2375,21 @@ ${contextData}
             const message = input.value.trim();
             if (!message || !modCurrentTripId) return;
             input.value = '';
+            
+            const newMsg = {
+                trip_id: modCurrentTripId,
+                sender_role: 'admin',
+                sender_id: 'moderator',
+                sender_name: 'المشرف',
+                message: message,
+                message_type: 'text',
+                created_at: new Date().toISOString()
+            };
+            
+            appendModMsg(newMsg);
+            
             try {
-                await sbClient.from('chat_messages').insert([{
-                    trip_id: modCurrentTripId,
-                    sender_role: 'admin',
-                    sender_id: 'moderator',
-                    sender_name: 'المشرف',
-                    message: message,
-                    message_type: 'text'
-                }]);
+                await sbClient.from('chat_messages').insert([newMsg]);
             } catch (error) {
                 alert('فشل إرسال الرسالة: ' + error.message);
             }
@@ -2664,6 +2670,83 @@ ${contextData}
                 }).subscribe();
         }
         setTimeout(initGlobalSupportListener, 2000);
+
+        let globalOmniCount = 0;
+        let globalSupportCount = 0;
+        let globalTripChatCount = 0;
+        
+        // نظام مزامنة احتياطي تحسباً لفشل أو حجب WebSockets
+        setInterval(async () => {
+            // -- تحديث القوائم الجانبية بذكاء --
+            // قائمة الدعم
+            if (activeTab === 'support-chats') {
+                const { count } = await sbClient.from('support_chats').select('*', { count: 'exact', head: true });
+                if (count !== undefined && count > globalSupportCount) {
+                    globalSupportCount = count;
+                    loadModSupportChatsSilent();
+                }
+            }
+            // قائمة الرسايل الموحدة
+            if (activeTab === 'omnichannel') {
+                const { count } = await sbClient.from('omnichannel_messages').select('*', { count: 'exact', head: true });
+                if (count !== undefined && count > globalOmniCount) {
+                    globalOmniCount = count;
+                    loadChats();
+                }
+            }
+            // قائمة رحلات الشات
+            if (activeTab === 'chats') {
+                const { count } = await sbClient.from('chat_messages').select('*', { count: 'exact', head: true });
+                if (count !== undefined && count > globalTripChatCount) {
+                    globalTripChatCount = count;
+                    loadModChats();
+                }
+            }
+
+            // -- تحديث الشاشات المفتوحة للمحادثة --
+            // 1. Polling for Omnichannel
+            const omniContainer = document.getElementById('chat-messages');
+            if (omniContainer && omniContainer.offsetParent !== null && typeof activeChatId !== 'undefined' && activeChatId) {
+                const { data: msgs } = await sbClient.from('omnichannel_messages').select('id').eq('sender_id', activeChatId);
+                const currentMsgCount = omniContainer.children.length;
+                if (msgs && msgs.length > currentMsgCount) {
+                    const { data: fullMsgs } = await sbClient.from('omnichannel_messages')
+                        .select('*').order('created_at', { ascending: false }).limit(1000);
+                    if (fullMsgs) {
+                        allMessages = fullMsgs.reverse();
+                        regroupAndRender();
+                        renderMessages();
+                        omniContainer.scrollTop = omniContainer.scrollHeight;
+                    }
+                }
+            }
+            
+            // 2. Polling for Trip Chats
+            const tripContainer = document.getElementById('mod-chat-messages');
+            if (tripContainer && tripContainer.offsetParent !== null && typeof modCurrentTripId !== 'undefined' && modCurrentTripId) {
+                const { data: msgs } = await sbClient.from('chat_messages').select('id').eq('trip_id', modCurrentTripId);
+                const currentMsgCount = tripContainer.querySelectorAll('div[class*="flex"]').length;
+                if (msgs && msgs.length > currentMsgCount) {
+                    loadModChatMessages(modCurrentTripId);
+                }
+            }
+            
+            // 3. Polling for Support Chats
+            const supportContainer = document.getElementById('mod-support-messages');
+            if (supportContainer && supportContainer.offsetParent !== null && typeof modCurrentSupportUserId !== 'undefined' && modCurrentSupportUserId) {
+                const { data: msgs } = await sbClient.from('support_chats').select('id').eq('user_id', modCurrentSupportUserId);
+                const currentMsgCount = supportContainer.children.length;
+                if (msgs && msgs.length > currentMsgCount) {
+                    const { data: realMsgs } = await sbClient.from('support_chats')
+                        .select('*').eq('user_id', modCurrentSupportUserId).order('created_at', { ascending: true });
+                    if (realMsgs) {
+                        supportContainer.innerHTML = '';
+                        realMsgs.forEach(m => appendModSupportMsg(m));
+                        supportContainer.scrollTop = supportContainer.scrollHeight;
+                    }
+                }
+            }
+        }, 3000);
 
     </script>
 </body>

@@ -985,13 +985,19 @@
             const message = input.value.trim();
             if (!message || !currentChatTripId) return;
             input.value = '';
-            await sb.from('chat_messages').insert([{
+            
+            const newMsg = {
                 trip_id: currentChatTripId,
                 sender_role: 'driver',
                 sender_id: currentDriver.id,
                 sender_name: currentDriver.name,
-                message, message_type: 'text'
-            }]);
+                message, message_type: 'text',
+                created_at: new Date().toISOString()
+            };
+            
+            appendMsg(newMsg);
+            
+            await sb.from('chat_messages').insert([newMsg]);
         }
 
         function subscribeChatMsgs(tripId) {
@@ -1511,6 +1517,30 @@
                 });
             });
         }
+        let globalChatCountDriver = 0;
+        
+        // نظام مزامنة احتياطي شامل للسواق لتجاوز مشاكل حجب WebSockets
+        setInterval(async () => {
+            // تحديث القائمة الجانبية في الخلفية إذا وصلت رسالة جديدة للسواق
+            if (document.getElementById('page-chats').classList.contains('active') && typeof currentDriver !== 'undefined' && currentDriver) {
+                const { count } = await sb.from('chat_messages').select('*, trips!inner(driver_id)', { count: 'exact', head: true }).eq('trips.driver_id', currentDriver.id);
+                // تبسيط العداد بشكل خفيف جدا للسائق:
+                if (count !== undefined && count > globalChatCountDriver) {
+                    globalChatCountDriver = count;
+                    if (typeof loadDriverChats === 'function') loadDriverChats();
+                }
+            }
+
+            // تحديث نافذة الشات المفتوحة
+            const container = document.getElementById('chat-messages');
+            if (container && container.offsetParent !== null && typeof currentChatTripId !== 'undefined' && currentChatTripId) {
+                const { data: msgs } = await sb.from('chat_messages').select('id').eq('trip_id', currentChatTripId);
+                const currentMsgCount = container.querySelectorAll('.msg').length;
+                if (msgs && msgs.length > currentMsgCount) {
+                    loadChatMsgs(currentChatTripId);
+                }
+            }
+        }, 3000);
     </script>
 
 </body>

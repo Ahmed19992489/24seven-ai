@@ -2229,15 +2229,71 @@
             if (!message || !currentClientChatTripId) return;
             input.value = '';
             const { data: profile } = await sb.from('profiles').select('full_name').eq('id', user.id).single();
-            await sb.from('chat_messages').insert([{
+            const newMsg = {
                 trip_id: currentClientChatTripId,
                 sender_role: 'client',
                 sender_id: user.id,
                 sender_name: profile?.full_name || 'عميل',
                 message: message,
-                message_type: 'text'
-            }]);
+                message_type: 'text',
+                created_at: new Date().toISOString()
+            };
+            
+            // إضافة الرسالة فوراً للشاشة (Optimistic UI)
+            appendClientMsg(newMsg);
+            
+            await sb.from('chat_messages').insert([newMsg]);
         }
+        
+        let globalSupportCountClient = 0;
+        
+        // نظام مزامنة احتياطي تحسباً لتعطل WebSockets وتحديث المحادثات الجانبية
+        setInterval(async () => {
+            // 1. Trip Chat Polling
+            if (currentClientChatTripId) {
+                const container = document.getElementById('client-chat-messages');
+                // حفظ حالة التمرير
+                const isAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 50;
+                
+                const { data: messages } = await sb.from('chat_messages')
+                    .select('*')
+                    .eq('trip_id', currentClientChatTripId)
+                    .order('created_at', { ascending: true });
+                
+                if (messages && messages.length > 0) {
+                    const currentMsgCount = container.querySelectorAll('.msg-bubble').length;
+                    if (messages.length > currentMsgCount) {
+                        container.innerHTML = '';
+                        messages.forEach(m => appendClientMsg(m));
+                        if(isAtBottom) container.scrollTop = container.scrollHeight;
+                    }
+                }
+            }
+            
+            // 2. Support Widget Polling
+            if (typeof user !== 'undefined' && user && user.id) {
+                const { count } = await sb.from('support_chats').select('*', { count: 'exact', head: true }).eq('user_id', user.id);
+                if (count !== undefined && count > globalSupportCountClient) {
+                    // تجنب الإشعار الوهمي عند التحميل الأول
+                    const isFirstLoad = globalSupportCountClient === 0;
+                    globalSupportCountClient = count;
+                    
+                    if (!isFirstLoad) {
+                        if (typeof isWidgetChatOpen !== 'undefined' && isWidgetChatOpen) {
+                            if (typeof loadWidgetMessages === 'function') loadWidgetMessages();
+                        } else {
+                            const badge = document.getElementById('widget-chat-badge');
+                            if (badge && badge.classList.contains('hidden')) {
+                                badge.classList.remove('hidden');
+                                badge.textContent = '!';
+                                if (typeof addNotification === 'function') addNotification('رد جديد من خدمة العملاء 💬');
+                                if (typeof showNotifBanner === 'function') showNotifBanner('رد جديد من خدمة العملاء 💬');
+                            }
+                        }
+                    }
+                }
+            }
+        }, 3000);
 
         async function shareMyLocation() {
             if (!navigator.geolocation) return alert('المتصفح لا يدعم تحديد الموقع');
