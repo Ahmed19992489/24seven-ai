@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 
 <head>
@@ -1756,7 +1756,7 @@
                 // زر دردشة الرحلة - يظهر للرحلات المعيّن لها كابتن (وليس من google_reservations)
                 let chatBtnHtml = '';
                 if (t.drivers && t.drivers.name && !String(t.id).startsWith('gr_') && t.status !== 'completed' && t.status !== 'trip_ended') {
-                    const dName = (t.drivers.name || 'الكابتن').replace(/'/g, '\\'');
+                    const dName = (t.drivers.name || '\u0627\u0644\u0643\u0627\u0628\u062a\u0646').replace(/'/g, '');
                     chatBtnHtml = `
                     <div class="mt-3 pt-3 border-t border-slate-700 text-center">
                         <button onclick="openClientChat('${t.id}', '${dName}')"
