@@ -2443,7 +2443,6 @@ ${contextData}
         // ⭐ شات خدمة العملاء (Support Chats) للموديتور
         // ==========================================
         let modCurrentSupportUserId = null;
-        let supportChatSub = null;
         let globalModSupportSub = null;
 
         function setupModSupportRealtime() {
@@ -2453,7 +2452,8 @@ ${contextData}
                     const msg = payload.new;
                     if (msg.sender_role === 'client') {
                         if (activeTab === 'support-chats' && modCurrentSupportUserId === msg.user_id) {
-                            // If the chat is open, it's already updated by supportChatSub
+                            // If the chat is open, append directly to view
+                            appendModSupportMsg(msg);
                             loadModSupportChatsSilent();
                         } else {
                             // إشعار
@@ -2580,17 +2580,11 @@ ${contextData}
             }
 
             msgs.forEach(m => appendModSupportMsg(m));
-
-            // الاشتراك لمراقبة الرسائل المباشرة
-            if (supportChatSub) sbClient.removeChannel(supportChatSub);
-            supportChatSub = sbClient.channel('support-mod-' + userId)
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_chats', filter: 'user_id=eq.' + userId }, (payload) => {
-                    appendModSupportMsg(payload.new);
-                }).subscribe();
         }
 
         function appendModSupportMsg(m) {
             const container = document.getElementById('mod-support-messages');
+            if (container.innerHTML.includes('لا توجد رسائل')) container.innerHTML = '';
             const div = document.createElement('div');
             div.style.cssText = `max-width:80%;padding:10px 14px;border-radius:12px;font-size:0.85rem;line-height:1.5;word-wrap:break-word;margin-bottom:4px;position:relative;`;
             
