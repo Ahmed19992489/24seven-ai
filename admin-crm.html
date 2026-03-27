@@ -262,6 +262,24 @@
                 </div>
             </div>
 
+            <div class="glass-panel p-4 mb-4 flex gap-3 flex-wrap items-end bg-slate-50 border border-slate-200 shadow-sm animate-fade-in-up">
+                <div class="flex-1 min-w-[200px]">
+                    <label class="text-xs font-bold text-slate-500 block mb-1">بحث (اسم عميل، موبايل، مسار، رقم الرحلة)</label>
+                    <input type="text" id="ops-search" oninput="loadOperations()" placeholder="ابحث هنا..." class="input-std">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500 block mb-1">من تاريخ الرحلة</label>
+                    <input type="date" id="ops-date-from" onchange="loadOperations()" class="input-std">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500 block mb-1">إلى تاريخ الرحلة</label>
+                    <input type="date" id="ops-date-to" onchange="loadOperations()" class="input-std">
+                </div>
+                <div>
+                    <button onclick="clearOpsFilter()" class="bg-slate-200 text-slate-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-300 transition">مسح الفلاتر</button>
+                </div>
+            </div>
+
             <div class="glass-panel overflow-hidden">
                 <div class="table-responsive">
                     <table class="w-full text-right text-sm whitespace-nowrap">
@@ -1107,6 +1125,9 @@
         const sbClient = supabase.createClient(supabaseUrl, supabaseKey);
 
         showPage('dashboard');
+        
+        // Setup real-time listeners globally
+        setupSupportRealtime();
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -1213,9 +1234,21 @@
                 .subscribe();
         }
 
+        function clearOpsFilter() {
+            if(document.getElementById('ops-search')) document.getElementById('ops-search').value = '';
+            if(document.getElementById('ops-date-from')) document.getElementById('ops-date-from').value = '';
+            if(document.getElementById('ops-date-to')) document.getElementById('ops-date-to').value = '';
+            loadOperations();
+        }
+
         async function loadOperations() {
             const list = document.getElementById('ops-table');
             list.innerHTML = '<tr><td colspan="8" class="text-center p-4">جاري التحميل...</td></tr>';
+            
+            const search = document.getElementById('ops-search')?.value.toLowerCase() || '';
+            const fDate = document.getElementById('ops-date-from')?.value || '';
+            const tDate = document.getElementById('ops-date-to')?.value || '';
+
             const { data: trips, error } = await sbClient.from('trips').select(`*, cars:cars!fk_trips_car(brand, model, plate_number), drivers:drivers!fk_trips_driver(name, phone)`).order('created_at', { ascending: false });
             if (error) { list.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-red-500">حدث خطأ</td></tr>'; return; }
 
@@ -1227,9 +1260,55 @@
             }
 
             list.innerHTML = '';
-            if (!trips?.length) { list.innerHTML = '<tr><td colspan="8" class="text-center p-4">لا توجد رحلات</td></tr>'; return; }
+            
+            const filteredTrips = (trips || []).filter(t => {
+                let matchSearch = true;
+                if (search) {
+                    const profile = profilesMap[t.user_id] || {};
+                    let name = profile.full_name || t.manual_client_name || '';
+                    let phone = profile.phone || t.client_phone || '';
+                    let notes = t.admin_notes || '';
+                    let locs = (t.pickup_location || '') + ' ' + (t.dropoff_location || '');
+                    matchSearch = name.toLowerCase().includes(search) || phone.includes(search) || notes.toLowerCase().includes(search) || locs.toLowerCase().includes(search) || String(t.id).includes(search);
+                }
 
-            trips.forEach(t => {
+                let matchDate = true;
+                if (fDate || tDate) {
+                    let extractedDateStr = '';
+                    if (t.admin_notes) {
+                        const dMatch = t.admin_notes.match(/📅\s*([0-9\-/\\]+)/);
+                        if (dMatch) extractedDateStr = dMatch[1].trim();
+                    }
+                    
+                    // تحويل التاريخ من النص إذا تم التقاطه، أو استخدام تاريخ إنشاء الطلب كبديل
+                    let tripDate;
+                    if (extractedDateStr) {
+                        tripDate = new Date(extractedDateStr);
+                    } else if (t.trip_date) {
+                        tripDate = new Date(t.trip_date);
+                    } else {
+                        tripDate = new Date(t.created_at);
+                    }
+                    
+                    if (!isNaN(tripDate.getTime())) {
+                        tripDate.setHours(0,0,0,0);
+                        if (fDate) {
+                            const fd = new Date(fDate); fd.setHours(0,0,0,0);
+                            if (tripDate < fd) matchDate = false;
+                        }
+                        if (tDate && matchDate) {
+                            const td = new Date(tDate); td.setHours(0,0,0,0);
+                            if (tripDate > td) matchDate = false;
+                        }
+                    }
+                }
+                
+                return matchSearch && matchDate;
+            });
+
+            if (!filteredTrips.length) { list.innerHTML = '<tr><td colspan="8" class="text-center p-4">لا توجد رحلات مطابقة للفلاتر</td></tr>'; return; }
+
+            filteredTrips.forEach(t => {
                 const profile = profilesMap[t.user_id] || { full_name: 'عميل', phone: '-' };
 
                 // البحث عن الاسم والرقم في admin_notes إذا كانت الحقول غير موجودة
@@ -1986,6 +2065,85 @@
         // ==========================================
         let adminChatMode = 'trip'; // 'trip' or 'support'
         let adminCurrentSupportUserId = null;
+        let globalSupportSub = null;
+
+        function setupSupportRealtime() {
+            if (globalSupportSub) return;
+            globalSupportSub = sbClient.channel('global-support-chats')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_chats' }, (payload) => {
+                    const msg = payload.new;
+                    // إذا كان المرسل هو العميل
+                    if (msg.sender_role === 'client') {
+                        if (adminChatMode === 'support' && adminCurrentSupportUserId === msg.user_id) {
+                            // إذا المشرف فاتح شات هذا العميل تحديداً
+                            const container = document.getElementById('admin-chat-messages');
+                            if (container) {
+                                if (container.innerHTML.includes('لا توجد رسائل')) container.innerHTML = '';
+                                const div = document.createElement('div');
+                                div.style.cssText = `max-width:80%;padding:10px 14px;border-radius:12px;font-size:0.85rem;line-height:1.5;word-wrap:break-word;margin-bottom:4px;background:#ffffff;border:1px solid #e5e7eb;align-self:flex-start;`;
+                                div.innerHTML = `
+                                    <p class="text-slate-800" style="white-space: pre-wrap;">${msg.message}</p>
+                                    <p class="text-[9px] text-gray-400 mt-1">${new Date(msg.created_at).toLocaleTimeString('ar-EG', {hour: '2-digit', minute:'2-digit'})}</p>
+                                `;
+                                container.appendChild(div);
+                                container.scrollTop = container.scrollHeight;
+                            }
+                            // نحدث قائمة الجنب بصمت
+                            loadSupportChatsSilent();
+                        } else {
+                            // إشعار
+                            const badge = document.getElementById('support-unread-badge');
+                            if (badge) {
+                                badge.textContent = '!';
+                                badge.classList.remove('hidden');
+                                badge.classList.add('animate-bounce');
+                                setTimeout(() => badge.classList.remove('animate-bounce'), 3000);
+                            }
+                            // تحديث القائمة لو المشرف في صفحة دعم العملاء
+                            if (adminChatMode === 'support' && !adminCurrentSupportUserId) {
+                                loadSupportChats();
+                            }
+                            
+                            try {
+                                const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+                                audio.play().catch(e => {});
+                            } catch(e) {}
+                        }
+                    }
+                })
+                .subscribe();
+        }
+
+        async function loadSupportChatsSilent() {
+            // تحديث خفي للقائمة بدون إظهار لودينج
+            const { data: msgs } = await sbClient.from('support_chats')
+                .select('user_id, message, created_at, sender_role')
+                .order('created_at', { ascending: false });
+            if (!msgs || msgs.length === 0) return;
+            
+            const byUser = {};
+            for (const m of msgs) {
+                if (!byUser[m.user_id]) byUser[m.user_id] = { uid: m.user_id, last: m.message, time: m.created_at, unread: 0 };
+                if (m.sender_role === 'client') byUser[m.user_id].unread++;
+            }
+            const userIds = Object.keys(byUser);
+            if (userIds.length > 0) {
+                const { data: profiles } = await sbClient.from('profiles').select('id, full_name').in('id', userIds);
+                if (profiles) profiles.forEach(p => { if (byUser[p.id]) byUser[p.id].name = p.full_name || p.id.slice(0, 8); });
+            }
+            const list = document.getElementById('admin-support-list');
+            if(list) {
+                list.innerHTML = Object.values(byUser).map(u => `
+                    <div onclick="openSupportChat('${u.uid}', '${(u.name || u.uid.slice(0, 8)).replace(/'/g, '')}')"
+                         class="p-4 cursor-pointer hover:bg-amber-50 transition border-b border-gray-100 ${adminCurrentSupportUserId === u.uid ? 'bg-amber-50 border-r-4 border-amber-500' : ''}">
+                        <div class="flex justify-between items-center">
+                            <p class="font-bold text-sm text-gray-800">${u.name || u.uid.slice(0, 8)}</p>
+                            <span class="text-[9px] text-gray-400">${new Date(u.time).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1 truncate">${u.last}</p>
+                    </div>`).join('');
+            }
+        }
 
         function switchChatTab(tab) {
             adminChatMode = tab;
