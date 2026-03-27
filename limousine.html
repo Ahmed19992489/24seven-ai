@@ -1549,13 +1549,16 @@
             let allTrips = [];
             if (!error && trips) {
                 allTrips = trips.map(t => {
-                    let tDate = '--', tTime = '--', pax = '--', bags = '--';
-                    if (t.admin_notes) {
-                        const dMatch = t.admin_notes.match(/📅\s*([^-]+)\s*-\s*([^\n]+)/);
-                        if (dMatch) { tDate = dMatch[1].trim(); tTime = dMatch[2].trim(); }
-                        const pMatch = t.admin_notes.match(/👥\s*(\d+)/);
+                    let tDate = t.trip_date || '--', tTime = t.trip_time || '--', pax = t.passengers || '--', bags = t.bags || '--';
+                    if (t.admin_notes && (tDate === '--' || pax === '--' || bags === '--')) {
+                        const dMatch = t.admin_notes.match(/📅\s*([0-9-/\\]+)(?:\s*[-:]\s*([0-9:amp\s]+))?/i);
+                        if (dMatch) { 
+                            tDate = dMatch[1].trim(); 
+                            if(dMatch[2]) tTime = dMatch[2].trim(); 
+                        }
+                        const pMatch = t.admin_notes.match(/👥\s*(\d+)/) || t.admin_notes.match(/أفراد?:\s*(\d+)/);
                         if (pMatch) pax = pMatch[1];
-                        const bMatch = t.admin_notes.match(/🧳\s*(\d+)/);
+                        const bMatch = t.admin_notes.match(/🧳\s*(\d+)/) || t.admin_notes.match(/شنط?:\s*(\d+)/);
                         if (bMatch) bags = bMatch[1];
                     }
                     t.details = { date: tDate, time: tTime, pax, bags, car: t.car_type || (t.cars ? t.cars.model : '--') };
@@ -1750,6 +1753,19 @@
                     </div>`;
                 }
 
+                // زر دردشة الرحلة - يظهر للرحلات المعيّن لها كابتن (وليس من google_reservations)
+                let chatBtnHtml = '';
+                if (t.drivers && t.drivers.name && !String(t.id).startsWith('gr_') && t.status !== 'completed' && t.status !== 'trip_ended') {
+                    const dName = (t.drivers.name || 'الكابتن').replace(/'/g, '\\'');
+                    chatBtnHtml = `
+                    <div class="mt-3 pt-3 border-t border-slate-700 text-center">
+                        <button onclick="openClientChat('${t.id}', '${dName}')"
+                            class="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600/20 border border-blue-500/40 text-blue-400 rounded-xl text-xs font-bold hover:bg-blue-600 hover:text-white transition">
+                            <i class="fas fa-comments"></i> دردشة الرحلة
+                        </button>
+                    </div>`;
+                }
+
                 return `
                 <div class="glass-card p-4 trip-card animate-fade-in-up mb-4 border border-slate-700/50">
                     <div class="flex justify-between items-start mb-2">
@@ -1762,6 +1778,7 @@
                     </div>
                     ${detailsHtml}
                     ${driverHtml}
+                    ${chatBtnHtml}
                     ${ratingHtml}
                 </div>`;
             }).join('') : '';
@@ -2114,7 +2131,7 @@
             const { data: trips } = await sb.from('trips')
                 .select('*, drivers:drivers!fk_trips_driver(name, phone), cars:cars!fk_trips_car(brand, model, plate_number)')
                 .eq('user_id', user.id)
-                .eq('status', 'driver_assigned')
+                .in('status', ['driver_assigned', 'approved'])
                 .order('created_at', { ascending: false });
 
             if (!trips || trips.length === 0) {
@@ -2526,12 +2543,14 @@
             if (session?.user) {
                 setTimeout(setupTripStatusListener, 1000);
                 setTimeout(setupGlobalChatListener, 1200);
+                setTimeout(initSupportChatListener, 1400);
             }
         });
         // لو اليوزر موجود خلاص
         if (user) {
             setupTripStatusListener();
             setupGlobalChatListener();
+            initSupportChatListener();
         }
 
         // ==========================================
@@ -2706,7 +2725,194 @@
             // إعادة رسم الواجهة
             loadLoyalty();
         }
-    </script>
-</body>
 
+        // ==========================================
+        // ⭐ خدمة العملاء (Support Chat Widget)
+        // ==========================================
+        let isSupportChatOpen = false;
+        let supportChatChannel = null;
+
+        function toggleSupportChat() {
+            if (!user) {
+                alert('يجب تسجيل الدخول أولاً للتواصل مع خدمة العملاء.');
+                return;
+            }
+            const win = document.getElementById('support-chat-window');
+            isSupportChatOpen = !isSupportChatOpen;
+            if (isSupportChatOpen) {
+                win.classList.remove('hidden');
+                document.getElementById('support-chat-badge').classList.add('hidden');
+                loadSupportMessages(); // Load immediately when opened
+                initSupportChatListener(); // Ensure listener is active
+            } else {
+                win.classList.add('hidden');
+            }
+        }
+
+        async function loadSupportMessages() {
+            if (!user) return;
+            const container = document.getElementById('support-chat-messages');
+
+            try {
+                const { data: msgs, error } = await sb.from('support_chats')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('created_at', { ascending: true });
+
+                if (error) throw error;
+                
+                container.innerHTML = `
+                    <div class="flex justify-center mt-2 mb-2">
+                        <span class="bg-slate-200 text-slate-500 text-[10px] px-2 py-1 rounded-full">رسائل خدمة العملاء</span>
+                    </div>
+                `;
+
+                if (!msgs || msgs.length === 0) {
+                    container.innerHTML += `
+                        <div class="flex items-start gap-2 max-w-[85%] self-start">
+                            <div class="w-7 h-7 rounded-full bg-indigo-100 text-indigo-600 flex justify-center items-center text-xs flex-shrink-0"><i class="fas fa-headset"></i></div>
+                            <div class="bg-white p-3 rounded-2xl rounded-tr-none shadow-sm border border-slate-100 text-sm text-slate-700">
+                                مرحباً بك في 24Seven! كيف يمكننا مساعدتك اليوم؟ 😊
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    msgs.forEach(m => renderSupportMessage(m, false));
+                }
+                container.scrollTop = container.scrollHeight;
+            } catch (err) {
+                console.error("Support Chat load error:", err);
+            }
+        }
+
+        function renderSupportMessage(m, autoScroll = true) {
+            const container = document.getElementById('support-chat-messages');
+            const timeStr = new Date(m.created_at || new Date()).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+            
+            if (m.sender_role === 'client') {
+                container.innerHTML += `
+                    <div class="flex flex-col items-end max-w-[85%] self-end">
+                        <div class="bg-indigo-600 text-white p-3 rounded-2xl rounded-br-none shadow-sm text-sm" style="word-break: break-word;">
+                            ${m.message}
+                        </div>
+                        <span class="text-[9px] text-slate-400 mt-1">${timeStr}</span>
+                    </div>
+                `;
+            } else {
+                container.innerHTML += `
+                    <div class="flex items-start gap-2 max-w-[85%] self-start mt-2">
+                        <div class="w-7 h-7 rounded-full bg-indigo-100 text-indigo-600 flex justify-center items-center text-xs flex-shrink-0 mt-1 shadow-sm"><i class="fas fa-headset"></i></div>
+                        <div class="flex flex-col items-start">
+                            <div class="bg-white p-3 rounded-2xl rounded-tr-none shadow-sm border border-slate-100 text-sm text-slate-700" style="word-break: break-word;">
+                                ${m.message}
+                            </div>
+                            <span class="text-[9px] text-slate-400 mt-1 mr-1">${timeStr}</span>
+                        </div>
+                    </div>
+                `;
+            }
+            if (autoScroll) container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendSupportMessage() {
+            if (!user) return;
+            const input = document.getElementById('support-chat-input');
+            const msgText = input.value.trim();
+            if (!msgText) return;
+
+            input.value = ''; // clear input
+
+            // Optimistic render
+            const tempMsg = {
+                message: msgText,
+                sender_role: 'client',
+                created_at: new Date().toISOString()
+            };
+            renderSupportMessage(tempMsg, true);
+
+            try {
+                const { error } = await sb.from('support_chats').insert([{
+                    user_id: user.id,
+                    sender_role: 'client',
+                    message: msgText
+                }]);
+                if (error) {
+                    console.error("Support chat save error:", error);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function initSupportChatListener() {
+            if (!user || supportChatChannel) return;
+            supportChatChannel = sb.channel('support-chat-' + user.id)
+                .on('postgres_changes', { 
+                    event: 'INSERT', 
+                    schema: 'public', 
+                    table: 'support_chats',
+                    filter: 'user_id=eq.' + user.id
+                }, (payload) => {
+                    const newMsg = payload.new;
+                    if (newMsg.sender_role !== 'client') {
+                        if (isSupportChatOpen) {
+                            renderSupportMessage(newMsg, true);
+                        } else {
+                            const badge = document.getElementById('support-chat-badge');
+                            badge.classList.remove('hidden');
+                            badge.textContent = '!';
+                            addNotification('رد جديد من خدمة العملاء 💬');
+                            showNotifBanner('رد جديد من خدمة العملاء 💬');
+                        }
+                    }
+                }).subscribe();
+        }
+    </script>
+    
+    <!-- Floating Customer Support Chat -->
+    <div id="support-chat-widget" class="fixed bottom-6 left-6 z-[99] flex flex-col items-start" style="direction: rtl;">
+        <!-- Chat Window (Hidden by default) -->
+        <div id="support-chat-window" class="hidden w-80 max-w-[90vw] h-96 max-h-[70vh] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col mb-4 overflow-hidden origin-bottom-left transition-all duration-300">
+            <!-- Header -->
+            <div class="bg-gradient-to-l from-indigo-700 to-indigo-500 p-4 text-white flex justify-between items-center shadow-md pb-6 relative">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-white/20 flex justify-center items-center shadow-inner border border-white/30">
+                        <i class="fas fa-headset text-lg"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-sm">خدمة عملاء 24Seven</h4>
+                        <p class="text-[10px] text-indigo-100 font-medium">نرد عليك خلال دقائق ⚡</p>
+                    </div>
+                </div>
+                <button onclick="toggleSupportChat()" class="text-white bg-indigo-800/40 hover:bg-indigo-800/80 rounded-full w-8 h-8 flex items-center justify-center transition">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- Curved overlay -->
+            <div class="-mt-4 h-5 bg-slate-50 rounded-t-3xl relative z-10 w-full mb-[-1px]"></div>
+
+            <!-- Messages Area -->
+            <div id="support-chat-messages" class="flex-1 overflow-y-auto px-4 pb-4 bg-slate-50 flex flex-col gap-3 relative scroll-smooth overflow-x-hidden">
+                <!-- Messages will be injected here -->
+            </div>
+            
+            <!-- Input Area -->
+            <div class="p-3 bg-white border-t border-slate-100 flex gap-2 items-center">
+                <input type="text" id="support-chat-input" placeholder="اكتب رسالتك..." 
+                       class="flex-1 bg-slate-100 border-none rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition shadow-inner"
+                       onkeypress="if(event.key==='Enter') sendSupportMessage()">
+                <button onclick="sendSupportMessage()" class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex justify-center items-center hover:bg-indigo-700 transition transform hover:scale-105 shadow-md flex-shrink-0">
+                    <i class="fas fa-paper-plane mr-1"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Floating Button -->
+        <button id="support-chat-btn" onclick="toggleSupportChat()" class="w-14 h-14 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-full shadow-[0_10px_25px_rgba(79,70,229,0.5)] flex justify-center items-center text-xl hover:scale-110 active:scale-95 transition-all duration-300 relative border-2 border-white">
+            <i class="fas fa-headphones-alt"></i>
+            <span id="support-chat-badge" class="hidden absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex justify-center items-center rounded-full border border-white animate-pulse">!</span>
+        </button>
+    </div>
+</body>
 </html>
