@@ -63,6 +63,11 @@
                 <i class="fas fa-car-side w-6"></i>
                 <span class="font-bold">دردشة الرحلات</span>
             </div>
+            <div onclick="showTab('support-chats')" id="btn-support-chats" class="sidebar-item">
+                <i class="fas fa-headset w-6"></i>
+                <span class="font-bold">خدمة العملاء</span>
+                <span id="support-badge" class="hidden mr-auto bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">0</span>
+            </div>
             <div onclick="showTab('trips')" id="btn-trips" class="sidebar-item">
                 <i class="fas fa-route w-6"></i>
                 <span class="font-bold">الحجوزات</span>
@@ -325,6 +330,46 @@
                     <div id="mod-chat-input-bar" class="p-3 border-t flex gap-2 bg-white rounded-b-xl relative z-20" style="display:none">
                         <input type="text" id="mod-chat-input" placeholder="تدخل كمشرف..." class="flex-1 border rounded-full px-4 py-2 text-sm outline-none focus:border-blue-500" onkeypress="if(event.key==='Enter')sendModMessage()">
                         <button onclick="sendModMessage()" class="bg-blue-600 hover:bg-blue-700 text-white w-10 h-10 rounded-full flex items-center justify-center transition transform hover:scale-105 shadow-md"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab: Support Chats (Website Customers) -->
+        <section id="tab-support-chats" class="tab-content hidden h-full flex flex-col">
+            <div class="flex items-center gap-3 mb-6">
+                <h2 class="text-2xl font-bold">🎟️ خدمة العملاء (الموقع)</h2>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4" style="height:75vh">
+                <!-- قائمة المحادثات -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+                    <div class="p-3 bg-amber-50 border-b text-xs font-bold text-amber-700">🎟️ استفسارات عملاء الموقع</div>
+                    <div id="mod-support-list" class="flex-1 overflow-y-auto divide-y h-full max-h-[65vh]">
+                        <p class="text-center text-gray-400 p-6">جاري التحميل...</p>
+                    </div>
+                </div>
+                <!-- نافذة المحادثة -->
+                <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col relative h-full">
+                    <div id="mod-support-header" class="p-4 border-b bg-gray-50 flex justify-between items-center" style="display:none;">
+                        <div>
+                            <p class="font-bold text-gray-700" id="mod-support-header-name">اختر محادثة</p>
+                            <p class="text-xs text-gray-400">شات الموقع المباشر</p>
+                        </div>
+                    </div>
+                    <div id="mod-no-support-header" class="p-4 border-b bg-gray-50 flex items-center">
+                        <p class="font-bold text-gray-700">اختر محادثة من القائمة</p>
+                    </div>
+                    <div id="mod-support-messages" class="flex-1 overflow-y-auto p-4 flex flex-col gap-2 bg-gray-50" style="direction:rtl">
+                        <div class="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 z-10" id="mod-no-support">
+                            <div class="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center text-slate-400 text-2xl mb-4">
+                                <i class="fas fa-headset"></i>
+                            </div>
+                            <p class="text-slate-500 font-bold">اختر استفساراً للرد عليه</p>
+                        </div>
+                    </div>
+                    <div id="mod-support-input-bar" class="p-3 border-t flex gap-2 bg-white rounded-b-xl relative z-20" style="display:none">
+                        <input type="text" id="mod-support-input" placeholder="رد الموديتور..." class="flex-1 border rounded-full px-4 py-2 text-sm outline-none focus:border-amber-500" onkeypress="if(event.key==='Enter')sendModSupportMessage()">
+                        <button onclick="sendModSupportMessage()" class="bg-amber-600 hover:bg-amber-700 text-white w-10 h-10 rounded-full flex items-center justify-center transition transform hover:scale-105 shadow-md"><i class="fas fa-paper-plane"></i></button>
                     </div>
                 </div>
             </div>
@@ -721,6 +766,11 @@
             }
             if(tabId === 'dashboard') loadSummary();
             if(tabId === 'trip-chats') loadModChats();
+            if(tabId === 'support-chats') {
+                loadModSupportChats();
+                const badge = document.getElementById('support-badge');
+                if(badge) badge.classList.add('hidden');
+            }
             if(tabId === 'chat') {
                 loadChats();
                 // Ensure list is visible on mobile when opening tab
@@ -1274,7 +1324,7 @@
                     dropoff_location: trip.dropoff_address || '',
                     estimated_price: Number(trip.cost) || 0,
                     status: 'driver_assigned',
-                    admin_notes: `حجز موديتور: ${currentModName}\nالعميل: ${trip.customer_name}\nالسائق: ${driverName} (${driverPhone})`
+                    admin_notes: `📅 ${trip.trip_date || '--'} - ${trip.trip_time || '--'}\n👥 ${trip.passengers || '1'}\n🧳 ${trip.bags || '0'}\nحجز موديتور: ${currentModName}\nالعميل: ${trip.customer_name}\nالسائق: ${driverName} (${driverPhone})`
                 }]).select().single();
 
                 if (tripErr) throw tripErr;
@@ -2388,6 +2438,167 @@ ${contextData}
                 alert('✅ تم الرد على الطلب');
             } catch (err) { alert('❌ خطأ: ' + err.message); }
         }
+
+        // ==========================================
+        // ⭐ شات خدمة العملاء (Support Chats) للموديتور
+        // ==========================================
+        let modCurrentSupportUserId = null;
+        let supportChatSub = null;
+
+        async function loadModSupportChats() {
+            const list = document.getElementById('mod-support-list');
+            list.innerHTML = '<p class="text-center text-gray-400 p-6">جاري التحميل...</p>';
+
+            const { data: msgs } = await sbClient.from('support_chats')
+                .select('user_id, message, created_at, sender_role')
+                .order('created_at', { ascending: false });
+
+            if (!msgs || msgs.length === 0) {
+                list.innerHTML = '<p class="text-center text-gray-400 p-6">لا توجد استفسارات</p>';
+                return;
+            }
+
+            // تجميع بالخلاصة لكل مستخدم
+            const byUser = {};
+            for (const m of msgs) {
+                if (!byUser[m.user_id]) {
+                    byUser[m.user_id] = { uid: m.user_id, last: m.message, time: m.created_at, unread: 0 };
+                }
+                if (m.sender_role === 'client') byUser[m.user_id].unread++;
+            }
+
+            const userIds = Object.keys(byUser);
+            if (userIds.length > 0) {
+                const { data: profiles } = await sbClient.from('profiles').select('id, full_name').in('id', userIds);
+                if (profiles) profiles.forEach(p => {
+                    if (byUser[p.id]) byUser[p.id].name = p.full_name || p.id.slice(0, 8);
+                });
+            }
+
+            list.innerHTML = Object.values(byUser).map(u => `
+                <div onclick="openModSupportChat('${u.uid}', '${(u.name || u.uid.slice(0, 8)).replace(/'/g, '')}')"
+                     class="p-4 cursor-pointer hover:bg-amber-50 transition border-b border-gray-100 ${modCurrentSupportUserId === u.uid ? 'bg-amber-50 border-r-4 border-amber-500' : ''}">
+                    <div class="flex justify-between items-center">
+                        <p class="font-bold text-sm text-gray-800">${u.name || u.uid.slice(0, 8)}</p>
+                        <span class="text-[9px] text-gray-400">${new Date(u.time).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1 truncate">${u.last}</p>
+                </div>`).join('');
+        }
+
+        async function openModSupportChat(userId, name) {
+            modCurrentSupportUserId = userId;
+            
+            document.getElementById('mod-support-header').style.display = 'flex';
+            document.getElementById('mod-no-support-header').style.display = 'none';
+            document.getElementById('mod-support-header-name').textContent = `🎟️ ${name}`;
+            document.getElementById('mod-support-input-bar').style.display = 'flex';
+            
+            // Reload list to update active state
+            loadModSupportChats();
+
+            const { data: msgs } = await sbClient.from('support_chats')
+                .select('*').eq('user_id', userId).order('created_at', { ascending: true });
+
+            const container = document.getElementById('mod-support-messages');
+            container.innerHTML = '';
+
+            if (!msgs || msgs.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-400 py-8">لا توجد رسائل بعد</p>';
+                return;
+            }
+
+            msgs.forEach(m => appendModSupportMsg(m));
+
+            // الاشتراك لمراقبة الرسائل المباشرة
+            if (supportChatSub) sbClient.removeChannel(supportChatSub);
+            supportChatSub = sbClient.channel('support-mod-' + userId)
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_chats', filter: 'user_id=eq.' + userId }, (payload) => {
+                    appendModSupportMsg(payload.new);
+                }).subscribe();
+        }
+
+        function appendModSupportMsg(m) {
+            const container = document.getElementById('mod-support-messages');
+            const div = document.createElement('div');
+            div.style.cssText = `max-width:80%;padding:10px 14px;border-radius:12px;font-size:0.85rem;line-height:1.5;word-wrap:break-word;margin-bottom:4px;position:relative;`;
+            
+            if (m.sender_role === 'admin' || m.sender_role === 'moderator') {
+                div.style.background = '#fcd34d'; // Amber 300
+                div.style.alignSelf = 'flex-end';
+                div.style.marginRight = 'auto'; // RTL push left
+                div.innerHTML = `<span style="font-size:10px;color:#92400e;display:block;margin-bottom:3px;font-weight:bold;">🛡️ الدعم الفني</span>${m.message}`;
+            } else {
+                div.style.background = '#fef3c7'; // Amber 100
+                div.style.alignSelf = 'flex-start';
+                div.innerHTML = `<span style="font-size:10px;color:#b45309;display:block;margin-bottom:3px;font-weight:bold;">👤 العميل</span>${m.message}`;
+            }
+            
+            const t = document.createElement('span');
+            t.style.cssText = 'display:block;font-size:9px;margin-top:4px;opacity:0.5;';
+            t.textContent = new Date(m.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+            div.appendChild(t);
+            
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendModSupportMessage() {
+            const input = document.getElementById('mod-support-input');
+            const message = input.value.trim();
+            if (!message || !modCurrentSupportUserId) return;
+            
+            input.value = '';
+            
+            // --- الإضافة الفورية للواجهة لتجنب انتظار الـ Realtime ---
+            const localMsg = {
+                user_id: modCurrentSupportUserId,
+                sender_role: 'admin',
+                message: message,
+                created_at: new Date().toISOString()
+            };
+            appendModSupportMsg(localMsg);
+            
+            try {
+                // إرسال رد الدعم (نرسله بدور 'admin' لأن كلايهما من طرف الشركة)
+                const { error } = await sbClient.from('support_chats').insert([{
+                    user_id: modCurrentSupportUserId,
+                    sender_role: 'admin',
+                    message: message
+                }]);
+                
+                if (error) throw error;
+                // قم بتحديث القائمة الجانبية فورياً أيضاً
+                loadModSupportChats();
+            } catch (error) {
+                alert('فشل إرسال الرسالة: ' + error.message);
+            }
+        }
+
+        // مراقبة كل رسائل الدعم في الخلفية لإظهار إشعارات
+        function initGlobalSupportListener() {
+            sbClient.channel('global-mod-support-chats')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_chats' }, (payload) => {
+                    const m = payload.new;
+                    if (m.sender_role === 'client') {
+                        // إشعار لو كان التاب غير مفعل
+                        if (!document.getElementById('tab-support-chats').classList.contains('active-tab')) {
+                            const badge = document.getElementById('support-badge');
+                            if (badge) {
+                                badge.classList.remove('hidden');
+                                badge.textContent = '!';
+                            }
+                        }
+                        // تحديث القائمة لو التاب مفتوح لعميل آخر
+                        if (m.user_id !== modCurrentSupportUserId) {
+                            if (!document.getElementById('tab-support-chats').classList.contains('hidden')) {
+                                loadModSupportChats();
+                            }
+                        }
+                    }
+                }).subscribe();
+        }
+        setTimeout(initGlobalSupportListener, 2000);
 
     </script>
 </body>

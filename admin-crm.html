@@ -1125,9 +1125,6 @@
         const sbClient = supabase.createClient(supabaseUrl, supabaseKey);
 
         showPage('dashboard');
-        
-        // Setup real-time listeners globally
-        setupSupportRealtime();
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -2113,6 +2110,9 @@
                 })
                 .subscribe();
         }
+        
+        // Call it immediately after definition
+        setupSupportRealtime();
 
         async function loadSupportChatsSilent() {
             // تحديث خفي للقائمة بدون إظهار لودينج
