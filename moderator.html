@@ -705,6 +705,13 @@
             
             // Auto-detection based on current URL
             const loc = window.location;
+            
+            // [Fix] إذا كان الموقع المفتوح هو الاستضافة الأساسية 24seven-ai.com، فهناك 
+            // سيرفر مستقل محلي بـ Ngrok ولا يوجد مسار API على هذا الدومين.
+            if (loc.hostname.includes('24seven-ai.com') || loc.hostname.includes('github.io') || loc.hostname.includes('vercel.app')) {
+                return null; // سيتم التعامل معها وإظهار رسالة تنبيه
+            }
+
             if (loc.port === '3000' || loc.pathname.startsWith('/moderator') || loc.pathname.startsWith('/dashboard')) {
                 return loc.origin; // Same server (clean origin)
             }
@@ -1180,7 +1187,12 @@
             input.value = '';
 
             try {
-                const targetUrl = `${getApiBaseUrl()}/api/send_reply`;
+                const apiBaseUrl = getApiBaseUrl();
+                if (!apiBaseUrl) {
+                    alert('❌ تنبيه هام:\nلم يتم العثور على رابط اتصال بالسيرفر المحلي (API)!\n\nيرجى مسح هذا الكود بالموبايل أو الدخول إلى (الإعدادات ⚙️) أعلى القائمة الجانبية وإدخال رابط ngrok المتاح فى الشاشة الرئيسية للإدارة.');
+                    return false;
+                }
+                const targetUrl = `${apiBaseUrl}/api/send_reply`;
                 console.log("📤 Sending to:", targetUrl);
                 
                 // [FIX] Resolve normalized ID to original sender_id for WhatsApp API
