@@ -2246,10 +2246,49 @@
         }
         
         let globalSupportCountClient = 0;
+        let lastKnownClientSysMsgId = null;
         
         // نظام مزامنة احتياطي تحسباً لتعطل WebSockets وتحديث المحادثات الجانبية
         setInterval(async () => {
-            // 1. Trip Chat Polling
+            if (typeof user === 'undefined' || !user || !user.id) return;
+
+            // 1. مراقبة الرسائل النظامية المهمة (تحديث السعر أو موافقة بتغيير الوجهة)
+            try {
+                // هنجيب آخر رسالة نظام للرحلات الخاصة بهذا العميل
+                // لازم نجيب الرحلات النشطة للعميل الأول
+                const { data: activeTrips } = await sb.from('trips').select('id').eq('user_id', user.id).in('status', ['driver_assigned', 'approved', 'pending']);
+                if (activeTrips && activeTrips.length > 0) {
+                    const tripIds = activeTrips.map(t => t.id);
+                    const { data: sysMessages } = await sb.from('chat_messages')
+                        .select('id, message, trip_id, created_at')
+                        .in('message_type', ['system'])
+                        .in('trip_id', tripIds)
+                        .order('created_at', { ascending: false })
+                        .limit(1);
+
+                    if (sysMessages && sysMessages.length > 0) {
+                        const latestMsg = sysMessages[0];
+                        if (lastKnownClientSysMsgId === null) {
+                            lastKnownClientSysMsgId = latestMsg.id;
+                        } else if (latestMsg.id !== lastKnownClientSysMsgId) {
+                            const msgText = latestMsg.message;
+                            lastKnownClientSysMsgId = latestMsg.id;
+                            
+                            // لو الرسالة بتاعت موافقة/تعديل السعر نعرضها ونحدث الشاشة
+                            if (msgText.includes('وافق') || msgText.includes('تعديل') || msgText.includes('تغيير') || msgText.includes('إضافة') || msgText.includes('رفض')) {
+                                if (typeof showNotifBanner === 'function') showNotifBanner('📢 ' + msgText.replace(/\\n/g, '<br>'));
+                                if (typeof addNotification === 'function') addNotification('تحديث على رحلتك: ' + msgText.substring(0, 30) + '...');
+                                // تنبيه صوتي
+                                try { new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(e=>{}); } catch(e) {}
+                                // إعادة تحميل واجهة العميل لتحديث السعر الجديد المعروض
+                                loadTrips();
+                            }
+                        }
+                    }
+                }
+            } catch (err) { console.error('Sys messages poll error:', err); }
+
+            // 2. Trip Chat Polling
             if (currentClientChatTripId) {
                 const container = document.getElementById('client-chat-messages');
                 // حفظ حالة التمرير
@@ -2270,7 +2309,7 @@
                 }
             }
             
-            // 2. Support Widget Polling
+            // 3. Support Widget Polling
             if (typeof user !== 'undefined' && user && user.id) {
                 const { count } = await sb.from('support_chats').select('*', { count: 'exact', head: true }).eq('user_id', user.id);
                 if (count !== undefined && count > globalSupportCountClient) {

@@ -1522,20 +1522,67 @@
             });
         }
         let globalChatCountDriver = 0;
+        let lastKnownSystemMsgId = null;
         
-        // نظام مزامنة احتياطي شامل للسواق لتجاوز مشاكل حجب WebSockets
+        // === إشعار عائم يظهر للسواق ===
+        function showDriverToast(text) {
+            const existing = document.getElementById('driver-toast');
+            if (existing) existing.remove();
+            const toast = document.createElement('div');
+            toast.id = 'driver-toast';
+            toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:9999;background:linear-gradient(135deg,#1e40af,#7c3aed);color:white;padding:16px 24px;border-radius:16px;font-size:14px;font-weight:bold;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.4);animation:slideDown 0.4s ease;max-width:90vw;word-wrap:break-word;';
+            toast.innerHTML = text;
+            document.body.appendChild(toast);
+            // تنبيه صوتي
+            try { new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(e=>{}); } catch(e) {}
+            setTimeout(() => { if (toast.parentNode) toast.remove(); }, 8000);
+        }
+
+        // === نظام مزامنة شامل للسواق ===
         setInterval(async () => {
-            // تحديث القائمة الجانبية في الخلفية إذا وصلت رسالة جديدة للسواق
-            if (document.getElementById('page-chats').classList.contains('active') && typeof currentDriver !== 'undefined' && currentDriver) {
+            if (typeof currentDriver === 'undefined' || !currentDriver) return;
+
+            // 1. مراقبة الرسائل المهمة (موافقة/رفض تغيير وجهة + تحديث سعر) بغض النظر عن الصفحة المفتوحة
+            try {
+                const { data: sysMessages } = await sb.from('chat_messages')
+                    .select('id, message, trip_id, created_at')
+                    .in('message_type', ['system'])
+                    .order('created_at', { ascending: false })
+                    .limit(1);
+                
+                if (sysMessages && sysMessages.length > 0) {
+                    const latestMsg = sysMessages[0];
+                    if (lastKnownSystemMsgId === null) {
+                        lastKnownSystemMsgId = latestMsg.id;
+                    } else if (latestMsg.id !== lastKnownSystemMsgId) {
+                        // رسالة نظام جديدة وصلت!
+                        const msg = latestMsg.message;
+                        lastKnownSystemMsgId = latestMsg.id;
+                        
+                        // هل هي متعلقة برحلة السواق؟
+                        const { data: trip } = await sb.from('trips').select('driver_id').eq('id', latestMsg.trip_id).single();
+                        if (trip && trip.driver_id === currentDriver.id) {
+                            // أظهر إشعار عائم
+                            if (msg.includes('وافق') || msg.includes('رفض') || msg.includes('تعديل') || msg.includes('تغيير')) {
+                                showDriverToast('📢 ' + msg.replace(/\\n/g, '<br>'));
+                                // أعد تحميل بيانات الرحلة لتحديث السعر والوجهة
+                                loadDriverTrips();
+                            }
+                        }
+                    }
+                }
+            } catch(e) { console.error('Notification poll error:', e); }
+            
+            // 2. تحديث القائمة الجانبية في الخلفية
+            if (document.getElementById('page-chats') && document.getElementById('page-chats').classList.contains('active')) {
                 const { count } = await sb.from('chat_messages').select('*, trips!inner(driver_id)', { count: 'exact', head: true }).eq('trips.driver_id', currentDriver.id);
-                // تبسيط العداد بشكل خفيف جدا للسائق:
                 if (count !== undefined && count > globalChatCountDriver) {
                     globalChatCountDriver = count;
                     if (typeof loadDriverChats === 'function') loadDriverChats();
                 }
             }
 
-            // تحديث نافذة الشات المفتوحة
+            // 3. تحديث نافذة الشات المفتوحة
             const container = document.getElementById('chat-messages');
             if (container && container.offsetParent !== null && typeof currentChatTripId !== 'undefined' && currentChatTripId) {
                 const { data: msgs } = await sb.from('chat_messages').select('id').eq('trip_id', currentChatTripId);
