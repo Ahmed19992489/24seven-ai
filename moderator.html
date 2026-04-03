@@ -933,9 +933,19 @@
                         container.scrollTop = container.scrollHeight;
                     }
                     
-                    // Play sound for incoming customer messages
+                    // Play sound + update badge for incoming customer messages
                     if (!payload.new.is_from_admin) {
                         playNotify();
+                        // تحديث شارة المراسلات إذا لم يكن الموديتور يشاهد هذا الشات حالياً
+                        if (activeTab !== 'chat' || activeChatId !== incomingNormalized) {
+                            const chatBadge = document.getElementById('chat-badge');
+                            if (chatBadge) {
+                                let count = parseInt(chatBadge.textContent || '0');
+                                if (isNaN(count)) count = 0;
+                                chatBadge.textContent = count + 1;
+                                chatBadge.classList.remove('hidden');
+                            }
+                        }
                     }
                 })
                 .subscribe();
@@ -1062,6 +1072,16 @@
             document.getElementById('chat-avatar').textContent = (chat.name || '?').charAt(0);
             renderMessages();
             renderChatList();
+
+            // تصفير شارة المراسلات عند فتح أي محادثة
+            const chatBadge = document.getElementById('chat-badge');
+            if (chatBadge) {
+                let count = parseInt(chatBadge.textContent || '0');
+                if (count > 0) {
+                    chatBadge.textContent = Math.max(0, count - 1);
+                    if (parseInt(chatBadge.textContent) <= 0) chatBadge.classList.add('hidden');
+                }
+            }
 
             // Mobile view toggle
             if (window.innerWidth < 1024) {
@@ -2646,15 +2666,23 @@ ${contextData}
                 });
             }
 
-            list.innerHTML = Object.values(byUser).map(u => `
+            list.innerHTML = Object.values(byUser).map(u => {
+                const unreadBadge = (u.unread > 0 && modCurrentSupportUserId !== u.uid) 
+                    ? `<span class="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">${u.unread}</span>` 
+                    : '';
+                return `
                 <div onclick="openModSupportChat('${u.uid}', '${(u.name || u.uid.slice(0, 8)).replace(/'/g, '')}')"
                      class="p-4 cursor-pointer hover:bg-amber-50 transition border-b border-gray-100 ${modCurrentSupportUserId === u.uid ? 'bg-amber-50 border-r-4 border-amber-500' : ''}">
                     <div class="flex justify-between items-center">
-                        <p class="font-bold text-sm text-gray-800">${u.name || u.uid.slice(0, 8)}</p>
+                        <div class="flex items-center gap-2">
+                            <p class="font-bold text-sm text-gray-800">${u.name || u.uid.slice(0, 8)}</p>
+                            ${unreadBadge}
+                        </div>
                         <span class="text-[9px] text-gray-400">${new Date(u.time).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                     <p class="text-xs text-gray-500 mt-1 truncate">${u.last}</p>
-                </div>`).join('');
+                </div>`;
+            }).join('');
         }
 
         async function openModSupportChat(userId, name) {
@@ -2664,6 +2692,16 @@ ${contextData}
             document.getElementById('mod-no-support-header').style.display = 'none';
             document.getElementById('mod-support-header-name').textContent = `🎟️ ${name}`;
             document.getElementById('mod-support-input-bar').style.display = 'flex';
+
+            // تصفير شارة التنبيه عند فتح محادثة دعم
+            const badge = document.getElementById('support-badge');
+            if (badge) {
+                let count = parseInt(badge.textContent || '0');
+                if (count > 0) {
+                    badge.textContent = Math.max(0, count - 1);
+                    if (parseInt(badge.textContent) <= 0) badge.classList.add('hidden');
+                }
+            }
             
             // Reload list to update active state
             loadModSupportChats();

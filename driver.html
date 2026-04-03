@@ -498,13 +498,21 @@
 
             // === مصدر 2: رحلات من google_reservations (الشيت) ===
             try {
-                // البحث بعدة صيغ لرقم الهاتف
-                const driverPhone = currentDriver.phone.replace(/\D/g, '');
+                // البحث بعدة صيغ لرقم الهاتف (معالجة +20, 0020, 01, 1)
+                let driverPhone = currentDriver.phone.replace(/\D/g, '');
+                // إزالة مقدمة الدولة المصرية بكل أشكالها
+                if (driverPhone.startsWith('0020')) driverPhone = driverPhone.substring(4);
+                else if (driverPhone.startsWith('20') && driverPhone.length > 10) driverPhone = driverPhone.substring(2);
+                if (driverPhone.startsWith('0') && driverPhone.length === 11) driverPhone = driverPhone.substring(1);
+                // driverPhone الآن = 10 أرقام بدون أي مقدمة (مثل 1121748885)
+
                 const phoneSuffix = driverPhone.length > 8 ? driverPhone.slice(-9) : driverPhone;
+                const withZero = '0' + driverPhone; // 01121748885
+                const with20 = '20' + driverPhone;  // 201121748885
 
                 const { data: sheetTrips } = await sb.from('google_reservations')
                     .select('*')
-                    .or(`modified_driver_phone.ilike.%${phoneSuffix}%`)
+                    .or(`modified_driver_phone.ilike.%${phoneSuffix}%,modified_driver_phone.eq.${withZero},modified_driver_phone.eq.${with20},modified_driver_phone.eq.${driverPhone}`)
                     .order('trip_date', { ascending: false })
                     .limit(30);
 
