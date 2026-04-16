@@ -228,3 +228,61 @@ def create_staff_account(data: dict):
     r_prof = requests.post(profile_url, headers=headers, json=profile_data)
     
     return {"status": "success", "user_id": user_id}
+
+
+# ---------------------------------------------------------
+# 🗑️ Reset Endpoints — لمسح الداتا وبدء من الصفر
+# ---------------------------------------------------------
+
+@router.post("/reset-expenses")
+def reset_expenses(db: Session = Depends(get_db)):
+    """مسح جدول المصاريف فقط (الخزنة) من SQLite"""
+    try:
+        count = db.query(models.Expense).count()
+        db.query(models.Expense).delete()
+        db.commit()
+        return {
+            "status": "success",
+            "deleted": count,
+            "message": f"تم مسح {count} مصروف من الخزنة"
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/reset-all-data")
+def reset_all_data(db: Session = Depends(get_db)):
+    """
+    مسح كل داتا SQLite على Render:
+    - expenses (الخزنة)
+    - chat_messages (المحادثات)
+    - payment_requests (طلبات الدفع)
+    - leads (البيانات المستخرجة)
+    - search_history (سجل البحث)
+    - users (المستخدمين)
+    ملاحظة: لا يمس Google Sheets أو Supabase
+    """
+    try:
+        results = {}
+
+        # الترتيب مهم بسبب Foreign Keys
+        results["chat_messages"]    = db.query(models.ChatMessage).delete()
+        results["payment_requests"] = db.query(models.PaymentRequest).delete()
+        results["leads"]            = db.query(models.Lead).delete()
+        results["search_history"]   = db.query(models.SearchHistory).delete()
+        results["expenses"]         = db.query(models.Expense).delete()
+        results["users"]            = db.query(models.User).delete()
+
+        db.commit()
+
+        total = sum(results.values())
+        return {
+            "status": "success",
+            "total_deleted": total,
+            "details": results,
+            "message": "✅ تم مسح كل الداتا — Google Sheets سليم"
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
