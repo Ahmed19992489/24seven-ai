@@ -762,7 +762,7 @@
 
                 if (notifyClientMsg) {
                     await sb.from('chat_messages').insert([{
-                        trip_id: tripId, sender_role: 'system', sender_id: 'system', sender_name: 'النظام',
+                        trip_id: tripId, sender_role: 'system', sender_id: currentDriver.id, sender_name: 'النظام',
                         message: notifyClientMsg, message_type: 'system'
                     }]);
                 }
@@ -1033,7 +1033,7 @@
                 if (error) throw new Error(error.message);
 
                 await sb.from('chat_messages').insert([{
-                    trip_id: tripId, sender_role: 'system', sender_id: 'system', sender_name: 'النظام',
+                    trip_id: tripId, sender_role: 'system', sender_id: currentDriver.id, sender_name: 'النظام',
                     message: '📍 الكابتن وصل لموقعك! من فضلك انزل، الكابتن في الانتظار.', message_type: 'system'
                 }]);
 
@@ -1407,7 +1407,7 @@
                     await sb.from('chat_messages').insert([{
                         trip_id: currentInspectionTrip,
                         sender_role: 'system',
-                        sender_id: 'system',
+                        sender_id: currentDriver.id,
                         sender_name: 'النظام',
                         message: '🚗 الكابتن استلم السيارة وفي طريقه إليك، يرجى الاستعداد!',
                         message_type: 'system'
@@ -1511,7 +1511,7 @@
                         const msg = '⏰ تنبيه: الرحلة بعد ساعة! هل استلمت السيارة من الجراش؟ لا تنسى تصوير حالة السيارة.';
                         await sb.from('chat_messages').insert([{
                             trip_id: t.id, sender_role: 'admin',
-                            sender_id: 'system', sender_name: 'النظام',
+                            sender_id: currentDriver.id, sender_name: 'النظام',
                             message: msg,
                             message_type: 'system'
                         }]);

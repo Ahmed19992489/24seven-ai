@@ -373,7 +373,10 @@
                                 <th class="p-4">العميل</th>
                                 <th class="p-4">رقم الهاتف</th>
                                 <th class="p-4">رصيد المحفظة</th>
+                                <th class="p-4 text-center">عدد الرحلات</th>
+                                <th class="p-4 text-center">إجمالي الإنفاق</th>
                                 <th class="p-4">تاريخ التسجيل</th>
+                                <th class="p-4 text-center">إجراءات</th>
                             </tr>
                         </thead>
                         <tbody id="crm-table"></tbody>
@@ -1333,6 +1336,13 @@
                                     lastRequest = { newDest: match[1].trim(), time: new Date(m.created_at) };
                                     lastResponse = null;
                                 }
+                            } else if (m.message_type === 'system' && m.message.includes('⚠️ طلب تغيير وجهة:')) {
+                                const lines = m.message.split('\n');
+                                const newD = lines[1] ? lines[1].trim() : '';
+                                if (newD) {
+                                    lastRequest = { newDest: newD, time: new Date(m.created_at) };
+                                    lastResponse = null;
+                                }
                             } else if (m.message_type === 'system' && (m.message.includes('وافقت على تغيير الوجهة') || m.message.includes('تم تعديل الوجهة') || m.message.includes('رفضت طلب تغيير الوجهة') || m.message.includes('رفض طلب تغيير الوجهة'))) {
                                 lastResponse = m;
                             }
@@ -1801,21 +1811,47 @@
 
         async function loadCRM() {
             const list = document.getElementById('crm-table'); 
-            const { data: profiles } = await sbClient.from('profiles').select('*'); 
+            const { data: profiles, error: pErr } = await sbClient.from('profiles').select('*'); 
+            const { data: trips, error: tErr } = await sbClient.from('trips').select('id, user_id, final_price, estimated_price, status');
+            
             list.innerHTML = ''; 
-            if (!profiles || profiles.length === 0) {
-                list.innerHTML = '<tr><td colspan="4" class="text-center p-4">لا يوجد عملاء مسجلين</td></tr>'; 
-            } else {
-                profiles.forEach(p => { 
-                    list.innerHTML += `
-                        <tr class="border-b bg-white hover:bg-slate-50 cursor-pointer transition" onclick="openClientProfile('${p.id}')">
-                            <td class="p-4 font-bold text-slate-700">${p.full_name || '-'}</td>
-                            <td class="p-4 text-slate-500">${p.phone || '-'}</td>
-                            <td class="p-4 font-bold ${p.wallet_balance < 0 ? 'text-red-500' : 'text-green-600'}">${p.wallet_balance || 0} EGP</td>
-                            <td class="p-4 text-xs text-slate-400">${new Date(p.created_at).toLocaleDateString()}</td>
-                        </tr>`; 
+            if (pErr || !profiles || profiles.length === 0) {
+                list.innerHTML = '<tr><td colspan="7" class="text-center p-4">لا يوجد عملاء مسجلين</td></tr>'; 
+                return;
+            }
+            
+            const tripsByUser = {};
+            if (trips) {
+                trips.forEach(t => {
+                    if (!t.user_id) return;
+                    const uid = String(t.user_id);
+                    if (!tripsByUser[uid]) tripsByUser[uid] = [];
+                    tripsByUser[uid].push(t);
                 });
             }
+            
+            profiles.forEach(p => { 
+                const userTrips = tripsByUser[String(p.id)] || [];
+                const completedTrips = userTrips.filter(t => t.status === 'completed');
+                const totalTrips = userTrips.length;
+                const completedCount = completedTrips.length;
+                const totalSpend = completedTrips.reduce((sum, t) => sum + (t.final_price || t.estimated_price || 0), 0);
+                
+                list.innerHTML += `
+                    <tr class="border-b bg-white hover:bg-slate-50 transition">
+                        <td class="p-4 font-bold text-slate-700">${p.full_name || '-'}</td>
+                        <td class="p-4 text-slate-500 font-mono">${p.phone || '-'}</td>
+                        <td class="p-4 font-bold ${p.wallet_balance < 0 ? 'text-red-500' : 'text-green-600'}">${p.wallet_balance || 0} EGP</td>
+                        <td class="p-4 text-center text-slate-700 font-bold">${completedCount} <span class="text-xs text-slate-400 font-normal">من ${totalTrips}</span></td>
+                        <td class="p-4 text-center font-bold text-blue-600">${totalSpend} EGP</td>
+                        <td class="p-4 text-xs text-slate-400">${new Date(p.created_at).toLocaleDateString()}</td>
+                        <td class="p-4 text-center">
+                            <button onclick="openClientProfile('${p.id}')" class="px-3 py-1 bg-purple-50 text-purple-600 hover:bg-purple-100 border border-purple-200 rounded-lg text-xs font-bold transition flex items-center gap-1 mx-auto">
+                                <i class="fas fa-eye"></i> عرض الملف
+                            </button>
+                        </td>
+                    </tr>`; 
+            });
         }
 
         async function openClientProfile(profileId) {
@@ -2187,10 +2223,16 @@
 
             if (msg.message_type === 'location') {
                 div.innerHTML += `📍 <a href="https://maps.google.com/?q=${msg.location_lat},${msg.location_lng}" target="_blank" style="color:#2563eb;text-decoration:underline">فتح الموقع في خرائط جوجل</a>`;
-            } else if (msg.message_type === 'admin_request' && msg.message.includes('يطلب تغيير الوجهة إلى:')) {
-                const match = msg.message.match(/إلى:\s*(.*)/);
-                const newD = match ? match[1].trim() : '';
-                div.innerHTML += `<div class="bg-orange-50 p-2 rounded border border-orange-200 mt-1">
+            } else if ((msg.message_type === 'admin_request' && msg.message.includes('يطلب تغيير الوجهة إلى:')) || (msg.message_type === 'system' && msg.message.includes('⚠️ طلب تغيير وجهة:'))) {
+                let newD = '';
+                if (msg.message_type === 'admin_request') {
+                    const match = msg.message.match(/إلى:\s*(.*)/);
+                    newD = match ? match[1].trim() : '';
+                } else {
+                    const lines = msg.message.split('\n');
+                    newD = lines[1] ? lines[1].trim() : '';
+                }
+                div.innerHTML += `<div class="bg-orange-50 p-2 rounded border border-orange-200 mt-1 text-right">
                     <p class="font-bold text-orange-800 text-xs mb-2 text-center">🚨 طلب تغيير وجهة</p>
                     <p class="text-xs text-orange-700 mb-3 text-center">الكابتن يطلب تغيير الوجهة إلى:<br><strong>${newD}</strong></p>
                     <div class="flex gap-2 justify-center">

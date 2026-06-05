@@ -2378,10 +2378,16 @@ ${contextData}
 
             if (msg.message_type === 'location') {
                 div.innerHTML += `📍 <a href="https://maps.google.com/?q=${msg.location_lat},${msg.location_lng}" target="_blank" style="color:#2563eb;text-decoration:underline">فتح الموقع</a>`;
-            } else if (msg.message_type === 'admin_request' && msg.message.includes('يطلب تغيير الوجهة إلى:')) {
-                const match = msg.message.match(/إلى:\s*(.*)/);
-                const newD = match ? match[1].trim() : '';
-                div.innerHTML += `<div class="bg-orange-50 p-2 rounded border border-orange-200 mt-1">
+            } else if ((msg.message_type === 'admin_request' && msg.message.includes('يطلب تغيير الوجهة إلى:')) || (msg.message_type === 'system' && msg.message.includes('⚠️ طلب تغيير وجهة:'))) {
+                let newD = '';
+                if (msg.message_type === 'admin_request') {
+                    const match = msg.message.match(/إلى:\s*(.*)/);
+                    newD = match ? match[1].trim() : '';
+                } else {
+                    const lines = msg.message.split('\n');
+                    newD = lines[1] ? lines[1].trim() : '';
+                }
+                div.innerHTML += `<div class="bg-orange-50 p-2 rounded border border-orange-200 mt-1 text-right">
                     <p class="font-bold text-orange-800 text-xs mb-2 text-center">🚨 طلب تغيير وجهة</p>
                     <p class="text-xs text-orange-700 mb-3 text-center">الكابتن يطلب تغيير الوجهة إلى:<br><strong>${newD}</strong></p>
                     <div class="flex gap-2 justify-center">
