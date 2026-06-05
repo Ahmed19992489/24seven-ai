@@ -541,14 +541,14 @@
             const bags = t.bags || '0';
             const carType = t.car_type || '--';
             const tripType = t.trip_type || '--';
-            const clientPhone = t.customer_phone || '';
+            const clientPhone = 'مخفي';
             const status = t.status || 'pending';
             
             const isActive = !['completed', 'trip_ended', 'cancelled'].includes(status);
             const statusColor = isActive ? 'text-blue-400 bg-blue-500/10 border-blue-500/30' : 'text-slate-400 bg-slate-700/30 border-slate-600/30';
             const statusText = isActive ? '🟢 نشطة' : '✅ مكتملة';
 
-            const whatsappLink = clientPhone ? `https://wa.me/2${clientPhone.replace(/\D/g, '')}` : '#';
+            const whatsappLink = 'https://wa.me/201121748885';
 
             return `
             <div class="glass p-4 mb-3">
@@ -582,14 +582,13 @@
                         <div class="w-8 h-8 bg-blue-600/20 border border-blue-500/30 rounded-full flex items-center justify-center text-sm">👤</div>
                         <div>
                             <p class="text-xs font-bold text-white">${clientName}</p>
-                            <p class="text-[10px] text-slate-400">${clientPhone}</p>
+                            <p class="text-[10px] text-blue-400"><i class="fas fa-comment-dots ml-1 text-[8px]"></i>التواصل عبر الدعم فقط</p>
                         </div>
                     </div>
-                    ${clientPhone ? `
                     <a href="${whatsappLink}" target="_blank"
-                        class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1">
-                        <i class="fab fa-whatsapp"></i> واتساب
-                    </a>` : ''}
+                        class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1">
+                        <i class="fas fa-headset"></i> الدعم
+                    </a>
                 </div>
             </div>`;
         }
