@@ -1080,6 +1080,64 @@
         </div>
     </div>
 
+    <!-- ملف العميل Modal -->
+    <div id="crm-profile-modal"
+        class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[9000] backdrop-blur-sm p-4">
+        <div class="bg-white p-6 rounded-2xl w-full max-w-4xl shadow-2xl max-h-[90vh] overflow-y-auto text-right">
+            <div class="flex justify-between items-center mb-6 border-b pb-3">
+                <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fas fa-id-card text-purple-600"></i> ملف العميل الكامل
+                </h3>
+                <button onclick="document.getElementById('crm-profile-modal').style.display='none'"
+                    class="bg-red-50 text-red-600 hover:bg-red-100 w-8 h-8 rounded-full flex items-center justify-center transition">✕</button>
+            </div>
+            
+            <!-- Client stats -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-slate-50 p-4 border rounded-xl">
+                    <span class="text-xs text-slate-500 block mb-1">الاسم</span>
+                    <span id="crm-prof-name" class="font-bold text-slate-800 text-sm">-</span>
+                </div>
+                <div class="bg-slate-50 p-4 border rounded-xl">
+                    <span class="text-xs text-slate-500 block mb-1">الهاتف</span>
+                    <span id="crm-prof-phone" class="font-bold text-slate-800 text-sm font-mono">-</span>
+                </div>
+                <div class="bg-slate-50 p-4 border rounded-xl">
+                    <span class="text-xs text-slate-500 block mb-1">رصيد المحفظة</span>
+                    <span id="crm-prof-wallet" class="font-bold text-slate-800 text-sm">-</span>
+                </div>
+                <div class="bg-slate-50 p-4 border rounded-xl">
+                    <span class="text-xs text-slate-500 block mb-1">إجمالي الرحلات</span>
+                    <span id="crm-prof-trips-count" class="font-bold text-slate-800 text-sm">-</span>
+                </div>
+            </div>
+
+            <!-- Trips List -->
+            <div>
+                <h4 class="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2">
+                    <i class="fas fa-route text-blue-500"></i> سجل الرحلات المسجلة
+                </h4>
+                <div class="table-responsive max-h-[350px] overflow-y-auto rounded-xl border border-slate-200">
+                    <table class="w-full text-right text-xs border-collapse">
+                        <thead class="bg-slate-100 text-slate-700 sticky top-0">
+                            <tr>
+                                <th class="p-3 border-b">رقم الرحلة</th>
+                                <th class="p-3 border-b">التاريخ والوقت</th>
+                                <th class="p-3 border-b">المسار</th>
+                                <th class="p-3 border-b">السائق / السيارة</th>
+                                <th class="p-3 border-b">السعر</th>
+                                <th class="p-3 border-b">الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody id="crm-prof-trips-list" class="text-slate-600">
+                            <!-- Loaded dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- مودال إضافة موظف جديد -->
     <div id="add-staff-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[9500] backdrop-blur-sm p-4 text-right">
         <div class="bg-white p-6 rounded-2xl w-full max-w-[450px] shadow-2xl border-t-4 border-blue-600 max-h-[90vh] overflow-y-auto">
@@ -1249,6 +1307,43 @@
             const { data: trips, error } = await sbClient.from('trips').select(`*, cars:cars!fk_trips_car(brand, model, plate_number), drivers:drivers!fk_trips_driver(name, phone)`).order('created_at', { ascending: false });
             if (error) { list.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-red-500">حدث خطأ</td></tr>'; return; }
 
+            // جلب رسائل النظام والمشرف لتتبع طلبات تغيير الوجهة المعلقة لكل رحلة
+            const tripIds = trips?.map(t => t.id) || [];
+            let pendingDestRequests = {};
+            if (tripIds.length > 0) {
+                const { data: messages } = await sbClient.from('chat_messages')
+                    .select('trip_id, message, message_type, created_at')
+                    .in('trip_id', tripIds)
+                    .or("message_type.eq.admin_request,message_type.eq.system")
+                    .order('created_at', { ascending: true });
+                if (messages) {
+                    let tripMsgs = {};
+                    messages.forEach(m => {
+                        if (!tripMsgs[m.trip_id]) tripMsgs[m.trip_id] = [];
+                        tripMsgs[m.trip_id].push(m);
+                    });
+                    Object.keys(tripMsgs).forEach(tid => {
+                        const msgs = tripMsgs[tid];
+                        let lastRequest = null;
+                        let lastResponse = null;
+                        msgs.forEach(m => {
+                            if (m.message_type === 'admin_request' && m.message.includes('يطلب تغيير الوجهة إلى:')) {
+                                const match = m.message.match(/إلى:\s*(.*)/);
+                                if (match) {
+                                    lastRequest = { newDest: match[1].trim(), time: new Date(m.created_at) };
+                                    lastResponse = null;
+                                }
+                            } else if (m.message_type === 'system' && (m.message.includes('وافقت على تغيير الوجهة') || m.message.includes('تم تعديل الوجهة') || m.message.includes('رفضت طلب تغيير الوجهة') || m.message.includes('رفض طلب تغيير الوجهة'))) {
+                                lastResponse = m;
+                            }
+                        });
+                        if (lastRequest && !lastResponse) {
+                            pendingDestRequests[tid] = lastRequest;
+                        }
+                    });
+                }
+            }
+
             const userIds = trips?.map(t => t.user_id).filter(Boolean) || [];
             let profilesMap = {};
             if (userIds.length) {
@@ -1354,10 +1449,26 @@
                 // زر عرض صور الفحص لأي رحلة عينها سواق
                 if (t.status !== 'pending') btns += ` <button onclick="viewTripPhotos('${t.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs">📸</button>`;
 
+                // التحقق من وجود طلب تغيير وجهة معلق للرحلة
+                let destReqHtml = '';
+                const pendingReq = pendingDestRequests[t.id];
+                if (pendingReq) {
+                    destReqHtml = `
+                        <div class="bg-orange-50 border border-orange-200 rounded-xl p-2 mt-2 text-[10px] whitespace-normal leading-relaxed text-right max-w-[220px]">
+                            <span class="text-orange-700 font-black block mb-1"><i class="fas fa-exclamation-triangle ml-1"></i> طلب تغيير وجهة إلى:</span>
+                            <span class="text-slate-700 font-bold block mb-2">${pendingReq.newDest}</span>
+                            <div class="flex gap-1.5 justify-center">
+                                <button onclick="respondDestChange('${t.id}', '${pendingReq.newDest}', true)" class="bg-green-600 hover:bg-green-700 text-white px-2 py-0.5 rounded font-bold text-[9px] transition flex-1">✅ موافقة</button>
+                                <button onclick="respondDestChange('${t.id}', '${pendingReq.newDest}', false)" class="bg-red-600 hover:bg-red-700 text-white px-2 py-0.5 rounded font-bold text-[9px] transition flex-1">❌ رفض</button>
+                            </div>
+                        </div>
+                    `;
+                }
+
                 list.innerHTML += `
                     <tr class="border-b hover:bg-white text-xs">
                         <td class="p-4">#${String(t.id)}</td>
-                        <td class="p-4 font-bold text-slate-800">${displayName}<br><span class="text-[10px] text-slate-500">${displayPhone}</span></td>
+                        <td class="p-4 font-bold text-slate-800">${displayName}<br><span class="text-[10px] text-slate-500">${displayPhone}</span>${destReqHtml}</td>
                         <td class="p-4 min-w-[180px] whitespace-normal leading-relaxed text-slate-600">${t.admin_notes || '-'}</td>
                         <td class="p-4 font-bold text-slate-500">${(t.pickup_location || '-').split(',')[0]} ➝ ${(t.dropoff_location || '-').split(',')[0]}</td>
                         <td class="p-4 font-bold">${driverName} / ${carInfo}</td>
@@ -1472,7 +1583,7 @@
                 const vid = await getVaultIdByName('خزنة العمولات');
                 if (vid) { const { data: v } = await sbClient.from('vaults').select('balance').eq('id', vid).single(); await sbClient.from('vaults').update({ balance: (v.balance || 0) + commission }).eq('id', vid); }
                 const expData = { title: `عمولة #${tripLabel}`, amount: commission, category: 'عمولات', related_trip_id: tripId };
-                if (trip.driver_id) expData.related_driver_id = trip.driver_id;
+                if (trip.car_id) expData.related_car_id = trip.car_id;
                 await sbClient.from('expenses').insert([expData]);
             }
 
@@ -1689,7 +1800,81 @@
         }
 
         async function loadCRM() {
-            const list = document.getElementById('crm-table'); const { data: profiles } = await sbClient.from('profiles').select('*'); list.innerHTML = ''; if (!profiles || profiles.length === 0) list.innerHTML = '<tr><td colspan="4" class="text-center p-4">لا يوجد</td></tr>'; else profiles.forEach(p => { list.innerHTML += `<tr class="border-b bg-white"><td class="p-4 font-bold text-slate-700">${p.full_name || '-'}</td><td class="p-4 text-slate-500">${p.phone || '-'}</td><td class="p-4 font-bold ${p.wallet_balance < 0 ? 'text-red-500' : 'text-green-600'}">${p.wallet_balance || 0}</td><td class="p-4 text-xs text-slate-400">${new Date(p.created_at).toLocaleDateString()}</td></tr>`; });
+            const list = document.getElementById('crm-table'); 
+            const { data: profiles } = await sbClient.from('profiles').select('*'); 
+            list.innerHTML = ''; 
+            if (!profiles || profiles.length === 0) {
+                list.innerHTML = '<tr><td colspan="4" class="text-center p-4">لا يوجد عملاء مسجلين</td></tr>'; 
+            } else {
+                profiles.forEach(p => { 
+                    list.innerHTML += `
+                        <tr class="border-b bg-white hover:bg-slate-50 cursor-pointer transition" onclick="openClientProfile('${p.id}')">
+                            <td class="p-4 font-bold text-slate-700">${p.full_name || '-'}</td>
+                            <td class="p-4 text-slate-500">${p.phone || '-'}</td>
+                            <td class="p-4 font-bold ${p.wallet_balance < 0 ? 'text-red-500' : 'text-green-600'}">${p.wallet_balance || 0} EGP</td>
+                            <td class="p-4 text-xs text-slate-400">${new Date(p.created_at).toLocaleDateString()}</td>
+                        </tr>`; 
+                });
+            }
+        }
+
+        async function openClientProfile(profileId) {
+            const { data: p } = await sbClient.from('profiles').select('*').eq('id', profileId).single();
+            if (!p) return;
+            
+            document.getElementById('crm-prof-name').innerText = p.full_name || 'عميل';
+            document.getElementById('crm-prof-phone').innerText = p.phone || '-';
+            document.getElementById('crm-prof-wallet').innerText = (p.wallet_balance || 0) + ' EGP';
+            
+            const cleanPhone = p.phone ? p.phone.replace(/\D/g, '') : '';
+            
+            // جلب الرحلات
+            const { data: trips, error } = await sbClient.from('trips')
+                .select('*, drivers:drivers!fk_trips_driver(name), cars:cars!fk_trips_car(brand)')
+                .or(`user_id.eq.${p.id}${cleanPhone ? `,client_phone.ilike.%${cleanPhone}%,admin_notes.ilike.%${cleanPhone}%` : ''}`)
+                .order('created_at', { ascending: false });
+                
+            const tbody = document.getElementById('crm-prof-trips-list');
+            tbody.innerHTML = '';
+            
+            if (error || !trips || trips.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-4 text-slate-400">لا توجد رحلات مسجلة لهذا العميل بعد.</td></tr>`;
+                document.getElementById('crm-prof-trips-count').innerText = '0';
+            } else {
+                document.getElementById('crm-prof-trips-count').innerText = trips.length;
+                trips.forEach(t => {
+                    let tDate = t.trip_date || '--';
+                    let tTime = t.trip_time || '--';
+                    if (t.admin_notes && (tDate === '--' || tTime === '--')) {
+                        const dMatch = t.admin_notes.match(/📅\s*([0-9-/\\]+)(?:\s*[-:]\s*([0-9:amp\s]+))?/i);
+                        if (dMatch) {
+                            tDate = dMatch[1].trim();
+                            if (dMatch[2]) tTime = dMatch[2].trim();
+                        }
+                    }
+                    const driverName = t.drivers ? t.drivers.name : '-';
+                    const carName = t.cars ? t.cars.brand : '-';
+                    const route = `${(t.pickup_location || '-').split(',')[0]} ➝ ${(t.dropoff_location || '-').split(',')[0]}`;
+                    
+                    let statusColor = 'text-amber-500';
+                    if (t.status === 'completed') statusColor = 'text-slate-400';
+                    else if (t.status === 'driver_assigned') statusColor = 'text-blue-500';
+                    else if (t.status === 'approved') statusColor = 'text-green-600';
+                    
+                    tbody.innerHTML += `
+                        <tr class="border-b hover:bg-slate-50">
+                            <td class="p-3">#${t.id}</td>
+                            <td class="p-3">${tDate} | ${tTime}</td>
+                            <td class="p-3 max-w-[220px] truncate" title="${t.pickup_location} ➝ ${t.dropoff_location}">${route}</td>
+                            <td class="p-3">${driverName} / ${carName}</td>
+                            <td class="p-3 font-bold text-green-700">${t.final_price || t.estimated_price || 0} EGP</td>
+                            <td class="p-3 font-bold ${statusColor}">${t.status}</td>
+                        </tr>
+                    `;
+                });
+            }
+            
+            document.getElementById('crm-profile-modal').style.display = 'flex';
         }
         async function loadPricing() { const { data } = await sbClient.from('pricing_tiers').select('*').order('car_type').order('min_km'); document.getElementById('pricing-list').innerHTML = data.map(r => `<div class="bg-white p-3 border rounded mb-2 flex justify-between items-center"><div class="flex-1"><span class="font-bold">${r.car_type}</span> <span class="text-xs text-slate-500 mx-2">(${r.min_km}-${r.max_km} km)</span> <span class="text-xs text-slate-500">فتح: ${r.base_price}</span></div><span class="font-bold text-green-700 mx-3">${r.price_per_km}/km</span><button onclick="deletePricingTier(${r.id})" class="text-red-500 hover:text-red-700 hover:bg-red-50 w-8 h-8 rounded-lg flex items-center justify-center transition"><i class="fas fa-trash-alt text-sm"></i></button></div>`).join(''); }
         async function deletePricingTier(id) { if (!confirm('هل تريد حذف هذه الشريحة؟')) return; const { error } = await sbClient.from('pricing_tiers').delete().eq('id', id); if (error) { alert('خطأ: ' + error.message); return; } alert('🗑️ تم الحذف'); loadPricing(); }
@@ -2428,6 +2613,10 @@
                         message: 'تم رفض طلب تغيير الوجهة بواسطة الإدارة.', created_at: new Date().toISOString()
                     });
                     alert('✅ تم إرسال الرفض للكابتن');
+                    loadOperations();
+                    if (typeof adminCurrentTripId !== 'undefined' && adminCurrentTripId === tripId) {
+                        loadAdminChatMessages(tripId);
+                    }
                 } catch (err) { alert('❌ خطأ: ' + err.message); }
                 return;
             }
@@ -2503,6 +2692,9 @@
                 document.getElementById('dest-price-modal').remove();
                 alert('✅ تم الموافقة وتحديث السعر بنجاح!');
                 loadOperations();
+                if (typeof adminCurrentTripId !== 'undefined' && adminCurrentTripId === tripId) {
+                    loadAdminChatMessages(tripId);
+                }
             } catch (err) {
                 if (btn) { btn.disabled = false; btn.textContent = 'تأكيد الموافقة'; }
                 alert('❌ خطأ: ' + err.message);

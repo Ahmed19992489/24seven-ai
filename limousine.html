@@ -1201,6 +1201,7 @@
         const sb = supabase.createClient('https://wtjwzqvmwnbvjxnmweqq.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY');
 
         let user = null;
+        let activeClientTripIds = new Set();
         let pricingRules = [];
         let tripData = { type: 'one-way', car: 'sedan', pay: 'cash', dist: 0, price: 0 };
         let map, directionsService, directionsRenderer;
@@ -1539,6 +1540,8 @@
 
 
         async function loadTrips() {
+            if (typeof activeClientTripIds === 'undefined' || !activeClientTripIds) activeClientTripIds = new Set();
+            activeClientTripIds.clear();
             // 1. Fetch assigned/completed trips from 'trips'
             const { data: trips, error } = await sb
                 .from('trips')
@@ -1548,6 +1551,7 @@
 
             let allTrips = [];
             if (!error && trips) {
+                trips.forEach(t => activeClientTripIds.add(String(t.id)));
                 allTrips = trips.map(t => {
                     let tDate = t.trip_date || '--', tTime = t.trip_time || '--', pax = t.passengers || '--', bags = t.bags || '--';
                     if (t.admin_notes && (tDate === '--' || pax === '--' || bags === '--')) {
@@ -1623,6 +1627,27 @@
                 }
 
                 if (sheetResAll.length > 0) {
+                    // Sync user_id in trips table
+                    const sqlIdsToSync = sheetResAll.filter(r => r.sql_server_id).map(r => r.sql_server_id);
+                    if (sqlIdsToSync.length > 0) {
+                        try {
+                            await sb.from('trips')
+                                .update({ user_id: user.id })
+                                .in('id', sqlIdsToSync)
+                                .is('user_id', null);
+                        } catch (syncErr) {
+                            console.error('Error syncing trips user_id:', syncErr);
+                        }
+                    }
+
+                    // Add to activeClientTripIds
+                    sheetResAll.forEach(r => {
+                        activeClientTripIds.add('gr_' + r.id);
+                        if (r.sql_server_id) {
+                            activeClientTripIds.add(String(r.sql_server_id));
+                        }
+                    });
+
                     // إزالة التكرارات (نفس الـ id أو مرتبطة بـ sql_server_id)
                     const existingGrIds = new Set(allTrips.map(t => t.id));
                     const existingTripsIds = new Set(allTrips.map(t => String(t.id)));
@@ -2376,7 +2401,7 @@
             clientChatSubscription = sb.channel('chat-client-' + tripId)
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: 'trip_id=eq.' + tripId }, (payload) => {
                     // تجاهل رسائل العميل نفسه - لأنها ظهرت فوراً بالـ Optimistic UI
-                    if (payload.new.sender_role === 'client' && payload.new.sender_id === user?.id) return;
+                    if (payload.new.sender_role === 'client' && user && String(payload.new.sender_id) === String(user.id)) return;
                     appendClientMsg(payload.new);
                 }).subscribe();
         }
@@ -2626,19 +2651,20 @@
 
                     // تحقق أن هذه الرسالة مرتبطة برحلة العميل الحالي
                     const { data: trip } = await sb.from('trips').select('user_id').eq('id', msg.trip_id).single();
-                    if (!trip || trip.user_id !== user?.id) return;
+                    const isMyTrip = (trip && trip.user_id === user?.id) || (typeof activeClientTripIds !== 'undefined' && activeClientTripIds.has(String(msg.trip_id)));
+                    if (!isMyTrip) return;
 
                     // تحديد الرسالة بناءً على نوع الحدث (notification routing للعميل فقط)
                     const m = msg.message;
                     let clientNotif = null;
 
-                    if (m.includes('الكابتن وصل لموقعك')) {
-                        clientNotif = '📍 الكابتن وصل إلى موقعك! يرجى النزول الآن.';
-                    } else if (m.includes('انطلقت الرحلة') || m.includes('رحلة سعيدة')) {
-                        clientNotif = '🚗 انطلقت رحلتك! نتمنى لك رحلة سعيدة ❤️';
-                    } else if (m.includes('الكابتن في الطريق')) {
+                    if (m.includes('الكابتن وصل') || m.includes('الكابتن وصل لموقعك')) {
+                        clientNotif = '📍 الكابتن وصل إلى موقعك! الرجاء النزول، الكابتن في انتظارك.';
+                    } else if (m.includes('انطلقت الرحلة') || m.includes('بدأت الرحلة') || m.includes('رحلة سعيدة')) {
+                        clientNotif = '🚗 بدأت الرحلة الآن! نتمنى لك رحلة سعيدة ❤️';
+                    } else if (m.includes('الكابتن في الطريق') || m.includes('في طريقه إليك') || m.includes('في اتجاهه') || m.includes('استلم السيارة')) {
                         clientNotif = '🚗 الكابتن في الطريق إليك! جهز نفسك من فضلك.';
-                    } else if (msg.message_type === 'trip_end' || m.includes('تم إنهاء الرحلة')) {
+                    } else if (msg.message_type === 'trip_end' || m.includes('تم إنهاء الرحلة') || m.includes('إنهاء الرحلة')) {
                         clientNotif = '✅ اكتملت رحلتك بنجاح! نتمنى أنك استمتعت بالرحلة ❤️';
                         showFeedbackModal(msg.trip_id);
                     } else {
@@ -2649,6 +2675,12 @@
                     if (clientNotif) {
                         addNotification(clientNotif);
                         showNotifBanner(clientNotif);
+                        // تشغيل تنبيه صوتي للعميل
+                        try {
+                            new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play();
+                        } catch (e) {
+                            console.log('Audio error:', e);
+                        }
                     }
                 }).subscribe();
         }

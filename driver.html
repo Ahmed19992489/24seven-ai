@@ -1011,8 +1011,7 @@
             chatSub = sb.channel('chat-drv-' + tripId)
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: 'trip_id=eq.' + tripId },
                     (p) => {
-                        // تجاهل رسائل السواق نفسه - لأنها ظهرت فوراً بالـ Optimistic UI
-                        if (p.new.sender_role === 'driver' && p.new.sender_id === currentDriver?.id) return;
+                        if (p.new.sender_role === 'driver' && currentDriver && String(p.new.sender_id) === String(currentDriver.id)) return;
                         appendMsg(p.new);
                     })
                 .subscribe();
@@ -1404,6 +1403,15 @@
 
                 if (currentInspectionType === 'pre') {
                     await sb.from('trips').update({ stage_status: 'garage_pickup' }).eq('id', currentInspectionTrip);
+                    // إرسال رسالة نظام للعميل أن الكابتن استلم السيارة وفي طريقه إليه ليجهز نفسه
+                    await sb.from('chat_messages').insert([{
+                        trip_id: currentInspectionTrip,
+                        sender_role: 'system',
+                        sender_id: 'system',
+                        sender_name: 'النظام',
+                        message: '🚗 الكابتن استلم السيارة وفي طريقه إليك، يرجى الاستعداد!',
+                        message_type: 'system'
+                    }]);
                 } else {
                     await sb.from('trips').update({ stage_status: 'post_photos' }).eq('id', currentInspectionTrip);
                 }
