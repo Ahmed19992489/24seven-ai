@@ -2650,9 +2650,25 @@
                     if (msg.message_type !== 'system' && msg.message_type !== 'trip_end') return;
 
                     // تحقق أن هذه الرسالة مرتبطة برحلة العميل الحالي
-                    const { data: trip } = await sb.from('trips').select('user_id').eq('id', msg.trip_id).single();
-                    const isMyTrip = (trip && trip.user_id === user?.id) || (typeof activeClientTripIds !== 'undefined' && activeClientTripIds.has(String(msg.trip_id)));
+                    const { data: trip } = await sb.from('trips').select('user_id, client_phone, admin_notes').eq('id', msg.trip_id).single();
+                    if (!trip) return;
+
+                    // جلب رقم الهاتف للمطابقة وتأمين استلام الإشعارات
+                    const { data: profile } = await sb.from('profiles').select('phone').eq('id', user.id).single();
+                    const userPhone = profile?.phone;
+                    const cleanUserPhone = userPhone ? userPhone.replace(/\D/g, '') : '';
+                    const cleanTripPhone = trip.client_phone ? trip.client_phone.replace(/\D/g, '') : '';
+                    
+                    const isPhoneMatch = cleanUserPhone && cleanTripPhone && (cleanTripPhone.includes(cleanUserPhone) || cleanUserPhone.includes(cleanTripPhone));
+                    const isNotesMatch = cleanUserPhone && trip.admin_notes && trip.admin_notes.replace(/\D/g, '').includes(cleanUserPhone);
+                    const isMyTrip = (trip.user_id === user?.id) || isPhoneMatch || isNotesMatch || (typeof activeClientTripIds !== 'undefined' && activeClientTripIds.has(String(msg.trip_id)));
+
                     if (!isMyTrip) return;
+
+                    // ربط العميل بالرحلة في قاعدة البيانات تلقائياً إن لم تكن مربوطة
+                    if (!trip.user_id) {
+                        await sb.from('trips').update({ user_id: user.id }).eq('id', msg.trip_id);
+                    }
 
                     // تحديد الرسالة بناءً على نوع الحدث (notification routing للعميل فقط)
                     const m = msg.message;
