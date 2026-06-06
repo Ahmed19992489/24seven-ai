@@ -449,6 +449,68 @@
         let cachedTrips = [];
         let cachedReservationsMap = {};
         let currentTripsFilter = 'today';
+        
+        let vendorProfileId = null;
+
+        async function ensureVendorProfile() {
+            if (!currentVendor) return;
+            try {
+                // 1. Check if profile with phone exists
+                const { data: prof, error: profErr } = await sb.from('profiles').select('id').eq('phone', currentVendor.owner_phone).maybeSingle();
+                if (prof) {
+                    vendorProfileId = prof.id;
+                    console.log("Found matching profile ID:", vendorProfileId);
+                    return;
+                }
+                
+                // 2. If not found, try signing up the vendor as an auth user
+                const email = `vendor_${currentVendor.owner_phone}@24seven.com`;
+                const password = `vendor_${currentVendor.owner_phone}`;
+                
+                // Try signing up
+                const { data: signUpData, error: signUpErr } = await sb.auth.signUp({
+                    email: email,
+                    password: password
+                });
+                
+                let newUserId = null;
+                if (signUpErr) {
+                    // If already registered, try signing in to get user ID
+                    if (signUpErr.message.includes("already registered") || signUpErr.status === 422) {
+                        const { data: signInData, error: signInErr } = await sb.auth.signInWithPassword({
+                            email: email,
+                            password: password
+                        });
+                        if (signInData && signInData.user) {
+                            newUserId = signInData.user.id;
+                        }
+                    } else {
+                        throw signUpErr;
+                    }
+                } else if (signUpData && signUpData.user) {
+                    newUserId = signUpData.user.id;
+                }
+                
+                if (newUserId) {
+                    // 3. Create the profile in profiles table
+                    const { error: insErr } = await sb.from('profiles').insert([{
+                        id: newUserId,
+                        full_name: "مكتب: " + currentVendor.name,
+                        phone: currentVendor.owner_phone,
+                        role: 'vendor'
+                    }]);
+                    
+                    vendorProfileId = newUserId;
+                    console.log("Created vendor profile ID:", vendorProfileId);
+                } else {
+                    vendorProfileId = currentVendor.id;
+                }
+            } catch (e) {
+                console.error("Error ensuring vendor profile:", e);
+                // Fallback to vendor id
+                vendorProfileId = currentVendor.id;
+            }
+        }
 
         // ==========================================
         // تسجيل الدخول
@@ -1237,9 +1299,13 @@
             box.innerHTML = '<p class="text-center text-slate-500 py-8 text-xs"><i class="fas fa-spinner fa-spin ml-1.5"></i>جاري تحميل رسائل الدعم...</p>';
             
             try {
+                if (!vendorProfileId) {
+                    await ensureVendorProfile();
+                }
+
                 const { data: msgs, error } = await sb.from('support_chats')
                     .select('*')
-                    .eq('user_id', currentVendor.id)
+                    .eq('user_id', vendorProfileId)
                     .order('created_at', { ascending: true });
                     
                 if (error) throw error;
@@ -1289,8 +1355,12 @@
 
             input.value = '';
 
+            if (!vendorProfileId) {
+                await ensureVendorProfile();
+            }
+
             const newMsg = {
-                user_id: currentVendor.id,
+                user_id: vendorProfileId,
                 sender_role: 'vendor',
                 message: msgText,
                 created_at: new Date().toISOString()
@@ -1306,11 +1376,15 @@
             }
         }
 
-        function subscribeSupportChat() {
+        async function subscribeSupportChat() {
             if (supportChatSub) sb.removeChannel(supportChatSub);
             
-            supportChatSub = sb.channel('support-vendor-' + currentVendor.id)
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_chats', filter: 'user_id=eq.' + currentVendor.id }, (payload) => {
+            if (!vendorProfileId) {
+                await ensureVendorProfile();
+            }
+
+            supportChatSub = sb.channel('support-vendor-' + vendorProfileId)
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_chats', filter: 'user_id=eq.' + vendorProfileId }, (payload) => {
                     const msg = payload.new;
                     if (msg.sender_role === 'vendor') return;
                     appendSupportMessage(msg);
