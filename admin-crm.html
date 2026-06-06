@@ -932,6 +932,13 @@
                 <div><label class="text-xs font-bold text-green-600">💰 إيراد الرحلة</label><input type="number"
                         id="comp-price" class="input-std font-bold text-green-600 text-lg" placeholder="0"
                         oninput="updateCompSummary()"></div>
+                <div id="comp-payment-method-group" class="hidden">
+                    <label class="text-xs font-bold text-slate-500">💵 طريقة تحصيل الرحلة (للشركاء)</label>
+                    <select id="comp-payment-method" class="input-std font-bold text-slate-800">
+                        <option value="cash">💵 كاش (التحصيل مع الكابتن/المكتب - المنصة تأخذ عمولة)</option>
+                        <option value="deferred">💳 أجل / للمنصة (التحصيل مع المنصة - المكتب له صافي الحساب)</option>
+                    </select>
+                </div>
                 <div class="grid grid-cols-2 gap-2">
                     <div><label class="text-xs font-bold text-slate-500">يومية الكابتن</label><input type="number"
                             id="comp-wage" class="input-std font-bold text-blue-600" value="0"
@@ -1576,7 +1583,7 @@
             document.getElementById('comp-price').value = price;
             document.getElementById('comp-dist-km').value = distKm || 0;
 
-            const { data: trip } = await sbClient.from('trips').select('is_outsourced, our_commission').eq('id', tripId).single();
+            const { data: trip } = await sbClient.from('trips').select('is_outsourced, our_commission, admin_notes').eq('id', tripId).single();
             const isOutsourced = trip?.is_outsourced || false;
 
             if (isOutsourced) {
@@ -1591,8 +1598,16 @@
                 // توسيع حقل العمولة ليكون بعرض كامل
                 document.getElementById('comp-commission').closest('div').classList.remove('grid-cols-2');
                 document.getElementById('comp-commission').closest('div').style.display = 'block';
+
+                // إظهار اختيار طريقة التحصيل للشركاء
+                const notes = trip?.admin_notes || '';
+                const isCash = notes.toLowerCase().includes('cash') || notes.includes('كاش') || notes.includes('💵');
+                document.getElementById('comp-payment-method').value = isCash ? 'cash' : 'deferred';
+                document.getElementById('comp-payment-method-group').style.display = 'block';
             } else {
-                // إظهار الحقول المخصصة للتشغيل الداخلي
+                // إخفاء مجموعة الدفع الخارجي وإظهار الحقول المخصصة للتشغيل الداخلي
+                document.getElementById('comp-payment-method-group').style.display = 'none';
+
                 document.getElementById('comp-wage').closest('div').style.display = 'block';
                 document.getElementById('comp-fuel').closest('div').style.display = 'block';
                 document.getElementById('comp-tolls').closest('div').style.display = 'block';
@@ -1648,8 +1663,7 @@
                 try {
                     await sbClient.from('trips').update({ status: 'completed', final_price: price, our_commission: commission }).eq('id', tripId);
                     
-                    const notes = trip.admin_notes || '';
-                    const isCash = notes.toLowerCase().includes('cash') || notes.includes('كاش') || notes.includes('💵');
+                    const isCash = document.getElementById('comp-payment-method').value === 'cash';
                     
                     if (trip.vendor_id) {
                         if (isCash) {

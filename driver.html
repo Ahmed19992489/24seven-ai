@@ -690,9 +690,9 @@
                 { key: 'trip_ended', label: '✅ منتهية', desc: 'تم إنهاء الرحلة' }
             ];
 
-            // تخصيص الخطوات للكابتن الخارجي (إلغاء الإقفال المالي للبنزين والكروت)
+            // تخصيص الخطوات للكابتن الخارجي (إلغاء التصوير قبل وبعد والإقفال المالي)
             if (currentDriver && currentDriver.is_external) {
-                STAGES = STAGES.filter(s => s.key !== 'financial_close');
+                STAGES = STAGES.filter(s => s.key !== 'garage_pickup' && s.key !== 'post_photos' && s.key !== 'financial_close');
             }
 
             const ORDER = STAGES.map(s => s.key);
@@ -730,7 +730,11 @@
             // الزرار الفعال
             let actionBtn = '';
             if (stage === 'new' || currentIdx < 0) {
-                actionBtn = stageBtn('garage_pickup', '🏭 ابدأ: استلام السيارة من الجراش', `openCarInspection('${tid}','pre')`, 'bg-yellow-600 text-white hover:bg-yellow-500');
+                if (currentDriver && currentDriver.is_external) {
+                    actionBtn = stageBtn('heading_client', '🚗 تحركت - في الطريق للعميل', `tripStage('${tid}','heading_client','🚗 الكابتن في الطريق إليك، يرجى الاستعداد!')`, 'bg-blue-600 text-white hover:bg-blue-500');
+                } else {
+                    actionBtn = stageBtn('garage_pickup', '🏭 ابدأ: استلام السيارة من الجراش', `openCarInspection('${tid}','pre')`, 'bg-yellow-600 text-white hover:bg-yellow-500');
+                }
             } else if (stage === 'garage_pickup') {
                 actionBtn = stageBtn('heading_client', '🚗 تحركت - في الطريق للعميل', `tripStage('${tid}','heading_client','🚗 الكابتن في الطريق إليك، يرجى الاستعداد!')`, 'bg-blue-600 text-white hover:bg-blue-500');
             } else if (stage === 'heading_client') {
@@ -738,7 +742,11 @@
             } else if (stage === 'arrived_client') {
                 actionBtn = stageBtn('trip_started', '🚀 ركب العميل - ابدأ الرحلة', `tripStage('${tid}','trip_started','🚀 انطلقت الرحلة! نتمنى لك رحلة سعيدة.')`, 'bg-indigo-600 text-white hover:bg-indigo-500');
             } else if (stage === 'trip_started') {
-                actionBtn = stageBtn('post_photos', '🏁 وصلنا - صوّر السيارة بعد الرحلة', `openCarInspection('${tid}','post')`, 'bg-red-600 text-white hover:bg-red-500');
+                if (currentDriver && currentDriver.is_external) {
+                    actionBtn = stageBtn('trip_ended', '🏁 وصلنا - إنهاء الرحلة وتأكيد الوصول', `confirmExternalEndTrip('${tid}')`, 'bg-red-600 text-white hover:bg-red-500');
+                } else {
+                    actionBtn = stageBtn('post_photos', '🏁 وصلنا - صوّر السيارة بعد الرحلة', `openCarInspection('${tid}','post')`, 'bg-red-600 text-white hover:bg-red-500');
+                }
                 actionBtn += stageBtn('dest_change', '🔀 تغيير وجهة (موافقة إدارة)', `requestDestChange('${tid}')`, 'mt-2 bg-orange-600/20 border border-orange-500/40 text-orange-400 hover:bg-orange-600 hover:text-white');
             } else if (stage === 'post_photos') {
                 if (currentDriver && currentDriver.is_external) {
