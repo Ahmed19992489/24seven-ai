@@ -232,6 +232,13 @@
                     <span id="trips-count" class="bg-blue-600/20 border border-blue-500/30 text-blue-400 text-xs px-2.5 py-0.5 rounded-full font-bold">0</span>
                 </div>
                 
+                <!-- تبويبات التصفية التاريخية للرحلات -->
+                <div class="flex gap-2 mb-3 bg-slate-950/40 p-1.5 rounded-xl border border-slate-700/30">
+                    <button onclick="setTripsFilter('today')" id="filter-btn-today" class="flex-1 py-2 rounded-lg text-xs font-bold transition bg-blue-600 text-white">📅 رحلات اليوم</button>
+                    <button onclick="setTripsFilter('tomorrow')" id="filter-btn-tomorrow" class="flex-1 py-2 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white">🗓️ رحلات الغد</button>
+                    <button onclick="setTripsFilter('all')" id="filter-btn-all" class="flex-1 py-2 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white">📁 جميع الرحلات</button>
+                </div>
+
                 <div id="trips-list" class="space-y-4 max-h-[600px] overflow-y-auto pr-1">
                     <!-- محتوى الرحلات -->
                 </div>
@@ -386,6 +393,10 @@
                     <input type="file" id="assign-car-photo-file" accept="image/*" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-white outline-none focus:border-blue-500 text-sm">
                     <input type="hidden" id="assign-car-photo">
                 </div>
+                <div>
+                    <label class="text-xs text-slate-400 block mb-1">💰 قيمة عمولة المنصة (EGP)</label>
+                    <input type="number" id="assign-trip-commission" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500 text-sm font-mono text-center" placeholder="100">
+                </div>
             </div>
 
             <div class="flex gap-3 pt-2">
@@ -434,6 +445,10 @@
         let currentVendor = null;
         let activeChatTripId = null;
         let chatSub = null;
+        
+        let cachedTrips = [];
+        let cachedReservationsMap = {};
+        let currentTripsFilter = 'today';
 
         // ==========================================
         // تسجيل الدخول
@@ -557,6 +572,48 @@
         // ==========================================
         // تحميل وعرض أوردرات المكتب
         // ==========================================
+        // تصفية وعرض الرحلات محلياً بدون تكرار الاستعلام من السيرفر
+        function setTripsFilter(filter) {
+            currentTripsFilter = filter;
+            
+            // تحديث تصميم أزرار التبويبات الفرعية
+            const btnToday = document.getElementById('filter-btn-today');
+            const btnTomorrow = document.getElementById('filter-btn-tomorrow');
+            const btnAll = document.getElementById('filter-btn-all');
+            
+            if (btnToday) btnToday.className = filter === 'today' ? "flex-1 py-2 rounded-lg text-xs font-bold transition bg-blue-600 text-white" : "flex-1 py-2 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white";
+            if (btnTomorrow) btnTomorrow.className = filter === 'tomorrow' ? "flex-1 py-2 rounded-lg text-xs font-bold transition bg-blue-600 text-white" : "flex-1 py-2 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white";
+            if (btnAll) btnAll.className = filter === 'all' ? "flex-1 py-2 rounded-lg text-xs font-bold transition bg-blue-600 text-white" : "flex-1 py-2 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white";
+            
+            renderFilteredTrips();
+        }
+
+        // تحليل التاريخ ومقارنته باليوم والغد
+        function parseDateToYMD(dateStr) {
+            if (!dateStr || dateStr === '--') return null;
+            let clean = dateStr.replace(/[\/\\]/g, '-').trim();
+            if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) return clean;
+            const dmy = clean.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+            if (dmy) {
+                return `${dmy[3]}-${dmy[2]}-${dmy[1]}`;
+            }
+            const parts = clean.split('-');
+            if (parts.length === 3) {
+                let y, m, d;
+                if (parts[0].length === 4) {
+                    y = parts[0];
+                    m = parts[1].padStart(2, '0');
+                    d = parts[2].padStart(2, '0');
+                } else if (parts[2].length === 4) {
+                    y = parts[2];
+                    m = parts[1].padStart(2, '0');
+                    d = parts[0].padStart(2, '0');
+                }
+                if (y && m && d) return `${y}-${m}-${d}`;
+            }
+            return clean;
+        }
+
         async function loadTrips() {
             const list = document.getElementById('trips-list');
             list.innerHTML = '<p class="text-center text-slate-400 py-8"><i class="fas fa-spinner fa-spin ml-2"></i>جاري تحميل الرحلات...</p>';
@@ -570,110 +627,213 @@
 
                 if (error) throw error;
 
-                document.getElementById('trips-count').textContent = trips?.length || 0;
+                cachedTrips = trips || [];
+                cachedReservationsMap = {};
 
-                if (!trips || trips.length === 0) {
-                    list.innerHTML = `
-                        <div class="text-center py-16 text-slate-500">
-                            <i class="fas fa-route text-5xl mb-3 block opacity-30"></i>
-                            <p>لا توجد رحلات مسندة لمكتبكم حالياً.</p>
-                        </div>`;
-                    return;
+                if (cachedTrips.length > 0) {
+                    // جلب تفاصيل الحجوزات المطابقة
+                    const tripIdsStr = cachedTrips.map(t => String(t.id));
+                    const { data: resData, error: resErr } = await sb.from('google_reservations')
+                        .select('sql_server_id, passengers, bags, car_type, trip_type, pickup_address, dropoff_address, trip_date, trip_time')
+                        .in('sql_server_id', tripIdsStr);
+
+                    if (resData) {
+                        resData.forEach(r => {
+                            if (r.sql_server_id) {
+                                cachedReservationsMap[r.sql_server_id] = r;
+                            }
+                        });
+                    }
                 }
 
-                list.innerHTML = trips.map(t => {
-                    const pickup = (t.pickup_location || '').split(',')[0];
-                    const dropoff = (t.dropoff_location || '').split(',')[0];
-                    const price = t.estimated_price || 0;
-                    const commission = t.our_commission || 0;
-                    
-                    // استخراج التاريخ والوقت من ملاحظات الأدمن
-                    let tripDate = t.trip_date || '--';
-                    let tripTime = t.trip_time || '--';
+                // عرض الرحلات بناءً على الفلتر الحالي
+                renderFilteredTrips();
+
+            } catch(e) {
+                list.innerHTML = `<p class="text-center text-red-500 py-8">حدث خطأ أثناء تحميل الرحلات: ${e.message}</p>`;
+            }
+        }
+
+        function renderFilteredTrips() {
+            const list = document.getElementById('trips-list');
+            if (cachedTrips.length === 0) {
+                document.getElementById('trips-count').textContent = 0;
+                list.innerHTML = `
+                    <div class="text-center py-16 text-slate-500">
+                        <i class="fas fa-route text-5xl mb-3 block opacity-30"></i>
+                        <p>لا توجد رحلات مسندة لمكتبكم حالياً.</p>
+                    </div>`;
+                return;
+            }
+
+            // حساب تاريخ اليوم والغد للفلترة
+            const today = new Date();
+            const tomorrow = new Date();
+            tomorrow.setDate(today.getDate() + 1);
+
+            const formatDate = (d) => {
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+
+            const todayStr = formatDate(today);
+            const tomorrowStr = formatDate(tomorrow);
+
+            // تصفية الرحلات
+            const filtered = cachedTrips.filter(t => {
+                if (currentTripsFilter === 'all') return true;
+
+                // استخراج التاريخ
+                let tripDate = t.trip_date || '';
+                const gr = cachedReservationsMap[String(t.id)];
+                if (gr && gr.trip_date) {
+                    tripDate = gr.trip_date;
+                } else {
+                    const notes = t.admin_notes || '';
+                    const dateMatch = notes.match(/📅\s*([0-9-/\\]+)/i);
+                    if (dateMatch) tripDate = dateMatch[1].trim();
+                }
+
+                const normalizedDate = parseDateToYMD(tripDate);
+                if (currentTripsFilter === 'today') {
+                    return normalizedDate === todayStr;
+                } else if (currentTripsFilter === 'tomorrow') {
+                    return normalizedDate === tomorrowStr;
+                }
+                return true;
+            });
+
+            document.getElementById('trips-count').textContent = filtered.length;
+
+            if (filtered.length === 0) {
+                let msg = "لا توجد رحلات مجدولة لليوم.";
+                if (currentTripsFilter === 'tomorrow') msg = "لا توجد رحلات مجدولة للغد.";
+                else if (currentTripsFilter === 'all') msg = "لا توجد رحلات مسندة لمكتبكم.";
+                
+                list.innerHTML = `
+                    <div class="text-center py-16 text-slate-500">
+                        <i class="fas fa-calendar-day text-5xl mb-3 block opacity-30"></i>
+                        <p>${msg}</p>
+                    </div>`;
+                return;
+            }
+
+            list.innerHTML = filtered.map(t => {
+                const gr = cachedReservationsMap[String(t.id)];
+                
+                // تفاصيل الرحلة الأساسية والمسار
+                const pickup = gr && gr.pickup_address ? gr.pickup_address : (t.pickup_location || '').split(',')[0];
+                const dropoff = gr && gr.dropoff_address ? gr.dropoff_address : (t.dropoff_location || '').split(',')[0];
+                
+                const price = t.estimated_price || 0;
+                const commission = t.our_commission || 0;
+                
+                // استخراج التاريخ والوقت
+                let tripDate = t.trip_date || '--';
+                let tripTime = t.trip_time || '--';
+                if (gr && gr.trip_date) {
+                    tripDate = gr.trip_date;
+                    if (gr.trip_time) tripTime = gr.trip_time;
+                } else {
                     const notes = t.admin_notes || '';
                     const dateMatch = notes.match(/📅\s*([0-9-/\\]+)(?:\s*[-:]\s*([0-9:amp\s]+))?/i);
                     if (dateMatch) {
                         tripDate = dateMatch[1].trim();
                         if (dateMatch[2]) tripTime = dateMatch[2].trim();
                     }
+                }
 
-                    // طريقة الدفع
-                    const isCash = notes.toLowerCase().includes('cash') || notes.includes('كاش') || notes.includes('💵');
-                    const payBadge = isCash ? '<span class="bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] px-2 py-0.5 rounded-full font-bold">💵 كاش للكبابتن</span>' 
-                                            : '<span class="bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] px-2 py-0.5 rounded-full font-bold">💳 أجل / للشركة</span>';
+                // تفاصيل الحجز الإضافية
+                const passengers = gr && gr.passengers !== undefined ? gr.passengers : '--';
+                const bags = gr && gr.bags !== undefined ? gr.bags : '--';
+                const reqCarType = gr && gr.car_type ? gr.car_type : 'غير محدد';
+                const tripTypeLabel = gr && gr.trip_type ? gr.trip_type : 'غير محدد';
 
-                    // حالة التعيين
-                    let assignBtn = '';
-                    let driverInfoHtml = '';
+                // طريقة الدفع
+                const notesText = t.admin_notes || '';
+                const isCash = notesText.toLowerCase().includes('cash') || notesText.includes('كاش') || notesText.includes('💵');
+                const payBadge = isCash ? '<span class="bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] px-2 py-0.5 rounded-full font-bold">💵 كاش للكابتن</span>' 
+                                        : '<span class="bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] px-2 py-0.5 rounded-full font-bold">💳 أجل / للشركة</span>';
 
-                    if (t.status === 'approved' && !t.driver_id) {
-                        assignBtn = `
-                            <button onclick="openAssignDriverModal('${t.id}')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition flex items-center gap-1">
-                                <i class="fas fa-user-plus"></i> إسناد سائق وسيارة
-                            </button>
-                        `;
-                        driverInfoHtml = `<span class="text-orange-400 text-xs font-bold"><i class="fas fa-exclamation-triangle ml-1"></i> بانتظار إسناد سائق</span>`;
-                    } else {
-                        const drvName = t.drivers ? t.drivers.name : 'سائق خارجي';
-                        const drvPhone = t.drivers ? t.drivers.phone : '-';
-                        const carBrand = t.cars ? t.cars.brand : 'سيارة خارجية';
-                        const carPlate = t.cars ? t.cars.plate_number : '-';
-                        driverInfoHtml = `
-                            <div class="text-xs text-slate-300 space-y-1">
-                                <p><i class="fas fa-user text-[10px] text-blue-400 ml-1.5"></i>الكابتن: <strong>${drvName}</strong> (${drvPhone})</p>
-                                <p><i class="fas fa-car text-[10px] text-blue-400 ml-1.5"></i>السيارة: <strong>${carBrand}</strong> [ ${carPlate} ]</p>
-                            </div>
-                        `;
-                    }
+                // حالة التعيين
+                let assignBtn = '';
+                let driverInfoHtml = '';
 
-                    // الشات
-                    const chatBtn = `
-                        <button onclick="openChat('${t.id}', '${pickup} ➝ ${dropoff}')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-xl text-xs border border-slate-700/60 transition flex items-center gap-1">
-                            <i class="fas fa-comments"></i> الدردشة المشتركة
+                if (t.status === 'approved' && !t.driver_id) {
+                    assignBtn = `
+                        <button onclick="openAssignDriverModal('${t.id}', ${commission})" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition flex items-center gap-1">
+                            <i class="fas fa-user-plus"></i> إسناد سائق وسيارة
                         </button>
                     `;
+                    driverInfoHtml = `<span class="text-orange-400 text-xs font-bold"><i class="fas fa-exclamation-triangle ml-1"></i> بانتظار إسناد سائق</span>`;
+                } else {
+                    const drvName = t.drivers ? t.drivers.name : 'سائق خارجي';
+                    const drvPhone = t.drivers ? t.drivers.phone : '-';
+                    const carBrand = t.cars ? t.cars.brand : 'سيارة خارجية';
+                    const carPlate = t.cars ? t.cars.plate_number : '-';
+                    driverInfoHtml = `
+                        <div class="text-xs text-slate-300 space-y-1">
+                            <p><i class="fas fa-user text-[10px] text-blue-400 ml-1.5"></i>الكابتن: <strong>${drvName}</strong> (${drvPhone})</p>
+                            <p><i class="fas fa-car text-[10px] text-blue-400 ml-1.5"></i>السيارة: <strong>${carBrand}</strong> [ ${carPlate} ]</p>
+                        </div>
+                    `;
+                }
 
-                    // اللون حسب الحالة
-                    let statusText = t.status;
-                    let statusColor = 'bg-slate-700 text-slate-300';
-                    if (t.status === 'approved') { statusText = '🟢 بانتظار السائق'; statusColor = 'bg-green-500/10 border-green-500/20 text-green-400'; }
-                    else if (t.status === 'driver_assigned') { statusText = '🚀 الكابتن معين'; statusColor = 'bg-blue-500/10 border-blue-500/20 text-blue-400'; }
-                    else if (t.status === 'completed' || t.status === 'trip_ended') { statusText = '✅ مكتملة'; statusColor = 'bg-slate-500/10 border border-slate-600/30 text-slate-400'; }
+                // الشات
+                const chatBtn = `
+                    <button onclick="openChat('${t.id}', '${pickup} ➝ ${dropoff}')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-xl text-xs border border-slate-700/60 transition flex items-center gap-1">
+                        <i class="fas fa-comments"></i> الدردشة المشتركة
+                    </button>
+                `;
 
-                    return `
-                        <div class="kpi-card p-4 rounded-2xl border flex flex-col md:flex-row justify-between gap-4">
-                            <div class="space-y-3 flex-1">
-                                <div class="flex justify-between items-center">
-                                    <span class="text-xs font-bold font-num text-slate-400">رحلة #${t.id}</span>
-                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${statusColor}">${statusText}</span>
-                                </div>
-                                <div class="bg-slate-900/40 rounded-xl p-3 border border-slate-800 space-y-1.5">
-                                    <p class="text-xs text-slate-200 font-bold"><i class="fas fa-circle-dot text-green-500 text-[9px] ml-1.5"></i>${pickup}</p>
-                                    <p class="text-xs text-slate-200 font-bold"><i class="fas fa-location-dot text-red-500 text-[9px] ml-1.5"></i>${dropoff}</p>
-                                </div>
-                                <div class="grid grid-cols-2 gap-2 text-xs text-slate-400">
-                                    <p><i class="far fa-calendar-alt ml-1"></i>التاريخ: <span class="font-bold text-white font-num">${tripDate}</span></p>
-                                    <p><i class="far fa-clock ml-1"></i>الوقت: <span class="font-bold text-white font-num">${tripTime}</span></p>
-                                </div>
-                                <div class="border-t border-slate-800 pt-3 flex flex-wrap gap-2 items-center justify-between">
-                                    ${driverInfoHtml}
-                                    <div class="flex items-center gap-2">
-                                        ${payBadge}
-                                        <span class="text-blue-400 font-bold text-sm font-num">${price} EGP</span>
-                                        <span class="text-red-400 font-bold text-xs font-num">(عمولة: ${commission})</span>
-                                    </div>
+                // اللون حسب الحالة
+                let statusText = t.status;
+                let statusColor = 'bg-slate-700 text-slate-300';
+                if (t.status === 'approved') { statusText = '🟢 بانتظار السائق'; statusColor = 'bg-green-500/10 border-green-500/20 text-green-400'; }
+                else if (t.status === 'driver_assigned') { statusText = '🚀 الكابتن معين'; statusColor = 'bg-blue-500/10 border-blue-500/20 text-blue-400'; }
+                else if (t.status === 'completed' || t.status === 'trip_ended') { statusText = '✅ مكتملة'; statusColor = 'bg-slate-500/10 border border-slate-600/30 text-slate-400'; }
+
+                return `
+                    <div class="kpi-card p-4 rounded-2xl border flex flex-col md:flex-row justify-between gap-4">
+                        <div class="space-y-3 flex-1">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-bold font-num text-slate-400">رحلة #${t.id}</span>
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${statusColor}">${statusText}</span>
+                            </div>
+                            <div class="bg-slate-900/40 rounded-xl p-3 border border-slate-800 space-y-1.5">
+                                <p class="text-xs text-slate-200 font-bold"><i class="fas fa-circle-dot text-green-500 text-[9px] ml-1.5"></i>${pickup}</p>
+                                <p class="text-xs text-slate-200 font-bold"><i class="fas fa-location-dot text-red-500 text-[9px] ml-1.5"></i>${dropoff}</p>
+                            </div>
+                            
+                            <!-- تفاصيل الحجز الإضافية المطلوبة -->
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 bg-slate-900/20 p-2.5 rounded-xl border border-slate-800/40 text-[11px] text-slate-300">
+                                <div><i class="fas fa-users text-blue-400 ml-1.5"></i>الأفراد: <span class="font-bold text-white font-num">${passengers}</span></div>
+                                <div><i class="fas fa-suitcase text-blue-400 ml-1.5"></i>الحقائب: <span class="font-bold text-white font-num">${bags}</span></div>
+                                <div><i class="fas fa-car-side text-blue-400 ml-1.5"></i>السيارة المطلوبة: <span class="font-bold text-white">${reqCarType}</span></div>
+                                <div><i class="fas fa-route text-blue-400 ml-1.5"></i>نوع الرحلة: <span class="font-bold text-white">${tripTypeLabel}</span></div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2 text-xs text-slate-400">
+                                <p><i class="far fa-calendar-alt ml-1"></i>التاريخ: <span class="font-bold text-white font-num">${tripDate}</span></p>
+                                <p><i class="far fa-clock ml-1"></i>الوقت: <span class="font-bold text-white font-num">${tripTime}</span></p>
+                            </div>
+                            <div class="border-t border-slate-800 pt-3 flex flex-wrap gap-2 items-center justify-between">
+                                ${driverInfoHtml}
+                                <div class="flex items-center gap-2">
+                                    ${payBadge}
+                                    <span class="text-blue-400 font-bold text-sm font-num">${price} EGP</span>
+                                    <span class="text-red-400 font-bold text-xs font-num">(عمولة: ${commission})</span>
                                 </div>
                             </div>
-                            <div class="flex flex-row md:flex-col justify-end gap-2 items-stretch md:w-44 border-t md:border-t-0 md:border-r border-slate-800 pt-3 md:pt-0 md:pr-4">
-                                ${assignBtn}
-                                ${chatBtn}
-                            </div>
-                        </div>`;
-                }).join('');
-
-            } catch(e) {
-                list.innerHTML = `<p class="text-center text-red-500 py-8">حدث خطأ أثناء تحميل الرحلات: ${e.message}</p>`;
-            }
+                        </div>
+                        <div class="flex flex-row md:flex-col justify-end gap-2 items-stretch md:w-44 border-t md:border-t-0 md:border-r border-slate-800 pt-3 md:pt-0 md:pr-4">
+                            ${assignBtn}
+                            ${chatBtn}
+                        </div>
+                    </div>`;
+            }).join('');
         }
 
         // ==========================================
@@ -720,8 +880,9 @@
         // ==========================================
         // مودال إسناد الكابتن والسيارة
         // ==========================================
-        function openAssignDriverModal(tripId) {
+        function openAssignDriverModal(tripId, currentCommission) {
             document.getElementById('assign-trip-id').value = tripId;
+            document.getElementById('assign-trip-commission').value = currentCommission !== undefined ? currentCommission : 100;
             document.getElementById('assign-driver-name').value = '';
             document.getElementById('assign-driver-phone').value = '';
             document.getElementById('assign-car-brand').value = '';
@@ -845,12 +1006,14 @@
                     carId = newC.id;
                 }
 
-                // 3. تحديث الرحلة بالمعرفات وتفعيل وضع تعيين الكابتن
+                // 3. تحديث الرحلة بالمعرفات وتفعيل وضع تعيين الكابتن والعمولة المخصصة
+                const commissionValue = parseFloat(document.getElementById('assign-trip-commission').value) || 0;
                 const { error: tErr } = await sb.from('trips').update({
                     driver_id: driverId,
                     car_id: carId,
                     status: 'driver_assigned',
-                    stage_status: 'new'
+                    stage_status: 'new',
+                    our_commission: commissionValue
                 }).eq('id', tripId);
                 if (tErr) throw tErr;
 
