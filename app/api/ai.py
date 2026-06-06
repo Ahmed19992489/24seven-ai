@@ -5,40 +5,51 @@ import os
 
 router = APIRouter()
 
-# 🔑 Anthropic API Key (يتم جلبه من متغيرات البيئة للأمان)
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-
 @router.post("/ai_chat")
 async def ai_chat_endpoint(payload: dict = Body(...)):
     """
-    بروكسي للاتصال بـ Claude API من Anthropic لضمان أمن المفتاح وسهولة الاستخدام
+    بروكسي للاتصال بـ Gemini API من Google لضمان أمن المفتاح وسهولة الاستخدام
     """
     system_prompt = payload.get("system", "أنت مساعد ذكي لشركة ليموزين.")
     messages = payload.get("messages", [])
     max_tokens = payload.get("max_tokens", 1000)
 
-    url = "https://api.anthropic.com/v1/messages"
-    headers = {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json"
+    gemini_key = os.getenv("GEMINI_API_KEY", "")
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}"
+
+    contents = []
+    for msg in messages:
+        role = msg.get("role")
+        if role == "assistant":
+            role = "model"
+        elif role != "model":
+            role = "user"
+        contents.append({
+            "role": role,
+            "parts": [{"text": msg.get("content", "")}]
+        })
+
+    gemini_payload = {
+        "contents": contents
     }
-    
-    data = {
-        "model": "claude-3-haiku-20240307",
-        "max_tokens": max_tokens,
-        "system": system_prompt,
-        "messages": messages
+    if system_prompt:
+        gemini_payload["systemInstruction"] = {
+            "parts": [{"text": system_prompt}]
+        }
+    gemini_payload["generationConfig"] = {
+        "maxOutputTokens": max_tokens,
+        "temperature": 0.2
     }
 
     try:
-        response = requests.post(url, headers=headers, json=data)
+        response = requests.post(url, json=gemini_payload, headers={"Content-Type": "application/json"})
         if response.status_code != 200:
-            raise HTTPException(status_code=response.status_code, detail=f"Claude API Error: {response.text}")
+            raise HTTPException(status_code=response.status_code, detail=f"Gemini API Error: {response.text}")
         
         resp_json = response.json()
-        answer = resp_json['content'][0]['text']
+        answer = resp_json['candidates'][0]['content']['parts'][0]['text']
         return {"answer": answer}
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+

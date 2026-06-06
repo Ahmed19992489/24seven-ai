@@ -680,7 +680,7 @@
             const price = t.estimated_price || 0;
 
             // تعريف المراحل بالترتيب
-            const STAGES = [
+            let STAGES = [
                 { key: 'garage_pickup', label: '🏭 استلام من الجراش', desc: 'صوّر السيارة قبل التحرك' },
                 { key: 'heading_client', label: '🚗 التحرك للعميل', desc: 'في الطريق للعميل' },
                 { key: 'arrived_client', label: '📍 وصلت للعميل', desc: 'انتظار العميل' },
@@ -689,6 +689,11 @@
                 { key: 'financial_close', label: '💰 إقفال الحساب', desc: 'أدخل البنزين والكروت' },
                 { key: 'trip_ended', label: '✅ منتهية', desc: 'تم إنهاء الرحلة' }
             ];
+
+            // تخصيص الخطوات للكابتن الخارجي (إلغاء الإقفال المالي للبنزين والكروت)
+            if (currentDriver && currentDriver.is_external) {
+                STAGES = STAGES.filter(s => s.key !== 'financial_close');
+            }
 
             const ORDER = STAGES.map(s => s.key);
             const currentIdx = ORDER.indexOf(stage);
@@ -736,7 +741,11 @@
                 actionBtn = stageBtn('post_photos', '🏁 وصلنا - صوّر السيارة بعد الرحلة', `openCarInspection('${tid}','post')`, 'bg-red-600 text-white hover:bg-red-500');
                 actionBtn += stageBtn('dest_change', '🔀 تغيير وجهة (موافقة إدارة)', `requestDestChange('${tid}')`, 'mt-2 bg-orange-600/20 border border-orange-500/40 text-orange-400 hover:bg-orange-600 hover:text-white');
             } else if (stage === 'post_photos') {
-                actionBtn = stageBtn('financial_close', '💰 إقفال الحساب (بنزين + كروت)', `openFinancialClose('${tid}',${price})`, 'bg-purple-600 text-white hover:bg-purple-500');
+                if (currentDriver && currentDriver.is_external) {
+                    actionBtn = stageBtn('trip_ended', '🏁 إنهاء الرحلة وتأكيد الوصول', `confirmExternalEndTrip('${tid}')`, 'bg-red-600 text-white hover:bg-red-500');
+                } else {
+                    actionBtn = stageBtn('financial_close', '💰 إقفال الحساب (بنزين + كروت)', `openFinancialClose('${tid}',${price})`, 'bg-purple-600 text-white hover:bg-purple-500');
+                }
             } else if (stage === 'financial_close' || stage === 'trip_ended') {
                 actionBtn = `<div class="bg-green-600/20 border border-green-500/30 rounded-xl p-3 text-center text-green-400 text-sm font-bold">✅ الرحلة منتهية بنجاح</div>`;
             }
@@ -861,6 +870,36 @@
                 loadDriverTrips();
             } catch (err) {
                 if (btn) { btn.disabled = false; btn.textContent = 'تأكيد الإنهاء'; }
+                alert('❌ خطأ: ' + err.message);
+            }
+        }
+
+        async function confirmExternalEndTrip(tripId) {
+            if (!confirm('هل تريد إنهاء الرحلة وتأكيد الوصول؟')) return;
+            const btn = event?.target;
+            if (btn) { btn.disabled = true; btn.textContent = '⏳ جاري إنهاء الرحلة...'; }
+
+            try {
+                const { error } = await sb.from('trips').update({
+                    status: 'trip_ended',
+                    stage_status: 'trip_ended',
+                    fuel_cost: 0,
+                    toll_cost: 0
+                }).eq('id', tripId);
+                if (error) throw new Error(error.message);
+
+                await sb.from('chat_messages').insert([{
+                    trip_id: tripId, sender_role: 'driver',
+                    sender_id: currentDriver.id, sender_name: currentDriver.name,
+                    message: `✅ تم إنهاء الرحلة بنجاح! شكراً لاستخدامك 24Seven.`,
+                    message_type: 'trip_end'
+                }]);
+
+                sendTripEmail(tripId, '✅ رحلتك اكتملت', 'نتمنى أنك استمتعت برحلتك معنا. شكراً لاستخدامك 24Seven!');
+                alert('✅ تم إنهاء الرحلة بنجاح');
+                loadDriverTrips();
+            } catch (err) {
+                if (btn) { btn.disabled = false; btn.textContent = '🏁 إنهاء الرحلة وتأكيد الوصول'; }
                 alert('❌ خطأ: ' + err.message);
             }
         }

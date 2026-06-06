@@ -180,6 +180,9 @@
             <div onclick="showPage('fleet')" id="nav-fleet" class="sidebar-item p-3 rounded-lg flex items-center gap-3">
                 <i class="fas fa-car w-5 text-center text-slate-600"></i> السيارات والكباتن
             </div>
+            <div onclick="showPage('partners')" id="nav-partners" class="sidebar-item p-3 rounded-lg flex items-center gap-3">
+                <i class="fas fa-handshake w-5 text-center text-orange-600"></i> التشغيل الخارجي (الشركاء)
+            </div>
 
             <p class="text-[10px] font-bold text-slate-400 mt-4 mb-1 px-3">التواصل</p>
             <div onclick="showPage('chat')" id="nav-chat" class="sidebar-item p-3 rounded-lg flex items-center gap-3">
@@ -358,6 +361,27 @@
                     <div class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 opacity-50">
                         <i class="fas fa-folder-open text-6xl mb-4"></i>
                         <p>اختر عنصراً لعرض الملف المالي</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-partners" class="page-section hidden">
+            <h2 class="text-2xl font-bold mb-6">إدارة التشغيل الخارجي والشركاء</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 h-auto lg:h-[calc(100vh-150px)]">
+                <div class="glass-panel p-4 overflow-y-auto col-span-1 h-96 lg:h-full">
+                    <div class="flex justify-between items-center mb-4 px-1">
+                        <h4 class="font-bold text-slate-600 text-xs uppercase">المكاتب المنفذة</h4>
+                        <button onclick="addVendorPrompt()"
+                            class="text-[10px] bg-slate-900 text-white px-2.5 py-1.5 rounded-lg hover:bg-slate-800 transition">إضافة مكتب</button>
+                    </div>
+                    <div id="partners-list" class="space-y-2"></div>
+                </div>
+                <div class="glass-panel p-6 col-span-1 lg:col-span-3 overflow-y-auto bg-slate-50 relative min-h-[300px]"
+                    id="partner-ledger-view">
+                    <div class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 opacity-50">
+                        <i class="fas fa-handshake text-6xl mb-4"></i>
+                        <p>اختر مكتباً خارجياً لعرض كشف الحساب والتفاصيل</p>
                     </div>
                 </div>
             </div>
@@ -860,18 +884,36 @@
     <div id="assign-modal"
         class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[9000] backdrop-blur-sm p-4">
         <div class="bg-white p-6 rounded-2xl w-full max-w-[500px] shadow-2xl max-h-[90vh] overflow-y-auto">
-            <h3 class="text-xl font-bold mb-4 border-b pb-3">تعيين كابتن</h3>
+            <h3 class="text-xl font-bold mb-4 border-b pb-3">تعيين كابتن / تشغيل خارجي</h3>
             <input type="hidden" id="modal-trip-id">
             <div class="space-y-4">
-                <div><label class="text-xs font-bold text-slate-500">الكابتن</label><select id="modal-driver"
-                        class="input-std"></select></div>
-                <div><label class="text-xs font-bold text-slate-500">السيارة</label><select id="modal-car"
-                        class="input-std"></select></div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500">نوع التشغيل</label>
+                    <select id="modal-assign-type" class="input-std" onchange="toggleAssignType()">
+                        <option value="internal">🚗 كابتن وسوّاق داخلي</option>
+                        <option value="external">🤝 مكتب خارجي (تشغيل خارجي)</option>
+                    </select>
+                </div>
+                
+                <div id="assign-internal-group" class="space-y-4">
+                    <div><label class="text-xs font-bold text-slate-500">الكابتن</label><select id="modal-driver"
+                            class="input-std"></select></div>
+                    <div><label class="text-xs font-bold text-slate-500">السيارة</label><select id="modal-car"
+                            class="input-std"></select></div>
+                </div>
+
+                <div id="assign-external-group" class="space-y-4 hidden">
+                    <div><label class="text-xs font-bold text-slate-500">المكتب الخارجي</label><select id="modal-vendor"
+                            class="input-std" onchange="updateVendorCommissionDefault()"></select></div>
+                    <div><label class="text-xs font-bold text-slate-500">عمولة المنصة من الأوردر (جنيه)</label><input type="number" id="modal-vendor-commission"
+                            class="input-std" value="100"></div>
+                </div>
+
                 <div><label class="text-xs font-bold text-slate-500">ملاحظات</label><textarea id="modal-note"
                         class="input-std h-20"></textarea></div>
                 <div class="flex gap-2 pt-2">
                     <button onclick="confirmAssign()"
-                        class="flex-1 bg-slate-900 text-white py-2.5 rounded-lg font-bold">تأكيد</button>
+                        class="flex-1 bg-slate-900 text-white py-2.5 rounded-lg font-bold">تأكيد التعيين</button>
                     <button onclick="document.getElementById('assign-modal').style.display='none'"
                         class="flex-1 bg-slate-200 text-slate-700 py-2.5 rounded-lg font-bold">إلغاء</button>
                 </div>
@@ -1184,6 +1226,7 @@
         const supabaseUrl = 'https://wtjwzqvmwnbvjxnmweqq.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY';
         const sbClient = supabase.createClient(supabaseUrl, supabaseKey);
+        let activeVendors = [];
 
         showPage('dashboard');
 
@@ -1208,6 +1251,7 @@
             if (pageId === 'crm') loadCRM();
             if (pageId === 'finance') loadFinance();
             if (pageId === 'fleet') loadFleetList();
+            if (pageId === 'partners') loadPartners();
             if (pageId === 'pricing') loadPricing();
             if (pageId === 'chat') loadAdminChats();
             if (pageId === 'ratings') loadRatings();
@@ -1527,16 +1571,42 @@
             document.body.appendChild(modal);
         }
 
-        function openCompleteModal(tripId, price, distKm, fuelCost = 0, tollCost = 0) {
+        async function openCompleteModal(tripId, price, distKm, fuelCost = 0, tollCost = 0) {
             document.getElementById('comp-trip-id').value = tripId;
             document.getElementById('comp-price').value = price;
             document.getElementById('comp-dist-km').value = distKm || 0;
-            document.getElementById('comp-wage').value = 0;
-            document.getElementById('comp-fuel').value = fuelCost;
-            document.getElementById('comp-tolls').value = tollCost;
-            document.getElementById('comp-commission').value = 0;
-            const maint = Math.round((distKm || 0) * 0.6);
-            document.getElementById('comp-maintenance-display').innerText = maint + ' EGP (' + (distKm || 0) + ' km × 0.6)';
+
+            const { data: trip } = await sbClient.from('trips').select('is_outsourced, our_commission').eq('id', tripId).single();
+            const isOutsourced = trip?.is_outsourced || false;
+
+            if (isOutsourced) {
+                // إخفاء حقول التقسيم المالي الداخلي وإظهار حقل العمولة فقط
+                document.getElementById('comp-wage').closest('div').style.display = 'none';
+                document.getElementById('comp-fuel').closest('div').style.display = 'none';
+                document.getElementById('comp-tolls').closest('div').style.display = 'none';
+                document.getElementById('comp-maintenance-display').closest('.bg-slate-50').style.display = 'none';
+                document.getElementById('comp-summary').style.display = 'none';
+                
+                document.getElementById('comp-commission').value = trip?.our_commission || 100;
+                // توسيع حقل العمولة ليكون بعرض كامل
+                document.getElementById('comp-commission').closest('div').classList.remove('grid-cols-2');
+                document.getElementById('comp-commission').closest('div').style.display = 'block';
+            } else {
+                // إظهار الحقول المخصصة للتشغيل الداخلي
+                document.getElementById('comp-wage').closest('div').style.display = 'block';
+                document.getElementById('comp-fuel').closest('div').style.display = 'block';
+                document.getElementById('comp-tolls').closest('div').style.display = 'block';
+                document.getElementById('comp-maintenance-display').closest('.bg-slate-50').style.display = 'block';
+                document.getElementById('comp-summary').style.display = 'block';
+
+                document.getElementById('comp-wage').value = 0;
+                document.getElementById('comp-fuel').value = fuelCost;
+                document.getElementById('comp-tolls').value = tollCost;
+                document.getElementById('comp-commission').value = 0;
+                const maint = Math.round((distKm || 0) * 0.6);
+                document.getElementById('comp-maintenance-display').innerText = maint + ' EGP (' + (distKm || 0) + ' km × 0.6)';
+            }
+            
             document.getElementById('complete-modal').style.display = 'flex';
             updateCompSummary();
         }
@@ -1570,8 +1640,56 @@
             const carNet = price - wage - fuel - tolls - commission - maint;
 
             if (!confirm('تأكيد الإنهاء؟')) return;
+
+            // التحقق هل الرحلة خارجية (Outsourced)
+            const { data: trip } = await sbClient.from('trips').select('is_outsourced, vendor_id, admin_notes, driver_id, car_id').eq('id', tripId).single();
+            
+            if (trip && trip.is_outsourced) {
+                try {
+                    await sbClient.from('trips').update({ status: 'completed', final_price: price, our_commission: commission }).eq('id', tripId);
+                    
+                    const notes = trip.admin_notes || '';
+                    const isCash = notes.toLowerCase().includes('cash') || notes.includes('كاش') || notes.includes('💵');
+                    
+                    if (trip.vendor_id) {
+                        if (isCash) {
+                            // العميل دفع كاش للسائق الخارجي، المكتب مدين لنا بالعمولة
+                            await sbClient.from('vendor_transactions').insert([{
+                                vendor_id: trip.vendor_id,
+                                trip_id: tripId,
+                                transaction_type: 'commission_deduction',
+                                amount: -commission,
+                                description: `خصم عمولة - رحلة كاش #${tripId}`
+                            }]);
+                        } else {
+                            // العميل دفع أجل/للمنصة، نحن مدينون للمكتب الخارجي بباقي الحساب
+                            const payout = price - commission;
+                            await sbClient.from('vendor_transactions').insert([{
+                                vendor_id: trip.vendor_id,
+                                trip_id: tripId,
+                                transaction_type: 'deferred_credit',
+                                amount: payout,
+                                description: `مستحق رحلة أجل #${tripId} (سعر: ${price} - عمولة: ${commission})`
+                            }]);
+                        }
+                    }
+                    
+                    document.getElementById('complete-modal').style.display = 'none';
+                    alert('✅ تم إنهاء الرحلة الخارجية بنجاح وتوزيع الحسابات!');
+                    loadOperations(); loadDashboard(); loadFinance();
+                    // تحديث قائمة الشركاء إذا كانت مفتوحة
+                    const partnersPage = document.getElementById('page-partners');
+                    if (partnersPage && !partnersPage.classList.contains('hidden')) {
+                        loadPartners();
+                    }
+                } catch(e) {
+                    alert('❌ خطأ أثناء إنهاء الرحلة الخارجية: ' + e.message);
+                }
+                return;
+            }
+
+            // تصفية الرحلة الداخلية العادية
             await sbClient.from('trips').update({ status: 'completed', final_price: price, driver_wage: wage }).eq('id', tripId);
-            const { data: trip } = await sbClient.from('trips').select('driver_id, car_id').eq('id', tripId).single();
             const tripLabel = String(tripId).slice(0, 6);
 
             // 1. يومية الكابتن → خزنة السواقين
@@ -1912,14 +2030,293 @@
             
             document.getElementById('crm-profile-modal').style.display = 'flex';
         }
+
+        async function loadPartners() {
+            const list = document.getElementById('partners-list');
+            list.innerHTML = '<p class="text-center text-slate-400 py-4"><i class="fas fa-spinner fa-spin ml-2"></i>جاري التحميل...</p>';
+            
+            // Get all vendors
+            const { data: vendors, error: vErr } = await sbClient.from('vendors').select('*').order('name');
+            if (vErr || !vendors) {
+                list.innerHTML = '<p class="text-center text-red-500 py-4">فشل تحميل الشركاء</p>';
+                return;
+            }
+            
+            if (vendors.length === 0) {
+                list.innerHTML = '<p class="text-center text-slate-500 py-4">لا يوجد مكاتب مسجلة حالياً</p>';
+                return;
+            }
+            
+            // Get all transactions to compute balances
+            const { data: txs } = await sbClient.from('vendor_transactions').select('vendor_id, amount');
+            const balanceMap = {};
+            if (txs) {
+                txs.forEach(t => {
+                    balanceMap[t.vendor_id] = (balanceMap[t.vendor_id] || 0) + Number(t.amount);
+                });
+            }
+            
+            list.innerHTML = '';
+            vendors.forEach(v => {
+                const bal = balanceMap[v.id] || 0;
+                const balColor = bal < 0 ? 'text-red-600' : bal > 0 ? 'text-green-600' : 'text-slate-500';
+                
+                const commTypeAr = v.commission_type === 'percentage' ? '%' : 'EGP';
+                const commDesc = `${v.commission_value || 0}${commTypeAr}`;
+                
+                list.innerHTML += `
+                    <div onclick="openPartnerLedger('${v.id}', '${v.name.replace(/'/g, "\\'")}')" 
+                        class="bg-white p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition flex justify-between items-center shadow-sm">
+                        <div>
+                            <p class="font-bold text-slate-800 text-sm">${v.name}</p>
+                            <p class="text-[10px] text-slate-400 font-mono mt-0.5">${v.owner_phone} | العمولة: ${commDesc}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-black font-num text-xs ${balColor}">${bal} EGP</p>
+                            <span class="text-[9px] px-1.5 py-0.5 rounded ${v.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}">${v.status === 'active' ? 'نشط' : 'موقف'}</span>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        async function addVendorPrompt() {
+            const name = prompt("🤝 أدخل اسم المكتب المنفذ الخارجي:");
+            if (!name) return;
+            const phone = prompt("📱 أدخل رقم هاتف المالك (لتسجيل الدخول):");
+            if (!phone) return;
+            const commType = prompt("نوع عمولة المنصة (fixed لمبلغ ثابت / percentage لنسبة مئوية):", "fixed");
+            if (commType !== 'fixed' && commType !== 'percentage') return alert("نوع العمولة غير صالح!");
+            const commVal = parseFloat(prompt("قيمة العمولة (جنيه أو نسبة):", "100")) || 0;
+            
+            const { error } = await sbClient.from('vendors').insert([{
+                name: name.trim(),
+                owner_phone: phone.trim().replace(/\D/g, ''),
+                commission_type: commType,
+                commission_value: commVal,
+                status: 'active'
+            }]);
+            
+            if (error) {
+                alert("❌ فشل إضافة المكتب: " + error.message);
+            } else {
+                alert("✅ تم تسجيل المكتب بنجاح!");
+                loadPartners();
+            }
+        }
+
+        async function editVendorPrompt(vendorId) {
+            const { data: v, error } = await sbClient.from('vendors').select('*').eq('id', vendorId).single();
+            if (error || !v) return alert("فشل تحميل بيانات المكتب");
+            
+            const name = prompt("🤝 تعديل اسم المكتب:", v.name);
+            if (name === null) return;
+            
+            const phone = prompt("📱 تعديل رقم هاتف المالك:", v.owner_phone);
+            if (phone === null) return;
+            
+            const commType = prompt("تعديل نوع عمولة المنصة (fixed لمبلغ ثابت / percentage لنسبة مئوية):", v.commission_type);
+            if (commType === null) return;
+            if (commType !== 'fixed' && commType !== 'percentage') return alert("نوع العمولة غير صالح!");
+            
+            const commVal = parseFloat(prompt("تعديل قيمة العمولة (جنيه أو نسبة):", v.commission_value)) || 0;
+            
+            const status = prompt("تعديل حالة المكتب (active نشط / suspended موقف):", v.status);
+            if (status === null) return;
+            if (status !== 'active' && status !== 'suspended') return alert("حالة غير صالحة!");
+            
+            const { error: updateErr } = await sbClient.from('vendors').update({
+                name: name.trim(),
+                owner_phone: phone.trim().replace(/\D/g, ''),
+                commission_type: commType,
+                commission_value: commVal,
+                status: status
+            }).eq('id', vendorId);
+            
+            if (updateErr) {
+                alert("❌ فشل تحديث بيانات المكتب: " + updateErr.message);
+            } else {
+                alert("✅ تم التعديل بنجاح!");
+                loadPartners();
+                openPartnerLedger(vendorId, name.trim());
+            }
+        }
+
+        async function openPartnerLedger(vendorId, vendorName) {
+            const view = document.getElementById('partner-ledger-view');
+            view.innerHTML = '<p class="text-center text-slate-400 py-12"><i class="fas fa-spinner fa-spin ml-2"></i>جاري تحميل الحسابات...</p>';
+            
+            // Load vendor info
+            const { data: v } = await sbClient.from('vendors').select('*').eq('id', vendorId).single();
+            if (!v) {
+                view.innerHTML = '<p class="text-center text-red-500 py-12">فشل تحميل كشف الحساب</p>';
+                return;
+            }
+            
+            // Load transactions
+            const { data: txs } = await sbClient.from('vendor_transactions').select('*').eq('vendor_id', vendorId).order('created_at', { ascending: false });
+            
+            let totalCredit = 0; // Owed to vendor
+            let totalDebit = 0;  // Owed to platform
+            if (txs) {
+                txs.forEach(t => {
+                    const amt = Number(t.amount);
+                    if (amt > 0) totalCredit += amt;
+                    else totalDebit += Math.abs(amt);
+                });
+            }
+            const net = totalCredit - totalDebit;
+            
+            // Render Statement
+            view.innerHTML = `
+                <div class="flex justify-between items-start border-b pb-4 mb-4">
+                    <div>
+                        <h3 class="font-bold text-xl text-slate-800">${v.name}</h3>
+                        <p class="text-xs text-slate-400 mt-1">رقم المالك: <span class="font-mono font-bold text-slate-700">${v.owner_phone}</span></p>
+                        <p class="text-xs text-slate-400">العمولة الافتراضية: <span class="font-bold text-slate-700">${v.commission_value} EGP (${v.commission_type === 'fixed' ? 'ثابت' : 'نسبة'})</span></p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="editVendorPrompt('${v.id}')" class="bg-slate-800 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-700 border border-slate-600 transition">✏️ تعديل المكتب</button>
+                        <button onclick="addPartnerTransaction('${v.id}', '${v.name.replace(/'/g, "\\'")}')" class="bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-700 transition">📝 تسجيل تسوية مالية (سداد/سحب)</button>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-4 mb-6 text-center text-xs">
+                    <div class="bg-green-50 border border-green-200 p-3 rounded-xl">
+                        <p class="text-slate-500 mb-1">💸 مستحقات المكتب (آجل)</p>
+                        <p class="font-bold text-green-700 text-lg font-num">${totalCredit} EGP</p>
+                    </div>
+                    <div class="bg-red-50 border border-red-200 p-3 rounded-xl">
+                        <p class="text-slate-500 mb-1">📉 عمولات المنصة (كاش)</p>
+                        <p class="font-bold text-red-700 text-lg font-num">${totalDebit} EGP</p>
+                    </div>
+                    <div class="bg-slate-100 border border-slate-200 p-3 rounded-xl">
+                        <p class="text-slate-500 mb-1">⚖️ صافي الرصيد الحالي</p>
+                        <p class="font-black text-lg font-num ${net >= 0 ? 'text-green-700' : 'text-red-700'}">${net} EGP</p>
+                        <p class="text-[9px] text-slate-400 mt-0.5">${net >= 0 ? 'مستحق للمكتب لدينا' : 'مديونية على المكتب لنا'}</p>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <h4 class="font-bold text-slate-700 text-sm mb-3">📋 سجل المعاملات والرحلات:</h4>
+                    <div class="space-y-2 max-h-96 overflow-y-auto">
+                        ${!txs || txs.length === 0 ? '<p class="text-center text-slate-400 py-6 text-xs">لا توجد حركات مالية مسجلة بعد</p>' : txs.map(t => {
+                            const date = new Date(t.created_at).toLocaleDateString('ar-EG');
+                            const time = new Date(t.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+                            const isPlus = Number(t.amount) >= 0;
+                            return `
+                                <div class="bg-white p-3 border rounded-xl flex justify-between items-center text-xs">
+                                    <div>
+                                        <p class="font-bold text-slate-800">${t.description || 'معاملة مالية'}</p>
+                                        <p class="text-[9px] text-slate-400 mt-1">${date} - ${time} | ${t.transaction_type}</p>
+                                    </div>
+                                    <span class="font-black font-num text-sm ${isPlus ? 'text-green-600' : 'text-red-600'}">${isPlus ? '+' : ''}${t.amount} EGP</span>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        async function addPartnerTransaction(vendorId, vendorName) {
+            const type = prompt("أدخل نوع المعاملة:\n1 - قمنا بتحويل أموال للمكتب (payout_to_vendor)\n2 - استلمنا أموال من المكتب لسداد مديونيته (payment_from_vendor)");
+            if (type !== '1' && type !== '2') return alert("اختيار غير صالح!");
+            
+            const amount = parseFloat(prompt("أدخل المبلغ (جنيه):"));
+            if (!amount || amount <= 0) return alert("مبلغ غير صالح!");
+            
+            const desc = prompt("ملاحظات / طريقة التحويل (مثال: فودافون كاش رقم ...):");
+            
+            const txType = type === '1' ? 'payout_to_vendor' : 'payment_from_vendor';
+            const calculatedAmount = type === '1' ? -amount : amount;
+            
+            const { error } = await sbClient.from('vendor_transactions').insert([{
+                vendor_id: vendorId,
+                transaction_type: txType,
+                amount: calculatedAmount,
+                description: desc || (type === '1' ? 'تسوية: تحويل رصيد للمكتب' : 'تسوية: سداد عمولة من المكتب')
+            }]);
+            
+            if (error) {
+                alert("❌ فشل تسجيل المعاملة: " + error.message);
+            } else {
+                alert("✅ تم تسجيل المعاملة والتسوية بنجاح!");
+                loadPartners();
+                openPartnerLedger(vendorId, vendorName);
+            }
+        }
+
         async function loadPricing() { const { data } = await sbClient.from('pricing_tiers').select('*').order('car_type').order('min_km'); document.getElementById('pricing-list').innerHTML = data.map(r => `<div class="bg-white p-3 border rounded mb-2 flex justify-between items-center"><div class="flex-1"><span class="font-bold">${r.car_type}</span> <span class="text-xs text-slate-500 mx-2">(${r.min_km}-${r.max_km} km)</span> <span class="text-xs text-slate-500">فتح: ${r.base_price}</span></div><span class="font-bold text-green-700 mx-3">${r.price_per_km}/km</span><button onclick="deletePricingTier(${r.id})" class="text-red-500 hover:text-red-700 hover:bg-red-50 w-8 h-8 rounded-lg flex items-center justify-center transition"><i class="fas fa-trash-alt text-sm"></i></button></div>`).join(''); }
         async function deletePricingTier(id) { if (!confirm('هل تريد حذف هذه الشريحة؟')) return; const { error } = await sbClient.from('pricing_tiers').delete().eq('id', id); if (error) { alert('خطأ: ' + error.message); return; } alert('🗑️ تم الحذف'); loadPricing(); }
         async function addPricingTier() { const type = document.getElementById('rule-type').value, min = document.getElementById('rule-min').value, max = document.getElementById('rule-max').value, base = document.getElementById('rule-base').value, km = document.getElementById('rule-km').value; if (!min || !max || !base || !km) { alert('أكمل البيانات'); return; } const { error } = await sbClient.from('pricing_tiers').insert([{ car_type: type, min_km: min, max_km: max, base_price: base, price_per_km: km }]); if (error) { alert('خطأ: ' + error.message); return; } alert('✅ تم الحفظ'); loadPricing(); }
-        async function openAssignModal(id) { document.getElementById('modal-trip-id').value = id; document.getElementById('assign-modal').style.display = 'flex'; const { data: d } = await sbClient.from('drivers').select('*'); const { data: c } = await sbClient.from('cars').select('*'); const dSel = document.getElementById('modal-driver'); dSel.innerHTML = ''; d.forEach(x => dSel.innerHTML += `<option value="${x.id}">${x.name}</option>`); const cSel = document.getElementById('modal-car'); cSel.innerHTML = ''; c.forEach(x => cSel.innerHTML += `<option value="${x.id}">${x.brand}</option>`); }
+        async function openAssignModal(id) { 
+            document.getElementById('modal-trip-id').value = id; 
+            document.getElementById('assign-modal').style.display = 'flex'; 
+            
+            // تهيئة الخيارات كتعيين داخلي بشكل افتراضي
+            document.getElementById('modal-assign-type').value = 'internal';
+            document.getElementById('assign-internal-group').classList.remove('hidden');
+            document.getElementById('assign-external-group').classList.add('hidden');
+            
+            // جلب قيمة الرحلة المقدرة وحفظها
+            const { data: trip } = await sbClient.from('trips').select('estimated_price').eq('id', id).single();
+            const tripPrice = trip?.estimated_price || 0;
+            document.getElementById('modal-trip-id').setAttribute('data-price', tripPrice);
+            
+            const { data: d } = await sbClient.from('drivers').select('*').eq('is_external', false); 
+            const { data: c } = await sbClient.from('cars').select('*').eq('is_external', false); 
+            const { data: v } = await sbClient.from('vendors').select('*').eq('status', 'active');
+            
+            activeVendors = v || [];
+            
+            const dSel = document.getElementById('modal-driver'); 
+            dSel.innerHTML = ''; 
+            if (d) d.forEach(x => dSel.innerHTML += `<option value="${x.id}">${x.name}</option>`); 
+            
+            const cSel = document.getElementById('modal-car'); 
+            cSel.innerHTML = ''; 
+            if (c) c.forEach(x => cSel.innerHTML += `<option value="${x.id}">${x.brand}</option>`); 
+            
+            const vSel = document.getElementById('modal-vendor');
+            vSel.innerHTML = '';
+            if (v) v.forEach(x => vSel.innerHTML += `<option value="${x.id}">${x.name}</option>`);
+            
+            // تحديث العمولة الافتراضية بناء على المكتب المحدد
+            updateVendorCommissionDefault();
+        }
+
+        function updateVendorCommissionDefault() {
+            const vendorId = document.getElementById('modal-vendor').value;
+            const tripPrice = Number(document.getElementById('modal-trip-id').getAttribute('data-price')) || 0;
+            const vendor = activeVendors.find(x => x.id === vendorId);
+            
+            if (vendor) {
+                let defaultComm = 100;
+                if (vendor.commission_type === 'percentage') {
+                    defaultComm = Math.round((tripPrice * (vendor.commission_value || 0)) / 100);
+                } else {
+                    defaultComm = vendor.commission_value || 0;
+                }
+                document.getElementById('modal-vendor-commission').value = defaultComm;
+            } else {
+                document.getElementById('modal-vendor-commission').value = 100;
+            }
+        }
+
+        function toggleAssignType() {
+            const type = document.getElementById('modal-assign-type').value;
+            if (type === 'internal') {
+                document.getElementById('assign-internal-group').classList.remove('hidden');
+                document.getElementById('assign-external-group').classList.add('hidden');
+            } else {
+                document.getElementById('assign-internal-group').classList.add('hidden');
+                document.getElementById('assign-external-group').classList.remove('hidden');
+            }
+        }
+
         async function confirmAssign() {
             const tid = document.getElementById('modal-trip-id').value;
-            const did = document.getElementById('modal-driver').value;
-            const cid = document.getElementById('modal-car').value;
+            const assignType = document.getElementById('modal-assign-type').value;
             const note = document.getElementById('modal-note').value;
 
             // جلب الملاحظات الحالية أولاً حتى لا نفقد بيانات الرحلة
@@ -1931,6 +2328,50 @@
             if (note && note.trim()) {
                 updatedNotes = existingNotes ? existingNotes + '\n--- ملاحظات التعيين ---\n' + note : note;
             }
+
+            if (assignType === 'external') {
+                const vendorId = document.getElementById('modal-vendor').value;
+                const commission = Number(document.getElementById('modal-vendor-commission').value) || 100;
+                
+                if (!vendorId) {
+                    alert('يرجى اختيار مكتب خارجي أولاً');
+                    return;
+                }
+                
+                const { data: vendorInfo } = await sbClient.from('vendors').select('name').eq('id', vendorId).single();
+                
+                // تحديث الرحلة بالتشغيل الخارجي وحفظ العمولة المقتطعة
+                await sbClient.from('trips').update({
+                    is_outsourced: true,
+                    vendor_id: vendorId,
+                    our_commission: commission,
+                    admin_notes: updatedNotes,
+                    status: 'approved' // الإدارة توافق، وينتظر إسناد السائق من المكتب المنفذ
+                }).eq('id', tid);
+
+                // إرسال رسالة نظام في شات الرحلة
+                const pickup = (existingTrip?.pickup_location || '').split(',')[0];
+                const dropoff = (existingTrip?.dropoff_location || '').split(',')[0];
+                const price = existingTrip?.estimated_price || 0;
+
+                await sbClient.from('chat_messages').insert([{
+                    trip_id: tid,
+                    sender_role: 'admin',
+                    sender_id: 'admin',
+                    sender_name: 'الإدارة',
+                    message: `🎯 تم إسناد الرحلة إلى المكتب الخارجي المنفذ: ${vendorInfo?.name || ''}\n📍 من: ${pickup}\n🏁 إلى: ${dropoff}\n💰 القيمة المقدرة: ${price} EGP\n\nبانتظار إسناد السائق والسيارة من طرف المكتب المنفذ لتفعيل التتبع والدردشة...`,
+                    message_type: 'system'
+                }]);
+
+                document.getElementById('assign-modal').style.display = 'none';
+                alert(`✅ تم إسناد الرحلة للمكتب الخارجي ${vendorInfo?.name || ''} بنجاح!`);
+                loadOperations();
+                return;
+            }
+
+            // التعيين الداخلي العادي
+            const did = document.getElementById('modal-driver').value;
+            const cid = document.getElementById('modal-car').value;
 
             await sbClient.from('trips').update({
                 driver_id: did,
