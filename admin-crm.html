@@ -1358,16 +1358,71 @@
             const fDate = document.getElementById('ops-date-from')?.value || '';
             const tDate = document.getElementById('ops-date-to')?.value || '';
 
-            const { data: trips, error } = await sbClient.from('trips').select(`*, cars:cars!fk_trips_car(brand, model, plate_number, car_image_url), drivers:drivers!fk_trips_driver(name, phone)`).order('created_at', { ascending: false });
-            if (error) { list.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-red-500">حدث خطأ</td></tr>'; return; }
+            // جلب الرحلات من Supabase وحجوزات الشيت
+            const [tripsResult, reservationsResult] = await Promise.all([
+                sbClient.from('trips').select(`*, cars:cars!fk_trips_car(brand, model, plate_number, car_image_url), drivers:drivers!fk_trips_driver(name, phone)`).order('created_at', { ascending: false }),
+                sbClient.from('google_reservations').select('*').order('created_at', { ascending: false })
+            ]);
+
+            if (tripsResult.error) { list.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-red-500">حدث خطأ أثناء تحميل الرحلات</td></tr>'; return; }
+
+            const trips = tripsResult.data || [];
+            const reservations = reservationsResult.data || [];
+
+            // تجميع معرفات الرحلات المسجلة بالفعل لمنع التكرار
+            const existingTripIds = new Set(trips.map(t => String(t.id)));
+
+            // تحويل وتصفية حجوزات الشيت
+            const pendingReservations = reservations
+                .filter(r => {
+                    if (r.sql_server_id && existingTripIds.has(String(r.sql_server_id))) {
+                        return false;
+                    }
+                    if (r.status === 'تم الترحيل' || r.status === 'driver_assigned') {
+                        return false;
+                    }
+                    return true;
+                })
+                .map(r => {
+                    return {
+                        id: 'gr_' + r.id,
+                        google_res_id: r.id,
+                        user_id: null,
+                        pickup_location: r.pickup_address,
+                        dropoff_location: r.dropoff_address,
+                        estimated_price: Number(r.cost) || 0,
+                        status: 'pending',
+                        admin_notes: `📝 حجز من الشيت
+👤 العميل: ${r.customer_name}
+📞 الهاتف: ${r.customer_phone}
+🚗 السيارة: ${r.car_type} | رحلة: ${r.trip_type}
+👥 ركاب: ${r.passengers} | شنط: ${r.bags}
+📅 التاريخ: ${r.trip_date} | الوقت: ${r.trip_time}
+💬 واتساب: ${r.whatsapp_num || '-'}
+💡 ملاحظات: ${r.notes || '-'}`,
+                        created_at: r.created_at || r.sheet_timestamp,
+                        drivers: null,
+                        cars: null,
+                        manual_client_name: r.customer_name,
+                        client_phone: r.customer_phone,
+                        is_google_res: true,
+                        sheet_row: r.sheet_row,
+                        trip_date: r.trip_date
+                    };
+                });
+
+            // دمج القائمتين وترتيبهما
+            const mergedTrips = [...trips, ...pendingReservations];
+            mergedTrips.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
             // جلب رسائل النظام والمشرف لتتبع طلبات تغيير الوجهة المعلقة لكل رحلة
-            const tripIds = trips?.map(t => t.id) || [];
+            // نستبعد المعرفات التي تبدأ بـ gr_ لأنها ليست في جدول trips وبالتالي ليس لها رسائل شات
+            const realTripIds = mergedTrips.map(t => t.id).filter(id => typeof id === 'number' || (typeof id === 'string' && !id.startsWith('gr_')));
             let pendingDestRequests = {};
-            if (tripIds.length > 0) {
+            if (realTripIds.length > 0) {
                 const { data: messages } = await sbClient.from('chat_messages')
                     .select('trip_id, message, message_type, created_at')
-                    .in('trip_id', tripIds)
+                    .in('trip_id', realTripIds)
                     .or("message_type.eq.admin_request,message_type.eq.system")
                     .order('created_at', { ascending: true });
                 if (messages) {
@@ -1405,7 +1460,7 @@
                 }
             }
 
-            const userIds = trips?.map(t => t.user_id).filter(Boolean) || [];
+            const userIds = mergedTrips.map(t => t.user_id).filter(Boolean) || [];
             let profilesMap = {};
             if (userIds.length) {
                 const { data: profiles } = await sbClient.from('profiles').select('id, full_name, phone').in('id', userIds);
@@ -1414,7 +1469,7 @@
 
             list.innerHTML = '';
             
-            const filteredTrips = (trips || []).filter(t => {
+            const filteredTrips = (mergedTrips || []).filter(t => {
                 let matchSearch = true;
                 if (search) {
                     const profile = profilesMap[t.user_id] || {};
@@ -2282,8 +2337,15 @@
             document.getElementById('assign-external-group').classList.add('hidden');
             
             // جلب قيمة الرحلة المقدرة وحفظها
-            const { data: trip } = await sbClient.from('trips').select('estimated_price').eq('id', id).single();
-            const tripPrice = trip?.estimated_price || 0;
+            let tripPrice = 0;
+            if (String(id).startsWith('gr_')) {
+                const numericId = Number(id.replace('gr_', ''));
+                const { data: res } = await sbClient.from('google_reservations').select('cost').eq('id', numericId).single();
+                tripPrice = res?.cost || 0;
+            } else {
+                const { data: trip } = await sbClient.from('trips').select('estimated_price').eq('id', id).single();
+                tripPrice = trip?.estimated_price || 0;
+            }
             document.getElementById('modal-trip-id').setAttribute('data-price', tripPrice);
             
             const { data: d } = await sbClient.from('drivers').select('*').eq('is_external', false); 
@@ -2342,9 +2404,89 @@
             const assignType = document.getElementById('modal-assign-type').value;
             const note = document.getElementById('modal-note').value;
 
-            // جلب الملاحظات الحالية أولاً حتى لا نفقد بيانات الرحلة
-            const { data: existingTrip } = await sbClient.from('trips').select('admin_notes, pickup_location, dropoff_location, estimated_price').eq('id', tid).single();
-            const existingNotes = existingTrip?.admin_notes || '';
+            let realTripId = tid;
+            let finalTripObj = null;
+            let originalSheetRow = null;
+            let originalSqlId = null;
+
+            if (String(tid).startsWith('gr_')) {
+                const numericId = Number(tid.replace('gr_', ''));
+                const { data: res } = await sbClient.from('google_reservations').select('*').eq('id', numericId).single();
+                if (!res) {
+                    alert('تعذر العثور على الحجز الأصلي');
+                    return;
+                }
+                originalSheetRow = res.sheet_row;
+                originalSqlId = res.sql_server_id;
+
+                // 1. إيجاد/إنشاء حساب العميل
+                const rawPhone = (res.customer_phone || '').replace(/\D/g, '');
+                const fakeEmail = rawPhone + '@24seven-client.app';
+                const password = rawPhone.slice(-6) || '123456';
+                let clientUserId = null;
+                try {
+                    const { data: existingProfile } = await sbClient.from('profiles').select('id').eq('phone', rawPhone).maybeSingle();
+                    if (existingProfile) {
+                        clientUserId = existingProfile.id;
+                    } else {
+                        const { data: signUpData } = await sbClient.auth.signUp({ email: fakeEmail, password: password });
+                        if (signUpData?.user) {
+                            clientUserId = signUpData.user.id;
+                            await sbClient.from('profiles').upsert({ id: clientUserId, full_name: res.customer_name, phone: rawPhone, wallet_balance: 0 });
+                        }
+                    }
+                } catch (e) { console.log('خطأ إنشاء حساب لترحيل الحجز:', e); }
+
+                // 2. إدراج الرحلة في trips
+                const fullNotes = `حجز من الشيت 📝
+العميل: ${res.customer_name}
+رقم: ${res.customer_phone}
+سيارة: ${res.car_type} | رحلة: ${res.trip_type}
+ركاب: ${res.passengers} | شنط: ${res.bags}
+التاريخ: ${res.trip_date} | الوقت: ${res.trip_time}
+ملاحظات: ${res.notes || ''}`;
+
+                const tripInsertData = {
+                    user_id: clientUserId,
+                    pickup_location: res.pickup_address,
+                    dropoff_location: res.dropoff_address,
+                    estimated_price: Number(res.cost) || 0,
+                    status: 'pending',
+                    admin_notes: fullNotes,
+                    car_type: res.car_type,
+                    manual_client_name: res.customer_name,
+                    client_phone: rawPhone
+                };
+
+                // إذا كان هناك sql_server_id موجود مسبقاً، نستخدمه
+                if (res.sql_server_id && !isNaN(res.sql_server_id)) {
+                    tripInsertData.id = Number(res.sql_server_id);
+                }
+
+                const { data: newTrip, error: insertErr } = await sbClient.from('trips').insert([tripInsertData]).select('id').single();
+                if (insertErr) {
+                    console.error('Error promoting reservation:', insertErr);
+                    alert('خطأ أثناء ترحيل الحجز لجدول الرحلات: ' + insertErr.message);
+                    return;
+                }
+
+                realTripId = newTrip.id;
+
+                // 3. تحديث google_reservations بـ sql_server_id الجديد وتغيير حالته
+                await sbClient.from('google_reservations').update({
+                    sql_server_id: String(realTripId),
+                    status: 'تم الترحيل'
+                }).eq('id', numericId);
+
+                // استرجاع كائن الرحلة الجديد لنفس منطق التعيين أدناه
+                const { data: tData } = await sbClient.from('trips').select('admin_notes, pickup_location, dropoff_location, estimated_price').eq('id', realTripId).single();
+                finalTripObj = tData;
+            } else {
+                const { data: tData } = await sbClient.from('trips').select('admin_notes, pickup_location, dropoff_location, estimated_price').eq('id', tid).single();
+                finalTripObj = tData;
+            }
+
+            const existingNotes = finalTripObj?.admin_notes || '';
 
             // دمج الملاحظات القديمة مع الجديدة
             let updatedNotes = existingNotes;
@@ -2370,15 +2512,15 @@
                     our_commission: commission,
                     admin_notes: updatedNotes,
                     status: 'approved' // الإدارة توافق، وينتظر إسناد السائق من المكتب المنفذ
-                }).eq('id', tid);
+                }).eq('id', realTripId);
 
                 // إرسال رسالة نظام في شات الرحلة
-                const pickup = (existingTrip?.pickup_location || '').split(',')[0];
-                const dropoff = (existingTrip?.dropoff_location || '').split(',')[0];
-                const price = existingTrip?.estimated_price || 0;
+                const pickup = (finalTripObj?.pickup_location || '').split(',')[0];
+                const dropoff = (finalTripObj?.dropoff_location || '').split(',')[0];
+                const price = finalTripObj?.estimated_price || 0;
 
                 await sbClient.from('chat_messages').insert([{
-                    trip_id: tid,
+                    trip_id: realTripId,
                     sender_role: 'admin',
                     sender_id: 'admin',
                     sender_name: 'الإدارة',
@@ -2401,19 +2543,19 @@
                 car_id: cid,
                 admin_notes: updatedNotes,
                 status: 'driver_assigned'
-            }).eq('id', tid);
+            }).eq('id', realTripId);
 
             // جلب بيانات الكابتن والسيارة
             const { data: driverInfo } = await sbClient.from('drivers').select('name, phone').eq('id', did).single();
             const { data: carInfo } = await sbClient.from('cars').select('brand, model, plate_number').eq('id', cid).single();
 
             // إرسال رسالة تنبيه في الشات للكابتن
-            const pickup = (existingTrip?.pickup_location || '').split(',')[0];
-            const dropoff = (existingTrip?.dropoff_location || '').split(',')[0];
-            const price = existingTrip?.estimated_price || 0;
+            const pickup = (finalTripObj?.pickup_location || '').split(',')[0];
+            const dropoff = (finalTripObj?.dropoff_location || '').split(',')[0];
+            const price = finalTripObj?.estimated_price || 0;
 
             await sbClient.from('chat_messages').insert([{
-                trip_id: tid,
+                trip_id: realTripId,
                 sender_role: 'admin',
                 sender_id: 'admin',
                 sender_name: 'الإدارة',
@@ -2424,16 +2566,23 @@
             // 🌐 محاولة إرسال التعيين لـ Google Sheets للتزامن وإرسال الواتساب
             try {
                 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
-                // Fire and forget (لا نعطل الواجهة لو فشل الشيت)
+                
+                const sheetData = {
+                    action: 'assignDriver',
+                    webId: realTripId, // ID رحلة السايت
+                    driverName: driverInfo?.name || '',
+                    driverPhone: driverInfo?.phone || ''
+                };
+
+                if (String(tid).startsWith('gr_')) {
+                    sheetData.sheetRow = originalSheetRow;
+                    sheetData.sqlId = String(realTripId);
+                }
+
                 fetch(APPS_SCRIPT_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({
-                        action: 'assignDriver',
-                        webId: tid, // ID رحلة السايت
-                        driverName: driverInfo?.name || '',
-                        driverPhone: driverInfo?.phone || ''
-                    })
+                    body: JSON.stringify(sheetData)
                 }).catch(e => console.error("Sheet Sync Error:", e));
             } catch (err) {}
 
@@ -2504,17 +2653,20 @@
 
             try {
                 // 5. الإرسال إلى Supabase مع ربط user_id
-                const { error } = await sbClient.from('trips').insert([{
+                const { data: tripData, error } = await sbClient.from('trips').insert([{
                     user_id: clientUserId,
                     pickup_location: pickup,
                     dropoff_location: dropoff,
                     estimated_price: Number(price),
                     status: 'pending',
                     admin_notes: fullNotes,
-                    car_type: carType
-                }]);
+                    car_type: carType,
+                    manual_client_name: name,
+                    client_phone: rawPhone
+                }]).select('id').single();
 
                 if (error) throw error;
+                const tripId = tripData?.id;
 
                 // إرسال إلى جوجل شيت
                 try {
@@ -2534,14 +2686,15 @@
                         email: '',
                         notes: notes,
                         tripType: tripType,
-                        enteredBy: 'موظف'
+                        enteredBy: 'موظف',
+                        sqlId: tripId || ''
                     });
                 } catch (se) { console.log('Sheet error:', se); }
 
                 // 6. نجاح
                 const successMsg = clientUserId
-                    ? `✅ تم تسجيل الحجز بنجاح!\n\n📱 تم إنشاء/ربط حساب العميل:\nرقم الهاتف: ${phone}\nكلمة المرور: ${password}\n\nأخبر العميل بهذه البيانات للدخول على الموقع.`
-                    : '✅ تم تسجيل الحجز بنجاح';
+                    ? `✅ تم تسجيل الحجز بنجاح!\n🆔 كود الحجز: ${tripId || 'غير معروف'}\n\n📱 تم إنشاء/ربط حساب العميل:\nرقم الهاتف: ${phone}\nكلمة المرور: ${password}\n\nأخبر العميل بهذه البيانات للدخول على الموقع.`
+                    : `✅ تم تسجيل الحجز بنجاح!\n🆔 كود الحجز: ${tripId || 'غير معروف'}`;
                 alert(successMsg);
                 document.getElementById('manual-trip-modal').style.display = 'none';
 
@@ -2554,7 +2707,6 @@
 
                 loadOperations();
                 loadDashboard();
-
 
             } catch (err) {
                 console.error(err);

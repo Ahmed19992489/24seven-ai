@@ -844,9 +844,19 @@
                 // 2. Filter locally for THIS moderator's stats
                 const myRes = allRes.filter(r => r.booking_employee === currentModName);
                 
-                document.getElementById('stat-count-today').textContent = myRes.length;
-                const vips = myRes.filter(r => (r.trip_type || '').toLowerCase().includes('vip')).length;
-                const offers = myRes.filter(r => (r.trip_type || '').toLowerCase().includes('offer')).length;
+                // Get local date formatted as YYYY-MM-DD
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const localTodayStr = `${year}-${month}-${day}`;
+                
+                // Filter stats for TODAY only
+                const myResToday = myRes.filter(r => r.trip_date === localTodayStr);
+                
+                document.getElementById('stat-count-today').textContent = myResToday.length;
+                const vips = myResToday.filter(r => (r.trip_type || '').toLowerCase().includes('vip')).length;
+                const offers = myResToday.filter(r => (r.trip_type || '').toLowerCase().includes('offer')).length;
                 document.getElementById('stat-vip-today').textContent = vips;
                 document.getElementById('stat-offer-today').textContent = offers;
                 
@@ -1333,120 +1343,142 @@
 
                 console.log('👷 Selected Driver:', { driverId, driverName, driverPhone });
 
-                // 1. Find or create client profile
-                const rawPhone = (trip.customer_phone || '').replace(/\D/g, '');
-                let clientUserId = null;
-                const { data: profile } = await sbClient.from('profiles').select('id').eq('phone', rawPhone).maybeSingle();
-                
-                if (profile) {
-                    clientUserId = profile.id;
-                } else {
-                    const fakeEmail = `${rawPhone}@24seven-client.app`;
-                    const { data: signUp } = await sbClient.auth.signUp({ email: fakeEmail, password: rawPhone.slice(-6) || '123456' });
-                    if (signUp?.user) {
-                        clientUserId = signUp.user.id;
-                        await sbClient.from('profiles').upsert({ id: clientUserId, full_name: trip.customer_name, phone: rawPhone, role: 'user', wallet_balance: 0 });
-                    }
-                }
+                let realTripId = currentAssignTripId;
+                let finalSqlId = '';
 
-                // 2. Create actual trip record
-                const { data: newTrip, error: tripErr } = await sbClient.from('trips').insert([{
-                    user_id: clientUserId,
-                    driver_id: driverId,
-                    car_id: carId,
-                    pickup_location: trip.pickup_address || '',
-                    dropoff_location: trip.dropoff_address || '',
-                    estimated_price: Number(trip.cost) || 0,
-                    status: 'driver_assigned',
-                    admin_notes: `📅 ${trip.trip_date || '--'} - ${trip.trip_time || '--'}\n👥 ${trip.passengers || '1'}\n🧳 ${trip.bags || '0'}\nحجز موديتور: ${currentModName}\nالعميل: ${trip.customer_name}\nالسائق: ${driverName} (${driverPhone})`
-                }]).select().single();
+                const isGoogleRes = currentAssignTripId.toString().startsWith('gr_');
 
-                if (tripErr) throw tripErr;
-
-                // 3. Update reservation status in Supabase (don't overwrite original sql_server_id)
-                const { error: resErr } = await sbClient
-                    .from('google_reservations')
-                    .update({ 
-                        status: 'driver_assigned',
-                        sql_server_id: String(newTrip.id),
-                        modified_driver_name: driverName,
-                        modified_driver_phone: driverPhone
-                    })
-                    .eq('id', currentAssignTripId);
-                
-                if(!resErr) {
-                    // --- 4. Notify Captain (App) ---
-                    try {
-                        const { data: carInfo } = await sbClient.from('cars').select('brand,model,plate_number').eq('id', carId).single();
-                        await sbClient.from('chat_messages').insert([{
-                            trip_id: newTrip.id,
-                            sender_role: 'admin',
-                            sender_id: 'admin',
-                            sender_name: 'الإدارة',
-                            message: `🎯 مرحباً كابتن ${driverName}!\n\nتم تعيينك على رحلة جديدة:\n📍 من: ${trip.pickup_address || ''}\n🏁 إلى: ${trip.dropoff_address || ''}\n💰 قيمة الرحلة: ${Number(trip.cost || 0).toLocaleString()} EGP\n🚗 السيارة: ${carInfo?.brand || ''} ${carInfo?.model || ''} (${carInfo?.plate_number || ''})\n\n✅ تواصل مع العميل من خلال الدردشة فقط`,
-                            message_type: 'system'
-                        }]);
-                    } catch(e) { console.error('Captain Notify Error:', e); }
-
-                    // --- 5. Notify Client (WhatsApp/Messenger) ---
-                    try {
-                        const clientMsg = `✅ تم تعيين الكابتن لرحلتك!\n🚕 الكابتن: ${driverName}\n📱 هاتف: 01121748885\n🚗 السيارة: ${trip.car_type || ''}\n📍 المسار: ${trip.pickup_address} ➝ ${trip.dropoff_address}\n\nنتمنى لك رحلة سعيدة! ✨`;
-                        
-                        // Try to find an active chat to get the correct channel/id
-                        let targetChannel = 'whatsapp';
-                        let targetSenderId = rawPhone;
-                        
-                        const searchPart = rawPhone.length > 8 ? rawPhone.slice(-9) : rawPhone;
-                        for (const key in groupedChats) {
-                            if (key.includes(searchPart)) {
-                                targetChannel = groupedChats[key].channel;
-                                targetSenderId = groupedChats[key].sender_id;
-                                break;
-                            }
-                        }
-
-                        await fetch(`${getApiBaseUrl()}/api/send_reply`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
-                            body: JSON.stringify({
-                                channel: targetChannel,
-                                sender_id: targetSenderId,
-                                message: clientMsg,
-                                mod_name: currentModName
-                            })
-                        });
-                    } catch(e) { console.error('Client Notify Error:', e); }
-                    // --- 6. Sync to Google Sheet ---
-                    let sheetSyncOk = false;
-                    try {
-                        console.log('📊 Syncing to sheet:', { sheetRow: trip.sheet_row, webId: trip.id, sqlId: trip.sql_server_id, driverName, driverPhone });
-                        const sheetRes = await sendToGoogleSheet({
-                            action: 'assignDriver',
-                            sheetRow: trip.sheet_row,
-                            webId: trip.id,                // Supabase ID (Column Q)
-                            sqlId: trip.sql_server_id,      // REAL SQL ID (Column U - e.g. 9178)
-                            driverName: driverName,
-                            driverPhone: driverPhone
-                        });
-                        console.log('📊 Sheet response:', JSON.stringify(sheetRes));
-                        if (sheetRes && sheetRes.success) {
-                            console.log('✅ Sheet Sync Success');
-                            sheetSyncOk = true;
-                        } else {
-                            console.error('❌ Sheet Sync Failed:', sheetRes ? sheetRes.error : 'No response');
-                        }
-                    } catch(e) { console.error('Sheet Sync Error:', e); }
-
-                    if (sheetSyncOk) {
-                        alert('✅ تم تعيين الكابتن!\n\n📤 تم إرسال البيانات للعميل ولتطبيق الكابتن وجوجل شيت بنجاح.');
+                if (isGoogleRes) {
+                    // 1. Find or create client profile
+                    const rawPhone = (trip.customer_phone || '').replace(/\D/g, '');
+                    let clientUserId = null;
+                    const { data: profile } = await sbClient.from('profiles').select('id').eq('phone', rawPhone).maybeSingle();
+                    
+                    if (profile) {
+                        clientUserId = profile.id;
                     } else {
-                        alert('⚠️ تم تعيين الكابتن في النظام!\n\nلكن فشل التحديث في جوجل شيت. تحقق من الإعدادات أو أعد المحاولة.');
+                        const fakeEmail = `${rawPhone}@24seven-client.app`;
+                        const { data: signUp } = await sbClient.auth.signUp({ email: fakeEmail, password: rawPhone.slice(-6) || '123456' });
+                        if (signUp?.user) {
+                            clientUserId = signUp.user.id;
+                            await sbClient.from('profiles').upsert({ id: clientUserId, full_name: trip.customer_name, phone: rawPhone, role: 'user', wallet_balance: 0 });
+                        }
                     }
-                    closeAssignModal();
-                    searchTrips(); 
+
+                    // 2. Create actual trip record
+                    const { data: newTrip, error: tripErr } = await sbClient.from('trips').insert([{
+                        user_id: clientUserId,
+                        driver_id: driverId,
+                        car_id: carId,
+                        pickup_location: trip.pickup_address || '',
+                        dropoff_location: trip.dropoff_address || '',
+                        estimated_price: Number(trip.cost) || 0,
+                        status: 'driver_assigned',
+                        admin_notes: `📅 ${trip.trip_date || '--'} - ${trip.trip_time || '--'}\n👥 ${trip.passengers || '1'}\n🧳 ${trip.bags || '0'}\nحجز موديتور: ${currentModName}\nالعميل: ${trip.customer_name}\nالسائق: ${driverName} (${driverPhone})`
+                    }]).select().single();
+
+                    if (tripErr) throw tripErr;
+
+                    realTripId = newTrip.id;
+                    finalSqlId = String(newTrip.id);
+
+                    // 3. Update reservation status in Supabase (don't overwrite original sql_server_id)
+                    const { error: resErr } = await sbClient
+                        .from('google_reservations')
+                        .update({ 
+                            status: 'driver_assigned',
+                            sql_server_id: finalSqlId,
+                            modified_driver_name: driverName,
+                            modified_driver_phone: driverPhone
+                        })
+                        .eq('id', trip.google_res_id || currentAssignTripId.toString().replace('gr_', ''));
+                    
+                    if(resErr) throw resErr;
                 } else {
-                    throw resErr;
+                    // Update existing trip in supabase
+                    const { error: updateErr } = await sbClient.from('trips').update({
+                        driver_id: driverId,
+                        car_id: carId,
+                        status: 'driver_assigned'
+                    }).eq('id', currentAssignTripId);
+
+                    if (updateErr) throw updateErr;
+
+                    realTripId = currentAssignTripId;
+                    finalSqlId = String(currentAssignTripId);
                 }
+
+                // --- 4. Notify Captain (App) ---
+                try {
+                    const { data: carInfo } = await sbClient.from('cars').select('brand,model,plate_number').eq('id', carId).single();
+                    await sbClient.from('chat_messages').insert([{
+                        trip_id: realTripId,
+                        sender_role: 'admin',
+                        sender_id: 'admin',
+                        sender_name: 'الإدارة',
+                        message: `🎯 مرحباً كابتن ${driverName}!\n\nتم تعيينك على رحلة جديدة:\n📍 من: ${trip.pickup_address || ''}\n🏁 إلى: ${trip.dropoff_address || ''}\n💰 قيمة الرحلة: ${Number(trip.cost || 0).toLocaleString()} EGP\n🚗 السيارة: ${carInfo?.brand || ''} ${carInfo?.model || ''} (${carInfo?.plate_number || ''})\n\n✅ تواصل مع العميل من خلال الدردشة فقط`,
+                        message_type: 'system'
+                    }]);
+                } catch(e) { console.error('Captain Notify Error:', e); }
+
+                // --- 5. Notify Client (WhatsApp/Messenger) ---
+                const rawPhone = (trip.customer_phone || '').replace(/\D/g, '');
+                try {
+                    const clientMsg = `✅ تم تعيين الكابتن لرحلتك!\n🚕 الكابتن: ${driverName}\n📱 هاتف: 01121748885\n🚗 السيارة: ${trip.car_type || ''}\n📍 المسار: ${trip.pickup_address} ➝ ${trip.dropoff_address}\n\nنتمنى لك رحلة سعيدة! ✨`;
+                    
+                    // Try to find an active chat to get the correct channel/id
+                    let targetChannel = 'whatsapp';
+                    let targetSenderId = rawPhone;
+                    
+                    const searchPart = rawPhone.length > 8 ? rawPhone.slice(-9) : rawPhone;
+                    for (const key in groupedChats) {
+                        if (key.includes(searchPart)) {
+                            targetChannel = groupedChats[key].channel;
+                            targetSenderId = groupedChats[key].sender_id;
+                            break;
+                        }
+                    }
+
+                    await fetch(`${getApiBaseUrl()}/api/send_reply`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+                        body: JSON.stringify({
+                            channel: targetChannel,
+                            sender_id: targetSenderId,
+                            message: clientMsg,
+                            mod_name: currentModName
+                        })
+                    });
+                } catch(e) { console.error('Client Notify Error:', e); }
+
+                // --- 6. Sync to Google Sheet ---
+                let sheetSyncOk = false;
+                try {
+                    console.log('📊 Syncing to sheet:', { sheetRow: trip.sheet_row, webId: realTripId, sqlId: finalSqlId, driverName, driverPhone });
+                    const sheetRes = await sendToGoogleSheet({
+                        action: 'assignDriver',
+                        sheetRow: trip.sheet_row,
+                        webId: realTripId,                // Supabase ID (Column Q)
+                        sqlId: finalSqlId,                // REAL SQL ID (Column U)
+                        driverName: driverName,
+                        driverPhone: driverPhone
+                    });
+                    console.log('📊 Sheet response:', JSON.stringify(sheetRes));
+                    if (sheetRes && sheetRes.success) {
+                        console.log('✅ Sheet Sync Success');
+                        sheetSyncOk = true;
+                    } else {
+                        console.error('❌ Sheet Sync Failed:', sheetRes ? sheetRes.error : 'No response');
+                    }
+                } catch(e) { console.error('Sheet Sync Error:', e); }
+
+                if (sheetSyncOk) {
+                    alert('✅ تم تعيين الكابتن!\n\n📤 تم إرسال البيانات للعميل ولتطبيق الكابتن وجوجل شيت بنجاح.');
+                } else {
+                    alert('⚠️ تم تعيين الكابتن في النظام!\n\nلكن فشل التحديث في جوجل شيت. تحقق من الإعدادات أو أعد المحاولة.');
+                }
+                closeAssignModal();
+                searchTrips(); 
             } catch (e) {
                 console.error(e);
                 alert('خطأ في عملية التعيين: ' + e.message);
@@ -1642,19 +1674,67 @@
             const resultsCount = document.getElementById('search-results-count');
             resultsCount.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري البحث...';
 
-            const { data, error } = await sbClient.from('google_reservations')
-                .select('*')
-                .or(`customer_name.ilike.%${query}%,customer_phone.ilike.%${query}%,pickup_address.ilike.%${query}%,dropoff_address.ilike.%${query}%`)
-                .order('trip_date', { ascending: false })
-                .limit(100);
-            
-            if(data) {
-                allTrips = data;
-                resultsCount.textContent = `تم العثور على ${data.length} نتيجة`;
-                renderTripsTable(data);
-            } else {
-                resultsCount.textContent = 'لم يتم العثور على نتائج';
-            }
+            const [reservationsResult, tripsResult] = await Promise.all([
+                sbClient.from('google_reservations')
+                    .select('*')
+                    .or(`customer_name.ilike.%${query}%,customer_phone.ilike.%${query}%,pickup_address.ilike.%${query}%,dropoff_address.ilike.%${query}%`)
+                    .order('trip_date', { ascending: false })
+                    .limit(100),
+                sbClient.from('trips')
+                    .select(`*, cars:cars(brand, plate_number), drivers:drivers(name, phone)`)
+                    .or(`manual_client_name.ilike.%${query}%,client_phone.ilike.%${query}%,pickup_location.ilike.%${query}%,dropoff_location.ilike.%${query}%,admin_notes.ilike.%${query}%`)
+                    .order('created_at', { ascending: false })
+                    .limit(100)
+            ]);
+
+            const reservations = reservationsResult.data || [];
+            const trips = tripsResult.data || [];
+
+            // تحويل الرحلات الفعلية لتوافق الموديل
+            const mappedTrips = trips.map(t => {
+                let tDate = '';
+                if (t.admin_notes) {
+                    const dMatch = t.admin_notes.match(/📅\s*([0-9\-/\\]+)/);
+                    if (dMatch) tDate = dMatch[1].trim();
+                }
+                if (!tDate && t.created_at) {
+                    tDate = t.created_at.split('T')[0];
+                }
+                return {
+                    id: t.id,
+                    customer_name: t.manual_client_name || 'عميل ويب',
+                    customer_phone: t.client_phone || '-',
+                    pickup_address: t.pickup_location,
+                    dropoff_address: t.dropoff_location,
+                    trip_date: tDate,
+                    trip_time: t.admin_notes?.match(/📅\s*[0-9\-/\\]+\s*-\s*([0-9:]+\s*[أإا]?[مو]?)/)?.[1] || t.created_at?.split('T')?.[1]?.substring(0, 5) || '--:--',
+                    trip_type: t.admin_notes?.includes('VIP') ? 'ذهاب فقط - VIP' : 'ذهاب فقط',
+                    cost: t.estimated_price || 0,
+                    status: t.status,
+                    car_type: t.car_type || 'سيدان',
+                    passengers: t.admin_notes?.match(/👥\s*([0-9]+)\s*أفراد/)?.[1] || 1,
+                    bags: t.admin_notes?.match(/🧳\s*([0-9]+)\s*شنط/)?.[1] || 0,
+                    is_real_trip: true,
+                    original_trip: t
+                };
+            });
+
+            // استبعاد المكرر
+            const existingTripIds = new Set(trips.map(t => String(t.id)));
+            const filteredReservations = reservations.filter(r => {
+                if (r.sql_server_id && existingTripIds.has(String(r.sql_server_id))) {
+                    return false;
+                }
+                if (r.status === 'تم الترحيل' || r.status === 'driver_assigned') {
+                    return false;
+                }
+                return true;
+            });
+
+            const merged = [...mappedTrips, ...filteredReservations];
+            allTrips = merged;
+            resultsCount.textContent = `تم العثور على ${merged.length} نتيجة`;
+            renderTripsTable(merged);
         }
 
         function renderTripsTable(trips) {
