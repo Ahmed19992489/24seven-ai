@@ -1358,7 +1358,7 @@
             const fDate = document.getElementById('ops-date-from')?.value || '';
             const tDate = document.getElementById('ops-date-to')?.value || '';
 
-            const { data: trips, error } = await sbClient.from('trips').select(`*, cars:cars!fk_trips_car(brand, model, plate_number), drivers:drivers!fk_trips_driver(name, phone)`).order('created_at', { ascending: false });
+            const { data: trips, error } = await sbClient.from('trips').select(`*, cars:cars!fk_trips_car(brand, model, plate_number, car_image_url), drivers:drivers!fk_trips_driver(name, phone)`).order('created_at', { ascending: false });
             if (error) { list.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-red-500">حدث خطأ</td></tr>'; return; }
 
             // جلب رسائل النظام والمشرف لتتبع طلبات تغيير الوجهة المعلقة لكل رحلة
@@ -1503,12 +1503,21 @@
                 }
 
                 const driverName = t.drivers ? t.drivers.name : '-';
-                const carInfo = t.cars ? `${t.cars.brand}` : '-';
+                let carInfo = t.cars ? `${t.cars.brand}` : '-';
+                if (t.cars && t.cars.car_image_url) {
+                    carInfo += ` <a href="${t.cars.car_image_url}" target="_blank" class="text-blue-500 hover:text-blue-700 ml-1.5" title="عرض صورة السيارة"><i class="fas fa-image"></i></a>`;
+                }
                 let btns = '';
                 if (t.status === 'pending' || t.status === 'approved') btns = `<button onclick="openAssignModal('${t.id}')" class="bg-slate-900 text-white px-2 py-1 rounded text-xs">تعيين</button>`;
                 else if (t.status === 'driver_assigned' || t.status === 'trip_ended') btns = `<button onclick="openCompleteModal('${t.id}', ${t.estimated_price}, ${t.distance_km || 0}, ${t.fuel_cost || 0}, ${t.toll_cost || 0})" class="bg-green-600 text-white px-2 py-1 rounded text-xs">إنهاء</button>`;
-                // زر عرض صور الفحص لأي رحلة عينها سواق
-                if (t.status !== 'pending') btns += ` <button onclick="viewTripPhotos('${t.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs">📸</button>`;
+                // زر عرض صور الفحص لأي رحلة عينها سواق (يتم استبدالها ببطاقة أوردر خارجي للتشغيل الخارجي)
+                if (t.status !== 'pending') {
+                    if (t.is_outsourced) {
+                        btns += ` <span class="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs border border-orange-200 font-bold">🤝 اوردر خارجي</span>`;
+                    } else {
+                        btns += ` <button onclick="viewTripPhotos('${t.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs" title="عرض صور الرحلة">📸</button>`;
+                    }
+                }
 
                 // التحقق من وجود طلب تغيير وجهة معلق للرحلة
                 let destReqHtml = '';
@@ -3427,6 +3436,13 @@
             }
 
             allReservations = data || [];
+ 
+             let outsourcedTripIds = new Set();
+             try {
+                 const { data: outs } = await sbClient.from('trips').select('id').eq('is_outsourced', true);
+                 if (outs) outs.forEach(o => outsourcedTripIds.add(String(o.id)));
+             } catch(e) { console.error(e); }
+             window.outsourcedTripIds = outsourcedTripIds;
 
             // إحصائيات
             const total = allReservations.length;
@@ -3514,6 +3530,18 @@
                 const stClass = statusColors[st] || 'bg-gray-100 text-gray-600';
                 const pickup = (r.pickup_address || '').substring(0, 30) + ((r.pickup_address || '').length > 30 ? '...' : '');
                 const dropoff = (r.dropoff_address || '').substring(0, 30) + ((r.dropoff_address || '').length > 30 ? '...' : '');
+                
+                const isOutsourced = (r.modified_driver_name && r.modified_driver_name.includes('مكتب خارجي')) || 
+                                     (r.sql_server_id && window.outsourcedTripIds && window.outsourcedTripIds.has(String(r.sql_server_id)));
+                
+                const ticketImgHtml = isOutsourced
+                    ? `<span class="bg-orange-100 text-orange-800 px-2 py-0.5 rounded text-[10px] font-bold border border-orange-200">اوردر خارجي</span>`
+                    : (r.ticket_image ? `<a href="${r.ticket_image}" target="_blank" class="text-blue-500 underline">رابط</a>` : '--');
+
+                const actionHtml = isOutsourced
+                    ? `<span class="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs border border-orange-200 font-bold">🤝 اوردر خارجي</span>`
+                    : `<button onclick="openAssignResByRow(${r.sheet_row})" class="bg-indigo-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-indigo-700 whitespace-nowrap shadow-sm"><i class="fas fa-user-plus ml-1"></i>تعيين كابتن</button>`;
+
                 return `<tr class="border-b hover:bg-slate-50 ${idx % 2 === 0 ? '' : 'bg-slate-50/50'}">
                     <td class="p-3 text-slate-400 text-xs">${r.sheet_row || ''}</td>
                     <td class="p-3 text-xs text-slate-500">${r.sheet_timestamp || '--'}</td>
@@ -3533,7 +3561,7 @@
                     <td class="p-3 text-xs">${r.trip_type || '--'}</td>
                     <td class="p-3 text-xs">${r.commission || '--'}</td>
                     <td class="p-3 text-xs">${r.booking_employee || '--'}</td>
-                    <td class="p-3 text-xs">${r.ticket_image ? '<a href="'+r.ticket_image+'" target="_blank" class="text-blue-500 underline">رابط</a>' : '--'}</td>
+                    <td class="p-3 text-xs">${ticketImgHtml}</td>
                     <td class="p-3"><span class="px-2 py-1 rounded-full text-xs font-bold ${stClass}">${st}</span></td>
                     <td class="p-3 text-xs">${r.sql_server_id || '--'}</td>
                     <td class="p-3 text-xs font-bold text-indigo-700">${r.modified_driver_name || '--'}</td>
@@ -3551,11 +3579,10 @@
                     <td class="p-3 text-xs truncate max-w-[150px]" title="${r.suggestions || ''}">${r.suggestions || '--'}</td>
                     <td class="p-3 text-xs font-bold">${r.trip_status || '--'}</td>
                     <td class="p-3 sticky right-0 bg-white/90 shadow-[inset_1px_0_0_rgba(0,0,0,0.1)] backdrop-blur-sm z-10 w-full h-full flex items-center justify-center">
-                        <button onclick="openAssignResByRow(${r.sheet_row})" 
-                            class="bg-indigo-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-indigo-700 whitespace-nowrap shadow-sm">
-                            <i class="fas fa-user-plus ml-1"></i>تعيين كابتن
-                        </button>
+                        ${actionHtml}
                     </td>
+                </tr>`;
+            }).join('');
                 </tr>`;
             }).join('');
 
@@ -4341,12 +4368,33 @@
         <div id="res-modal-info" class="mb-4"></div>
         <div class="space-y-4">
             <div>
-                <label class="text-xs font-bold text-slate-500 block mb-1">اختر الكابتن</label>
-                <select id="res-modal-driver" class="input-std bg-white"></select>
+                <label class="text-xs font-bold text-slate-500 block mb-1">نوع التشغيل</label>
+                <select id="res-modal-assign-type" class="input-std bg-white" onchange="toggleResAssignType()">
+                    <option value="internal">تشغيل داخلي (سائق وسيارة من الشركة)</option>
+                    <option value="external">تشغيل خارجي (إسناد لمكتب شريك)</option>
+                </select>
             </div>
-            <div>
-                <label class="text-xs font-bold text-slate-500 block mb-1">اختر السيارة</label>
-                <select id="res-modal-car" class="input-std bg-white"></select>
+            
+            <div id="res-assign-internal-group" class="space-y-4">
+                <div>
+                    <label class="text-xs font-bold text-slate-500 block mb-1">اختر الكابتن</label>
+                    <select id="res-modal-driver" class="input-std bg-white"></select>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500 block mb-1">اختر السيارة</label>
+                    <select id="res-modal-car" class="input-std bg-white"></select>
+                </div>
+            </div>
+            
+            <div id="res-assign-external-group" class="space-y-4 hidden">
+                <div>
+                    <label class="text-xs font-bold text-slate-500 block mb-1">المكتب الخارجي</label>
+                    <select id="res-modal-vendor" class="input-std bg-white" onchange="updateResVendorCommissionDefault()"></select>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500 block mb-1">عمولة المنصة من الرحلة (EGP)</label>
+                    <input type="number" id="res-modal-vendor-commission" class="input-std" value="100">
+                </div>
             </div>
         </div>
         <div class="flex gap-3 pt-5 mt-4 border-t">
@@ -4363,8 +4411,37 @@
 </div>
 
 <script>
+let resActiveVendors = [];
+
 function closeResModal() {
     document.getElementById('res-assign-modal').style.display = 'none';
+}
+
+function toggleResAssignType() {
+    const type = document.getElementById('res-modal-assign-type').value;
+    if (type === 'internal') {
+        document.getElementById('res-assign-internal-group').classList.remove('hidden');
+        document.getElementById('res-assign-external-group').classList.add('hidden');
+    } else {
+        document.getElementById('res-assign-internal-group').classList.add('hidden');
+        document.getElementById('res-assign-external-group').classList.remove('hidden');
+    }
+}
+
+function updateResVendorCommissionDefault() {
+    const vendorId = document.getElementById('res-modal-vendor').value;
+    const tripPrice = Number(currentResRow.cost) || 0;
+    const vendor = resActiveVendors.find(x => x.id === vendorId);
+    
+    if (vendor) {
+        let defaultComm = 100;
+        if (vendor.commission_type === 'percentage') {
+            defaultComm = Math.round((tripPrice * (vendor.commission_value || 0)) / 100);
+        } else {
+            defaultComm = vendor.commission_value || 0;
+        }
+        document.getElementById('res-modal-vendor-commission').value = defaultComm;
+    }
 }
 
 function openAssignResByRow(sheetRow) {
@@ -4377,21 +4454,34 @@ async function openAssignResModal(reservation) {
     currentResRow = reservation;
     const driverSel = document.getElementById('res-modal-driver');
     const carSel = document.getElementById('res-modal-car');
+    const vendorSel = document.getElementById('res-modal-vendor');
+    
     driverSel.innerHTML = '<option value="">جاري التحميل...</option>';
     carSel.innerHTML = '<option value="">جاري التحميل...</option>';
+    vendorSel.innerHTML = '<option value="">جاري التحميل...</option>';
 
     document.getElementById('res-assign-modal').style.display = 'flex';
+    
+    document.getElementById('res-modal-assign-type').value = 'internal';
+    document.getElementById('res-assign-internal-group').classList.remove('hidden');
+    document.getElementById('res-assign-external-group').classList.add('hidden');
 
-    const [{ data: drivers }, { data: cars }] = await Promise.all([
-        sbClient.from('drivers').select('id,name,phone').order('name'),
-        sbClient.from('cars').select('id,brand,plate_number').order('brand')
+    const [{ data: drivers }, { data: cars }, { data: vendors }] = await Promise.all([
+        sbClient.from('drivers').select('id,name,phone').eq('is_external', false).order('name'),
+        sbClient.from('cars').select('id,brand,plate_number').eq('is_external', false).order('brand'),
+        sbClient.from('vendors').select('*').eq('status', 'active').order('name')
     ]);
+    
+    resActiveVendors = vendors || [];
 
     driverSel.innerHTML = '<option value="">اختر كابتن</option>' +
         (drivers || []).map(d => `<option value="${d.id}" data-name="${d.name || ''}" data-phone="${d.phone || ''}">${d.name} - ${d.phone || ''}</option>`).join('');
 
     carSel.innerHTML = '<option value="">اختر سيارة</option>' +
         (cars || []).map(c => `<option value="${c.id}">${c.brand} - ${c.plate_number}</option>`).join('');
+        
+    vendorSel.innerHTML = '<option value="">اختر مكتب خارجي</option>' +
+        (vendors || []).map(v => `<option value="${v.id}">${v.name}</option>`).join('');
 
     document.getElementById('res-modal-info').innerHTML = `
         <div class="bg-indigo-50 rounded-lg p-3 text-sm space-y-1">
@@ -4401,9 +4491,104 @@ async function openAssignResModal(reservation) {
             <p><b>التاريخ:</b> ${reservation.trip_date || '--'} الساعة ${reservation.trip_time || '--'}</p>
             <p><b>السعر:</b> ${Number(reservation.cost || 0).toLocaleString()} EGP</p>
         </div>`;
+    
+    updateResVendorCommissionDefault();
 }
 
 async function confirmResAssign() {
+    const assignType = document.getElementById('res-modal-assign-type').value;
+    const r = currentResRow;
+    const btn = document.getElementById('res-assign-btn');
+
+    if (assignType === 'external') {
+        const vendorId = document.getElementById('res-modal-vendor').value;
+        const commission = Number(document.getElementById('res-modal-vendor-commission').value) || 100;
+        if (!vendorId) { alert('يرجى اختيار مكتب خارجي أولاً'); return; }
+
+        const vendorOpt = document.getElementById('res-modal-vendor').options[document.getElementById('res-modal-vendor').selectedIndex];
+        const vendorName = vendorOpt.text;
+
+        btn.disabled = true; btn.textContent = 'جاري التعيين...';
+
+        try {
+            // 1. إيجاد/إنشاء حساب العميل في Supabase
+            const rawPhone = (r.customer_phone || '').replace(/\D/g, '');
+            const fakeEmail = rawPhone + '@24seven-client.app';
+            let clientUserId = null;
+            const { data: existingProfile } = await sbClient.from('profiles').select('id').eq('phone', rawPhone).maybeSingle();
+            if (existingProfile) {
+                clientUserId = existingProfile.id;
+            } else {
+                const { data: signUpData } = await sbClient.auth.signUp({ email: fakeEmail, password: rawPhone.slice(-6) || '123456' });
+                if (signUpData?.user) {
+                    clientUserId = signUpData.user.id;
+                    await sbClient.from('profiles').upsert({ id: clientUserId, full_name: r.customer_name, phone: rawPhone, role: 'user', wallet_balance: 0 });
+                }
+            }
+
+            // 2. إنشاء رحلة في Supabase trips كـ Outsourced
+            const { data: newTrip, error: tripErr } = await sbClient.from('trips').insert([{
+                user_id: clientUserId,
+                is_outsourced: true,
+                vendor_id: vendorId,
+                our_commission: commission,
+                pickup_location: r.pickup_address || '',
+                dropoff_location: r.dropoff_address || '',
+                estimated_price: Number(r.cost) || 0,
+                status: 'approved', // الإدارة توافق، وينتظر إسناد السائق من المكتب المنفذ
+                admin_notes: `حجز شيت صف ${r.sheet_row}\nالعميل: ${r.customer_name}\nنوع التحصيل: ${r.payment_method || 'غير محدد'}\nإسناد خارجي للمكتب: ${vendorName}`
+            }]).select().single();
+            if (tripErr) throw new Error('خطأ إنشاء الرحلة: ' + tripErr.message);
+
+            // 3. إرسال رسالة نظام في شات الرحلة
+            const pickup = (r.pickup_address || '').split(',')[0];
+            const dropoff = (r.dropoff_address || '').split(',')[0];
+            const price = Number(r.cost) || 0;
+
+            await sbClient.from('chat_messages').insert([{
+                trip_id: newTrip.id,
+                sender_role: 'admin',
+                sender_id: 'admin',
+                sender_name: 'الإدارة',
+                message: `🎯 تم إسناد الرحلة إلى المكتب الخارجي المنفذ: ${vendorName}\n📍 من: ${pickup}\n🏁 إلى: ${dropoff}\n💰 القيمة المقدرة: ${price} EGP\n\nبانتظار إسناد السائق والسيارة من طرف المكتب المنفذ لتفعيل التتبع والدردشة...`,
+                message_type: 'system'
+            }]);
+
+            // 4. تحديث google_reservations مع ربطها برحلة السيستم الجديدة وحفظ اسم المكتب ككابتن
+            await sbClient.from('google_reservations').update({
+                status: 'driver_assigned',
+                sql_server_id: String(newTrip.id),
+                modified_driver_name: `مكتب خارجي: ${vendorName}`,
+                modified_driver_phone: '-'
+            }).eq('sheet_row', r.sheet_row);
+
+            // 5. تحديث جوجل شيت
+            const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
+            fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify({ 
+                    action: 'assignDriver', 
+                    sheetRow: r.sheet_row, 
+                    webId: r.id,
+                    sqlId: String(newTrip.id),
+                    driverName: `مكتب خارجي: ${vendorName}`, 
+                    driverPhone: '-' 
+                })
+            }).catch(err => console.error('❌ Sheet Update Error:', err));
+
+            closeResModal();
+            alert(`✅ تم إسناد الحجز للمكتب الخارجي ${vendorName} بنجاح!`);
+            await loadReservationsPage();
+
+        } catch(e) {
+            alert('❌ خطأ: ' + e.message);
+        } finally {
+            btn.disabled = false; btn.textContent = 'تعيين الكابتن';
+        }
+        return;
+    }
+
     const driverSel = document.getElementById('res-modal-driver');
     const carSel = document.getElementById('res-modal-car');
     const driverId = driverSel.value;
@@ -4413,9 +4598,7 @@ async function confirmResAssign() {
     const driverOpt = driverSel.options[driverSel.selectedIndex];
     const driverName = driverOpt.dataset.name || driverOpt.text.split(' - ')[0];
     const driverPhone = driverOpt.dataset.phone || '';
-    const r = currentResRow;
 
-    const btn = document.getElementById('res-assign-btn');
     btn.disabled = true; btn.textContent = 'جاري التعيين...';
 
     try {

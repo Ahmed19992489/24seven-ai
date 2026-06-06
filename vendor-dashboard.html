@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>لوحة تحكم المكتب المنفذ - 24Seven Partners</title>
     
-    <!-- Google Fonts: Outfit & Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Google Fonts: Cairo, Outfit & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Inter:wght@300;400;600;800&family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Tailwind CSS (for structure/flexibility) -->
@@ -16,7 +16,7 @@
 
     <style>
         body {
-            font-family: 'Inter', 'Outfit', sans-serif;
+            font-family: 'Cairo', 'Inter', 'Outfit', sans-serif;
             background: radial-gradient(circle at 10% 20%, rgb(15, 23, 42) 0%, rgb(9, 13, 26) 90.1%);
             color: #f8fafc;
             min-height: 100vh;
@@ -196,19 +196,26 @@
                 <div>
                     <p class="text-xs text-slate-400">⚖️ صافي الحساب المالي الحالي</p>
                     <h3 id="kpi-net" class="text-2xl font-black mt-1 text-white font-num">0 <span class="text-xs font-normal">EGP</span></h3>
-                    <p id="kpi-net-desc" class="text-[9px] text-slate-400 mt-1">جاري التحميل...</p>
-                </div>
-                <div class="text-2xl bg-blue-500/10 p-3 rounded-2xl text-blue-400 border border-blue-500/20">
-                    <i class="fas fa-scale-balanced"></i>
-                </div>
-            </div>
+                    <p id="kpi-n        <!-- بار التنقل بين التبويبات -->
+        <div class="glass p-2 flex gap-2 overflow-x-auto rounded-2xl border border-slate-700/60 shadow-lg mb-6">
+            <button onclick="switchVendorTab('trips')" id="tab-btn-trips" class="flex-1 min-w-[140px] py-2.5 rounded-xl text-xs font-bold text-center transition bg-blue-600 text-white border border-blue-500/30">
+                <i class="fas fa-route ml-1.5 text-blue-400"></i> الأوردرات والتشغيل
+            </button>
+            <button onclick="switchVendorTab('accounts')" id="tab-btn-accounts" class="flex-1 min-w-[140px] py-2.5 rounded-xl text-xs font-bold text-center transition text-slate-300 hover:bg-slate-800 border border-transparent">
+                <i class="fas fa-file-invoice-dollar ml-1.5 text-green-400"></i> الحسابات والتصفية
+            </button>
+            <button onclick="switchVendorTab('fleet')" id="tab-btn-fleet" class="flex-1 min-w-[140px] py-2.5 rounded-xl text-xs font-bold text-center transition text-slate-300 hover:bg-slate-800 border border-transparent">
+                <i class="fas fa-users ml-1.5 text-purple-400"></i> كباتن وسيارات المكتب
+            </button>
+            <button onclick="switchVendorTab('support')" id="tab-btn-support" class="flex-1 min-w-[140px] py-2.5 rounded-xl text-xs font-bold text-center transition text-slate-300 hover:bg-slate-800 border border-transparent relative">
+                <i class="fas fa-headset ml-1.5 text-teal-400"></i> الدعم والدردشة
+                <span id="vendor-support-badge" class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full hidden"></span>
+            </button>
         </div>
 
-        <!-- الأقسام الرئيسية -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            <!-- أوردرات التشغيل الخارجي -->
-            <div class="glass p-5 lg:col-span-2 space-y-4">
+        <!-- 1. أوردرات التشغيل الخارجي -->
+        <div id="tab-content-trips" class="vendor-tab-content space-y-4">
+            <div class="glass p-5 space-y-4">
                 <div class="flex justify-between items-center border-b border-slate-700/60 pb-3">
                     <h3 class="font-bold text-sm text-white flex items-center gap-2">
                         <span class="w-2.5 h-2.5 bg-blue-500 rounded-full inline-block"></span>
@@ -221,11 +228,112 @@
                     <!-- محتوى الرحلات -->
                 </div>
             </div>
+        </div>
 
-            <!-- كشف الحساب التفصيلي -->
-            <div class="glass p-5 space-y-4">
-                <div class="flex justify-between items-center border-b border-slate-700/60 pb-3">
+        <!-- 2. كشف الحساب التفصيلي -->
+        <div id="tab-content-accounts" class="vendor-tab-content hidden space-y-4">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- كشف الحساب المالي للأوردرات -->
+                <div class="glass p-5 lg:col-span-2 space-y-4 overflow-x-auto">
+                    <div class="flex justify-between items-center border-b border-slate-700/60 pb-3">
+                        <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 bg-blue-500 rounded-full inline-block"></span>
+                            كشف حساب الأوردرات التفصيلي
+                        </h3>
+                    </div>
+                    <table class="w-full text-right text-xs border-collapse min-w-[500px]">
+                        <thead>
+                            <tr class="text-slate-400 border-b border-slate-700/60">
+                                <th class="p-3">رقم الأوردر</th>
+                                <th class="p-3">المسار والتحصيل</th>
+                                <th class="p-3">سعر الرحلة</th>
+                                <th class="p-3">عمولة المنصة</th>
+                                <th class="p-3">صافي المكتب</th>
+                                <th class="p-3">حالة الأوردر</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trips-ledger-table" class="divide-y divide-slate-800/40">
+                            <!-- سيتم حقن الصفوف مالياً هنا -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- دفتر التسويات والحركات -->
+                <div class="glass p-5 space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-700/60 pb-3">
+                        <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 bg-green-500 rounded-full inline-block"></span>
+                            سجل التسويات والتحويلات المالية
+                        </h3>
+                    </div>
+                    <div id="ledger-list" class="space-y-2 max-h-[600px] overflow-y-auto pr-1">
+                        <!-- حركات المقاصة -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. كباتن وسيارات المكتب -->
+        <div id="tab-content-fleet" class="vendor-tab-content hidden space-y-4">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- كباتن المكتب وتصفية السواقين -->
+                <div class="glass p-5 space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-700/60 pb-3">
+                        <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 bg-purple-500 rounded-full inline-block"></span>
+                            كباتن المكتب وتصفية الحسابات
+                        </h3>
+                        <button onclick="openAddDriverPrompt()" class="bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/40 text-blue-400 text-xs px-3 py-1.5 rounded-xl font-bold transition">
+                            <i class="fas fa-user-plus ml-1"></i> إضافة كابتن
+                        </button>
+                    </div>
+                    <div id="vendor-drivers-list" class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                        <!-- قائمة الكباتن -->
+                    </div>
+                </div>
+
+                <!-- سيارات المكتب -->
+                <div class="glass p-5 space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-700/60 pb-3">
+                        <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 bg-purple-500 rounded-full inline-block"></span>
+                            سيارات المكتب المسجلة
+                        </h3>
+                        <button onclick="openAddCarPrompt()" class="bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/40 text-blue-400 text-xs px-3 py-1.5 rounded-xl font-bold transition">
+                            <i class="fas fa-car ml-1"></i> إضافة سيارة
+                        </button>
+                    </div>
+                    <div id="vendor-cars-list" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-1">
+                        <!-- قائمة السيارات -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. الدعم والدردشة -->
+        <div id="tab-content-support" class="vendor-tab-content hidden space-y-4">
+            <div class="glass p-5 max-w-3xl mx-auto h-[70vh] flex flex-col shadow-xl overflow-hidden animate-fade">
+                <div class="flex justify-between items-center border-b border-slate-700/60 pb-3 mb-3">
                     <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 bg-teal-500 rounded-full inline-block"></span>
+                        دردشة الدعم الفني والتواصل مع المشرفين
+                    </h3>
+                </div>
+                <!-- الرسائل -->
+                <div id="support-chat-messages" class="flex-1 overflow-y-auto p-4 flex flex-col space-y-2 bg-slate-900/30 rounded-2xl mb-4">
+                    <!-- الرسائل ديناميكياً -->
+                </div>
+                <!-- إدخال الرسالة -->
+                <div class="flex gap-2">
+                    <input type="text" id="support-chat-input" placeholder="اكتب رسالة لموظف الدعم..." 
+                        class="flex-1 bg-slate-900/80 border border-slate-700/60 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500 text-xs"
+                        onkeydown="if(event.key === 'Enter') sendVendorSupportMessage()">
+                    <button onclick="sendVendorSupportMessage()" class="bg-blue-600 hover:bg-blue-500 text-white w-10 h-10 rounded-xl flex items-center justify-center transition">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>r gap-2">
                         <span class="w-2.5 h-2.5 bg-green-500 rounded-full inline-block"></span>
                         سجل الحركات المالية والتسويات
                     </h3>
@@ -266,8 +374,9 @@
                     </div>
                 </div>
                 <div>
-                    <label class="text-xs text-slate-400 block mb-1">📸 صورة السيارة (رابط أو مسار)</label>
-                    <input type="text" id="assign-car-photo" placeholder="رابط الصورة أو اتركها فارغة" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500 text-sm text-center">
+                    <label class="text-xs text-slate-400 block mb-1">📸 صورة السيارة (مطلوب للسيارات الجديدة)</label>
+                    <input type="file" id="assign-car-photo-file" accept="image/*" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-white outline-none focus:border-blue-500 text-sm">
+                    <input type="hidden" id="assign-car-photo">
                 </div>
             </div>
 
@@ -367,6 +476,7 @@
             document.body.classList.add('p-3', 'md:p-6');
 
             document.getElementById('header-vendor-name').textContent = currentVendor.name;
+            switchVendorTab('trips');
             loadDashboardData();
         }
 
@@ -609,8 +719,40 @@
             document.getElementById('assign-car-brand').value = '';
             document.getElementById('assign-car-plate').value = '';
             document.getElementById('assign-car-photo').value = '';
+            const fileInput = document.getElementById('assign-car-photo-file');
+            if (fileInput) fileInput.value = '';
             
             document.getElementById('assign-driver-modal').style.display = 'flex';
+        }
+
+        // ضغط الصورة قبل الرفع
+        async function compressImage(file) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                const url = URL.createObjectURL(file);
+                img.onload = () => {
+                    try {
+                        const MAX = 900;
+                        let w = img.width, h = img.height;
+                        if (w > MAX || h > MAX) {
+                            if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+                            else { w = Math.round(w * MAX / h); h = MAX; }
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = w; canvas.height = h;
+                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                        canvas.toBlob(blob => {
+                            URL.revokeObjectURL(url);
+                            resolve(blob || file);
+                        }, 'image/jpeg', 0.70);
+                    } catch (e) {
+                        URL.revokeObjectURL(url);
+                        resolve(file);
+                    }
+                };
+                img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+                img.src = url;
+            });
         }
 
         async function confirmDriverAssignment() {
@@ -619,7 +761,7 @@
             const drvPhone = document.getElementById('assign-driver-phone').value.trim().replace(/\D/g, '');
             const carBrand = document.getElementById('assign-car-brand').value.trim();
             const carPlate = document.getElementById('assign-car-plate').value.trim();
-            const carPhotoUrl = document.getElementById('assign-car-photo').value.trim();
+            const photoFileInput = document.getElementById('assign-car-photo-file');
 
             if (!drvName || !drvPhone || !carBrand || !carPlate) {
                 alert("يرجى ملء كافة البيانات المطلوبة للكابتن والسيارة!");
@@ -649,16 +791,47 @@
 
                 // 2. تحقق وإنشاء السيارة
                 let carId;
-                const { data: extC } = await sb.from('cars').select('id').eq('plate_number', carPlate).maybeSingle();
+                let existingCarPhoto = "";
+                const { data: extC } = await sb.from('cars').select('id, car_image_url').eq('plate_number', carPlate).maybeSingle();
+                
                 if (extC) {
                     carId = extC.id;
+                    existingCarPhoto = extC.car_image_url || "";
+                }
+
+                let carPhotoUrl = existingCarPhoto;
+
+                // رفع الصورة إذا تم اختيارها
+                if (photoFileInput && photoFileInput.files[0]) {
+                    btn.textContent = '⏳ جاري رفع صورة السيارة...';
+                    const compressed = await compressImage(photoFileInput.files[0]);
+                    const path = `cars/${carPlate.replace(/\s+/g, '_')}_${Date.now()}.jpg`;
+                    const { error: uploadErr } = await sb.storage.from('trip-photos').upload(path, compressed, { upsert: true, contentType: 'image/jpeg' });
+                    if (uploadErr) throw uploadErr;
+
+                    const { data: urlData } = sb.storage.from('trip-photos').getPublicUrl(path);
+                    if (urlData && urlData.publicUrl) {
+                        carPhotoUrl = urlData.publicUrl;
+                    }
+                } else if (!existingCarPhoto) {
+                    alert("❌ صورة السيارة مطلوبة للسيارات الجديدة! يرجى اختيار ملف صورة السيارة.");
+                    btn.disabled = false;
+                    btn.textContent = 'تأكيد الإسناد';
+                    return;
+                }
+
+                if (extC) {
+                    // تحديث رابط الصورة في حال تم رفع صورة جديدة
+                    if (carPhotoUrl !== existingCarPhoto) {
+                        await sb.from('cars').update({ car_image_url: carPhotoUrl }).eq('id', carId);
+                    }
                 } else {
                     const { data: newC, error: cErr } = await sb.from('cars').insert([{
                         brand: carBrand,
                         plate_number: carPlate,
                         is_external: true,
                         vendor_id: currentVendor.id,
-                        car_image_url: carPhotoUrl || ''
+                        car_image_url: carPhotoUrl
                     }]).select('id').single();
                     if (cErr) throw cErr;
                     carId = newC.id;
@@ -695,7 +868,293 @@
         }
 
         // ==========================================
-        // نظام الدردشة التفاعلي المشترك
+        // نظام تبديل التبويبات
+        // ==========================================
+        function switchVendorTab(tabId) {
+            document.querySelectorAll('.vendor-tab-content').forEach(el => {
+                el.classList.add('hidden');
+            });
+            const targetContent = document.getElementById('tab-content-' + tabId);
+            if (targetContent) {
+                targetContent.classList.remove('hidden');
+            }
+            
+            const buttons = [
+                { id: 'tab-btn-trips', bg: 'bg-blue-600 text-white border-blue-500/30' },
+                { id: 'tab-btn-accounts', bg: 'bg-green-600 text-white border-green-500/30' },
+                { id: 'tab-btn-fleet', bg: 'bg-purple-600 text-white border-purple-500/30' },
+                { id: 'tab-btn-support', bg: 'bg-teal-600 text-white border-teal-500/30' }
+            ];
+            
+            buttons.forEach(btn => {
+                const el = document.getElementById(btn.id);
+                if (el) {
+                    if (btn.id === 'tab-btn-' + tabId) {
+                        el.className = `flex-1 min-w-[140px] py-2.5 rounded-xl text-xs font-bold text-center transition ${btn.bg}`;
+                    } else {
+                        el.className = `flex-1 min-w-[140px] py-2.5 rounded-xl text-xs font-bold text-center transition text-slate-300 hover:bg-slate-800 border border-transparent`;
+                    }
+                }
+            });
+
+            if (tabId === 'trips') {
+                loadTrips();
+            } else if (tabId === 'accounts') {
+                loadLedger();
+            } else if (tabId === 'fleet') {
+                loadFleetData();
+            } else if (tabId === 'support') {
+                loadSupportChat();
+                subscribeSupportChat();
+                const badge = document.getElementById('vendor-support-badge');
+                if (badge) badge.classList.add('hidden');
+            }
+        }
+
+        // ==========================================
+        // إدارة دفعات السائقين (الأسطول)
+        // ==========================================
+        function getDriverPayout(driverId) {
+            return Number(localStorage.getItem('driver_payout_' + driverId)) || 0;
+        }
+
+        function recordDriverPayout(driverId, name) {
+            const earned = Number(document.getElementById('earned-' + driverId).getAttribute('data-earned')) || 0;
+            const paid = getDriverPayout(driverId);
+            const remaining = earned - paid;
+            
+            const amt = parseFloat(prompt(`💰 تسجيل دفعة مسددة للكابتن ${name}:\n(المستحق الحالي له: ${remaining} EGP)\nأدخل المبلغ المدفوع حالياً:`));
+            if (isNaN(amt) || amt <= 0) return;
+            
+            localStorage.setItem('driver_payout_' + driverId, paid + amt);
+            loadFleetData();
+        }
+
+        async function loadFleetData() {
+            const driversList = document.getElementById('vendor-drivers-list');
+            const carsList = document.getElementById('vendor-cars-list');
+            
+            driversList.innerHTML = '<p class="text-center text-slate-500 text-xs py-4"><i class="fas fa-spinner fa-spin ml-2"></i>جاري تحميل الكباتن...</p>';
+            carsList.innerHTML = '<p class="text-center text-slate-500 text-xs py-4"><i class="fas fa-spinner fa-spin ml-2"></i>جاري تحميل السيارات...</p>';
+            
+            try {
+                const [dRes, cRes, tRes] = await Promise.all([
+                    sb.from('drivers').select('*').eq('vendor_id', currentVendor.id).eq('is_external', true),
+                    sb.from('cars').select('*').eq('vendor_id', currentVendor.id).eq('is_external', true),
+                    sb.from('trips').select('driver_id, driver_wage').eq('vendor_id', currentVendor.id).eq('status', 'completed')
+                ]);
+
+                if (dRes.error) throw dRes.error;
+                if (cRes.error) throw cRes.error;
+                if (tRes.error) throw tRes.error;
+
+                const drivers = dRes.data || [];
+                const cars = cRes.data || [];
+                const trips = tRes.data || [];
+
+                const wageMap = {};
+                trips.forEach(t => {
+                    if (t.driver_id) {
+                        wageMap[t.driver_id] = (wageMap[t.driver_id] || 0) + (Number(t.driver_wage) || 0);
+                    }
+                });
+
+                // رندر الكباتن
+                if (drivers.length === 0) {
+                    driversList.innerHTML = '<p class="text-center text-slate-500 text-xs py-4">لا يوجد سائقين مسجلين للمكتب حالياً.</p>';
+                } else {
+                    driversList.innerHTML = drivers.map(d => {
+                        const earned = wageMap[d.id] || 0;
+                        const paid = getDriverPayout(d.id);
+                        const remaining = earned - paid;
+                        return `
+                            <div class="bg-slate-900/30 border border-slate-800 p-4 rounded-2xl flex justify-between items-center text-xs">
+                                <div>
+                                    <p class="font-bold text-white text-sm">${d.name}</p>
+                                    <p class="text-[10px] text-slate-400 font-mono mt-0.5">${d.phone}</p>
+                                    <div class="flex gap-4 mt-2 text-[10px] text-slate-400">
+                                        <span>إجمالي مستحقات الرحلات: <strong class="text-white">${earned} EGP</strong></span>
+                                        <span>المسدد: <strong class="text-white">${paid} EGP</strong></span>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p id="earned-${d.id}" data-earned="${earned}" class="font-black font-num text-sm text-green-400">${remaining} EGP</p>
+                                    <button onclick="recordDriverPayout('${d.id}', '${d.name.replace(/'/g, "\\'")}')" class="mt-2 bg-slate-800 hover:bg-slate-700 text-[10px] text-slate-300 px-2 py-1.5 rounded-lg border border-slate-700/60 transition">💰 تسوية دفعة</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                // رندر السيارات
+                if (cars.length === 0) {
+                    carsList.innerHTML = '<p class="text-center text-slate-500 text-xs py-4 col-span-2">لا توجد سيارات مسجلة للمكتب بعد.</p>';
+                } else {
+                    carsList.innerHTML = cars.map(c => {
+                        const photoHtml = c.car_image_url ? `<img src="${c.car_image_url}" class="w-full h-24 object-cover rounded-xl mt-2 border border-slate-800">` : '<div class="h-24 bg-slate-900/40 rounded-xl mt-2 flex items-center justify-center text-[10px] text-slate-500 border border-slate-800/60">بدون صورة</div>';
+                        return `
+                            <div class="bg-slate-900/30 border border-slate-800 p-3 rounded-2xl text-xs flex flex-col justify-between">
+                                <div>
+                                    <p class="font-bold text-white text-sm">${c.brand}</p>
+                                    <p class="text-[10px] text-slate-400 font-mono mt-0.5">${c.plate_number}</p>
+                                    ${photoHtml}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            } catch(e) {
+                console.error("Error loading fleet data:", e);
+                driversList.innerHTML = '<p class="text-center text-red-500 py-4 text-xs">فشل تحميل بيانات الأسطول</p>';
+            }
+        }
+
+        async function openAddDriverPrompt() {
+            const name = prompt("👤 أدخل اسم الكابتن الجديد:");
+            if (!name) return;
+            const phone = prompt("📱 أدخل رقم تليفون الكابتن (لتسجيل الدخول):");
+            if (!phone) return;
+            
+            const cleanPhone = phone.trim().replace(/\D/g, '');
+            if (!cleanPhone) { alert("رقم الهاتف غير صالح"); return; }
+            
+            try {
+                const { error } = await sb.from('drivers').insert([{
+                    name: name,
+                    phone: cleanPhone,
+                    is_external: true,
+                    vendor_id: currentVendor.id
+                }]);
+                if (error) throw error;
+                alert("✅ تم إضافة الكابتن بنجاح!");
+                loadFleetData();
+            } catch(e) {
+                alert("❌ خطأ: " + e.message);
+            }
+        }
+
+        async function openAddCarPrompt() {
+            const brand = prompt("🚘 أدخل ماركة السيارة (مثال: تويوتا كورولا):");
+            if (!brand) return;
+            const plate = prompt("🔢 أدخل لوحة أرقام السيارة:");
+            if (!plate) return;
+            const photoUrl = prompt("📸 أدخل رابط صورة السيارة (اختياري):") || "";
+            
+            try {
+                const { error } = await sb.from('cars').insert([{
+                    brand: brand,
+                    plate_number: plate,
+                    is_external: true,
+                    vendor_id: currentVendor.id,
+                    car_image_url: photoUrl
+                }]);
+                if (error) throw error;
+                alert("✅ تم إضافة السيارة بنجاح!");
+                loadFleetData();
+            } catch(e) {
+                alert("❌ خطأ: " + e.message);
+            }
+        }
+
+        // ==========================================
+        // شات الدعم الفني الخاص بالمنصة
+        // ==========================================
+        let supportChatSub = null;
+
+        async function loadSupportChat() {
+            const box = document.getElementById('support-chat-messages');
+            box.innerHTML = '<p class="text-center text-slate-500 py-8 text-xs"><i class="fas fa-spinner fa-spin ml-1.5"></i>جاري تحميل رسائل الدعم...</p>';
+            
+            try {
+                const { data: msgs, error } = await sb.from('support_chats')
+                    .select('*')
+                    .eq('user_id', currentVendor.id)
+                    .order('created_at', { ascending: true });
+                    
+                if (error) throw error;
+                
+                box.innerHTML = '';
+                if (!msgs || msgs.length === 0) {
+                    box.innerHTML = '<p class="text-center text-slate-500 text-xs py-8">لا توجد رسائل دعم فني بعد. اكتب استفسارك في الأسفل للتواصل مع موظف الدعم الفني النشط بالوردية.</p>';
+                    return;
+                }
+
+                msgs.forEach(m => {
+                    appendSupportMessage(m);
+                });
+                box.scrollTop = box.scrollHeight;
+            } catch(e) {
+                box.innerHTML = `<p class="text-center text-red-500 py-8 text-xs">خطأ في تحميل الدردشة: ${e.message}</p>`;
+            }
+        }
+
+        function appendSupportMessage(msg) {
+            const box = document.getElementById('support-chat-messages');
+            if (box.innerHTML.includes('لا توجد رسائل')) box.innerHTML = '';
+
+            const div = document.createElement('div');
+            
+            if (msg.sender_role === 'vendor') {
+                div.className = 'msg msg-me';
+                div.innerHTML = `<span class="text-[9px] block mb-1 opacity-70 text-white/80">🤝 مكتب منفذ</span>${msg.message}`;
+            } else {
+                div.className = 'msg msg-other';
+                div.innerHTML = `<span class="text-[9px] block mb-1 opacity-70 text-teal-400">🛡️ الدعم الفني</span>${msg.message}`;
+            }
+
+            const time = document.createElement('span');
+            time.className = 'block text-[8px] mt-1 opacity-50 text-left';
+            time.textContent = new Date(msg.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+            div.appendChild(time);
+
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        async function sendVendorSupportMessage() {
+            const input = document.getElementById('support-chat-input');
+            const msgText = input.value.trim();
+            if (!msgText) return;
+
+            input.value = '';
+
+            const newMsg = {
+                user_id: currentVendor.id,
+                sender_role: 'vendor',
+                message: msgText,
+                created_at: new Date().toISOString()
+            };
+
+            appendSupportMessage(newMsg);
+
+            try {
+                const { error } = await sb.from('support_chats').insert([newMsg]);
+                if (error) throw error;
+            } catch(e) {
+                console.error("Failed to send support message:", e);
+            }
+        }
+
+        function subscribeSupportChat() {
+            if (supportChatSub) sb.removeChannel(supportChatSub);
+            
+            supportChatSub = sb.channel('support-vendor-' + currentVendor.id)
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_chats', filter: 'user_id=eq.' + currentVendor.id }, (payload) => {
+                    const msg = payload.new;
+                    if (msg.sender_role === 'vendor') return;
+                    appendSupportMessage(msg);
+                    
+                    const activeTab = document.querySelector('.vendor-tab-content:not(.hidden)');
+                    if (activeTab && activeTab.id !== 'tab-content-support') {
+                        const badge = document.getElementById('vendor-support-badge');
+                        if (badge) badge.classList.remove('hidden');
+                    }
+                })
+                .subscribe();
+        }
+
+        // ==========================================
+        // نظام الدردشة التفاعلي المشترك للرحلات
         // ==========================================
         async function openChat(tripId, routeName) {
             activeChatTripId = tripId;
@@ -733,7 +1192,7 @@
                 msgs.forEach(m => appendChatMessage(m));
                 box.scrollTop = box.scrollHeight;
             } catch(e) {
-                box.innerHTML = `<p class="text-center text-red-500 py-8 text-xs">خطأ في جلب الشات: ${e.message}</p>`;
+                box.innerHTML = `<p class="text-center text-red-500 py-8 text-xs">خطأ في جلب شات الرحلة: ${e.message}</p>`;
             }
         }
 
@@ -756,7 +1215,6 @@
                 div.className = 'msg msg-other';
                 div.innerHTML = `<span class="text-[9px] block mb-1 opacity-70 text-blue-400">🚗 الكابتن: ${msg.sender_name}</span>${msg.message}`;
             } else {
-                // رسالتي كمكتب منفذ
                 div.className = 'msg msg-me';
                 div.innerHTML = `<span class="text-[9px] block mb-1 opacity-70 text-white/80">🤝 مكتب منفذ (${msg.sender_name})</span>${msg.message}`;
             }
@@ -779,7 +1237,7 @@
 
             const newMsg = {
                 trip_id: activeChatTripId,
-                sender_role: 'admin', // نرسل كـ admin لأننا من طرف الشركة
+                sender_role: 'admin', 
                 sender_id: currentVendor.id,
                 sender_name: currentVendor.name,
                 message: msgText,
@@ -802,11 +1260,132 @@
             chatSub = sb.channel('chat-vendor-' + tripId)
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: 'trip_id=eq.' + tripId }, (payload) => {
                     const msg = payload.new;
-                    // تجاهل رسائلي لتجنب التكرار
                     if (String(msg.sender_id) === String(currentVendor.id)) return;
                     appendChatMessage(msg);
                 })
                 .subscribe();
+        }
+
+        // ==========================================
+        // رندر وعرض كشوفات الحساب
+        // ==========================================
+        function renderLedgerTable(trips, txs) {
+            const tbody = document.getElementById('trips-ledger-table');
+            if (!tbody) return;
+
+            if (!trips || trips.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center p-4 text-slate-500">لا توجد رحلات مسجلة بعد.</td></tr>';
+                return;
+            }
+
+            const txMap = {};
+            if (txs) {
+                txs.forEach(tx => {
+                    if (tx.trip_id) {
+                        if (!txMap[tx.trip_id]) txMap[tx.trip_id] = [];
+                        txMap[tx.trip_id].push(tx);
+                    }
+                });
+            }
+
+            tbody.innerHTML = trips.map(t => {
+                const tripTxs = txMap[t.id] || [];
+                let commission = t.our_commission || 0;
+                let price = t.estimated_price || 0;
+                let partnerNet = price - commission;
+                let paymentBadge = '';
+
+                const deductionTx = tripTxs.find(x => x.transaction_type === 'commission_deduction');
+                const creditTx = tripTxs.find(x => x.transaction_type === 'deferred_credit');
+
+                if (deductionTx) {
+                    commission = Math.abs(Number(deductionTx.amount));
+                    partnerNet = price - commission;
+                    paymentBadge = `<span class="bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] px-2 py-0.5 rounded-full font-bold ml-1.5 inline-block">💵 كاش</span>`;
+                } else if (creditTx) {
+                    partnerNet = Number(creditTx.amount);
+                    commission = price - partnerNet;
+                    paymentBadge = `<span class="bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] px-2 py-0.5 rounded-full font-bold ml-1.5 inline-block">💳 أجل</span>`;
+                } else {
+                    const notes = t.admin_notes || '';
+                    const isCash = notes.toLowerCase().includes('cash') || notes.includes('كاش') || notes.includes('💵');
+                    paymentBadge = isCash 
+                        ? `<span class="bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] px-2 py-0.5 rounded-full font-bold ml-1.5 inline-block">💵 كاش (متوقع)</span>`
+                        : `<span class="bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] px-2 py-0.5 rounded-full font-bold ml-1.5 inline-block">💳 أجل (متوقع)</span>`;
+                }
+
+                const pickup = (t.pickup_location || '').split(',')[0];
+                const dropoff = (t.dropoff_location || '').split(',')[0];
+
+                let statusText = t.status;
+                let statusColor = 'text-slate-400';
+                if (t.status === 'approved') { statusText = 'بانتظار السائق'; statusColor = 'text-green-400'; }
+                else if (t.status === 'driver_assigned') { statusText = 'الكابتن معين'; statusColor = 'text-blue-400'; }
+                else if (t.status === 'completed' || t.status === 'trip_ended') { statusText = 'مكتملة'; statusColor = 'text-slate-400'; }
+
+                return `
+                    <tr class="hover:bg-slate-900/40 border-b border-slate-800/40 transition">
+                        <td class="p-3 font-num font-bold text-slate-400">#${t.id}</td>
+                        <td class="p-3">
+                            <p class="font-bold text-white text-[11px]">${pickup} ➝ ${dropoff}</p>
+                            <p class="text-[9px] text-slate-500 mt-1">${paymentBadge}</p>
+                        </td>
+                        <td class="p-3 font-num font-bold text-white">${price} EGP</td>
+                        <td class="p-3 font-num text-red-400">-${commission} EGP</td>
+                        <td class="p-3 font-num text-green-400">+${partnerNet} EGP</td>
+                        <td class="p-3 font-bold ${statusColor}">${statusText}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function loadLedger() {
+            const list = document.getElementById('ledger-list');
+            list.innerHTML = '<p class="text-center text-slate-500 py-4 text-xs"><i class="fas fa-spinner fa-spin ml-2"></i>جاري تحميل القيود...</p>';
+
+            try {
+                const [txsRes, tripsRes] = await Promise.all([
+                    sb.from('vendor_transactions').select('*').eq('vendor_id', currentVendor.id).order('created_at', { ascending: false }),
+                    sb.from('trips').select('*').eq('vendor_id', currentVendor.id).order('created_at', { ascending: false })
+                ]);
+
+                if (txsRes.error) throw txsRes.error;
+
+                const txs = txsRes.data || [];
+                const trips = tripsRes.data || [];
+
+                renderLedgerTable(trips, txs);
+
+                if (txs.length === 0) {
+                    list.innerHTML = '<p class="text-center text-slate-500 py-8 text-xs">لا توجد حركات مالية مسجلة في كشف حسابكم بعد.</p>';
+                    return;
+                }
+
+                list.innerHTML = txs.map(t => {
+                    const date = new Date(t.created_at).toLocaleDateString('ar-EG');
+                    const isPlus = Number(t.amount) >= 0;
+                    const amountColor = isPlus ? 'text-green-400' : 'text-red-400';
+                    const amountPrefix = isPlus ? '+' : '';
+                    
+                    let typeText = t.transaction_type;
+                    if (t.transaction_type === 'commission_deduction') typeText = 'خصم عمولة (كاش)';
+                    else if (t.transaction_type === 'deferred_credit') typeText = 'مستحق للمكتب (أجل)';
+                    else if (t.transaction_type === 'payout_to_vendor') typeText = 'تسوية تحويل للمكتب';
+                    else if (t.transaction_type === 'payment_from_vendor') typeText = 'تسوية سداد من المكتب';
+
+                    return `
+                        <div class="bg-slate-900/30 border border-slate-800 p-3 rounded-xl flex justify-between items-center text-xs">
+                            <div class="space-y-1">
+                                <p class="font-semibold text-slate-200">${t.description || 'حركة مقاصة'}</p>
+                                <p class="text-[9px] text-slate-500 font-mono">${date} | ${typeText}</p>
+                            </div>
+                            <span class="font-black font-num text-sm ${amountColor}">${amountPrefix}${t.amount} EGP</span>
+                        </div>`;
+                }).join('');
+
+            } catch(e) {
+                list.innerHTML = `<p class="text-center text-red-500 py-4 text-xs">خطأ في جلب كشف الحساب: ${e.message}</p>`;
+            }
         }
     </script>
 </body>
