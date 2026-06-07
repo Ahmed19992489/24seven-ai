@@ -4744,7 +4744,7 @@ async function confirmResAssign() {
                 dropoff_location: r.dropoff_address || '',
                 estimated_price: Number(r.cost) || 0,
                 status: 'approved', // الإدارة توافق، وينتظر إسناد السائق من المكتب المنفذ
-                admin_notes: `حجز شيت صف ${r.sheet_row}\nالعميل: ${r.customer_name}\nنوع التحصيل: ${r.payment_method || 'غير محدد'}\nإسناد خارجي للمكتب: ${vendorName}`,
+                admin_notes: `حجز شيت صف ${r.sheet_row}\nالعميل: ${r.customer_name}\n📅 ${r.trip_date || '--'} - ${r.trip_time || '--'}\nنوع التحصيل: ${r.payment_method || 'غير محدد'}\nإسناد خارجي للمكتب: ${vendorName}`,
                 trip_date: r.trip_date,
                 trip_time: r.trip_time,
                 passengers: Number(r.passengers) || 1,
@@ -4840,7 +4840,7 @@ async function confirmResAssign() {
             dropoff_location: r.dropoff_address || '',
             estimated_price: Number(r.cost) || 0,
             status: 'driver_assigned',
-            admin_notes: `حجز شيت صف ${r.sheet_row}\nالعميل: ${r.customer_name}\nنوع التحصيل: ${r.payment_method || 'غير محدد'}\nالسائق: ${driverName} (${driverPhone})`,
+            admin_notes: `حجز شيت صف ${r.sheet_row}\nالعميل: ${r.customer_name}\n📅 ${r.trip_date || '--'} - ${r.trip_time || '--'}\nنوع التحصيل: ${r.payment_method || 'غير محدد'}\nالسائق: ${driverName} (${driverPhone})`,
             trip_date: r.trip_date,
             trip_time: r.trip_time,
             passengers: Number(r.passengers) || 1,
