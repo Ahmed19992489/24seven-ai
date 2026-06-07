@@ -2399,6 +2399,17 @@
             }
         }
 
+        function normalizeEgyptianPhone(phone) {
+            if (!phone) return '';
+            let clean = phone.replace(/\D/g, '');
+            if (clean.startsWith('201') && clean.length === 12) {
+                clean = '0' + clean.slice(2);
+            } else if (clean.startsWith('1') && clean.length === 10) {
+                clean = '0' + clean;
+            }
+            return clean;
+        }
+
         async function confirmAssign() {
             const tid = document.getElementById('modal-trip-id').value;
             const assignType = document.getElementById('modal-assign-type').value;
@@ -2420,7 +2431,8 @@
                 originalSqlId = res.sql_server_id;
 
                 // 1. إيجاد/إنشاء حساب العميل
-                const rawPhone = (res.customer_phone || '').replace(/\D/g, '');
+                let rawPhone = (res.customer_phone || '').replace(/\D/g, '');
+                rawPhone = normalizeEgyptianPhone(rawPhone);
                 const fakeEmail = rawPhone + '@24seven-client.app';
                 const password = rawPhone.slice(-6) || '123456';
                 let clientUserId = null;
@@ -2455,7 +2467,12 @@
                     admin_notes: fullNotes,
                     car_type: res.car_type,
                     manual_client_name: res.customer_name,
-                    client_phone: rawPhone
+                    client_phone: rawPhone,
+                    trip_date: res.trip_date,
+                    trip_time: res.trip_time,
+                    passengers: Number(res.passengers) || 1,
+                    bags: Number(res.bags) || 0,
+                    payment_method: res.payment_method
                 };
 
                 // إذا كان هناك sql_server_id موجود مسبقاً، نستخدمه
@@ -2621,7 +2638,8 @@
             }
 
             // 3. إنشاء/ربط حساب العميل برقم هاتفه
-            const rawPhone = phone.replace(/\D/g, '');
+            let rawPhone = phone.replace(/\D/g, '');
+            rawPhone = normalizeEgyptianPhone(rawPhone);
             const fakeEmail = rawPhone + '@24seven-client.app';
             const password = rawPhone.slice(-6);
             let clientUserId = null;
@@ -4676,7 +4694,8 @@ async function confirmResAssign() {
 
         try {
             // 1. إيجاد/إنشاء حساب العميل في Supabase
-            const rawPhone = (r.customer_phone || '').replace(/\D/g, '');
+            let rawPhone = (r.customer_phone || '').replace(/\D/g, '');
+            rawPhone = normalizeEgyptianPhone(rawPhone);
             const fakeEmail = rawPhone + '@24seven-client.app';
             let clientUserId = null;
             const { data: existingProfile } = await sbClient.from('profiles').select('id').eq('phone', rawPhone).maybeSingle();
@@ -4700,7 +4719,13 @@ async function confirmResAssign() {
                 dropoff_location: r.dropoff_address || '',
                 estimated_price: Number(r.cost) || 0,
                 status: 'approved', // الإدارة توافق، وينتظر إسناد السائق من المكتب المنفذ
-                admin_notes: `حجز شيت صف ${r.sheet_row}\nالعميل: ${r.customer_name}\nنوع التحصيل: ${r.payment_method || 'غير محدد'}\nإسناد خارجي للمكتب: ${vendorName}`
+                admin_notes: `حجز شيت صف ${r.sheet_row}\nالعميل: ${r.customer_name}\nنوع التحصيل: ${r.payment_method || 'غير محدد'}\nإسناد خارجي للمكتب: ${vendorName}`,
+                trip_date: r.trip_date,
+                trip_time: r.trip_time,
+                passengers: Number(r.passengers) || 1,
+                bags: Number(r.bags) || 0,
+                car_type: r.car_type,
+                payment_method: r.payment_method
             }]).select().single();
             if (tripErr) throw new Error('خطأ إنشاء الرحلة: ' + tripErr.message);
 
@@ -4767,7 +4792,8 @@ async function confirmResAssign() {
 
     try {
         // 1. إيجاد/إنشاء حساب العميل في Supabase
-        const rawPhone = (r.customer_phone || '').replace(/\D/g, '');
+        let rawPhone = (r.customer_phone || '').replace(/\D/g, '');
+        rawPhone = normalizeEgyptianPhone(rawPhone);
         const fakeEmail = rawPhone + '@24seven-client.app';
         let clientUserId = null;
         const { data: existingProfile } = await sbClient.from('profiles').select('id').eq('phone', rawPhone).maybeSingle();
@@ -4790,7 +4816,13 @@ async function confirmResAssign() {
             dropoff_location: r.dropoff_address || '',
             estimated_price: Number(r.cost) || 0,
             status: 'driver_assigned',
-            admin_notes: `حجز شيت صف ${r.sheet_row}\nالعميل: ${r.customer_name}\nالسائق: ${driverName} (${driverPhone})`
+            admin_notes: `حجز شيت صف ${r.sheet_row}\nالعميل: ${r.customer_name}\nالسائق: ${driverName} (${driverPhone})`,
+            trip_date: r.trip_date,
+            trip_time: r.trip_time,
+            passengers: Number(r.passengers) || 1,
+            bags: Number(r.bags) || 0,
+            car_type: r.car_type,
+            payment_method: r.payment_method
         }]).select().single();
         if (tripErr) throw new Error('خطأ إنشاء الرحلة: ' + tripErr.message);
 

@@ -1357,9 +1357,44 @@
         }
 
         function setupRealtime() {
+            // Trips channel
             sb.channel('public:trips')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'trips', filter: 'user_id=eq.' + user.id }, (payload) => {
-                    if (!document.getElementById('page-trips').classList.contains('hidden')) loadTrips();
+                    loadTrips();
+                    if (typeof loadClientChats === 'function') {
+                        try { loadClientChats(); } catch(e) {}
+                    }
+                })
+                .subscribe();
+
+            // Google Reservations channel
+            sb.channel('public:google_reservations')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'google_reservations' }, (payload) => {
+                    const userPhone = document.getElementById('guest-phone')?.value || '';
+                    const payloadPhone = payload.new?.customer_phone || '';
+                    const payloadWhatsapp = payload.new?.whatsapp_num || '';
+                    if (userPhone && (payloadPhone.includes(userPhone) || userPhone.includes(payloadPhone) || payloadWhatsapp.includes(userPhone))) {
+                        loadTrips();
+                    }
+                })
+                .subscribe();
+
+            // Chat messages channel for instant notifications
+            sb.channel('public:chat_messages')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, (payload) => {
+                    const msg = payload.new;
+                    if (msg && typeof activeClientTripIds !== 'undefined' && activeClientTripIds && activeClientTripIds.has(String(msg.trip_id))) {
+                        if (msg.message_type === 'system') {
+                            const cleanedMsg = cleanClientChatMessage(msg.message);
+                            if (typeof showNotifBanner === 'function') showNotifBanner('📢 ' + cleanedMsg.replace(/\n/g, '<br>'));
+                            if (typeof addNotification === 'function') addNotification('تحديث على رحلتك: ' + cleanedMsg.substring(0, 30) + '...');
+                            try { new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(e=>{}); } catch(e) {}
+                            loadTrips();
+                        }
+                        if (typeof loadClientChats === 'function') {
+                            try { loadClientChats(); } catch(e) {}
+                        }
+                    }
                 })
                 .subscribe();
         }
@@ -1468,7 +1503,8 @@
             const phone = document.getElementById('guest-phone').value;
 
             // 1. تنظيف رقم الهاتف للبحث والإنشاء
-            const rawPhone = phone.replace(/\D/g, '');
+            let rawPhone = phone.replace(/\D/g, '');
+            rawPhone = normalizeEgyptianPhone(rawPhone);
             let targetUserId = user ? user.id : null;
 
             if (rawPhone) {
@@ -1499,7 +1535,7 @@
                 try {
                     const { data: { user: authUser } } = await sb.auth.getUser();
                     const userEmail = authUser?.email || '';
-                    await sb.from('profiles').upsert({ id: user.id, full_name: name, phone: phone, email: userEmail });
+                    await sb.from('profiles').upsert({ id: user.id, full_name: name, phone: rawPhone, email: userEmail });
                 } catch (e) { }
             }
 
@@ -1794,7 +1830,7 @@
                 let driverHtml = '';
                 if (t.drivers && t.drivers.name) {
                     let driverName = t.drivers.name;
-                    if (t.is_outsourced || driverName.includes('مكتب خارجي') || driverName.includes('خارجي') || driverName.includes('موزع')) {
+                    if (driverName.includes('مكتب خارجي') || driverName.includes('خارجي') || driverName.includes('موزع') || driverName.toLowerCase().includes('فهد') || driverName.includes('الفهد')) {
                         driverName = 'قسم التشغيل';
                     }
                     driverHtml = `
@@ -1852,7 +1888,7 @@
                 const realTripId = String(t.id).startsWith('gr_') ? t.sql_server_id : t.id;
                 if (t.drivers && t.drivers.name && realTripId && status !== 'completed' && status !== 'trip_ended' && status !== 'cancelled' && status !== 'rejected') {
                     let dName = t.drivers.name;
-                    if (t.is_outsourced || dName.includes('مكتب خارجي') || dName.includes('خارجي') || dName.includes('موزع')) {
+                    if (dName.includes('مكتب خارجي') || dName.includes('خارجي') || dName.includes('موزع') || dName.toLowerCase().includes('فهد') || dName.includes('الفهد')) {
                         dName = 'قسم التشغيل';
                     }
                     dName = dName.replace(/'/g, '');
@@ -2076,8 +2112,36 @@
             }
         }
 
+        function normalizeEgyptianPhone(phone) {
+            if (!phone) return '';
+            let clean = phone.replace(/\D/g, '');
+            if (clean.startsWith('201') && clean.length === 12) {
+                clean = '0' + clean.slice(2);
+            } else if (clean.startsWith('1') && clean.length === 10) {
+                clean = '0' + clean;
+            }
+            return clean;
+        }
+
+        function cleanClientChatMessage(msgText) {
+            if (!msgText) return '';
+            let cleaned = msgText;
+            cleaned = cleaned.replace(/المكتب الخارجي المنفذ:\s*[^\n]*/g, 'قسم التشغيل');
+            cleaned = cleaned.replace(/إسناد خارجي للمكتب:\s*[^\n]*/g, 'إسناد إلى قسم التشغيل');
+            cleaned = cleaned.replace(/مكتب خارجي:\s*[^\n]*/g, 'قسم التشغيل');
+            cleaned = cleaned.replace(/من طرف المكتب المنفذ\s*/g, '');
+            cleaned = cleaned.replace(/للمكتب الخارجي\s+\S+/g, 'لقسم التشغيل');
+            cleaned = cleaned.replace(/مكتب الفهد/g, 'قسم التشغيل');
+            cleaned = cleaned.replace(/مكتب فهد/g, 'قسم التشغيل');
+            cleaned = cleaned.replace(/الفهد/g, 'قسم التشغيل');
+            cleaned = cleaned.replace(/فهد/g, 'قسم التشغيل');
+            cleaned = cleaned.replace(/المكتب الخارجي/g, 'قسم التشغيل');
+            return cleaned;
+        }
+
         async function phoneLogin() {
-            const rawPhone = document.getElementById('login-phone').value.trim().replace(/\D/g, '');
+            let rawPhone = document.getElementById('login-phone').value.trim().replace(/\D/g, '');
+            rawPhone = normalizeEgyptianPhone(rawPhone);
             if (!rawPhone || rawPhone.length < 10) {
                 return alert('❌ أدخل رقم هاتف صحيح');
             }
@@ -2241,13 +2305,13 @@
             let html = '';
             for (const t of trips) {
                 let driverName = t.drivers?.name || 'الكابتن';
-                if (t.is_outsourced || (driverName !== 'الكابتن' && (driverName.includes('مكتب خارجي') || driverName.includes('خارجي') || driverName.includes('موزع')))) {
+                if (driverName !== 'الكابتن' && (driverName.includes('مكتب خارجي') || driverName.includes('خارجي') || driverName.includes('موزع') || driverName.toLowerCase().includes('فهد') || driverName.includes('الفهد'))) {
                     driverName = 'قسم التشغيل';
                 }
                 const { data: lastMsg } = await sb.from('chat_messages')
                     .select('message, sender_role').eq('trip_id', t.id)
                     .order('created_at', { ascending: false }).limit(1);
-                const preview = lastMsg?.[0]?.message || 'ابدأ المحادثة الآن';
+                const preview = cleanClientChatMessage(lastMsg?.[0]?.message || 'ابدأ المحادثة الآن');
                 const rolePrefix = lastMsg?.[0]?.sender_role === 'client' ? 'أنت: ' : lastMsg?.[0]?.sender_role === 'admin' ? 'الإدارة: ' : '';
 
                 html += `
@@ -2300,10 +2364,7 @@
 
             const div = document.createElement('div');
             // تنظيف أسماء المكاتب الخارجية من الرسائل المعروضة للعميل
-            let displayMsg = msg.message || '';
-            displayMsg = displayMsg.replace(/المكتب الخارجي المنفذ:\s*[^\n]*/g, 'قسم التشغيل');
-            displayMsg = displayMsg.replace(/من طرف المكتب المنفذ\s*/g, '');
-            displayMsg = displayMsg.replace(/للمكتب الخارجي\s+\S+/g, 'لقسم التشغيل');
+            let displayMsg = cleanClientChatMessage(msg.message || '');
 
             if (msg.message_type === 'system') {
                 div.className = 'msg-bubble msg-system';
@@ -2382,15 +2443,13 @@
                             const msgText = latestMsg.message;
                             lastKnownClientSysMsgId = latestMsg.id;
                             
-                            // لو الرسالة بتاعت موافقة/تعديل السعر نعرضها ونحدث الشاشة
-                            if (msgText.includes('وافق') || msgText.includes('تعديل') || msgText.includes('تغيير') || msgText.includes('إضافة') || msgText.includes('رفض')) {
-                                if (typeof showNotifBanner === 'function') showNotifBanner('📢 ' + msgText.replace(/\\n/g, '<br>'));
-                                if (typeof addNotification === 'function') addNotification('تحديث على رحلتك: ' + msgText.substring(0, 30) + '...');
-                                // تنبيه صوتي
-                                try { new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(e=>{}); } catch(e) {}
-                                // إعادة تحميل واجهة العميل لتحديث السعر الجديد المعروض
-                                loadTrips();
-                            }
+                            const cleanedMsg = cleanClientChatMessage(msgText);
+                            if (typeof showNotifBanner === 'function') showNotifBanner('📢 ' + cleanedMsg.replace(/\n/g, '<br>'));
+                            if (typeof addNotification === 'function') addNotification('تحديث على رحلتك: ' + cleanedMsg.substring(0, 30) + '...');
+                            // تنبيه صوتي
+                            try { new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(e=>{}); } catch(e) {}
+                            // إعادة تحميل واجهة العميل لتحديث السعر الجديد المعروض
+                            loadTrips();
                         }
                     }
                 }

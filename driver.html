@@ -601,16 +601,54 @@
             }
             if (t.manual_client_name) clientName = t.manual_client_name;
 
-            // بيانات من admin_notes
+            // === قراءة البيانات من الأعمدة المباشرة أولاً، ثم fallback على admin_notes ===
             let tripType = '', payMethod = '', tripDate = '', tripTime = '', passengers = '1', bags = '0';
+            
+            // 1. قراءة مباشرة من أعمدة الجدول
+            if (t.trip_date) tripDate = t.trip_date;
+            if (t.trip_time) tripTime = t.trip_time;
+            if (t.passengers) passengers = String(t.passengers);
+            if (t.bags) bags = String(t.bags);
+            if (t.car_type) tripType = t.car_type;
+            if (t.payment_method) payMethod = t.payment_method;
+            
+            // 2. Fallback: استخراج من admin_notes لو الأعمدة فاضية
             const notes = t.admin_notes || '';
-            const typeM = notes.match(/نوع: (.*?) \|/); if (typeM) tripType = typeM[1].trim();
-            const payM = notes.match(/الدفع: (.*?)[\n|]/); if (payM) payMethod = payM[1].trim();
-            const dateM = notes.match(/📅\s*(.*?)\s*-\s*(.*?)[\n|$]/); if (dateM) { tripDate = dateM[1].trim(); tripTime = dateM[2].trim(); }
-            const passM = notes.match(/(\d+)\s*(?:أفراد|فرد|ركاب)/); if (passM) passengers = passM[1];
-            const bagM = notes.match(/(\d+)\s*(?:شنط|شنطة|حقائب)/); if (bagM) bags = bagM[1];
+            if (!tripType) { 
+                const typeM = notes.match(/نوع:\s*([^|\n]*)/) || notes.match(/رحلة:\s*([^|\n]*)/) || notes.match(/سيارة:\s*([^|\n]*)/); 
+                if (typeM) tripType = typeM[1].trim(); 
+            }
+            if (!payMethod) { 
+                const payM = notes.match(/الدفع:\s*([^|\n]*)/) || notes.match(/نوع التحصيل:\s*([^|\n]*)/); 
+                if (payM) payMethod = payM[1].trim(); 
+            }
+            if (!tripDate || tripDate === '--') { 
+                const dateM = notes.match(/📅\s*([0-9-/\\]+)(?:\s*[-:]\s*([0-9:amp\s]+))?/i); 
+                if (dateM) { 
+                    tripDate = dateM[1].trim(); 
+                    if (dateM[2] && (!tripTime || tripTime === '--')) tripTime = dateM[2].trim(); 
+                } else {
+                    const dateM2 = notes.match(/التاريخ:\s*([^|\n]*)/); 
+                    if (dateM2) tripDate = dateM2[1].trim(); 
+                }
+            }
+            if (!tripTime || tripTime === '--') { 
+                const timeM = notes.match(/الوقت:\s*([^|\n]*)/); 
+                if (timeM) tripTime = timeM[1].trim(); 
+            }
+            if (!passengers || passengers === '--' || passengers === '1') { 
+                const passM = notes.match(/👥\s*(\d+)/) || notes.match(/أفراد?:\s*(\d+)/) || notes.match(/ركاب:\s*(\d+)/) || notes.match(/(\d+)\s*(?:أفراد|فرد|ركاب)/); 
+                if (passM) passengers = passM[1]; 
+            }
+            if (!bags || bags === '--' || bags === '0') { 
+                const bagM = notes.match(/🧳\s*(\d+)/) || notes.match(/شنط?:\s*(\d+)/) || notes.match(/(\d+)\s*(?:شنط|شنطة|حقائب)/); 
+                if (bagM) bags = bagM[1]; 
+            }
+            
             if (payMethod === 'cash') payMethod = '💵 كاش';
             else if (payMethod === 'wallet') payMethod = '💳 محفظة';
+            else if (payMethod === 'غير محدد') payMethod = '💵 غير محدد';
+            
             const tripTypeAr = tripType === 'one-way' ? 'ذهاب فقط' : tripType === 'round-diff' ? 'ذهاب وعودة' : tripType || '--';
 
             const isActive = t.status === 'driver_assigned';

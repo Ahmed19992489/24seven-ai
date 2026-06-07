@@ -1350,7 +1350,12 @@
 
                 if (isGoogleRes) {
                     // 1. Find or create client profile
-                    const rawPhone = (trip.customer_phone || '').replace(/\D/g, '');
+                    let rawPhone = (trip.customer_phone || '').replace(/\D/g, '');
+                    if (rawPhone.startsWith('201') && rawPhone.length === 12) {
+                        rawPhone = '0' + rawPhone.slice(2);
+                    } else if (rawPhone.startsWith('1') && rawPhone.length === 10) {
+                        rawPhone = '0' + rawPhone;
+                    }
                     let clientUserId = null;
                     const { data: profile } = await sbClient.from('profiles').select('id').eq('phone', rawPhone).maybeSingle();
                     
@@ -1374,7 +1379,13 @@
                         dropoff_location: trip.dropoff_address || '',
                         estimated_price: Number(trip.cost) || 0,
                         status: 'driver_assigned',
-                        admin_notes: `📅 ${trip.trip_date || '--'} - ${trip.trip_time || '--'}\n👥 ${trip.passengers || '1'}\n🧳 ${trip.bags || '0'}\nحجز موديتور: ${currentModName}\nالعميل: ${trip.customer_name}\nالسائق: ${driverName} (${driverPhone})`
+                        admin_notes: `📅 ${trip.trip_date || '--'} - ${trip.trip_time || '--'}\n👥 ${trip.passengers || '1'}\n🧳 ${trip.bags || '0'}\nحجز موديتور: ${currentModName}\nالعميل: ${trip.customer_name}\nالسائق: ${driverName} (${driverPhone})`,
+                        trip_date: trip.trip_date,
+                        trip_time: trip.trip_time,
+                        passengers: Number(trip.passengers) || 1,
+                        bags: Number(trip.bags) || 0,
+                        car_type: trip.car_type,
+                        payment_method: trip.payment_method
                     }]).select().single();
 
                     if (tripErr) throw tripErr;
