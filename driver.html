@@ -559,11 +559,9 @@
                 if (payM) payMethod = payM[1].trim(); 
             }
             
-            let payMethodClean = '💵 غير محدد';
+            let payMethodClean = '💵 كاش';
             const payLower = (payMethod + ' ' + notes + ' ' + adminNotes).toLowerCase();
-            if (payLower.includes('cash') || payLower.includes('كاش') || payLower.includes('💵')) {
-                payMethodClean = '💵 كاش';
-            } else if (payLower.includes('postpaid') || payLower.includes('آجل') || payLower.includes('اجل') || payLower.includes('💳')) {
+            if (payLower.includes('postpaid') || payLower.includes('آجل') || payLower.includes('اجل') || payLower.includes('💳')) {
                 payMethodClean = '💳 آجل';
             } else if (payLower.includes('wallet') || payLower.includes('محفظة')) {
                 payMethodClean = '💳 محفظة';
@@ -675,11 +673,9 @@
             else if (payMethod === 'postpaid') payMethod = '💳 آجل';
             else if (payMethod === 'غير محدد') payMethod = '💵 غير محدد';
 
-            let payMethodClean = payMethod || '💵 غير محدد';
+            let payMethodClean = '💵 كاش';
             const payLower = (payMethod + ' ' + notes).toLowerCase();
-            if (payLower.includes('cash') || payLower.includes('كاش') || payLower.includes('💵')) {
-                payMethodClean = '💵 كاش';
-            } else if (payLower.includes('postpaid') || payLower.includes('آجل') || payLower.includes('اجل') || payLower.includes('💳')) {
+            if (payLower.includes('postpaid') || payLower.includes('آجل') || payLower.includes('اجل') || payLower.includes('💳')) {
                 payMethodClean = '💳 آجل';
             } else if (payLower.includes('wallet') || payLower.includes('محفظة')) {
                 payMethodClean = '💳 محفظة';
