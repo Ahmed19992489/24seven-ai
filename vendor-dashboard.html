@@ -705,7 +705,7 @@
                     });
 
                     let query = sb.from('google_reservations')
-                        .select('id, sheet_row, sql_server_id, passengers, bags, car_type, trip_type, pickup_address, dropoff_address, trip_date, trip_time');
+                        .select('id, sheet_row, sql_server_id, customer_name, passengers, bags, car_type, trip_type, pickup_address, dropoff_address, trip_date, trip_time');
 
                     if (sheetRows.length > 0) {
                         query = query.or(`sql_server_id.in.(${tripIdsStr.join(',')}),sheet_row.in.(${sheetRows.join(',')})`);
@@ -861,6 +861,19 @@
                 const price = t.estimated_price || 0;
                 const commission = t.our_commission || 0;
                 
+                // اسم العميل مع الفولباك
+                let customerName = 'عميل';
+                if (gr && gr.customer_name) {
+                    customerName = gr.customer_name;
+                } else if (t.manual_client_name) {
+                    customerName = t.manual_client_name;
+                } else {
+                    const nameMatch = notesText.match(/العميل:\s*([^\n\r|]+)/);
+                    if (nameMatch) {
+                        customerName = nameMatch[1].trim();
+                    }
+                }
+
                 // استخراج التاريخ والوقت
                 let tripDate = t.trip_date || '--';
                 let tripTime = t.trip_time || '--';
@@ -953,7 +966,11 @@
                     <div class="kpi-card p-4 rounded-2xl border flex flex-col md:flex-row justify-between gap-4">
                         <div class="space-y-3 flex-1">
                             <div class="flex justify-between items-center">
-                                <span class="text-xs font-bold font-num text-slate-400">رحلة #${t.id}</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold font-num text-slate-400">رحلة #${t.id}</span>
+                                    <span class="text-xs text-slate-500">|</span>
+                                    <span class="text-xs font-bold text-blue-400"><i class="fas fa-user text-[10px] ml-1"></i>العميل: ${customerName}</span>
+                                </div>
                                 <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${statusColor}">${statusText}</span>
                             </div>
                             <div class="bg-slate-900/40 rounded-xl p-3 border border-slate-800 space-y-1.5">
