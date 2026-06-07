@@ -1092,6 +1092,25 @@
                         placeholder="0.00">
                 </div>
 
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-xs font-bold text-slate-500">طريقة الدفع</label>
+                        <select id="manual-payment-method" class="input-std">
+                            <option value="cash">💵 كاش (Cash)</option>
+                            <option value="postpaid">💳 آجل (Postpaid)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-500">منصة الحجز</label>
+                        <select id="manual-platform" class="input-std">
+                            <option value="فيسبوك">🔵 فيسبوك (Facebook)</option>
+                            <option value="انستجرام">📸 انستجرام (Instagram)</option>
+                            <option value="واتساب">🟢 واتساب (WhatsApp)</option>
+                            <option value="ويب سايت">🌐 ويب سايت (Website)</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div>
                     <label class="text-xs font-bold text-slate-500">ملاحظات</label>
                     <textarea id="manual-notes" class="input-std h-16"></textarea>
@@ -1399,6 +1418,7 @@
 👥 ركاب: ${r.passengers} | شنط: ${r.bags}
 📅 التاريخ: ${r.trip_date} | الوقت: ${r.trip_time}
 💬 واتساب: ${r.whatsapp_num || '-'}
+نوع التحصيل: ${r.payment_method || 'غير محدد'}
 💡 ملاحظات: ${r.notes || '-'}`,
                         created_at: r.created_at || r.sheet_timestamp,
                         drivers: null,
@@ -2660,6 +2680,9 @@
                 }
             } catch (e) { console.log('خطأ منوع إنشاء الحساب:', e); }
 
+            const payMethod = document.getElementById('manual-payment-method').value;
+            const platform = document.getElementById('manual-platform').value;
+
             // 4. تجميع الملاحظات
             const fullNotes = `حجز هاتفي 📞
 العميل: ${name} (${clientType})
@@ -2667,6 +2690,8 @@
 سيارة: ${carType} | رحلة: ${tripType}
 ركاب: ${passengers} | شنط: ${luggage}
 التاريخ: ${date} | الوقت: ${time}
+نوع التحصيل: ${payMethod === 'cash' ? 'cash' : 'postpaid'}
+المنصة: ${platform}
 ملاحظات إضافية: ${notes}`;
 
             try {
@@ -2702,7 +2727,7 @@
                         clientStatus: clientType === 'vip' ? 'VIP' : (clientType === 'returning' ? 'عميل قديم' : 'عميل جديد'),
                         price: price,
                         email: '',
-                        notes: notes,
+                        notes: `المنصة: ${platform}${notes ? ' | ' + notes : ''}`,
                         tripType: tripType,
                         enteredBy: 'موظف',
                         sqlId: tripId || ''

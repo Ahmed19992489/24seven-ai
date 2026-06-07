@@ -474,6 +474,22 @@
                         <label class="block text-xs font-bold text-slate-400 mb-2">السعر المتفق عليه</label>
                         <input type="number" id="t-cost" required class="input-std" placeholder="0.00">
                     </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-2">طريقة الدفع</label>
+                        <select id="t-payment-method" class="input-std">
+                            <option value="cash">💵 كاش (Cash)</option>
+                            <option value="postpaid">💳 آجل (Postpaid)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-2">منصة الحجز</label>
+                        <select id="t-platform" class="input-std">
+                            <option value="فيسبوك">🔵 فيسبوك (Facebook)</option>
+                            <option value="انستجرام">📸 انستجرام (Instagram)</option>
+                            <option value="واتساب">🟢 واتساب (WhatsApp)</option>
+                            <option value="ويب سايت">🌐 ويب سايت (Website)</option>
+                        </select>
+                    </div>
                     <div class="md:col-span-2 lg:col-span-3">
                         <label class="block text-xs font-bold text-slate-400 mb-2">ملاحظات إضافية</label>
                         <textarea id="t-notes" class="input-std h-20" placeholder="أي تفاصيل أخرى..."></textarea>
@@ -1379,7 +1395,7 @@
                         dropoff_location: trip.dropoff_address || '',
                         estimated_price: Number(trip.cost) || 0,
                         status: 'driver_assigned',
-                        admin_notes: `📅 ${trip.trip_date || '--'} - ${trip.trip_time || '--'}\n👥 ${trip.passengers || '1'}\n🧳 ${trip.bags || '0'}\nنوع التحصيل: ${trip.payment_method || 'غير محدد'}\nحجز موديتور: ${currentModName}\nالعميل: ${trip.customer_name}\nالسائق: ${driverName} (${driverPhone})`,
+                        admin_notes: `📅 ${trip.trip_date || '--'} - ${trip.trip_time || '--'}\n👥 ${trip.passengers || '1'}\n🧳 ${trip.bags || '0'}\nنوع التحصيل: ${trip.payment_method || 'غير محدد'}\nحجز موديتور: ${currentModName}\nالعميل: ${trip.customer_name}\nالسائق: ${driverName} (${driverPhone})\nملاحظات: ${trip.notes || ''}`,
                         trip_date: trip.trip_date,
                         trip_time: trip.trip_time,
                         passengers: Number(trip.passengers) || 1,
@@ -1797,7 +1813,8 @@
         function copyTripDetails(id) {
             const t = allTrips.find(x => x.id == id);
             if(!t) return;
-            const text = `🚕 *تفاصيل الحجز* 🚕\n👤 العميل: ${t.customer_name}\n📱 الهاتف: ${t.customer_phone}\n📅 التاريخ: ${t.trip_date}\n⏰ الوقت: ${t.trip_time}\n📍 من: ${t.pickup_address}\n🏁 إلى: ${t.dropoff_address}\n👥 الركاب: ${t.passengers}\n🧳 الشنط: ${t.bags}\n🚗 السيارة: ${t.car_type}\n💰 السعر: ${t.cost} EGP\n📝 ملاحظات: ${t.notes || 'لا يوجد'}`;
+            const payText = t.payment_method === 'cash' ? '💵 كاش' : (t.payment_method === 'postpaid' ? '💳 آجل' : 'غير محدد');
+            const text = `🚕 *تفاصيل الحجز* 🚕\n👤 العميل: ${t.customer_name}\n📱 الهاتف: ${t.customer_phone}\n📅 التاريخ: ${t.trip_date}\n⏰ الوقت: ${t.trip_time}\n📍 من: ${t.pickup_address}\n🏁 إلى: ${t.dropoff_address}\n👥 الركاب: ${t.passengers}\n🧳 الشنط: ${t.bags}\n🚗 السيارة: ${t.car_type}\n💰 السعر: ${t.cost} EGP\n💵 طريقة الدفع: ${payText}\n📝 ملاحظات: ${t.notes || 'لا يوجد'}`;
             navigator.clipboard.writeText(text);
             alert('تم نسخ بيانات الرحلة بنجاح!');
         }
@@ -1807,6 +1824,10 @@
             const btn = document.getElementById('t-submit');
             btn.disabled = true;
             btn.textContent = 'جاري الحفظ...';
+
+            const rawNotes = document.getElementById('t-notes').value || '';
+            const platform = document.getElementById('t-platform').value;
+            const finalNotes = `المنصة: ${platform}${rawNotes ? ' | ' + rawNotes : ''}`;
 
             const payload = {
                 customer_name: document.getElementById('t-name').value,
@@ -1821,9 +1842,10 @@
                 pickup_address: document.getElementById('t-from').value,
                 dropoff_address: document.getElementById('t-to').value,
                 cost: document.getElementById('t-cost').value,
-                notes: document.getElementById('t-notes').value,
+                notes: finalNotes,
                 booking_employee: currentModName,
-                status: 'pending'
+                status: 'pending',
+                payment_method: document.getElementById('t-payment-method').value
             };
 
             const { data: insertedRows, error } = await sbClient.from('google_reservations').insert([payload]).select();
