@@ -1394,12 +1394,21 @@
             // تحويل وتصفية حجوزات الشيت
             const pendingReservations = reservations
                 .filter(r => {
+                    // إذا كان الحجز تم ترحيله بالفعل لرحلة موجودة بجدول trips، نقوم بإخفائه لمنع التكرار
                     if (r.sql_server_id && existingTripIds.has(String(r.sql_server_id))) {
                         return false;
                     }
-                    if (r.status === 'تم الترحيل' || r.status === 'driver_assigned') {
+                    
+                    // إذا كان الحجز له كابتن أو مكتب معين بالفعل في الشيت، نقوم بإخفائه (حتى لا يتم تعيينه مرتين)
+                    if (r.modified_driver_name && r.modified_driver_name.trim() !== '' && r.modified_driver_name !== '--') {
                         return false;
                     }
+
+                    // إذا كانت حالة الحجز مكتملة أو ملغاة في الشيت، نقوم بإخفائه
+                    if (r.trip_status === 'مكتملة' || r.trip_status === 'ملغاة') {
+                        return false;
+                    }
+                    
                     return true;
                 })
                 .map(r => {
