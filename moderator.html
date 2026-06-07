@@ -1618,6 +1618,125 @@
         // --- Trip Management Logic ---
         let allTrips = []; // Cache for local filtering
 
+        async function loadTripsForDate(dateStr) {
+            const [reservationsResult, tripsResult] = await Promise.all([
+                sbClient.from('google_reservations')
+                    .select('*')
+                    .eq('trip_date', dateStr)
+                    .order('trip_time', { ascending: true }),
+                sbClient.from('trips')
+                    .select(`*, cars:cars(brand, plate_number), drivers:drivers(name, phone)`)
+                    .eq('trip_date', dateStr)
+                    .order('created_at', { ascending: false })
+            ]);
+
+            const reservations = reservationsResult.data || [];
+            const trips = tripsResult.data || [];
+
+            // بناء خريطة فهرس للحجوزات لتحديد ومطابقة قرار العميل
+            const resBySqlIdMap = {};
+            const resBySheetRowMap = {};
+            reservations.forEach(r => {
+                if (r.sql_server_id) resBySqlIdMap[String(r.sql_server_id)] = r;
+                if (r.sheet_row) resBySheetRowMap[r.sheet_row] = r;
+            });
+
+            // تحويل الرحلات الفعلية لتوافق الموديل
+            const mappedTrips = trips.map(t => {
+                let tDate = t.trip_date || '';
+                if (!tDate && t.admin_notes) {
+                    const dMatch = t.admin_notes.match(/📅\s*([0-9\-/\\]+)/);
+                    if (dMatch) tDate = dMatch[1].trim();
+                }
+                if (!tDate && t.created_at) {
+                    tDate = t.created_at.split('T')[0];
+                }
+
+                // مطابقة قرار العميل
+                let matchedRes = resBySqlIdMap[String(t.id)] || null;
+                if (!matchedRes && t.admin_notes) {
+                    const rowMatch = t.admin_notes.match(/حجز شيت صف\s*(\d+)/);
+                    if (rowMatch) {
+                        matchedRes = resBySheetRowMap[parseInt(rowMatch[1])] || null;
+                    }
+                }
+
+                return {
+                    id: t.id,
+                    customer_name: t.manual_client_name || 'عميل ويب',
+                    customer_phone: t.client_phone || '-',
+                    pickup_location: t.pickup_location,
+                    dropoff_location: t.dropoff_location,
+                    trip_date: tDate,
+                    trip_time: t.admin_notes?.match(/📅\s*[0-9\-/\\]+\s*-\s*([0-9:]+\s*[أإا]?[مو]?)/)?.[1] || t.created_at?.split('T')?.[1]?.substring(0, 5) || '--:--',
+                    trip_type: t.admin_notes?.includes('VIP') ? 'ذهاب فقط - VIP' : 'ذهاب فقط',
+                    cost: t.estimated_price || 0,
+                    status: t.status,
+                    car_type: t.car_type || 'سيدان',
+                    passengers: t.admin_notes?.match(/👥\s*([0-9]+)\s*أفراد/)?.[1] || 1,
+                    bags: t.admin_notes?.match(/🧳\s*([0-9]+)\s*شنط/)?.[1] || 0,
+                    is_real_trip: true,
+                    original_trip: t,
+                    google_res_id: matchedRes ? matchedRes.id : null,
+                    client_decision: matchedRes ? matchedRes.client_decision : null
+                };
+            });
+
+            // استبعاد المكرر
+            const existingTripIds = new Set(trips.map(t => String(t.id)));
+            const filteredReservations = reservations.filter(r => {
+                if (r.sql_server_id && existingTripIds.has(String(r.sql_server_id))) {
+                    return false;
+                }
+                return true;
+            });
+
+            const merged = [...mappedTrips, ...filteredReservations];
+            return merged;
+        }
+
+        async function changeClientDecision(resId, currentDecision) {
+            const newDecision = prompt(
+                "تعديل قرار العميل للرحلة:\n\nاكتب:\n1 - للتأكيد (مؤكد)\n2 - للإلغاء (ملغي)\n3 - للمسح (لم يقرر)",
+                currentDecision === 'مؤكد' ? '1' : (currentDecision === 'ملغي' ? '2' : '')
+            );
+            
+            if (newDecision === null) return;
+            
+            let decisionText = '';
+            if (newDecision === '1') {
+                decisionText = 'مؤكد';
+            } else if (newDecision === '2') {
+                decisionText = 'ملغي';
+            } else if (newDecision === '3' || newDecision.trim() === '') {
+                decisionText = '';
+            } else {
+                decisionText = newDecision.trim();
+            }
+            
+            try {
+                const { error } = await sbClient.from('google_reservations')
+                    .update({ client_decision: decisionText })
+                    .eq('id', resId);
+                    
+                if (error) throw error;
+                
+                alert("✅ تم تحديث قرار العميل بنجاح!");
+                
+                // تحديث الحالة محلياً وإعادة رسم الجدول
+                allTrips = allTrips.map(t => {
+                    const rId = t.is_real_trip ? t.google_res_id : t.id;
+                    if (String(rId) === String(resId)) {
+                        return { ...t, client_decision: decisionText };
+                    }
+                    return t;
+                });
+                renderTripsTable(allTrips);
+            } catch (e) {
+                alert("❌ خطأ أثناء تحديث القرار: " + e.message);
+            }
+        }
+
         function toggleTripForm() {
             const container = document.getElementById('trip-form-container');
             container.classList.toggle('hidden');
@@ -1659,16 +1778,10 @@
             const resultsCount = document.getElementById('search-results-count');
             resultsCount.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحميل...';
 
-            const { data, error } = await sbClient.from('google_reservations')
-                .select('*')
-                .eq('trip_date', dateStr)
-                .order('trip_time', { ascending: true });
-            
-            if(data) {
-                allTrips = data;
-                resultsCount.textContent = `تم العثور على ${data.length} رحلة لـ ${type === 'today' ? 'اليوم' : 'الغد'}`;
-                renderTripsTable(data);
-            }
+            const merged = await loadTripsForDate(dateStr);
+            allTrips = merged;
+            resultsCount.textContent = `تم العثور على ${merged.length} رحلة لـ ${type === 'today' ? 'اليوم' : 'الغد'}`;
+            renderTripsTable(merged);
         }
 
         async function filterByCustomDate(dateStr) {
@@ -1678,13 +1791,12 @@
             document.getElementById('clear-date-btn')?.classList.remove('hidden');
             const resultsCount = document.getElementById('search-results-count');
             resultsCount.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحميل...';
-            const { data } = await sbClient.from('google_reservations').select('*').eq('trip_date', dateStr).order('trip_time', { ascending: true });
-            if (data) {
-                allTrips = data;
-                const displayDate = new Date(dateStr + 'T12:00:00').toLocaleDateString('ar-EG', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
-                resultsCount.innerHTML = `<span class="text-teal-600 font-black">📅 ${displayDate}</span> — ${data.length} رحلة`;
-                renderTripsTable(data);
-            }
+            
+            const merged = await loadTripsForDate(dateStr);
+            allTrips = merged;
+            const displayDate = new Date(dateStr + 'T12:00:00').toLocaleDateString('ar-EG', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+            resultsCount.innerHTML = `<span class="text-teal-600 font-black">📅 ${displayDate}</span> — ${merged.length} رحلة`;
+            renderTripsTable(merged);
         }
 
         function clearDateFilter() {
@@ -1716,22 +1828,63 @@
             const reservations = reservationsResult.data || [];
             const trips = tripsResult.data || [];
 
+            // جلب الحجوزات الناقصة والمرتبطة بهذه الرحلات للحصول على قرارات العملاء الخاصة بها
+            const missingResIds = [];
+            const tripsWithRes = trips.filter(t => t.google_res_id);
+            if (tripsWithRes.length > 0) {
+                const fetchedResIds = new Set(reservations.map(r => r.id));
+                tripsWithRes.forEach(t => {
+                    if (!fetchedResIds.has(t.google_res_id)) {
+                        missingResIds.push(t.google_res_id);
+                    }
+                });
+            }
+
+            if (missingResIds.length > 0) {
+                const { data: extraRes } = await sbClient.from('google_reservations')
+                    .select('*')
+                    .in('id', missingResIds);
+                if (extraRes) {
+                    reservations.push(...extraRes);
+                }
+            }
+
+            // بناء خرائط فهارس للبحث السريع
+            const resByIdMap = {};
+            const resBySqlIdMap = {};
+            const resBySheetRowMap = {};
+            reservations.forEach(r => {
+                if (r.id) resByIdMap[r.id] = r;
+                if (r.sql_server_id) resBySqlIdMap[String(r.sql_server_id)] = r;
+                if (r.sheet_row) resBySheetRowMap[r.sheet_row] = r;
+            });
+
             // تحويل الرحلات الفعلية لتوافق الموديل
             const mappedTrips = trips.map(t => {
-                let tDate = '';
-                if (t.admin_notes) {
+                let tDate = t.trip_date || '';
+                if (!tDate && t.admin_notes) {
                     const dMatch = t.admin_notes.match(/📅\s*([0-9\-/\\]+)/);
                     if (dMatch) tDate = dMatch[1].trim();
                 }
                 if (!tDate && t.created_at) {
                     tDate = t.created_at.split('T')[0];
                 }
+
+                // مطابقة قرار العميل
+                let matchedRes = resByIdMap[t.google_res_id] || resBySqlIdMap[String(t.id)] || null;
+                if (!matchedRes && t.admin_notes) {
+                    const rowMatch = t.admin_notes.match(/حجز شيت صف\s*(\d+)/);
+                    if (rowMatch) {
+                        matchedRes = resBySheetRowMap[parseInt(rowMatch[1])] || null;
+                    }
+                }
+
                 return {
                     id: t.id,
                     customer_name: t.manual_client_name || 'عميل ويب',
                     customer_phone: t.client_phone || '-',
-                    pickup_address: t.pickup_location,
-                    dropoff_address: t.dropoff_location,
+                    pickup_location: t.pickup_location,
+                    dropoff_location: t.dropoff_location,
                     trip_date: tDate,
                     trip_time: t.admin_notes?.match(/📅\s*[0-9\-/\\]+\s*-\s*([0-9:]+\s*[أإا]?[مو]?)/)?.[1] || t.created_at?.split('T')?.[1]?.substring(0, 5) || '--:--',
                     trip_type: t.admin_notes?.includes('VIP') ? 'ذهاب فقط - VIP' : 'ذهاب فقط',
@@ -1741,7 +1894,9 @@
                     passengers: t.admin_notes?.match(/👥\s*([0-9]+)\s*أفراد/)?.[1] || 1,
                     bags: t.admin_notes?.match(/🧳\s*([0-9]+)\s*شنط/)?.[1] || 0,
                     is_real_trip: true,
-                    original_trip: t
+                    original_trip: t,
+                    google_res_id: matchedRes ? matchedRes.id : null,
+                    client_decision: matchedRes ? matchedRes.client_decision : null
                 };
             });
 
@@ -1771,11 +1926,44 @@
                 if(t.performance_comment) feedbackArr.push(`<span title="${t.performance_comment}">📝</span>`);
                 const feedbackHtml = feedbackArr.length > 0 ? feedbackArr.join(' ') : '<span class="text-slate-300">---</span>';
 
+                // تحديد حالة التأكيد (قرار العميل)
+                let decision = 'لم يقرر';
+                let decisionClass = 'bg-slate-100 text-slate-600 border-slate-200';
+                let decisionIcon = 'fa-circle-question';
+                
+                if (t.client_decision) {
+                    const cleanDecision = t.client_decision.trim();
+                    if (cleanDecision.includes('مؤكد') || cleanDecision.includes('تأكيد') || cleanDecision.includes('تاكيد') || cleanDecision.includes('نعم') || cleanDecision.includes('مستمر')) {
+                        decision = 'مؤكد';
+                        decisionClass = 'bg-green-100 text-green-800 border-green-200';
+                        decisionIcon = 'fa-check-circle';
+                    } else if (cleanDecision.includes('ملغي') || cleanDecision.includes('إلغاء') || cleanDecision.includes('الغاء') || cleanDecision.includes('لا') || cleanDecision.includes('كنسل')) {
+                        decision = 'ملغي';
+                        decisionClass = 'bg-red-100 text-red-800 border-red-200';
+                        decisionIcon = 'fa-times-circle';
+                    } else {
+                        decision = cleanDecision;
+                        decisionClass = 'bg-amber-100 text-amber-800 border-amber-200';
+                        decisionIcon = 'fa-info-circle';
+                    }
+                }
+
+                const resId = t.is_real_trip ? t.google_res_id : t.id;
+                const decisionHtml = resId ? `
+                    <div class="mt-1 flex items-center gap-1.5 flex-wrap">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${decisionClass} inline-flex items-center gap-1">
+                            <i class="fas ${decisionIcon}"></i> ${decision}
+                        </span>
+                        <button onclick="changeClientDecision(${resId}, '${decision}')" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold border border-blue-200 rounded px-1.5 py-0.5 bg-blue-50/50 hover:bg-blue-50 transition cursor-pointer" title="تعديل قرار العميل">تعديل القرار</button>
+                    </div>
+                ` : '';
+
                 return `
                 <tr class="border-b hover:bg-slate-50 transition border-r-4 ${t.client_status === 'قديم' ? 'border-r-blue-400' : 'border-r-teal-400'}">
                     <td class="p-4">
                         <div class="font-bold text-slate-700">${t.customer_name || '---'}</div>
                         <div class="text-[10px] text-slate-400">${t.customer_phone || ''} | ${t.client_status || 'جديد'}</div>
+                        ${decisionHtml}
                     </td>
                     <td class="p-4">
                         <div class="text-xs text-slate-600 font-bold">${t.pickup_address?.substring(0,30)}...</div>
