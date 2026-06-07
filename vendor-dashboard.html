@@ -961,8 +961,21 @@
                                notesText.includes('كاش') || 
                                notesText.includes('💵') ||
                                notesText.includes('نوع التحصيل: كاش');
-                let payBadge = isCash ? '<span class="bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] px-2 py-0.5 rounded-full font-bold">💵 كاش للكابتن</span>' 
-                                      : '<span class="bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] px-2 py-0.5 rounded-full font-bold">💳 أجل / للشركة</span>';
+                const isPostpaid = (gr && (gr.payment_method === 'postpaid' || String(gr.payment_method).includes('أجل') || String(gr.payment_method).includes('اجل'))) || 
+                                   notesText.toLowerCase().includes('postpaid') || 
+                                   notesText.includes('أجل') || 
+                                   notesText.includes('اجل') || 
+                                   notesText.includes('نوع التحصيل: postpaid') ||
+                                   notesText.includes('نوع التحصيل: أجل');
+
+                let payBadge = '';
+                if (isCash) {
+                    payBadge = '<span class="bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] px-2 py-0.5 rounded-full font-bold">💵 كاش للكابتن</span>';
+                } else if (isPostpaid) {
+                    payBadge = '<span class="bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] px-2 py-0.5 rounded-full font-bold">💳 أجل / للشركة</span>';
+                } else {
+                    payBadge = '<span class="bg-slate-500/10 border border-slate-500/20 text-slate-400 text-[10px] px-2 py-0.5 rounded-full font-bold">❓ غير محدد</span>';
+                }
 
                 if (isCash) {
                     payBadge += `
@@ -1844,9 +1857,19 @@
                                    notesText.includes('كاش') || 
                                    notesText.includes('💵') ||
                                    notesText.includes('نوع التحصيل: كاش');
-                    paymentBadge = isCash 
-                        ? `<span class="bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] px-2 py-0.5 rounded-full font-bold ml-1.5 inline-block">💵 كاش (متوقع)</span>`
-                        : `<span class="bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] px-2 py-0.5 rounded-full font-bold ml-1.5 inline-block">💳 أجل (متوقع)</span>`;
+                    const isPostpaid = (gr && (gr.payment_method === 'postpaid' || String(gr.payment_method).includes('أجل') || String(gr.payment_method).includes('اجل'))) || 
+                                       notesText.toLowerCase().includes('postpaid') || 
+                                       notesText.includes('أجل') || 
+                                       notesText.includes('اجل') || 
+                                       notesText.includes('نوع التحصيل: postpaid') ||
+                                       notesText.includes('نوع التحصيل: أجل');
+                    if (isCash) {
+                        paymentBadge = `<span class="bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] px-2 py-0.5 rounded-full font-bold ml-1.5 inline-block">💵 كاش (متوقع)</span>`;
+                    } else if (isPostpaid) {
+                        paymentBadge = `<span class="bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] px-2 py-0.5 rounded-full font-bold ml-1.5 inline-block">💳 أجل (متوقع)</span>`;
+                    } else {
+                        paymentBadge = `<span class="bg-slate-500/10 border border-slate-500/20 text-slate-400 text-[10px] px-2 py-0.5 rounded-full font-bold ml-1.5 inline-block">❓ غير محدد (متوقع)</span>`;
+                    }
                 }
 
                 const pickup = (t.pickup_location || '').split(',')[0];
