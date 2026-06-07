@@ -1794,7 +1794,7 @@
                 let driverHtml = '';
                 if (t.drivers && t.drivers.name) {
                     let driverName = t.drivers.name;
-                    if (driverName.includes('مكتب خارجي') || driverName.includes('خارجي') || driverName.includes('موزع')) {
+                    if (t.is_outsourced || driverName.includes('مكتب خارجي') || driverName.includes('خارجي') || driverName.includes('موزع')) {
                         driverName = 'قسم التشغيل';
                     }
                     driverHtml = `
@@ -1852,7 +1852,7 @@
                 const realTripId = String(t.id).startsWith('gr_') ? t.sql_server_id : t.id;
                 if (t.drivers && t.drivers.name && realTripId && status !== 'completed' && status !== 'trip_ended' && status !== 'cancelled' && status !== 'rejected') {
                     let dName = t.drivers.name;
-                    if (dName.includes('مكتب خارجي') || dName.includes('خارجي') || dName.includes('موزع')) {
+                    if (t.is_outsourced || dName.includes('مكتب خارجي') || dName.includes('خارجي') || dName.includes('موزع')) {
                         dName = 'قسم التشغيل';
                     }
                     dName = dName.replace(/'/g, '');
@@ -2240,7 +2240,10 @@
 
             let html = '';
             for (const t of trips) {
-                const driverName = t.drivers?.name || 'الكابتن';
+                let driverName = t.drivers?.name || 'الكابتن';
+                if (t.is_outsourced || (driverName !== 'الكابتن' && (driverName.includes('مكتب خارجي') || driverName.includes('خارجي') || driverName.includes('موزع')))) {
+                    driverName = 'قسم التشغيل';
+                }
                 const { data: lastMsg } = await sb.from('chat_messages')
                     .select('message, sender_role').eq('trip_id', t.id)
                     .order('created_at', { ascending: false }).limit(1);
@@ -2296,12 +2299,18 @@
             if (placeholder) placeholder.remove();
 
             const div = document.createElement('div');
+            // تنظيف أسماء المكاتب الخارجية من الرسائل المعروضة للعميل
+            let displayMsg = msg.message || '';
+            displayMsg = displayMsg.replace(/المكتب الخارجي المنفذ:\s*[^\n]*/g, 'قسم التشغيل');
+            displayMsg = displayMsg.replace(/من طرف المكتب المنفذ\s*/g, '');
+            displayMsg = displayMsg.replace(/للمكتب الخارجي\s+\S+/g, 'لقسم التشغيل');
+
             if (msg.message_type === 'system') {
                 div.className = 'msg-bubble msg-system';
-                div.textContent = msg.message;
+                div.textContent = displayMsg;
             } else if (msg.sender_role === 'admin') {
                 div.className = 'msg-bubble msg-admin';
-                div.innerHTML = `<span class="text-[10px] block mb-1">🛡️ الإدارة</span>${msg.message}`;
+                div.innerHTML = `<span class="text-[10px] block mb-1">🛡️ الإدارة</span>${displayMsg}`;
             } else if (msg.sender_role === 'client') {
                 div.className = 'msg-bubble msg-mine';
                 if (msg.message_type === 'location') {

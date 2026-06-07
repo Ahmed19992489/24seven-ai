@@ -1,0 +1,32 @@
+--- admin-crm.html ---
+Line 454:                     <button id="tab-support-chat" onclick="switchChatTab('support')" class="px-4 py-1.5 rounded-md text-sm font-bold text-gray-500 hover:bg-white transition relative">
+Line 2749:                     await sbClient.from('support_chats').insert([newMsg]);
+Line 2778:             const { count: sCount } = await sbClient.from('support_chats').select('*', { count: 'exact', head: true });
+Line 2808:                     const { data: msgs } = await sbClient.from('support_chats').select('id').eq('user_id', adminCurrentSupportUserId);
+Line 2846:             globalSupportSub = sbClient.channel('global-support-chats')
+Line 2847:                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_chats' }, (payload) => {
+Line 2896:             const { data: msgs } = await sbClient.from('support_chats')
+Line 2928:             const supportTab = document.getElementById('tab-support-chat');
+Line 2956:             const { data: msgs } = await sbClient.from('support_chats')
+Line 3003:             const { data: msgs } = await sbClient.from('support_chats')
+
+--- moderator.html ---
+Line 66:             <div onclick="showTab('support-chats')" id="btn-support-chats" class="sidebar-item">
+Line 339:         <section id="tab-support-chats" class="tab-content hidden h-full flex flex-col">
+Line 776:             if(tabId === 'support-chats') {
+Line 2576:             globalModSupportSub = sbClient.channel('global-mod-support-chats')
+Line 2577:                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_chats' }, (payload) => {
+Line 2580:                         if (activeTab === 'support-chats' && modCurrentSupportUserId === msg.user_id) {
+Line 2597:                             if (activeTab === 'support-chats' && !modCurrentSupportUserId) {
+Line 2616:             const { data: msgs } = await sbClient.from('support_chats')
+Line 2649:             const { data: msgs } = await sbClient.from('support_chats')
+Line 2715:             const { data: msgs } = await sbClient.from('support_chats')
+Line 2773:                 const { error } = await sbClient.from('support_chats').insert([{
+Line 2789:             sbClient.channel('global-mod-support-chats')
+Line 2790:                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_chats' }, (payload) => {
+Line 2794:                         if (!document.getElementById('tab-support-chats').classList.contains('active-tab')) {
+Line 2803:                             if (!document.getElementById('tab-support-chats').classList.contains('hidden')) {
+Line 2820:             if (activeTab === 'support-chats') {
+Line 2821:                 const { count } = await sbClient.from('support_chats').select('*', { count: 'exact', head: true });
+Line 2875:                 const { data: msgs } = await sbClient.from('support_chats').select('id').eq('user_id', modCurrentSupportUserId);
+Line 2878:                     const { data: realMsgs } = await sbClient.from('support_chats')
