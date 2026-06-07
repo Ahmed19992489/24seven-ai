@@ -2715,11 +2715,7 @@
                     admin_notes: fullNotes,
                     car_type: res.car_type,
                     manual_client_name: res.customer_name,
-                    client_phone: rawPhone,
-                    trip_date: res.trip_date,
-                    trip_time: res.trip_time,
-                    passengers: Number(res.passengers) || 1,
-                    bags: Number(res.bags) || 0
+                    client_phone: rawPhone
                 };
 
                 // إذا كان هناك sql_server_id موجود مسبقاً، نستخدمه
@@ -4972,10 +4968,6 @@ async function confirmResAssign() {
                 estimated_price: Number(r.cost) || 0,
                 status: 'approved', // الإدارة توافق، وينتظر إسناد السائق من المكتب المنفذ
                 admin_notes: `حجز شيت صف ${r.sheet_row}\nالعميل: ${r.customer_name}\n📅 ${r.trip_date || '--'} - ${r.trip_time || '--'}\nنوع التحصيل: ${r.payment_method || 'غير محدد'}\nإسناد خارجي للمكتب: ${vendorName}`,
-                trip_date: r.trip_date,
-                trip_time: r.trip_time,
-                passengers: Number(r.passengers) || 1,
-                bags: Number(r.bags) || 0,
                 car_type: r.car_type
             }]).select().single();
             if (tripErr) throw new Error('خطأ إنشاء الرحلة: ' + tripErr.message);
@@ -5068,10 +5060,6 @@ async function confirmResAssign() {
             estimated_price: Number(r.cost) || 0,
             status: 'driver_assigned',
             admin_notes: `حجز شيت صف ${r.sheet_row}\nالعميل: ${r.customer_name}\n📅 ${r.trip_date || '--'} - ${r.trip_time || '--'}\nنوع التحصيل: ${r.payment_method || 'غير محدد'}\nالسائق: ${driverName} (${driverPhone})`,
-            trip_date: r.trip_date,
-            trip_time: r.trip_time,
-            passengers: Number(r.passengers) || 1,
-            bags: Number(r.bags) || 0,
             car_type: r.car_type
         }]).select().single();
         if (tripErr) throw new Error('خطأ إنشاء الرحلة: ' + tripErr.message);
