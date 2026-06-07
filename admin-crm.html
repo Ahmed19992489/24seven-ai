@@ -1589,6 +1589,7 @@
                 if (t.status !== 'pending') {
                     if (t.is_outsourced) {
                         btns += ` <span class="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs border border-orange-200 font-bold">🤝 اوردر خارجي</span>`;
+                        btns += ` <button onclick="transferTripToInternal('${t.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 rounded text-xs mx-1 font-bold shadow-sm" title="نقل إلى مكتبي / تحويل لداخلي"><i class="fas fa-right-left ml-1"></i>نقل</button>`;
                     } else {
                         btns += ` <button onclick="viewTripPhotos('${t.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs" title="عرض صور الرحلة">📸</button>`;
                     }
@@ -1825,6 +1826,67 @@
 
             document.getElementById('complete-modal').style.display = 'none';
             loadOperations(); loadDashboard(); loadFinance();
+        }
+
+        async function transferTripToInternal(tripId) {
+            if (!confirm("هل أنت متأكد من إلغاء إسناد هذه الرحلة للمكتب الخارجي وتحويلها لرحلة داخلية؟")) return;
+            
+            try {
+                // 1. جلب بيانات الرحلة الحالية لقراءة الملاحظات وتعديلها
+                const { data: trip, error: getErr } = await sbClient.from('trips')
+                    .select('admin_notes')
+                    .eq('id', tripId)
+                    .single();
+                    
+                if (getErr) throw getErr;
+                
+                let notes = trip.admin_notes || '';
+                // تنظيف ملاحظات الإسناد الخارجي إن وجدت
+                notes = notes.replace(/\n?إسناد خارجي للمكتب:\s*[^\n\r]+/g, '').trim();
+                
+                // 2. تحديث الرحلة في جدول trips
+                const { error: updateErr } = await sbClient.from('trips')
+                    .update({
+                        vendor_id: null,
+                        is_outsourced: false,
+                        driver_id: null,
+                        car_id: null,
+                        status: 'approved',
+                        stage_status: 'new',
+                        final_price: null,
+                        admin_notes: notes
+                    })
+                    .eq('id', tripId);
+                    
+                if (updateErr) throw updateErr;
+                
+                // 3. إرسال رسالة نظام للدردشة المشتركة لتسجيل الحركة
+                await sbClient.from('chat_messages').insert([{
+                    trip_id: tripId,
+                    sender_role: 'system',
+                    sender_name: 'النظام',
+                    message: '📢 تم إلغاء إسناد الرحلة للمكتب الخارجي وتحويلها إلى رحلة داخلية للمنصة.',
+                    message_type: 'system'
+                }]);
+
+                // 4. تحديث جدول google_reservations إذا كان له صف شيت مرتبط
+                const rowMatch = notes.match(/حجز شيت صف\s*(\d+)/);
+                if (rowMatch) {
+                    const sheetRow = parseInt(rowMatch[1]);
+                    await sbClient.from('google_reservations')
+                        .update({
+                            modified_driver_name: '',
+                            modified_driver_phone: '',
+                            sql_server_id: String(tripId)
+                        })
+                        .eq('sheet_row', sheetRow);
+                }
+
+                alert("✅ تم نقل الرحلة بنجاح وإعادتها كرحلة داخلية!");
+                loadOperations(); // إعادة تحميل قائمة التشغيل
+            } catch (e) {
+                alert("❌ خطأ أثناء نقل الرحلة: " + e.message);
+            }
         }
 
         async function loadFinance() {
