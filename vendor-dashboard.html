@@ -695,14 +695,33 @@
                 if (cachedTrips.length > 0) {
                     // جلب تفاصيل الحجوزات المطابقة
                     const tripIdsStr = cachedTrips.map(t => String(t.id));
-                    const { data: resData, error: resErr } = await sb.from('google_reservations')
-                        .select('sql_server_id, passengers, bags, car_type, trip_type, pickup_address, dropoff_address, trip_date, trip_time')
-                        .in('sql_server_id', tripIdsStr);
+                    const sheetRows = [];
+                    cachedTrips.forEach(t => {
+                        const notes = t.admin_notes || '';
+                        const match = notes.match(/حجز شيت صف\s*(\d+)/);
+                        if (match) {
+                            sheetRows.push(parseInt(match[1]));
+                        }
+                    });
+
+                    let query = sb.from('google_reservations')
+                        .select('id, sheet_row, sql_server_id, passengers, bags, car_type, trip_type, pickup_address, dropoff_address, trip_date, trip_time');
+
+                    if (sheetRows.length > 0) {
+                        query = query.or(`sql_server_id.in.(${tripIdsStr.join(',')}),sheet_row.in.(${sheetRows.join(',')})`);
+                    } else {
+                        query = query.in('sql_server_id', tripIdsStr);
+                    }
+
+                    const { data: resData, error: resErr } = await query;
 
                     if (resData) {
                         resData.forEach(r => {
                             if (r.sql_server_id) {
                                 cachedReservationsMap[r.sql_server_id] = r;
+                            }
+                            if (r.sheet_row) {
+                                cachedReservationsMap[`row_${r.sheet_row}`] = r;
                             }
                         });
                     }
@@ -728,6 +747,34 @@
                 return;
             }
 
+            // دالة مساعدة لاستخراج تفاصيل الحجز من الملاحظات كفولباك
+            function parseReservationDetailsFromNotes(notes) {
+                let passengers = null;
+                let bags = null;
+                let carType = null;
+                let tripType = null;
+
+                if (!notes) return { passengers, bags, carType, tripType };
+
+                // Passengers (ركاب)
+                const passMatch = notes.match(/(?:👥\s*)?ركاب:\s*([^\s|]+)/);
+                if (passMatch) passengers = passMatch[1].trim();
+
+                // Bags (شنط)
+                const bagsMatch = notes.match(/شنط:\s*([^\s|]+)/);
+                if (bagsMatch) bags = bagsMatch[1].trim();
+
+                // Car Type (سيارة / السيارة)
+                const carMatch = notes.match(/(?:🚗\s*)?السيارة:\s*([^\s|]+)/) || notes.match(/سيارة:\s*([^\s|]+)/);
+                if (carMatch) carType = carMatch[1].trim();
+
+                // Trip Type (رحلة)
+                const tripMatch = notes.match(/رحلة:\s*([^\n\r|]+)/);
+                if (tripMatch) tripType = tripMatch[1].trim();
+
+                return { passengers, bags, carType, tripType };
+            }
+
             // حساب تاريخ اليوم والغد للفلترة
             const today = new Date();
             const tomorrow = new Date();
@@ -749,13 +796,26 @@
 
                 // استخراج التاريخ
                 let tripDate = t.trip_date || '';
-                const gr = cachedReservationsMap[String(t.id)];
+                const notesText = t.admin_notes || '';
+                
+                let gr = cachedReservationsMap[String(t.id)];
+                if (!gr) {
+                    const rowMatch = notesText.match(/حجز شيت صف\s*(\d+)/);
+                    if (rowMatch) {
+                        gr = cachedReservationsMap[`row_${rowMatch[1]}`];
+                    }
+                }
+
                 if (gr && gr.trip_date) {
                     tripDate = gr.trip_date;
                 } else {
-                    const notes = t.admin_notes || '';
-                    const dateMatch = notes.match(/📅\s*([0-9-/\\]+)/i);
-                    if (dateMatch) tripDate = dateMatch[1].trim();
+                    const dtMatch = notesText.match(/التاريخ:\s*([^\s|]+)\s*\|\s*الوقت:\s*([^\n\r]+)/);
+                    if (dtMatch) {
+                        tripDate = dtMatch[1].trim();
+                    } else {
+                        const dateMatch = notesText.match(/📅\s*([0-9-/\\]+)/i);
+                        if (dateMatch) tripDate = dateMatch[1].trim();
+                    }
                 }
 
                 const normalizedDate = parseDateToYMD(tripDate);
@@ -783,7 +843,16 @@
             }
 
             list.innerHTML = filtered.map(t => {
-                const gr = cachedReservationsMap[String(t.id)];
+                const notesText = t.admin_notes || '';
+                
+                // البحث عن الحجز المقابل بمعرف الرحلة أو رقم الصف
+                let gr = cachedReservationsMap[String(t.id)];
+                if (!gr) {
+                    const rowMatch = notesText.match(/حجز شيت صف\s*(\d+)/);
+                    if (rowMatch) {
+                        gr = cachedReservationsMap[`row_${rowMatch[1]}`];
+                    }
+                }
                 
                 // تفاصيل الرحلة الأساسية والمسار
                 const pickup = gr && gr.pickup_address ? gr.pickup_address : (t.pickup_location || '').split(',')[0];
@@ -799,22 +868,45 @@
                     tripDate = gr.trip_date;
                     if (gr.trip_time) tripTime = gr.trip_time;
                 } else {
-                    const notes = t.admin_notes || '';
-                    const dateMatch = notes.match(/📅\s*([0-9-/\\]+)(?:\s*[-:]\s*([0-9:amp\s]+))?/i);
-                    if (dateMatch) {
-                        tripDate = dateMatch[1].trim();
-                        if (dateMatch[2]) tripTime = dateMatch[2].trim();
+                    const dtMatch = notesText.match(/التاريخ:\s*([^\s|]+)\s*\|\s*الوقت:\s*([^\n\r]+)/);
+                    if (dtMatch) {
+                        tripDate = dtMatch[1].trim();
+                        tripTime = dtMatch[2].trim();
+                    } else {
+                        const dateMatch = notesText.match(/📅\s*([0-9-/\\]+)(?:\s*[-:]\s*([^\n\r]+))?/i);
+                        if (dateMatch) {
+                            tripDate = dateMatch[1].trim();
+                            if (dateMatch[2]) tripTime = dateMatch[2].trim();
+                        }
                     }
                 }
 
-                // تفاصيل الحجز الإضافية
-                const passengers = gr && gr.passengers !== undefined ? gr.passengers : '--';
-                const bags = gr && gr.bags !== undefined ? gr.bags : '--';
-                const reqCarType = gr && gr.car_type ? gr.car_type : 'غير محدد';
-                const tripTypeLabel = gr && gr.trip_type ? gr.trip_type : 'غير محدد';
+                // تفاصيل الحجز الإضافية مع الفولباك للملاحظات وقيم جدول الرحلات
+                let passengers = '--';
+                let bags = '--';
+                let reqCarType = 'غير محدد';
+                let tripTypeLabel = 'غير محدد';
+
+                if (gr) {
+                    if (gr.passengers !== null && gr.passengers !== undefined && gr.passengers !== '') passengers = gr.passengers;
+                    if (gr.bags !== null && gr.bags !== undefined && gr.bags !== '') bags = gr.bags;
+                    if (gr.car_type) reqCarType = gr.car_type;
+                    if (gr.trip_type) tripTypeLabel = gr.trip_type;
+                }
+
+                const parsedNotes = parseReservationDetailsFromNotes(notesText);
+
+                if (passengers === '--' && parsedNotes.passengers) passengers = parsedNotes.passengers;
+                if (bags === '--' && parsedNotes.bags) bags = parsedNotes.bags;
+                
+                if (reqCarType === 'غير محدد') {
+                    if (t.car_type) reqCarType = t.car_type;
+                    else if (parsedNotes.carType) reqCarType = parsedNotes.carType;
+                }
+                
+                if (tripTypeLabel === 'غير محدد' && parsedNotes.tripType) tripTypeLabel = parsedNotes.tripType;
 
                 // طريقة الدفع
-                const notesText = t.admin_notes || '';
                 const isCash = notesText.toLowerCase().includes('cash') || notesText.includes('كاش') || notesText.includes('💵');
                 const payBadge = isCash ? '<span class="bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] px-2 py-0.5 rounded-full font-bold">💵 كاش للكابتن</span>' 
                                         : '<span class="bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] px-2 py-0.5 rounded-full font-bold">💳 أجل / للشركة</span>';
