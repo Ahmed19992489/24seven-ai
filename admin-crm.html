@@ -1155,6 +1155,106 @@
         </div>
     </div>
 
+    <!-- نافذة تعديل الأوردر بالكامل -->
+    <div id="edit-trip-modal"
+        class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[9000] backdrop-blur-sm p-4">
+        <div class="bg-white p-6 rounded-2xl w-full max-w-[500px] shadow-2xl border-t-4 border-indigo-600 max-h-[90vh] overflow-y-auto">
+            <h3 class="text-xl font-bold mb-4 text-indigo-800 border-b pb-3 text-right">تعديل بيانات الأوردر</h3>
+            <div class="space-y-3 text-right" dir="rtl">
+                <input type="hidden" id="edit-trip-id">
+                <input type="hidden" id="edit-trip-is-google-res">
+                
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-xs font-bold text-slate-500">اسم العميل</label>
+                        <input type="text" id="edit-trip-name" class="input-std" placeholder="الاسم">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-500">رقم الهاتف</label>
+                        <input type="tel" id="edit-trip-phone" class="input-std" placeholder="01xxxxxxxxx">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-slate-500">من (Pickup)</label>
+                    <input type="text" id="edit-trip-pickup" class="input-std" placeholder="العنوان">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500">إلى (Dropoff)</label>
+                    <input type="text" id="edit-trip-dropoff" class="input-std" placeholder="الوجهة">
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-xs font-bold text-slate-500">نوع السيارة</label>
+                        <select id="edit-trip-car-type" class="input-std">
+                            <option value="sedan">سيدان (4 ركاب)</option>
+                            <option value="suv">SUV (عائلية)</option>
+                            <option value="van">H1 (فان سياحي)</option>
+                            <option value="limo">ليموزين فاخر</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-500">نوع الرحلة</label>
+                        <select id="edit-trip-type-select" class="input-std">
+                            <option value="one_way">ذهاب فقط</option>
+                            <option value="round_trip">ذهاب وعودة</option>
+                            <option value="airport">استقبال مطار</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-xs font-bold text-slate-500">عدد الركاب</label>
+                        <input type="number" id="edit-trip-passengers" class="input-std" min="1">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-500">عدد الشنط</label>
+                        <input type="number" id="edit-trip-luggage" class="input-std" min="0">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-xs font-bold text-slate-500">التاريخ</label>
+                        <input type="date" id="edit-trip-date" class="input-std">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-500">الوقت</label>
+                        <input type="time" id="edit-trip-time" class="input-std">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-xs font-bold text-slate-500">السعر المتفق عليه</label>
+                        <input type="number" id="edit-trip-price" class="input-std text-green-700 font-bold" placeholder="0.00">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-500">طريقة الدفع</label>
+                        <select id="edit-trip-payment-method" class="input-std">
+                            <option value="cash">💵 كاش (Cash)</option>
+                            <option value="postpaid">💳 آجل (Postpaid)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-slate-500">ملاحظات إضافية</label>
+                    <textarea id="edit-trip-notes" class="input-std h-16"></textarea>
+                </div>
+
+                <div class="flex gap-2 pt-4">
+                    <button onclick="saveTripEdits()"
+                        class="flex-1 bg-indigo-600 text-white py-2.5 rounded-lg font-bold hover:bg-indigo-700">حفظ التغييرات</button>
+                    <button onclick="document.getElementById('edit-trip-modal').style.display='none'"
+                        class="flex-1 bg-slate-200 text-slate-700 py-2.5 rounded-lg font-bold">إلغاء</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ملف العميل Modal -->
     <div id="crm-profile-modal"
         class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[9000] backdrop-blur-sm p-4">
@@ -1754,6 +1854,8 @@
                         btns += ` <button onclick="viewTripPhotos('${t.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs" title="عرض صور الرحلة">📸</button>`;
                     }
                 }
+                // زر تعديل الأوردر
+                btns += ` <button onclick="openEditTripModal('${t.id}', ${!!t.is_google_res})" class="bg-amber-600 hover:bg-amber-700 text-white px-2 py-1 rounded text-xs mx-0.5 font-bold" title="تعديل الأوردر"><i class="fas fa-edit"></i> تعديل</button>`;
 
                 // التحقق من وجود طلب تغيير وجهة معلق للرحلة
                 let destReqHtml = '';
@@ -2902,6 +3004,209 @@
         async function addDriverPrompt() { const n = prompt("الاسم:"); const p = prompt("هاتف:"); if (n) { await sbClient.from('drivers').insert([{ name: n, phone: p }]); loadFleetList(); } }
 
         new Chart(document.getElementById('tripsChart'), { type: 'bar', data: { labels: ['S', 'M', 'T', 'W', 'T', 'F', 'S'], datasets: [{ label: 'الرحلات', data: [5, 8, 12, 7, 15, 10, 9], backgroundColor: '#3b82f6', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, display: false }, x: { grid: { display: false } } } } });
+
+        // --- وظائف تعديل الأوردر بالكامل ---
+        async function openEditTripModal(id, isGoogleRes) {
+            document.getElementById('edit-trip-id').value = id;
+            document.getElementById('edit-trip-is-google-res').value = isGoogleRes ? 'true' : 'false';
+
+            let name = '', phone = '', pickup = '', dropoff = '', carType = 'sedan', tripType = 'one_way';
+            let passengers = 1, luggage = 0, date = '', time = '', price = 0, payMethod = 'cash', notes = '';
+
+            try {
+                if (isGoogleRes) {
+                    const cleanId = id.startsWith('gr_') ? id.replace('gr_', '') : id;
+                    const { data: resData, error } = await sbClient.from('google_reservations').select('*').eq('id', cleanId).single();
+                    if (error) throw error;
+                    
+                    name = resData.customer_name || '';
+                    phone = resData.customer_phone || '';
+                    pickup = resData.pickup_address || '';
+                    dropoff = resData.dropoff_address || '';
+                    carType = resData.car_type || 'sedan';
+                    tripType = resData.trip_type || 'one_way';
+                    passengers = resData.passengers || 1;
+                    luggage = resData.bags || 0;
+                    date = resData.trip_date || '';
+                    time = resData.trip_time || '';
+                    price = resData.cost || 0;
+                    payMethod = resData.payment_method === 'postpaid' ? 'postpaid' : 'cash';
+                    notes = resData.notes || '';
+                } else {
+                    const { data: tripData, error } = await sbClient.from('trips').select('*').eq('id', id).single();
+                    if (error) throw error;
+
+                    name = tripData.manual_client_name || '';
+                    phone = tripData.client_phone || '';
+                    pickup = tripData.pickup_location || '';
+                    dropoff = tripData.dropoff_location || '';
+                    carType = tripData.car_type || 'sedan';
+                    price = tripData.estimated_price || 0;
+
+                    // Parse from admin_notes for other fields
+                    const notesText = tripData.admin_notes || '';
+                    tripType = notesText.includes('رحلة: round_trip') || notesText.includes('ذهاب وعودة') ? 'round_trip' : (notesText.includes('استقبال مطار') ? 'airport' : 'one_way');
+                    
+                    const passMatch = notesText.match(/(?:ركاب:|👥)\s*(\d+)/);
+                    if (passMatch) passengers = parseInt(passMatch[1]);
+                    
+                    const bagMatch = notesText.match(/(?:شنط:|🧳)\s*(\d+)/);
+                    if (bagMatch) luggage = parseInt(bagMatch[1]);
+
+                    const dateMatch = notesText.match(/(?:التاريخ:|📅)\s*([0-9\-/\\]+)/);
+                    if (dateMatch) date = dateMatch[1].trim();
+                    else if (tripData.trip_date) date = tripData.trip_date;
+
+                    const timeMatch = notesText.match(/(?:الوقت:|⏰)\s*([0-9:]+\s*[أإا]?[مو]?)/);
+                    if (timeMatch) time = timeMatch[1].trim();
+
+                    const isCash = notesText.toLowerCase().includes('cash') || notesText.includes('كاش') || notesText.includes('💵');
+                    payMethod = isCash ? 'cash' : (tripData.payment_method || 'cash');
+
+                    // Extract additional notes
+                    const addMatch = notesText.match(/ملاحظات إضافية:\s*(.*)/s);
+                    notes = addMatch ? addMatch[1].trim() : notesText;
+                }
+
+                // Populate fields
+                document.getElementById('edit-trip-name').value = name;
+                document.getElementById('edit-trip-phone').value = phone;
+                document.getElementById('edit-trip-pickup').value = pickup;
+                document.getElementById('edit-trip-dropoff').value = dropoff;
+                
+                // Map values
+                const carSelect = document.getElementById('edit-trip-car-type');
+                if ([...carSelect.options].some(opt => opt.value === carType.toLowerCase())) {
+                    carSelect.value = carType.toLowerCase();
+                } else {
+                    carSelect.value = 'sedan';
+                }
+
+                const typeSelect = document.getElementById('edit-trip-type-select');
+                if ([...typeSelect.options].some(opt => opt.value === tripType)) {
+                    typeSelect.value = tripType;
+                } else {
+                    typeSelect.value = 'one_way';
+                }
+
+                document.getElementById('edit-trip-passengers').value = passengers;
+                document.getElementById('edit-trip-luggage').value = luggage;
+                document.getElementById('edit-trip-date').value = date;
+                document.getElementById('edit-trip-time').value = time;
+                document.getElementById('edit-trip-price').value = price;
+                document.getElementById('edit-trip-payment-method').value = payMethod;
+                document.getElementById('edit-trip-notes').value = notes;
+
+                document.getElementById('edit-trip-modal').style.display = 'flex';
+            } catch (err) {
+                console.error(err);
+                alert("حدث خطأ أثناء تحميل بيانات الرحلة: " + err.message);
+            }
+        }
+
+        async function saveTripEdits() {
+            const id = document.getElementById('edit-trip-id').value;
+            const isGoogleRes = document.getElementById('edit-trip-is-google-res').value === 'true';
+
+            const name = document.getElementById('edit-trip-name').value;
+            const phone = document.getElementById('edit-trip-phone').value;
+            const pickup = document.getElementById('edit-trip-pickup').value;
+            const dropoff = document.getElementById('edit-trip-dropoff').value;
+            const carType = document.getElementById('edit-trip-car-type').value;
+            const tripType = document.getElementById('edit-trip-type-select').value;
+            const passengers = document.getElementById('edit-trip-passengers').value;
+            const luggage = document.getElementById('edit-trip-luggage').value;
+            const date = document.getElementById('edit-trip-date').value;
+            const time = document.getElementById('edit-trip-time').value;
+            const price = document.getElementById('edit-trip-price').value;
+            const payMethod = document.getElementById('edit-trip-payment-method').value;
+            const notes = document.getElementById('edit-trip-notes').value;
+
+            if (!name || !phone || !pickup || !dropoff || !price) {
+                alert("يرجى ملء جميع البيانات الأساسية (الاسم، الهاتف، العنوان، السعر)");
+                return;
+            }
+
+            let rawPhone = phone.replace(/\D/g, '');
+            rawPhone = normalizeEgyptianPhone(rawPhone);
+
+            const fullNotes = `حجز معدل 📞
+العميل: ${name}
+رقم: ${rawPhone}
+سيارة: ${carType} | رحلة: ${tripType}
+ركاب: ${passengers} | شنط: ${luggage}
+التاريخ: ${date} | الوقت: ${time}
+نوع التحصيل: ${payMethod === 'cash' ? 'cash' : 'postpaid'}
+ملاحظات إضافية: ${notes}`;
+
+            try {
+                if (isGoogleRes) {
+                    const cleanId = id.startsWith('gr_') ? id.replace('gr_', '') : id;
+                    const { error } = await sbClient.from('google_reservations').update({
+                        customer_name: name,
+                        customer_phone: rawPhone,
+                        pickup_address: pickup,
+                        dropoff_address: dropoff,
+                        car_type: carType,
+                        trip_type: tripType,
+                        passengers: passengers,
+                        bags: luggage,
+                        trip_date: date,
+                        trip_time: time,
+                        cost: Number(price),
+                        payment_method: payMethod,
+                        notes: notes
+                    }).eq('id', cleanId);
+                    if (error) throw error;
+                } else {
+                    // Update Trips
+                    const { error } = await sbClient.from('trips').update({
+                        manual_client_name: name,
+                        client_phone: rawPhone,
+                        pickup_location: pickup,
+                        dropoff_location: dropoff,
+                        car_type: carType,
+                        estimated_price: Number(price),
+                        payment_method: payMethod,
+                        admin_notes: fullNotes,
+                        trip_date: date
+                    }).eq('id', id);
+                    if (error) throw error;
+
+                    // Sync to google_reservations if linked
+                    try {
+                        const { data: linkedRes } = await sbClient.from('google_reservations').select('id').eq('sql_server_id', id).maybeSingle();
+                        if (linkedRes) {
+                            await sbClient.from('google_reservations').update({
+                                customer_name: name,
+                                customer_phone: rawPhone,
+                                pickup_address: pickup,
+                                dropoff_address: dropoff,
+                                car_type: carType,
+                                trip_type: tripType,
+                                passengers: passengers,
+                                bags: luggage,
+                                trip_date: date,
+                                trip_time: time,
+                                cost: Number(price),
+                                payment_method: payMethod,
+                                notes: notes
+                            }).eq('id', linkedRes.id);
+                        }
+                    } catch (syncErr) {
+                        console.log("Linked reservation sync error:", syncErr);
+                    }
+                }
+
+                alert("✅ تم حفظ التعديلات بنجاح!");
+                document.getElementById('edit-trip-modal').style.display = 'none';
+                loadOperations();
+                loadDashboard();
+            } catch (err) {
+                console.error(err);
+                alert("حدث خطأ أثناء الحفظ: " + err.message);
+            }
+        }
 
         // --- وظيفة إضافة حجز يدوي ---
         async function submitManualTrip() {
