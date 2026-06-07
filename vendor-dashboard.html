@@ -983,6 +983,22 @@
                         </button>
                     `;
                     driverInfoHtml = `<span class="text-orange-400 text-xs font-bold"><i class="fas fa-exclamation-triangle ml-1"></i> بانتظار إسناد سائق</span>`;
+                } else if (t.status === 'driver_assigned') {
+                    assignBtn = `
+                        <button onclick="openAssignDriverModal('${t.id}', ${commission})" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition flex items-center gap-1">
+                            <i class="fas fa-user-edit"></i> تعديل الكابتن/السيارة
+                        </button>
+                    `;
+                    const drvName = t.drivers ? t.drivers.name : 'سائق خارجي';
+                    const drvPhone = t.drivers ? t.drivers.phone : '-';
+                    const carBrand = t.cars ? t.cars.brand : 'سيارة خارجية';
+                    const carPlate = t.cars ? t.cars.plate_number : '-';
+                    driverInfoHtml = `
+                        <div class="text-xs text-slate-300 space-y-1">
+                            <p><i class="fas fa-user text-[10px] text-blue-400 ml-1.5"></i>الكابتن: <strong>${drvName}</strong> (${drvPhone})</p>
+                            <p><i class="fas fa-car text-[10px] text-blue-400 ml-1.5"></i>السيارة: <strong>${carBrand}</strong> [ ${carPlate} ]</p>
+                        </div>
+                    `;
                 } else {
                     const drvName = t.drivers ? t.drivers.name : 'سائق خارجي';
                     const drvPhone = t.drivers ? t.drivers.phone : '-';
@@ -1108,10 +1124,18 @@
             const tripPrice = tripObj ? (tripObj.estimated_price || 0) : 0;
             document.getElementById('assign-trip-price-display').innerText = Number(tripPrice).toLocaleString();
             
-            document.getElementById('assign-driver-name').value = '';
-            document.getElementById('assign-driver-phone').value = '';
-            document.getElementById('assign-car-brand').value = '';
-            document.getElementById('assign-car-plate').value = '';
+            // تعبئة البيانات الافتراضية إذا كان هناك سائق معين مسبقاً
+            if (tripObj && tripObj.driver_id) {
+                document.getElementById('assign-driver-name').value = tripObj.drivers ? tripObj.drivers.name : '';
+                document.getElementById('assign-driver-phone').value = tripObj.drivers ? tripObj.drivers.phone : '';
+                document.getElementById('assign-car-brand').value = tripObj.cars ? tripObj.cars.brand : '';
+                document.getElementById('assign-car-plate').value = tripObj.cars ? tripObj.cars.plate_number : '';
+            } else {
+                document.getElementById('assign-driver-name').value = '';
+                document.getElementById('assign-driver-phone').value = '';
+                document.getElementById('assign-car-brand').value = '';
+                document.getElementById('assign-car-plate').value = '';
+            }
             document.getElementById('assign-car-photo').value = '';
             const fileInput = document.getElementById('assign-car-photo-file');
             if (fileInput) fileInput.value = '';
