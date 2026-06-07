@@ -1379,13 +1379,12 @@
                         dropoff_location: trip.dropoff_address || '',
                         estimated_price: Number(trip.cost) || 0,
                         status: 'driver_assigned',
-                        admin_notes: `📅 ${trip.trip_date || '--'} - ${trip.trip_time || '--'}\n👥 ${trip.passengers || '1'}\n🧳 ${trip.bags || '0'}\nحجز موديتور: ${currentModName}\nالعميل: ${trip.customer_name}\nالسائق: ${driverName} (${driverPhone})`,
+                        admin_notes: `📅 ${trip.trip_date || '--'} - ${trip.trip_time || '--'}\n👥 ${trip.passengers || '1'}\n🧳 ${trip.bags || '0'}\nنوع التحصيل: ${trip.payment_method || 'غير محدد'}\nحجز موديتور: ${currentModName}\nالعميل: ${trip.customer_name}\nالسائق: ${driverName} (${driverPhone})`,
                         trip_date: trip.trip_date,
                         trip_time: trip.trip_time,
                         passengers: Number(trip.passengers) || 1,
                         bags: Number(trip.bags) || 0,
-                        car_type: trip.car_type,
-                        payment_method: trip.payment_method
+                        car_type: trip.car_type
                     }]).select().single();
 
                     if (tripErr) throw tripErr;

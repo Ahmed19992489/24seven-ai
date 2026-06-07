@@ -570,9 +570,9 @@
                     <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">📅 التاريخ</p><p class="text-[11px] text-white font-num">${tripDate}</p></div>
                     <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">⏰ الوقت</p><p class="text-[11px] text-white font-num">${tripTime}</p></div>
                     <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">🚗 النوع</p><p class="text-[11px] text-white">${carType}</p></div>
-                    <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">👥 أفراد</p><p class="text-[11px] text-white">${pax}</p></div>
-                    <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">🧳 شنط</p><p class="text-[11px] text-white">${bags}</p></div>
+                    <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">👥 أفراد / شنط</p><p class="text-[11px] text-white font-num">${pax} فرد / ${bags} شنطة</p></div>
                     <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">🔄 الاتجاه</p><p class="text-[11px] text-white">${tripType}</p></div>
+                    <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">💵 التكلفة</p><p class="text-[11px] text-blue-400 font-num font-bold">${price} EGP</p></div>
                 </div>
 
                 <div class="flex items-center justify-between pt-3 border-t border-slate-700/60">
@@ -683,9 +683,9 @@
                     <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">📅 التاريخ</p><p class="text-[11px] text-white font-num">${tripDate || '--'}</p></div>
                     <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">⏰ الوقت</p><p class="text-[11px] text-white font-num">${tripTime || '--'}</p></div>
                     <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">🚗 النوع</p><p class="text-[11px] text-white">${tripTypeAr}</p></div>
-                    <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">👥 أفراد</p><p class="text-[11px] text-white">${passengers}</p></div>
-                    <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">🧳 شنط</p><p class="text-[11px] text-white">${bags}</p></div>
+                    <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">👥 أفراد / شنط</p><p class="text-[11px] text-white font-num">${passengers} فرد / ${bags} شنطة</p></div>
                     <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">💰 الدفع</p><p class="text-[11px] text-white">${payMethod || '--'}</p></div>
+                    <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">💵 التكلفة</p><p class="text-[11px] text-blue-400 font-num font-bold">${t.estimated_price || '--'} EGP</p></div>
                 </div>
 
                 <!-- العميل -->

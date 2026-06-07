@@ -2456,6 +2456,7 @@
 سيارة: ${res.car_type} | رحلة: ${res.trip_type}
 ركاب: ${res.passengers} | شنط: ${res.bags}
 التاريخ: ${res.trip_date} | الوقت: ${res.trip_time}
+نوع التحصيل: ${res.payment_method || 'غير محدد'}
 ملاحظات: ${res.notes || ''}`;
 
                 const tripInsertData = {
@@ -2471,8 +2472,7 @@
                     trip_date: res.trip_date,
                     trip_time: res.trip_time,
                     passengers: Number(res.passengers) || 1,
-                    bags: Number(res.bags) || 0,
-                    payment_method: res.payment_method
+                    bags: Number(res.bags) || 0
                 };
 
                 // إذا كان هناك sql_server_id موجود مسبقاً، نستخدمه
@@ -4724,8 +4724,7 @@ async function confirmResAssign() {
                 trip_time: r.trip_time,
                 passengers: Number(r.passengers) || 1,
                 bags: Number(r.bags) || 0,
-                car_type: r.car_type,
-                payment_method: r.payment_method
+                car_type: r.car_type
             }]).select().single();
             if (tripErr) throw new Error('خطأ إنشاء الرحلة: ' + tripErr.message);
 
@@ -4816,13 +4815,12 @@ async function confirmResAssign() {
             dropoff_location: r.dropoff_address || '',
             estimated_price: Number(r.cost) || 0,
             status: 'driver_assigned',
-            admin_notes: `حجز شيت صف ${r.sheet_row}\nالعميل: ${r.customer_name}\nالسائق: ${driverName} (${driverPhone})`,
+            admin_notes: `حجز شيت صف ${r.sheet_row}\nالعميل: ${r.customer_name}\nنوع التحصيل: ${r.payment_method || 'غير محدد'}\nالسائق: ${driverName} (${driverPhone})`,
             trip_date: r.trip_date,
             trip_time: r.trip_time,
             passengers: Number(r.passengers) || 1,
             bags: Number(r.bags) || 0,
-            car_type: r.car_type,
-            payment_method: r.payment_method
+            car_type: r.car_type
         }]).select().single();
         if (tripErr) throw new Error('خطأ إنشاء الرحلة: ' + tripErr.message);
 
