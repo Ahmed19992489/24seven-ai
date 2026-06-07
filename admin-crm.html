@@ -1564,6 +1564,51 @@
                 if (t.manual_client_name) displayName = t.manual_client_name;
                 if (t.client_phone) displayPhone = t.client_phone;
 
+                // تحديد حالة التأكيد (قرار العميل)
+                let decision = 'لم يقرر';
+                let decisionClass = 'bg-slate-100 text-slate-600 border-slate-200';
+                let decisionIcon = 'fa-circle-question';
+                
+                let resObj = null;
+                if (t.is_google_res) {
+                    resObj = reservations.find(x => x.id === t.google_res_id);
+                } else {
+                    resObj = reservations.find(x => String(x.sql_server_id) === String(t.id));
+                    if (!resObj && t.admin_notes) {
+                        const rowMatch = t.admin_notes.match(/حجز شيت صف\s*(\d+)/);
+                        if (rowMatch) {
+                            const sheetRow = parseInt(rowMatch[1]);
+                            resObj = reservations.find(x => x.sheet_row === sheetRow);
+                        }
+                    }
+                }
+
+                if (resObj && resObj.client_decision) {
+                    const cleanDecision = resObj.client_decision.trim();
+                    if (cleanDecision.includes('مؤكد') || cleanDecision.includes('تأكيد') || cleanDecision.includes('تاكيد') || cleanDecision.includes('نعم') || cleanDecision.includes('مستمر')) {
+                        decision = 'مؤكد';
+                        decisionClass = 'bg-green-100 text-green-800 border-green-200';
+                        decisionIcon = 'fa-check-circle';
+                    } else if (cleanDecision.includes('ملغي') || cleanDecision.includes('إلغاء') || cleanDecision.includes('الغاء') || cleanDecision.includes('لا') || cleanDecision.includes('كنسل')) {
+                        decision = 'ملغي';
+                        decisionClass = 'bg-red-100 text-red-800 border-red-200';
+                        decisionIcon = 'fa-times-circle';
+                    } else {
+                        decision = cleanDecision;
+                        decisionClass = 'bg-amber-100 text-amber-800 border-amber-200';
+                        decisionIcon = 'fa-info-circle';
+                    }
+                }
+
+                const decisionHtml = `
+                    <div class="mt-1 flex items-center gap-1.5 flex-wrap">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${decisionClass} inline-flex items-center gap-1">
+                            <i class="fas ${decisionIcon}"></i> ${decision}
+                        </span>
+                        ${resObj ? `<button onclick="changeClientDecision(${resObj.id}, '${decision}')" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold border border-blue-200 rounded px-1.5 py-0.5 bg-blue-50/50 hover:bg-blue-50 transition cursor-pointer" title="تعديل قرار العميل">تعديل القرار</button>` : ''}
+                    </div>
+                `;
+
                 let statusColor = 'bg-amber-100 text-amber-800';
                 if (t.status === 'driver_assigned') statusColor = 'bg-blue-100 text-blue-800';
                 else if (t.status === 'approved') statusColor = 'bg-green-100 text-green-800';
@@ -1623,7 +1668,7 @@
                 list.innerHTML += `
                     <tr class="border-b hover:bg-white text-xs">
                         <td class="p-4">#${String(t.id)}</td>
-                        <td class="p-4 font-bold text-slate-800">${displayName}<br><span class="text-[10px] text-slate-500">${displayPhone}</span>${destReqHtml}</td>
+                        <td class="p-4 font-bold text-slate-800">${displayName}<br><span class="text-[10px] text-slate-500">${displayPhone}</span>${decisionHtml}${destReqHtml}</td>
                         <td class="p-4 min-w-[180px] whitespace-normal leading-relaxed text-slate-600">${t.admin_notes || '-'}</td>
                         <td class="p-4 font-bold text-slate-500">${(t.pickup_location || '-').split(',')[0]} ➝ ${(t.dropoff_location || '-').split(',')[0]}</td>
                         <td class="p-4 font-bold">${driverName} / ${carInfo}</td>
@@ -1895,6 +1940,39 @@
                 loadOperations(); // إعادة تحميل قائمة التشغيل
             } catch (e) {
                 alert("❌ خطأ أثناء نقل الرحلة: " + e.message);
+            }
+        }
+
+        async function changeClientDecision(resId, currentDecision) {
+            const newDecision = prompt(
+                "تعديل قرار العميل للرحلة:\n\nاكتب:\n1 - للتأكيد (مؤكد)\n2 - للإلغاء (ملغي)\n3 - للمسح (لم يقرر)",
+                currentDecision === 'مؤكد' ? '1' : (currentDecision === 'ملغي' ? '2' : '')
+            );
+            
+            if (newDecision === null) return;
+            
+            let decisionText = '';
+            if (newDecision === '1') {
+                decisionText = 'مؤكد';
+            } else if (newDecision === '2') {
+                decisionText = 'ملغي';
+            } else if (newDecision === '3' || newDecision.trim() === '') {
+                decisionText = '';
+            } else {
+                decisionText = newDecision.trim();
+            }
+            
+            try {
+                const { error } = await sbClient.from('google_reservations')
+                    .update({ client_decision: decisionText })
+                    .eq('id', resId);
+                    
+                if (error) throw error;
+                
+                alert("✅ تم تحديث قرار العميل بنجاح!");
+                loadOperations();
+            } catch (e) {
+                alert("❌ خطأ أثناء تحديث القرار: " + e.message);
             }
         }
 
