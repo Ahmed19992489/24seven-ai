@@ -329,6 +329,9 @@
                     </div>
                     <div id="mod-chat-input-bar" class="p-3 border-t flex gap-2 bg-white rounded-b-xl relative z-20" style="display:none">
                         <input type="text" id="mod-chat-input" placeholder="تدخل كمشرف..." class="flex-1 border rounded-full px-4 py-2 text-sm outline-none focus:border-blue-500" onkeypress="if(event.key==='Enter')sendModMessage()">
+                        <button onclick="sendModPaymentNumber()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-full flex items-center justify-center gap-1 transition text-xs font-bold" title="إرسال رقم الدفع الموحد">
+                            <i class="fas fa-credit-card"></i> رقم الدفع
+                        </button>
                         <button onclick="sendModMessage()" class="bg-blue-600 hover:bg-blue-700 text-white w-10 h-10 rounded-full flex items-center justify-center transition transform hover:scale-105 shadow-md"><i class="fas fa-paper-plane"></i></button>
                     </div>
                 </div>
@@ -511,6 +514,7 @@
                                 <th class="p-4 text-center">التاريخ والوقت</th>
                                 <th class="p-4 text-center">النوع</th>
                                 <th class="p-4 text-center">الفيدباك</th>
+                                <th class="p-4 text-center">الكابتن وحركة السيارة</th>
                                 <th class="p-4 text-center">الحالة</th>
                                 <th class="p-4 text-center">الإجراءات</th>
                             </tr>
@@ -1663,6 +1667,8 @@
                     customer_phone: t.client_phone || '-',
                     pickup_location: t.pickup_location,
                     dropoff_location: t.dropoff_location,
+                    pickup_address: t.pickup_location || '',
+                    dropoff_address: t.dropoff_location || '',
                     trip_date: tDate,
                     trip_time: t.admin_notes?.match(/📅\s*[0-9\-/\\]+\s*-\s*([0-9:]+\s*[أإا]?[مو]?)/)?.[1] || t.created_at?.split('T')?.[1]?.substring(0, 5) || '--:--',
                     trip_type: t.admin_notes?.includes('VIP') ? 'ذهاب فقط - VIP' : 'ذهاب فقط',
@@ -1674,7 +1680,18 @@
                     is_real_trip: true,
                     original_trip: t,
                     google_res_id: matchedRes ? matchedRes.id : null,
-                    client_decision: matchedRes ? matchedRes.client_decision : null
+                    client_decision: (matchedRes && matchedRes.client_decision) ? matchedRes.client_decision : (() => {
+                        if (t.admin_notes && t.admin_notes.includes('قرار العميل:')) {
+                            const match = t.admin_notes.match(/قرار العميل:\s*(.*)/);
+                            if (match) return match[1].trim();
+                        }
+                        return null;
+                    })(),
+                    driver_name: t.drivers?.name || null,
+                    driver_phone: t.drivers?.phone || null,
+                    car_brand: t.cars?.brand || null,
+                    car_plate: t.cars?.plate_number || null,
+                    stage_status: t.stage_status || null
                 };
             });
 
@@ -1691,7 +1708,7 @@
             return merged;
         }
 
-        async function changeClientDecision(resId, currentDecision) {
+        async function changeClientDecision(resId, currentDecision, tripId) {
             const newDecision = prompt(
                 "تعديل قرار العميل للرحلة:\n\nاكتب:\n1 - للتأكيد (مؤكد)\n2 - للإلغاء (ملغي)\n3 - للمسح (لم يقرر)",
                 currentDecision === 'مؤكد' ? '1' : (currentDecision === 'ملغي' ? '2' : '')
@@ -1716,6 +1733,25 @@
                     .eq('id', resId);
                     
                 if (error) throw error;
+
+                if (tripId && !String(tripId).startsWith('gr_')) {
+                    const { data: tripData } = await sbClient.from('trips')
+                        .select('admin_notes')
+                        .eq('id', Number(tripId))
+                        .single();
+                        
+                    if (tripData) {
+                        let notes = tripData.admin_notes || '';
+                        if (notes.includes('قرار العميل:')) {
+                            notes = notes.replace(/قرار العميل:\s*.*/, `قرار العميل: ${decisionText}`);
+                        } else {
+                            notes = notes.trim() + `\nقرار العميل: ${decisionText}`;
+                        }
+                        await sbClient.from('trips')
+                            .update({ admin_notes: notes })
+                            .eq('id', Number(tripId));
+                    }
+                }
                 
                 alert("✅ تم تحديث قرار العميل بنجاح!");
                 
@@ -1881,6 +1917,8 @@
                     customer_phone: t.client_phone || '-',
                     pickup_location: t.pickup_location,
                     dropoff_location: t.dropoff_location,
+                    pickup_address: t.pickup_location || '',
+                    dropoff_address: t.dropoff_location || '',
                     trip_date: tDate,
                     trip_time: t.admin_notes?.match(/📅\s*[0-9\-/\\]+\s*-\s*([0-9:]+\s*[أإا]?[مو]?)/)?.[1] || t.created_at?.split('T')?.[1]?.substring(0, 5) || '--:--',
                     trip_type: t.admin_notes?.includes('VIP') ? 'ذهاب فقط - VIP' : 'ذهاب فقط',
@@ -1892,7 +1930,12 @@
                     is_real_trip: true,
                     original_trip: t,
                     google_res_id: matchedRes ? matchedRes.id : null,
-                    client_decision: matchedRes ? matchedRes.client_decision : null
+                    client_decision: matchedRes ? matchedRes.client_decision : null,
+                    driver_name: t.drivers?.name || null,
+                    driver_phone: t.drivers?.phone || null,
+                    car_brand: t.cars?.brand || null,
+                    car_plate: t.cars?.plate_number || null,
+                    stage_status: t.stage_status || null
                 };
             });
 
@@ -1944,13 +1987,32 @@
                     }
                 }
 
+                // التحقق من طريقة الدفع للرحلة
+                let payMethodBadge = '';
+                if (t.is_real_trip) {
+                    const notesText = t.admin_notes || '';
+                    const isCash = (t.payment_method === 'cash') || 
+                                   notesText.toLowerCase().includes('cash') || 
+                                   notesText.includes('كاش') || 
+                                   notesText.includes('💵') ||
+                                   notesText.includes('نوع التحصيل: كاش');
+                    if (isCash) {
+                        payMethodBadge = `
+                            <button onclick="changeTripToPostpaid('${t.id}')" class="text-amber-600 hover:text-amber-800 text-[10px] font-bold border border-amber-200 rounded px-1.5 py-0.5 bg-amber-50/50 hover:bg-amber-50 transition cursor-pointer mt-1 inline-flex items-center gap-1" title="تحويل طريقة الدفع لآجل (تحويل للشركة)">
+                                <i class="fas fa-exchange-alt"></i> تحويل لآجل
+                            </button>
+                        `;
+                    }
+                }
+
                 const resId = t.is_real_trip ? t.google_res_id : t.id;
                 const decisionHtml = resId ? `
                     <div class="mt-1 flex items-center gap-1.5 flex-wrap">
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${decisionClass} inline-flex items-center gap-1">
                             <i class="fas ${decisionIcon}"></i> ${decision}
                         </span>
-                        <button onclick="changeClientDecision(${resId}, '${decision}')" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold border border-blue-200 rounded px-1.5 py-0.5 bg-blue-50/50 hover:bg-blue-50 transition cursor-pointer" title="تعديل قرار العميل">تعديل القرار</button>
+                        <button onclick="changeClientDecision(${resId}, '${decision}', ${t.is_real_trip ? t.id : 'null'})" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold border border-blue-200 rounded px-1.5 py-0.5 bg-blue-50/50 hover:bg-blue-50 transition cursor-pointer" title="تعديل قرار العميل">تعديل القرار</button>
+                        ${payMethodBadge}
                     </div>
                 ` : '';
 
@@ -1975,6 +2037,52 @@
                     </td>
                     <td class="p-4 text-center">
                         <div class="text-xs font-bold">${feedbackHtml}</div>
+                    </td>
+                    <td class="p-4 text-center">
+                        ${(() => {
+                            let driverCarStageHtml = '<span class="text-slate-300">---</span>';
+                            if (t.is_real_trip) {
+                                const driverName = t.driver_name || 'بانتظار التعيين';
+                                const driverPhone = t.driver_phone ? ` (${t.driver_phone})` : '';
+                                const carBrand = t.car_brand || '';
+                                const carPlate = t.car_plate ? ` [ ${t.car_plate} ]` : '';
+                                
+                                let stageBadge = '';
+                                if (t.status === 'driver_assigned' || t.stage_status) {
+                                    const stages = {
+                                        'new': { text: 'عينت السائق 🚖', cls: 'bg-teal-50 text-teal-700 border-teal-200' },
+                                        'garage_pickup': { text: 'استلم من الجراش 🏢', cls: 'bg-blue-50 text-blue-700 border-blue-200' },
+                                        'heading_client': { text: 'في الطريق للعميل 📍', cls: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
+                                        'arrived_client': { text: 'وصل للعميل 🔔', cls: 'bg-purple-50 text-purple-700 border-purple-200' },
+                                        'trip_started': { text: 'الرحلة جارية ⚙️', cls: 'bg-green-50 text-green-700 border-green-200 font-bold animate-pulse' },
+                                        'post_photos': { text: 'صور بعد الرحلة 📸', cls: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
+                                        'financial_close': { text: 'قفل الحساب 💵', cls: 'bg-slate-50 text-slate-700 border-slate-200' },
+                                        'trip_ended': { text: 'انتهت 🏁', cls: 'bg-slate-100 text-slate-600 border-slate-300' }
+                                    };
+                                    const stage = stages[t.stage_status] || { text: t.stage_status || 'بانتظار البدء', cls: 'bg-slate-50 text-slate-600 border-slate-200' };
+                                    stageBadge = `
+                                        <div class="mt-1">
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] border ${stage.cls} inline-flex items-center gap-1 font-bold">
+                                                ${stage.text}
+                                            </span>
+                                        </div>
+                                    `;
+                                }
+                                
+                                driverCarStageHtml = `
+                                    <div class="text-xs text-slate-700">
+                                        <span class="font-bold"><i class="fas fa-user-tie text-slate-400 ml-1"></i>${driverName}</span>
+                                        ${driverPhone ? `<div class="text-[10px] text-slate-500">${driverPhone}</div>` : ''}
+                                    </div>
+                                    ${carBrand ? `
+                                    <div class="text-[10px] text-slate-600 font-medium mt-0.5">
+                                        <i class="fas fa-car text-slate-400 ml-1"></i>${carBrand}${carPlate}
+                                    </div>` : ''}
+                                    ${stageBadge}
+                                `;
+                            }
+                            return driverCarStageHtml;
+                        })()}
                     </td>
                     <td class="p-4 text-center">
                         <span class="px-2 py-0.5 rounded-full text-[10px] ${t.status === 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'} font-black">${t.status || 'معلق'}</span>
@@ -2731,6 +2839,112 @@ ${contextData}
             }
         }
 
+        async function sendModPaymentNumber() {
+            if (!modCurrentTripId) return;
+            const paymentMsg = "رقم الدفع الموحد للشركة للتحويل (محفظة أو إنستاباي) هو: 01121748885";
+            
+            const newMsg = {
+                trip_id: modCurrentTripId,
+                sender_role: 'admin',
+                sender_id: 'moderator',
+                sender_name: 'المشرف',
+                message: paymentMsg,
+                message_type: 'text',
+                created_at: new Date().toISOString()
+            };
+            
+            appendModMsg(newMsg);
+            
+            try {
+                await sbClient.from('chat_messages').insert([newMsg]);
+            } catch (error) {
+                alert('فشل إرسال الرسالة: ' + error.message);
+            }
+        }
+
+        async function changeTripToPostpaid(tripId) {
+            if (!confirm("هل أنت متأكد من تحويل طريقة الدفع للرحلة إلى أجل؟ (سيتم تعديل الملاحظات والحسابات المالية)")) return;
+
+            try {
+                // 1. جلب بيانات الرحلة الحالية من trips
+                const { data: trip, error: tripErr } = await sbClient.from('trips')
+                    .select('*')
+                    .eq('id', tripId)
+                    .maybeSingle();
+
+                if (tripErr) throw tripErr;
+                if (!trip) {
+                    alert("الرحلة غير موجودة في قاعدة بيانات التشغيل!");
+                    return;
+                }
+
+                // 2. تحديث الملاحظات لتبديل كاش بـ أجل
+                let notes = trip.admin_notes || '';
+                notes = notes.replace(/كاش/g, 'أجل')
+                             .replace(/cash/gi, 'postpaid')
+                             .replace(/💵/g, '💳');
+                
+                if (!notes.includes('أجل')) {
+                    notes += '\nنوع التحصيل: أجل\n(تم تحويل طريقة الدفع لآجل)';
+                } else {
+                    notes += '\n(تم تحويل طريقة الدفع لآجل)';
+                }
+
+                const { error: updateErr } = await sbClient.from('trips')
+                    .update({ admin_notes: notes })
+                    .eq('id', tripId);
+
+                if (updateErr) throw updateErr;
+
+                // تحديث حجز جوجل أيضاً إن وجد
+                if (trip.google_res_id) {
+                    await sbClient.from('google_reservations')
+                        .update({ payment_method: 'postpaid' })
+                        .eq('id', trip.google_res_id);
+                }
+
+                // 3. إذا كانت الرحلة منتهية، نقوم بإعادة تسوية الحركات المالية
+                if (trip.status === 'completed' || trip.status === 'trip_ended') {
+                    // حذف حركات الرحلة السابقة للمكتب الخارجي
+                    const { error: delErr } = await sbClient.from('vendor_transactions')
+                        .delete()
+                        .eq('trip_id', tripId);
+
+                    if (delErr) throw delErr;
+
+                    // إدراج الحركة الجديدة كـ أجل (deferred_credit)
+                    const price = trip.estimated_price || 0;
+                    const commission = trip.our_commission || 0;
+                    const payout = price - commission;
+
+                    const { error: insErr } = await sbClient.from('vendor_transactions')
+                        .insert([{
+                            vendor_id: trip.vendor_id,
+                            trip_id: tripId,
+                            transaction_type: 'deferred_credit',
+                            amount: payout,
+                            description: `مستحق رحلة أجل #${tripId} (سعر: ${price} - عمولة: ${commission})`
+                        }]);
+
+                    if (insErr) throw insErr;
+                }
+
+                alert("✅ تم تحويل طريقة الدفع لآجل وتحديث الحسابات المالية بنجاح!");
+                
+                // 4. إعادة تحميل الجدول
+                const customDate = document.getElementById('custom-date-filter')?.value;
+                if (customDate) {
+                    await filterByCustomDate(customDate);
+                } else {
+                    const isTomActive = document.getElementById('filter-tomorrow')?.classList.contains('bg-teal-600');
+                    await filterTrips(isTomActive ? 'tomorrow' : 'today');
+                }
+
+            } catch(e) {
+                alert("❌ خطأ أثناء تحويل الرحلة لآجل: " + e.message);
+            }
+        }
+
         function subscribeModChat(tripId) {
             if (modChatSub) sbClient.removeChannel(modChatSub);
             modChatSub = sbClient.channel('chat-mod-' + tripId)
@@ -3116,6 +3330,93 @@ ${contextData}
                 }).subscribe();
         }
         setTimeout(initGlobalSupportListener, 2000);
+
+        let globalModTripsSub = null;
+        function setupModTripsRealtime() {
+            if (globalModTripsSub) return;
+            globalModTripsSub = sbClient.channel('global-mod-trips-realtime')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'trips' }, async (payload) => {
+                    const trip = payload.new;
+                    if (payload.eventType === 'UPDATE') {
+                        // Find and update the trip in allTrips
+                        const index = allTrips.findIndex(x => x.is_real_trip && String(x.id) === String(trip.id));
+                        if (index !== -1) {
+                            // Fetch full details with joined drivers and cars
+                            const { data: fullTrip } = await sbClient.from('trips')
+                                .select(`*, cars:cars(brand, plate_number), drivers:drivers(name, phone)`)
+                                .eq('id', trip.id)
+                                .single();
+                            if (fullTrip) {
+                                let tDate = fullTrip.trip_date || '';
+                                if (!tDate && fullTrip.admin_notes) {
+                                    const dMatch = fullTrip.admin_notes.match(/📅\s*([0-9\-/\\]+)/);
+                                    if (dMatch) tDate = dMatch[1].trim();
+                                }
+                                if (!tDate && fullTrip.created_at) {
+                                    tDate = fullTrip.created_at.split('T')[0];
+                                }
+                                
+                                const oldItem = allTrips[index];
+                                allTrips[index] = {
+                                    id: fullTrip.id,
+                                    customer_name: fullTrip.manual_client_name || 'عميل ويب',
+                                    customer_phone: fullTrip.client_phone || '-',
+                                    pickup_location: fullTrip.pickup_location,
+                                    dropoff_location: fullTrip.dropoff_location,
+                                    pickup_address: fullTrip.pickup_location || '',
+                                    dropoff_address: fullTrip.dropoff_location || '',
+                                    trip_date: tDate,
+                                    trip_time: fullTrip.admin_notes?.match(/📅\s*[0-9\-/\\]+\s*-\s*([0-9:]+\s*[أإا]?[مو]?)/)?.[1] || fullTrip.created_at?.split('T')?.[1]?.substring(0, 5) || '--:--',
+                                    trip_type: fullTrip.admin_notes?.includes('VIP') ? 'ذهاب فقط - VIP' : 'ذهاب فقط',
+                                    cost: fullTrip.estimated_price || 0,
+                                    status: fullTrip.status,
+                                    car_type: fullTrip.car_type || 'سيدان',
+                                    passengers: fullTrip.admin_notes?.match(/👥\s*([0-9]+)\s*أفراد/)?.[1] || 1,
+                                    bags: fullTrip.admin_notes?.match(/🧳\s*([0-9]+)\s*شنط/)?.[1] || 0,
+                                    is_real_trip: true,
+                                    original_trip: fullTrip,
+                                    google_res_id: oldItem.google_res_id,
+                                    client_decision: oldItem.client_decision,
+                                    driver_name: fullTrip.drivers?.name || null,
+                                    driver_phone: fullTrip.drivers?.phone || null,
+                                    car_brand: fullTrip.cars?.brand || null,
+                                    car_plate: fullTrip.cars?.plate_number || null,
+                                    stage_status: fullTrip.stage_status || null
+                                };
+                                quickFilterTrips();
+                            }
+                        } else {
+                            // If not found in cache, reload the list for the current active filter/date
+                            const dateInput = document.getElementById('custom-date-filter');
+                            if (dateInput && dateInput.value) {
+                                filterByCustomDate(dateInput.value);
+                            } else {
+                                const filterTodayBtn = document.getElementById('filter-today');
+                                if (filterTodayBtn && filterTodayBtn.classList.contains('bg-teal-600')) {
+                                    filterByDate('today');
+                                } else {
+                                    filterByDate('tomorrow');
+                                }
+                            }
+                        }
+                    } else if (payload.eventType === 'INSERT') {
+                        // Reload list to display the newly inserted trip
+                        const dateInput = document.getElementById('custom-date-filter');
+                        if (dateInput && dateInput.value) {
+                            filterByCustomDate(dateInput.value);
+                        } else {
+                            const filterTodayBtn = document.getElementById('filter-today');
+                            if (filterTodayBtn && filterTodayBtn.classList.contains('bg-teal-600')) {
+                                filterByDate('today');
+                            } else {
+                                filterByDate('tomorrow');
+                            }
+                        }
+                    }
+                })
+                .subscribe();
+        }
+        setTimeout(setupModTripsRealtime, 2000);
 
         let globalOmniCount = 0;
         let globalSupportCount = 0;

@@ -344,6 +344,9 @@
                 <div class="chat-bar">
                     <input type="text" id="chat-input" placeholder="اكتب رسالتك..."
                         onkeypress="if(event.key==='Enter')sendDriverMessage()">
+                    <button onclick="sendPaymentNumber()" class="bg-amber-600 text-white" style="width: auto; padding: 0 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; gap: 4px; display: inline-flex;" title="إرسال رقم الدفع الموحد">
+                        <i class="fas fa-credit-card"></i> رقم الدفع
+                    </button>
                     <button onclick="sendDriverMessage()" class="bg-blue-600 text-white"><i
                             class="fas fa-paper-plane"></i></button>
                 </div>
@@ -540,9 +543,31 @@
             const pax = t.passengers || '1';
             const bags = t.bags || '0';
             const carType = t.car_type || '--';
-            const tripType = t.trip_type || '--';
             const clientPhone = 'مخفي';
             const status = t.status || 'pending';
+            
+            // استخراج طريقة الدفع مع بدائل ذكية من الملاحظات
+            let payMethod = t.payment_method || '';
+            const notes = t.notes || '';
+            const adminNotes = t.admin_notes || '';
+            if (!payMethod) {
+                const payM = notes.match(/الدفع:\s*([^|\n]*)/) || notes.match(/نوع التحصيل:\s*([^|\n]*)/); 
+                if (payM) payMethod = payM[1].trim(); 
+            }
+            if (!payMethod && adminNotes) {
+                const payM = adminNotes.match(/الدفع:\s*([^|\n]*)/) || adminNotes.match(/نوع التحصيل:\s*([^|\n]*)/); 
+                if (payM) payMethod = payM[1].trim(); 
+            }
+            
+            let payMethodClean = '💵 غير محدد';
+            const payLower = (payMethod + ' ' + notes + ' ' + adminNotes).toLowerCase();
+            if (payLower.includes('cash') || payLower.includes('كاش') || payLower.includes('💵')) {
+                payMethodClean = '💵 كاش';
+            } else if (payLower.includes('postpaid') || payLower.includes('آجل') || payLower.includes('اجل') || payLower.includes('💳')) {
+                payMethodClean = '💳 آجل';
+            } else if (payLower.includes('wallet') || payLower.includes('محفظة')) {
+                payMethodClean = '💳 محفظة';
+            }
             
             const isActive = !['completed', 'trip_ended', 'cancelled'].includes(status);
             const statusColor = isActive ? 'text-blue-400 bg-blue-500/10 border-blue-500/30' : 'text-slate-400 bg-slate-700/30 border-slate-600/30';
@@ -571,7 +596,7 @@
                     <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">⏰ الوقت</p><p class="text-[11px] text-white font-num">${tripTime}</p></div>
                     <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">🚗 النوع</p><p class="text-[11px] text-white">${carType}</p></div>
                     <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">👥 أفراد / شنط</p><p class="text-[11px] text-white font-num">${pax} فرد / ${bags} شنطة</p></div>
-                    <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">🔄 الاتجاه</p><p class="text-[11px] text-white">${tripType}</p></div>
+                    <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">💰 الدفع</p><p class="text-[11px] text-white">${payMethodClean}</p></div>
                     <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">💵 التكلفة</p><p class="text-[11px] text-blue-400 font-num font-bold">${price} EGP</p></div>
                 </div>
 
@@ -649,6 +674,16 @@
             else if (payMethod === 'wallet') payMethod = '💳 محفظة';
             else if (payMethod === 'postpaid') payMethod = '💳 آجل';
             else if (payMethod === 'غير محدد') payMethod = '💵 غير محدد';
+
+            let payMethodClean = payMethod || '💵 غير محدد';
+            const payLower = (payMethod + ' ' + notes).toLowerCase();
+            if (payLower.includes('cash') || payLower.includes('كاش') || payLower.includes('💵')) {
+                payMethodClean = '💵 كاش';
+            } else if (payLower.includes('postpaid') || payLower.includes('آجل') || payLower.includes('اجل') || payLower.includes('💳')) {
+                payMethodClean = '💳 آجل';
+            } else if (payLower.includes('wallet') || payLower.includes('محفظة')) {
+                payMethodClean = '💳 محفظة';
+            }
             
             const tripTypeAr = tripType === 'one-way' ? 'ذهاب فقط' : tripType === 'round-diff' ? 'ذهاب وعودة' : tripType || '--';
 
@@ -685,7 +720,7 @@
                     <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">⏰ الوقت</p><p class="text-[11px] text-white font-num">${tripTime || '--'}</p></div>
                     <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">🚗 النوع</p><p class="text-[11px] text-white">${tripTypeAr}</p></div>
                     <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">👥 أفراد / شنط</p><p class="text-[11px] text-white font-num">${passengers} فرد / ${bags} شنطة</p></div>
-                    <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">💰 الدفع</p><p class="text-[11px] text-white">${payMethod || '--'}</p></div>
+                    <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">💰 الدفع</p><p class="text-[11px] text-white">${payMethodClean}</p></div>
                     <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">💵 التكلفة</p><p class="text-[11px] text-blue-400 font-num font-bold">${t.estimated_price || '--'} EGP</p></div>
                 </div>
 
@@ -1084,6 +1119,25 @@
                 sender_id: currentDriver.id,
                 sender_name: currentDriver.name,
                 message, message_type: 'text',
+                created_at: new Date().toISOString()
+            };
+            
+            appendMsg(newMsg);
+            
+            await sb.from('chat_messages').insert([newMsg]);
+        }
+
+        async function sendPaymentNumber() {
+            if (!currentChatTripId) return;
+            const paymentMsg = "رقم الدفع الموحد للشركة للتحويل (محفظة أو إنستاباي) هو: 01121748885";
+            
+            const newMsg = {
+                trip_id: currentChatTripId,
+                sender_role: 'driver',
+                sender_id: currentDriver.id,
+                sender_name: currentDriver.name,
+                message: paymentMsg,
+                message_type: 'text',
                 created_at: new Date().toISOString()
             };
             

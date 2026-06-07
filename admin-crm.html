@@ -486,6 +486,10 @@
                         <input type="text" id="admin-chat-input" placeholder="تدخل كإدارة..."
                             class="flex-1 border rounded-full px-4 py-2 text-sm outline-none focus:border-blue-500"
                             onkeypress="if(event.key==='Enter')sendAdminMessage()">
+                        <button onclick="sendAdminPaymentNumber()"
+                            class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-full flex items-center justify-center gap-1 transition text-xs font-bold" title="إرسال رقم الدفع الموحد">
+                            <i class="fas fa-credit-card"></i> رقم الدفع
+                        </button>
                         <button onclick="sendAdminMessage()"
                             class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center"><i
                                 class="fas fa-paper-plane"></i></button>
@@ -1661,21 +1665,44 @@
                     }
                 }
 
+                let rawDecision = '';
                 if (resObj && resObj.client_decision) {
-                    const cleanDecision = resObj.client_decision.trim();
-                    if (cleanDecision.includes('مؤكد') || cleanDecision.includes('تأكيد') || cleanDecision.includes('تاكيد') || cleanDecision.includes('نعم') || cleanDecision.includes('مستمر')) {
+                    rawDecision = resObj.client_decision.trim();
+                } else if (t.admin_notes && t.admin_notes.includes('قرار العميل:')) {
+                    const match = t.admin_notes.match(/قرار العميل:\s*(.*)/);
+                    if (match) rawDecision = match[1].trim();
+                }
+
+                if (rawDecision) {
+                    if (rawDecision.includes('مؤكد') || rawDecision.includes('تأكيد') || rawDecision.includes('تاكيد') || rawDecision.includes('نعم') || rawDecision.includes('مستمر')) {
                         decision = 'مؤكد';
                         decisionClass = 'bg-green-100 text-green-800 border-green-200';
                         decisionIcon = 'fa-check-circle';
-                    } else if (cleanDecision.includes('ملغي') || cleanDecision.includes('إلغاء') || cleanDecision.includes('الغاء') || cleanDecision.includes('لا') || cleanDecision.includes('كنسل')) {
+                    } else if (rawDecision.includes('ملغي') || rawDecision.includes('إلغاء') || rawDecision.includes('الغاء') || rawDecision.includes('لا') || rawDecision.includes('كنسل')) {
                         decision = 'ملغي';
                         decisionClass = 'bg-red-100 text-red-800 border-red-200';
                         decisionIcon = 'fa-times-circle';
                     } else {
-                        decision = cleanDecision;
+                        decision = rawDecision;
                         decisionClass = 'bg-amber-100 text-amber-800 border-amber-200';
                         decisionIcon = 'fa-info-circle';
                     }
+                }
+
+                // التحقق من طريقة الدفع للرحلة
+                let payMethodBadge = '';
+                const notesText = t.admin_notes || '';
+                const isCash = (t.payment_method === 'cash') || 
+                               notesText.toLowerCase().includes('cash') || 
+                               notesText.includes('كاش') || 
+                               notesText.includes('💵') ||
+                               notesText.includes('نوع التحصيل: كاش');
+                if (isCash) {
+                    payMethodBadge = `
+                        <button onclick="changeTripToPostpaid('${t.id}')" class="text-amber-600 hover:text-amber-800 text-[10px] font-bold border border-amber-200 rounded px-1.5 py-0.5 bg-amber-50/50 hover:bg-amber-50 transition cursor-pointer mt-1 inline-flex items-center gap-1" title="تحويل طريقة الدفع لآجل (تحويل للشركة)">
+                            <i class="fas fa-exchange-alt"></i> تحويل لآجل
+                        </button>
+                    `;
                 }
 
                 const decisionHtml = `
@@ -1683,7 +1710,8 @@
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${decisionClass} inline-flex items-center gap-1">
                             <i class="fas ${decisionIcon}"></i> ${decision}
                         </span>
-                        ${resObj ? `<button onclick="changeClientDecision(${resObj.id}, '${decision}')" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold border border-blue-200 rounded px-1.5 py-0.5 bg-blue-50/50 hover:bg-blue-50 transition cursor-pointer" title="تعديل قرار العميل">تعديل القرار</button>` : ''}
+                        ${resObj ? `<button onclick="changeClientDecision(${resObj.id}, '${decision}', '${t.id}')" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold border border-blue-200 rounded px-1.5 py-0.5 bg-blue-50/50 hover:bg-blue-50 transition cursor-pointer" title="تعديل قرار العميل">تعديل القرار</button>` : ''}
+                        ${payMethodBadge}
                     </div>
                 `;
 
@@ -2021,7 +2049,7 @@
             }
         }
 
-        async function changeClientDecision(resId, currentDecision) {
+        async function changeClientDecision(resId, currentDecision, tripId) {
             const newDecision = prompt(
                 "تعديل قرار العميل للرحلة:\n\nاكتب:\n1 - للتأكيد (مؤكد)\n2 - للإلغاء (ملغي)\n3 - للمسح (لم يقرر)",
                 currentDecision === 'مؤكد' ? '1' : (currentDecision === 'ملغي' ? '2' : '')
@@ -2046,6 +2074,25 @@
                     .eq('id', resId);
                     
                 if (error) throw error;
+
+                if (tripId && !String(tripId).startsWith('gr_')) {
+                    const { data: tripData } = await sbClient.from('trips')
+                        .select('admin_notes')
+                        .eq('id', Number(tripId))
+                        .single();
+                        
+                    if (tripData) {
+                        let notes = tripData.admin_notes || '';
+                        if (notes.includes('قرار العميل:')) {
+                            notes = notes.replace(/قرار العميل:\s*.*/, `قرار العميل: ${decisionText}`);
+                        } else {
+                            notes = notes.trim() + `\nقرار العميل: ${decisionText}`;
+                        }
+                        await sbClient.from('trips')
+                            .update({ admin_notes: notes })
+                            .eq('id', Number(tripId));
+                    }
+                }
                 
                 alert("✅ تم تحديث قرار العميل بنجاح!");
                 loadOperations();
@@ -2225,11 +2272,11 @@
         }
 
         async function settleDriver(driverId, driverName, netAmount) {
-            if (netAmount <= 0) return alert('لا يوجد مبلغ مستحق للقبض');
-            const payAmount = prompt(`المستحق: ${netAmount} EGP\nأدخل المبلغ المراد قبضه:`, netAmount);
-            if (!payAmount || Number(payAmount) <= 0) return;
+            if (netAmount === 0) return alert('الحساب مصفي بالفعل، لا يوجد مستحق');
+            const payAmount = prompt(`صافي الحساب المستحق: ${netAmount} EGP\nأدخل المبلغ المراد تسويته:\n(موجب للقبض/الدفع له، سالب إذا كان السائق يدفع للشركة)`, netAmount);
+            if (!payAmount || Number(payAmount) === 0) return;
             const pay = Number(payAmount);
-            if (!confirm(`تأكيد قبض ${pay} EGP للكابتن ${driverName}؟`)) return;
+            if (!confirm(`تأكيد تسوية مبلغ ${pay} EGP للكابتن ${driverName}؟`)) return;
             // خصم من خزنة السواقين
             const vid = await getVaultIdByName('خزنة السواقين');
             if (!vid) { alert('خزنة السواقين غير موجودة'); return; }
@@ -3183,6 +3230,133 @@
             } catch (error) {
                 console.error('Error sending message:', error);
                 alert('فشل إرسال الرسالة');
+            }
+        }
+
+        async function sendAdminPaymentNumber() {
+            const paymentMsg = "رقم الدفع الموحد للشركة للتحويل (محفظة أو إنستاباي) هو: 01121748885";
+            try {
+                if (adminChatMode === 'support' && adminCurrentSupportUserId) {
+                    const newMsg = {
+                        user_id: adminCurrentSupportUserId,
+                        sender_role: 'admin',
+                        message: paymentMsg,
+                        created_at: new Date().toISOString()
+                    };
+                    const container = document.getElementById('admin-chat-messages');
+                    const placeholder = container.querySelector('p.text-center');
+                    if (placeholder) placeholder.remove();
+                    
+                    const div = document.createElement('div');
+                    div.style.cssText = `max-width:80%;padding:10px 14px;border-radius:12px;font-size:0.85rem;line-height:1.5;word-wrap:break-word;margin-bottom:4px;background:#ede9fe;align-self:flex-end;margin-right:auto;`;
+                    div.innerHTML = `<span style="font-size:10px;color:#6d28d9;display:block;margin-bottom:3px">🛡️ الإدارة</span>${paymentMsg}`;
+                    const t = document.createElement('span');
+                    t.style.cssText = 'display:block;font-size:9px;margin-top:4px;opacity:0.5;';
+                    t.textContent = new Date(newMsg.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+                    div.appendChild(t);
+                    container.appendChild(div);
+                    container.scrollTop = container.scrollHeight;
+
+                    await sbClient.from('support_chats').insert([newMsg]);
+                } else if (adminCurrentTripId) {
+                    const newMsg = {
+                        trip_id: adminCurrentTripId,
+                        sender_role: 'admin',
+                        sender_id: 'admin',
+                        sender_name: 'الإدارة',
+                        message: paymentMsg,
+                        message_type: 'text',
+                        created_at: new Date().toISOString()
+                    };
+                    appendAdminMsg(newMsg);
+                    await sbClient.from('chat_messages').insert([newMsg]);
+                }
+            } catch (error) {
+                console.error('Error sending payment number message:', error);
+                alert('فشل إرسال رسالة رقم الدفع');
+            }
+        }
+
+        async function changeTripToPostpaid(tripId) {
+            if (!confirm("هل أنت متأكد من تحويل طريقة الدفع للرحلة إلى أجل؟ (سيتم تعديل الملاحظات والحسابات المالية)")) return;
+
+            try {
+                // 1. جلب بيانات الرحلة الحالية من trips
+                const { data: trip, error: tripErr } = await sbClient.from('trips')
+                    .select('*')
+                    .eq('id', tripId)
+                    .maybeSingle();
+
+                if (tripErr) throw tripErr;
+                if (!trip) {
+                    alert("الرحلة غير موجودة في قاعدة بيانات التشغيل!");
+                    return;
+                }
+
+                // 2. تحديث الملاحظات لتبديل كاش بـ أجل
+                let notes = trip.admin_notes || '';
+                notes = notes.replace(/كاش/g, 'أجل')
+                             .replace(/cash/gi, 'postpaid')
+                             .replace(/💵/g, '💳');
+                
+                if (!notes.includes('أجل')) {
+                    notes += '\nنوع التحصيل: أجل\n(تم تحويل طريقة الدفع لآجل)';
+                } else {
+                    notes += '\n(تم تحويل طريقة الدفع لآجل)';
+                }
+
+                const { error: updateErr } = await sbClient.from('trips')
+                    .update({ admin_notes: notes })
+                    .eq('id', tripId);
+
+                if (updateErr) throw updateErr;
+
+                // تحديث حجز جوجل أيضاً إن وجد
+                if (trip.google_res_id) {
+                    await sbClient.from('google_reservations')
+                        .update({ payment_method: 'postpaid' })
+                        .eq('id', trip.google_res_id);
+                }
+
+                // 3. إذا كانت الرحلة منتهية، نقوم بإعادة تسوية الحركات المالية
+                if (trip.status === 'completed' || trip.status === 'trip_ended') {
+                    // حذف حركات الرحلة السابقة للمكتب الخارجي
+                    const { error: delErr } = await sbClient.from('vendor_transactions')
+                        .delete()
+                        .eq('trip_id', tripId);
+
+                    if (delErr) throw delErr;
+
+                    // إدراج الحركة الجديدة كـ أجل (deferred_credit)
+                    const price = trip.estimated_price || 0;
+                    const commission = trip.our_commission || 0;
+                    const payout = price - commission;
+
+                    const { error: insErr } = await sbClient.from('vendor_transactions')
+                        .insert([{
+                            vendor_id: trip.vendor_id,
+                            trip_id: tripId,
+                            transaction_type: 'deferred_credit',
+                            amount: payout,
+                            description: `مستحق رحلة أجل #${tripId} (سعر: ${price} - عمولة: ${commission})`
+                        }]);
+
+                    if (insErr) throw insErr;
+                }
+
+                alert("✅ تم تحويل طريقة الدفع لآجل وتحديث الحسابات المالية بنجاح!");
+                
+                // 4. إعادة تحميل البيانات
+                if (typeof loadOperations === 'function') loadOperations();
+                if (typeof loadDashboard === 'function') loadDashboard();
+                if (typeof loadFinance === 'function') loadFinance();
+                const partnersPage = document.getElementById('page-partners');
+                if (partnersPage && !partnersPage.classList.contains('hidden') && typeof loadPartners === 'function') {
+                    loadPartners();
+                }
+
+            } catch(e) {
+                alert("❌ خطأ أثناء تحويل الرحلة لآجل: " + e.message);
             }
         }
         

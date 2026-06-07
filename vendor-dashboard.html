@@ -232,6 +232,37 @@
                     <span id="trips-count" class="bg-blue-600/20 border border-blue-500/30 text-blue-400 text-xs px-2.5 py-0.5 rounded-full font-bold">0</span>
                 </div>
                 
+                <!-- كروت الإحصائيات التشغيلية للمكتب -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-slate-900/40 p-4 rounded-2xl border border-slate-700/40 flex justify-between items-center shadow-lg">
+                        <div>
+                            <p class="text-xs text-slate-400">📦 إجمالي الأوردرات</p>
+                            <h4 id="op-total-trips" class="text-xl font-black mt-1 text-blue-400 font-num">0</h4>
+                        </div>
+                        <div class="text-xl bg-blue-500/10 p-2.5 rounded-xl text-blue-400 border border-blue-500/20">
+                            <i class="fas fa-list-check"></i>
+                        </div>
+                    </div>
+                    <div class="bg-slate-900/40 p-4 rounded-2xl border border-slate-700/40 flex justify-between items-center shadow-lg">
+                        <div>
+                            <p class="text-xs text-slate-400">⏳ أوردرات بانتظار سائق</p>
+                            <h4 id="op-pending-driver" class="text-xl font-black mt-1 text-amber-400 font-num">0</h4>
+                        </div>
+                        <div class="text-xl bg-amber-500/10 p-2.5 rounded-xl text-amber-400 border border-amber-500/20">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                    </div>
+                    <div class="bg-slate-900/40 p-4 rounded-2xl border border-slate-700/40 flex justify-between items-center shadow-lg">
+                        <div>
+                            <p class="text-xs text-slate-400">✅ أوردرات مكتملة</p>
+                            <h4 id="op-completed-trips" class="text-xl font-black mt-1 text-green-400 font-num">0</h4>
+                        </div>
+                        <div class="text-xl bg-green-500/10 p-2.5 rounded-xl text-green-400 border border-green-500/20">
+                            <i class="fas fa-circle-check"></i>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- تبويبات التصفية التاريخية للرحلات -->
                 <div class="flex gap-2 mb-3 bg-slate-950/40 p-1.5 rounded-xl border border-slate-700/30">
                     <button onclick="setTripsFilter('today')" id="filter-btn-today" class="flex-1 py-2 rounded-lg text-xs font-bold transition bg-blue-600 text-white">📅 رحلات اليوم</button>
@@ -356,6 +387,10 @@
     <div id="assign-driver-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center p-4 z-50 backdrop-blur-sm">
         <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-[450px] p-6 shadow-2xl space-y-4 animate-fade">
             <h3 class="text-lg font-bold text-white border-b border-slate-700 pb-3">✍️ إسناد السائق والسيارة للرحلة</h3>
+            <div id="assign-trip-price-container" class="bg-blue-500/10 border border-blue-500/20 px-4 py-2.5 rounded-xl text-blue-400 text-xs font-bold flex justify-between items-center">
+                <span>💰 إجمالي قيمة الأوردر:</span>
+                <span class="font-num text-sm text-white"><span id="assign-trip-price-display">0</span> EGP</span>
+            </div>
             <input type="hidden" id="assign-trip-id">
             
             <div class="space-y-3">
@@ -418,6 +453,9 @@
             <div class="p-3 bg-slate-900 border-t border-slate-700 flex gap-2">
                 <input type="text" id="chat-input" placeholder="اكتب رسالة للمشرف والعميل والكابتن..." 
                     class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500 text-xs">
+                <button onclick="sendPaymentNumber()" class="bg-amber-600 hover:bg-amber-500 text-white px-3 rounded-xl flex items-center justify-center gap-1 transition text-xs font-bold" title="إرسال رقم الدفع الموحد">
+                    <i class="fas fa-credit-card"></i> رقم الدفع
+                </button>
                 <button onclick="sendMessage()" class="bg-blue-600 hover:bg-blue-500 text-white w-10 h-10 rounded-xl flex items-center justify-center transition">
                     <i class="fas fa-paper-plane"></i>
                 </button>
@@ -725,6 +763,15 @@
         }
 
         function renderFilteredTrips() {
+            // حساب إحصائيات التشغيل للمكتب بناءً على جميع الرحلات المسندة
+            const opTotal = cachedTrips.length;
+            const opPending = cachedTrips.filter(t => t.status === 'approved' && !t.driver_id).length;
+            const opCompleted = cachedTrips.filter(t => t.status === 'completed' || t.status === 'trip_ended').length;
+
+            if (document.getElementById('op-total-trips')) document.getElementById('op-total-trips').innerText = opTotal.toLocaleString();
+            if (document.getElementById('op-pending-driver')) document.getElementById('op-pending-driver').innerText = opPending.toLocaleString();
+            if (document.getElementById('op-completed-trips')) document.getElementById('op-completed-trips').innerText = opCompleted.toLocaleString();
+
             const list = document.getElementById('trips-list');
             if (cachedTrips.length === 0) {
                 document.getElementById('trips-count').textContent = 0;
@@ -909,9 +956,21 @@
                 if (tripTypeLabel === 'غير محدد' && parsedNotes.tripType) tripTypeLabel = parsedNotes.tripType;
 
                 // طريقة الدفع
-                const isCash = notesText.toLowerCase().includes('cash') || notesText.includes('كاش') || notesText.includes('💵');
-                const payBadge = isCash ? '<span class="bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] px-2 py-0.5 rounded-full font-bold">💵 كاش للكابتن</span>' 
-                                        : '<span class="bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] px-2 py-0.5 rounded-full font-bold">💳 أجل / للشركة</span>';
+                const isCash = (gr && (gr.payment_method === 'cash' || String(gr.payment_method).includes('كاش'))) || 
+                               notesText.toLowerCase().includes('cash') || 
+                               notesText.includes('كاش') || 
+                               notesText.includes('💵') ||
+                               notesText.includes('نوع التحصيل: كاش');
+                let payBadge = isCash ? '<span class="bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] px-2 py-0.5 rounded-full font-bold">💵 كاش للكابتن</span>' 
+                                      : '<span class="bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] px-2 py-0.5 rounded-full font-bold">💳 أجل / للشركة</span>';
+
+                if (isCash) {
+                    payBadge += `
+                        <button onclick="changeTripToPostpaid('${t.id}')" class="text-amber-500 hover:text-amber-400 text-[10px] font-bold border border-amber-500/20 rounded px-1.5 py-0.5 bg-amber-500/5 hover:bg-amber-500/10 transition cursor-pointer mr-2 inline-flex items-center gap-1" title="تحويل طريقة الدفع لآجل (تحويل للشركة)">
+                            <i class="fas fa-exchange-alt"></i> تحويل لآجل
+                        </button>
+                    `;
+                }
 
                 // حالة التعيين
                 let assignBtn = '';
@@ -952,43 +1011,43 @@
                 else if (t.status === 'completed' || t.status === 'trip_ended') { statusText = '✅ مكتملة'; statusColor = 'bg-slate-500/10 border border-slate-600/30 text-slate-400'; }
 
                 return `
-                    <div class="kpi-card p-4 rounded-2xl border flex flex-col md:flex-row justify-between gap-4">
-                        <div class="space-y-3 flex-1">
+                    <div class="kpi-card p-5 rounded-2xl border flex flex-col md:flex-row justify-between gap-4">
+                        <div class="space-y-4 flex-1">
                             <div class="flex justify-between items-center">
-                                <div class="flex items-center gap-2">
-                                    <span class="text-xs font-bold font-num text-slate-400">رحلة #${t.id}</span>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-sm font-black font-num text-slate-400">رحلة #${t.id}</span>
                                     <span class="text-xs text-slate-500">|</span>
-                                    <span class="text-xs font-bold text-blue-400"><i class="fas fa-user text-[10px] ml-1"></i>العميل: ${customerName}</span>
+                                    <span class="text-sm font-black text-blue-400"><i class="fas fa-user text-xs ml-1"></i>العميل: ${customerName}</span>
                                 </div>
-                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${statusColor}">${statusText}</span>
+                                <span class="text-xs font-bold px-3 py-1 rounded-full border ${statusColor}">${statusText}</span>
                             </div>
-                            <div class="bg-slate-900/40 rounded-xl p-3 border border-slate-800 space-y-1.5">
-                                <p class="text-xs text-slate-200 font-bold"><i class="fas fa-circle-dot text-green-500 text-[9px] ml-1.5"></i>${pickup}</p>
-                                <p class="text-xs text-slate-200 font-bold"><i class="fas fa-location-dot text-red-500 text-[9px] ml-1.5"></i>${dropoff}</p>
+                            <div class="bg-slate-900/60 rounded-xl p-4 border border-slate-800 space-y-2">
+                                <p class="text-sm text-white font-bold leading-normal"><i class="fas fa-circle-dot text-green-500 text-xs ml-2"></i>${pickup}</p>
+                                <p class="text-sm text-white font-bold leading-normal"><i class="fas fa-location-dot text-red-500 text-xs ml-2"></i>${dropoff}</p>
                             </div>
                             
                             <!-- تفاصيل الحجز الإضافية المطلوبة -->
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 bg-slate-900/20 p-2.5 rounded-xl border border-slate-800/40 text-[11px] text-slate-300">
-                                <div><i class="fas fa-users text-blue-400 ml-1.5"></i>الأفراد: <span class="font-bold text-white font-num">${passengers}</span></div>
-                                <div><i class="fas fa-suitcase text-blue-400 ml-1.5"></i>الحقائب: <span class="font-bold text-white font-num">${bags}</span></div>
-                                <div><i class="fas fa-car-side text-blue-400 ml-1.5"></i>السيارة المطلوبة: <span class="font-bold text-white">${reqCarType}</span></div>
-                                <div><i class="fas fa-route text-blue-400 ml-1.5"></i>نوع الرحلة: <span class="font-bold text-white">${tripTypeLabel}</span></div>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-900/40 p-3.5 rounded-xl border border-slate-800/60 text-xs text-slate-200">
+                                <div><i class="fas fa-users text-blue-400 ml-2 text-xs"></i>الأفراد: <span class="font-black text-white font-num text-sm">${passengers}</span></div>
+                                <div><i class="fas fa-suitcase text-blue-400 ml-2 text-xs"></i>الحقائب: <span class="font-black text-white font-num text-sm">${bags}</span></div>
+                                <div><i class="fas fa-car-side text-blue-400 ml-2 text-xs"></i>السيارة المطلوبة: <span class="font-black text-white text-sm">${reqCarType}</span></div>
+                                <div><i class="fas fa-route text-blue-400 ml-2 text-xs"></i>نوع الرحلة: <span class="font-black text-white text-sm">${tripTypeLabel}</span></div>
                             </div>
 
-                            <div class="grid grid-cols-2 gap-2 text-xs text-slate-400">
-                                <p><i class="far fa-calendar-alt ml-1"></i>التاريخ: <span class="font-bold text-white font-num">${tripDate}</span></p>
-                                <p><i class="far fa-clock ml-1"></i>الوقت: <span class="font-bold text-white font-num">${tripTime}</span></p>
+                            <div class="grid grid-cols-2 gap-3 text-sm text-slate-300">
+                                <p><i class="far fa-calendar-alt ml-2 text-xs"></i>التاريخ: <span class="font-black text-white font-num text-sm">${tripDate}</span></p>
+                                <p><i class="far fa-clock ml-2 text-xs"></i>الوقت: <span class="font-black text-white font-num text-sm">${tripTime}</span></p>
                             </div>
-                            <div class="border-t border-slate-800 pt-3 flex flex-wrap gap-2 items-center justify-between">
+                            <div class="border-t border-slate-800 pt-3 flex flex-wrap gap-3 items-center justify-between">
                                 ${driverInfoHtml}
-                                <div class="flex items-center gap-2">
+                                <div class="flex items-center gap-3">
                                     ${payBadge}
-                                    <span class="text-blue-400 font-bold text-sm font-num">${price} EGP</span>
-                                    <span class="text-red-400 font-bold text-xs font-num">(عمولة: ${commission})</span>
+                                    <span class="text-blue-400 font-black text-lg font-num">${price} EGP</span>
+                                    <span class="text-red-400 font-bold text-sm font-num">(عمولة: ${commission})</span>
                                 </div>
                             </div>
                         </div>
-                        <div class="flex flex-row md:flex-col justify-end gap-2 items-stretch md:w-44 border-t md:border-t-0 md:border-r border-slate-800 pt-3 md:pt-0 md:pr-4">
+                        <div class="flex flex-row md:flex-col justify-end gap-3 items-stretch md:w-48 border-t md:border-t-0 md:border-r border-slate-800 pt-3 md:pt-0 md:pr-4">
                             ${assignBtn}
                             ${chatBtn}
                         </div>
@@ -1043,6 +1102,12 @@
         function openAssignDriverModal(tripId, currentCommission) {
             document.getElementById('assign-trip-id').value = tripId;
             document.getElementById('assign-trip-commission').value = currentCommission !== undefined ? currentCommission : 100;
+            
+            // جلب قيمة الأوردر من الكاش للرحلات وعرضها
+            const tripObj = (cachedTrips || []).find(t => String(t.id) === String(tripId));
+            const tripPrice = tripObj ? (tripObj.estimated_price || 0) : 0;
+            document.getElementById('assign-trip-price-display').innerText = Number(tripPrice).toLocaleString();
+            
             document.getElementById('assign-driver-name').value = '';
             document.getElementById('assign-driver-phone').value = '';
             document.getElementById('assign-car-brand').value = '';
@@ -1082,6 +1147,75 @@
                 img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
                 img.src = url;
             });
+        }
+
+        async function changeTripToPostpaid(tripId) {
+            if (!confirm("هل أنت متأكد من تحويل طريقة الدفع للرحلة إلى أجل؟ (سيتم تعديل الحسابات المالية المرتبطة)")) return;
+
+            try {
+                // 1. جلب بيانات الرحلة الحالية
+                const { data: trip, error: tripErr } = await sb.from('trips')
+                    .select('*')
+                    .eq('id', tripId)
+                    .maybeSingle();
+
+                if (tripErr) throw tripErr;
+                if (!trip) {
+                    alert("الرحلة غير موجودة!");
+                    return;
+                }
+
+                // 2. تحديث الملاحظات لتبديل كاش بـ أجل
+                let notes = trip.admin_notes || '';
+                notes = notes.replace(/كاش/g, 'أجل')
+                             .replace(/cash/gi, 'postpaid')
+                             .replace(/💵/g, '💳');
+                
+                if (!notes.includes('أجل')) {
+                    notes += '\nنوع التحصيل: أجل\n(تم تحويل طريقة الدفع لآجل)';
+                } else {
+                    notes += '\n(تم تحويل طريقة الدفع لآجل)';
+                }
+
+                const { error: updateErr } = await sb.from('trips')
+                    .update({ admin_notes: notes })
+                    .eq('id', tripId);
+
+                if (updateErr) throw updateErr;
+
+                // 3. إذا كانت الرحلة منتهية، نقوم بإعادة تسوية الحركات المالية
+                if (trip.status === 'completed' || trip.status === 'trip_ended') {
+                    // حذف حركات الرحلة السابقة للمكتب الخارجي
+                    const { error: delErr } = await sb.from('vendor_transactions')
+                        .delete()
+                        .eq('trip_id', tripId);
+
+                    if (delErr) throw delErr;
+
+                    // إدراج الحركة الجديدة كـ أجل (deferred_credit)
+                    const price = trip.estimated_price || 0;
+                    const commission = trip.our_commission || 0;
+                    const payout = price - commission;
+
+                    const { error: insErr } = await sb.from('vendor_transactions')
+                        .insert([{
+                            vendor_id: trip.vendor_id,
+                            trip_id: tripId,
+                            transaction_type: 'deferred_credit',
+                            amount: payout,
+                            description: `مستحق رحلة أجل #${tripId} (سعر: ${price} - عمولة: ${commission})`
+                        }]);
+
+                    if (insErr) throw insErr;
+                }
+
+                alert("✅ تم تحويل طريقة الدفع لآجل وتحديث الحسابات المالية بنجاح!");
+                // إعادة تحميل البيانات
+                await loadDashboardData();
+
+            } catch(e) {
+                alert("❌ خطأ أثناء تحويل الرحلة لآجل: " + e.message);
+            }
         }
 
         async function confirmDriverAssignment() {
@@ -1597,6 +1731,29 @@
             }
         }
 
+        async function sendPaymentNumber() {
+            if (!activeChatTripId) return;
+            const paymentMsg = "رقم الدفع الموحد للشركة للتحويل (محفظة أو إنستاباي) هو: 01121748885";
+            
+            const newMsg = {
+                trip_id: activeChatTripId,
+                sender_role: 'admin', 
+                sender_id: currentVendor.id,
+                sender_name: currentVendor.name,
+                message: paymentMsg,
+                message_type: 'text',
+                created_at: new Date().toISOString()
+            };
+
+            appendChatMessage(newMsg);
+
+            try {
+                await sb.from('chat_messages').insert([newMsg]);
+            } catch(e) {
+                console.error("Failed to send payment number message:", e);
+            }
+        }
+
         function subscribeChat(tripId) {
             if (chatSub) sb.removeChannel(chatSub);
             
@@ -1650,8 +1807,19 @@
                     commission = price - partnerNet;
                     paymentBadge = `<span class="bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] px-2 py-0.5 rounded-full font-bold ml-1.5 inline-block">💳 أجل</span>`;
                 } else {
-                    const notes = t.admin_notes || '';
-                    const isCash = notes.toLowerCase().includes('cash') || notes.includes('كاش') || notes.includes('💵');
+                    const notesText = t.admin_notes || '';
+                    let gr = cachedReservationsMap[String(t.id)];
+                    if (!gr && notesText) {
+                        const rowMatch = notesText.match(/حجز شيت صف\s*(\d+)/);
+                        if (rowMatch) {
+                            gr = cachedReservationsMap[`row_${rowMatch[1]}`];
+                        }
+                    }
+                    const isCash = (gr && (gr.payment_method === 'cash' || String(gr.payment_method).includes('كاش'))) || 
+                                   notesText.toLowerCase().includes('cash') || 
+                                   notesText.includes('كاش') || 
+                                   notesText.includes('💵') ||
+                                   notesText.includes('نوع التحصيل: كاش');
                     paymentBadge = isCash 
                         ? `<span class="bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] px-2 py-0.5 rounded-full font-bold ml-1.5 inline-block">💵 كاش (متوقع)</span>`
                         : `<span class="bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] px-2 py-0.5 rounded-full font-bold ml-1.5 inline-block">💳 أجل (متوقع)</span>`;
