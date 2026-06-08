@@ -2578,19 +2578,60 @@
         async function shareMyLocation() {
             if (!navigator.geolocation) return alert('المتصفح لا يدعم تحديد الموقع');
             if (!currentClientChatTripId) return;
-            navigator.geolocation.getCurrentPosition(async (pos) => {
-                const { data: profile } = await sb.from('profiles').select('full_name').eq('id', user.id).single();
-                await sb.from('chat_messages').insert([{
-                    trip_id: currentClientChatTripId,
-                    sender_role: 'client',
-                    sender_id: user.id,
-                    sender_name: profile?.full_name || 'عميل',
-                    message: '📍 تم إرسال الموقع',
-                    message_type: 'location',
-                    location_lat: pos.coords.latitude,
-                    location_lng: pos.coords.longitude
-                }]);
-            }, () => alert('لم يتم السماح بتحديد الموقع. يرجى تفعيل GPS.'));
+
+            const options = {
+                enableHighAccuracy: true,
+                timeout: 8000,
+                maximumAge: 30000
+            };
+
+            function successCallback(pos) {
+                sendLocationMsg(pos.coords.latitude, pos.coords.longitude);
+            }
+
+            function errorCallback(err) {
+                console.warn(`Geolocation error (${err.code}): ${err.message}. Retrying with low accuracy...`);
+                // Fallback to low accuracy (Wi-Fi/Cell tower) which is faster and works indoors
+                navigator.geolocation.getCurrentPosition(
+                    (fallbackPos) => {
+                        sendLocationMsg(fallbackPos.coords.latitude, fallbackPos.coords.longitude);
+                    },
+                    (fallbackErr) => {
+                        alert('تعذر الحصول على موقعك الجغرافي. يرجى التأكد من تشغيل الـ GPS والإنترنت في هاتفك المحمول وإعادة المحاولة.');
+                    },
+                    {
+                        enableHighAccuracy: false,
+                        timeout: 5000,
+                        maximumAge: 60000
+                    }
+                );
+            }
+
+            async function sendLocationMsg(lat, lng) {
+                try {
+                    const { data: profile } = await sb.from('profiles').select('full_name').eq('id', user.id).single();
+                    const newMsg = {
+                        trip_id: currentClientChatTripId,
+                        sender_role: 'client',
+                        sender_id: user.id,
+                        sender_name: profile?.full_name || 'عميل',
+                        message: '📍 تم إرسال الموقع',
+                        message_type: 'location',
+                        location_lat: lat,
+                        location_lng: lng,
+                        created_at: new Date().toISOString()
+                    };
+
+                    // Optimistic UI Update - show immediately on screen
+                    appendClientMsg(newMsg);
+
+                    await sb.from('chat_messages').insert([newMsg]);
+                } catch (e) {
+                    console.error("Error inserting location message:", e);
+                }
+            }
+
+            navigator.geolocation.getCurrentPosition(successCallback, errorCallback, options);
         }
 
         function subscribeToClientChat(tripId) {
