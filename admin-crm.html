@@ -2259,7 +2259,7 @@
                 // 🌐 تحديث القرار في شيت جوجل لتفادي اختفائه عند التزامن
                 if (sheetRow) {
                     try {
-                        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
+                        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzPfnfJ7yiKYqHyVIJ9hQ0I7Ejo4FsU6AhcXD2wLqsl43Xg6pQiMOp8MsmEvsopDMvU/exec';
                         const cleanTripId = (tripId && !String(tripId).startsWith('gr_')) ? String(tripId) : '';
                         
                         const sheetData = {
@@ -3061,7 +3061,7 @@
 
             // 🌐 محاولة إرسال التعيين لـ Google Sheets للتزامن وإرسال الواتساب
             try {
-                const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
+                const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzPfnfJ7yiKYqHyVIJ9hQ0I7Ejo4FsU6AhcXD2wLqsl43Xg6pQiMOp8MsmEvsopDMvU/exec';
                 
                 const sheetData = {
                     action: 'assignDriver',
@@ -4556,7 +4556,7 @@
         // ==========================================
         // إرسال بيانات الحجز إلى جوجل شيت
         // ==========================================
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzPfnfJ7yiKYqHyVIJ9hQ0I7Ejo4FsU6AhcXD2wLqsl43Xg6pQiMOp8MsmEvsopDMvU/exec';
 
         function sendToAdminSheet(data) {
             if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'PASTE_YOUR_APPS_SCRIPT_URL_HERE') return;
@@ -5724,7 +5724,7 @@ async function confirmResAssign() {
             }).eq('sheet_row', r.sheet_row);
 
             // 5. تحديث جوجل شيت
-            const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
+            const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzPfnfJ7yiKYqHyVIJ9hQ0I7Ejo4FsU6AhcXD2wLqsl43Xg6pQiMOp8MsmEvsopDMvU/exec';
             fetch(APPS_SCRIPT_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain' },
@@ -5813,7 +5813,7 @@ async function confirmResAssign() {
         }).eq('sheet_row', r.sheet_row);
 
         // 5. تحديث جوجل شيت - أعمدة 22-23 (اسم السائق ورقمه)
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzPfnfJ7yiKYqHyVIJ9hQ0I7Ejo4FsU6AhcXD2wLqsl43Xg6pQiMOp8MsmEvsopDMvU/exec';
         fetch(APPS_SCRIPT_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain' },

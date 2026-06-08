@@ -620,7 +620,7 @@
 
             // 🌐 محاولة إرسال التعيين لـ Google Sheets للتزامن وإرسال الواتساب
             try {
-                const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
+                const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzPfnfJ7yiKYqHyVIJ9hQ0I7Ejo4FsU6AhcXD2wLqsl43Xg6pQiMOp8MsmEvsopDMvU/exec';
                 // Fire and forget (لا نعطل الواجهة لو فشل الشيت)
                 fetch(APPS_SCRIPT_URL, {
                     method: 'POST',
@@ -1418,7 +1418,7 @@
         // ==========================================
         // إرسال بيانات الحجز إلى جوجل شيت
         // ==========================================
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzPfnfJ7yiKYqHyVIJ9hQ0I7Ejo4FsU6AhcXD2wLqsl43Xg6pQiMOp8MsmEvsopDMvU/exec';
 
         function sendToAdminSheet(data) {
             if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'PASTE_YOUR_APPS_SCRIPT_URL_HERE') return;

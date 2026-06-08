@@ -869,7 +869,7 @@
         const SUPABASE_URL = 'https://wtjwzqvmwnbvjxnmweqq.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY';
         const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzPfnfJ7yiKYqHyVIJ9hQ0I7Ejo4FsU6AhcXD2wLqsl43Xg6pQiMOp8MsmEvsopDMvU/exec';
 
         function getApiBaseUrl() {
             const saved = localStorage.getItem('mod_api_url');
@@ -2171,7 +2171,7 @@
                 // 🌐 تحديث القرار في شيت جوجل لتفادي اختفائه عند التزامن
                 if (sheetRow) {
                     try {
-                        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
+                        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzPfnfJ7yiKYqHyVIJ9hQ0I7Ejo4FsU6AhcXD2wLqsl43Xg6pQiMOp8MsmEvsopDMvU/exec';
                         const cleanTripId = (tripId && !String(tripId).startsWith('gr_')) ? String(tripId) : '';
                         
                         const sheetData = {
