@@ -8,7 +8,7 @@ with open("admin-crm.html", "r", encoding="utf-8") as f:
 
 print("File length:", len(content))
 
-keywords = ["expenses", "vault", "settle", "drivers", "تصفية", "تسوية", "قبض"]
+keywords = ["edit", "update", "تعديل", "تعديل الرحلة", "تعديل الحجز"]
 for kw in keywords:
     matches = [m.start() for m in re.finditer(kw, content, re.IGNORECASE)]
     print(f"Keyword '{kw}' found {len(matches)} times")

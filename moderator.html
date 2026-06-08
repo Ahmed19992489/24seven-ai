@@ -2069,7 +2069,10 @@
                 if (r.sql_server_id && existingTripIds.has(String(r.sql_server_id))) {
                     return false;
                 }
-                if (r.status === 'تم الترحيل' || r.status === 'driver_assigned') {
+                if (r.modified_driver_name && r.modified_driver_name.trim() !== '' && r.modified_driver_name !== '--') {
+                    return false;
+                }
+                if (r.trip_status === 'مكتملة' || r.trip_status === 'ملغاة') {
                     return false;
                 }
                 return true;
@@ -2379,7 +2382,10 @@
                 if (r.sql_server_id && existingTripIds.has(String(r.sql_server_id))) {
                     return false;
                 }
-                if (r.status === 'تم الترحيل' || r.status === 'driver_assigned') {
+                if (r.modified_driver_name && r.modified_driver_name.trim() !== '' && r.modified_driver_name !== '--') {
+                    return false;
+                }
+                if (r.trip_status === 'مكتملة' || r.trip_status === 'ملغاة') {
                     return false;
                 }
                 return true;
