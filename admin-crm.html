@@ -1815,26 +1815,18 @@
                     }
                 }
 
-                // التحقق من طريقة الدفع للرحلة
-                // admin_notes لرحلات trips و notes لأوردارات google_reservations
+                // التحقق من طريقة الدفع
+                // الأصل كل الأوردرات كاش - يختفي الزر فقط إذا كان الأوردر محوّل آجل مسبقاً
                 let payMethodBadge = '';
                 const notesText = t.admin_notes || '';
                 const resNotesText = t.notes || '';
-                const isCash = (t.payment_method === 'cash') || 
-                               notesText.toLowerCase().includes('cash') || 
-                               notesText.includes('كاش') || 
-                               notesText.includes('💵') ||
-                               notesText.includes('نوع التحصيل: كاش') ||
-                               resNotesText.toLowerCase().includes('cash') ||
-                               resNotesText.includes('كاش') ||
-                               resNotesText.includes('💵');
-                const isPostpaid = (t.payment_method === 'postpaid') ||
-                                   notesText.toLowerCase().includes('postpaid') ||
-                                   notesText.includes('آجل') || notesText.includes('اجل') ||
-                                   resNotesText.toLowerCase().includes('postpaid') ||
-                                   resNotesText.includes('آجل') || resNotesText.includes('اجل');
-                if (isCash && !isPostpaid) {
-                    // الدالة تختلف حسب نوع الأوردر (trips table أو google_reservations)
+                const allPayText = (notesText + ' ' + resNotesText).toLowerCase();
+                const isAlreadyPostpaid = (t.payment_method === 'postpaid') ||
+                                          allPayText.includes('postpaid') ||
+                                          allPayText.includes('آجل') ||
+                                          allPayText.includes('اجل') ||
+                                          allPayText.includes('للشركة');
+                if (!isAlreadyPostpaid) {
                     const convertFn = t.is_google_res 
                         ? `changeTripToPostpaidGR('${t.google_res_id || t.id}')` 
                         : `changeTripToPostpaid('${t.id}')`;

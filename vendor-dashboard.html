@@ -974,18 +974,12 @@
                 else if (gr && gr.trip_type) tripTypeLabel = gr.trip_type;
 
 
-                // طريقة الدفع
-                const isCash = (gr && (gr.payment_method === 'cash' || String(gr.payment_method).includes('كاش'))) || 
-                               notesText.toLowerCase().includes('cash') || 
-                               notesText.includes('كاش') || 
-                               notesText.includes('💵') ||
-                               notesText.includes('نوع التحصيل: كاش');
-                const isPostpaid = (gr && (gr.payment_method === 'postpaid' || String(gr.payment_method).includes('أجل') || String(gr.payment_method).includes('اجل'))) || 
-                                   notesText.toLowerCase().includes('postpaid') || 
-                                   notesText.includes('أجل') || 
-                                   notesText.includes('اجل') || 
-                                   notesText.includes('نوع التحصيل: postpaid') ||
-                                   notesText.includes('نوع التحصيل: أجل');
+                // الأصل كل الأوردرات كاش - يتغير فقط لو كان محوّل آجل صراحةً
+                const allPayNotes = (notesText + ' ' + (t.payment_method || '') + ' ' + (gr?.payment_method || '') + ' ' + (gr?.notes || '')).toLowerCase();
+                const isPostpaid = allPayNotes.includes('postpaid') ||
+                                   allPayNotes.includes('آجل') ||
+                                   allPayNotes.includes('اجل') ||
+                                   allPayNotes.includes('للشركة');
 
                 let payBadge = '';
                 if (isPostpaid) {

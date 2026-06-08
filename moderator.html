@@ -2138,18 +2138,15 @@
                     }
                 }
 
-                // التحقق من طريقة الدفع للرحلة - يعمل لجميع الأوردرات (trips + google_reservations)
+                // الأصل كل الأوردرات كاش - الزر يظهر دائماً ما لم يكن الأوردر آجل مسبقاً
                 let payMethodBadge = '';
                 const modNotesText = t.admin_notes || t.notes || '';
-                const modIsCash = (t.payment_method === 'cash') || 
-                                  modNotesText.toLowerCase().includes('cash') || 
-                                  modNotesText.includes('كاش') || 
-                                  modNotesText.includes('💵') ||
-                                  modNotesText.includes('نوع التحصيل: كاش');
-                const modIsPostpaid = (t.payment_method === 'postpaid') ||
-                                     modNotesText.toLowerCase().includes('postpaid') ||
-                                     modNotesText.includes('آجل') || modNotesText.includes('اجل');
-                if (modIsCash && !modIsPostpaid) {
+                const modAllText = (modNotesText + ' ' + (t.payment_method || '')).toLowerCase();
+                const modIsAlreadyPostpaid = modAllText.includes('postpaid') ||
+                                             modAllText.includes('آجل') ||
+                                             modAllText.includes('اجل') ||
+                                             modAllText.includes('للشركة');
+                if (!modIsAlreadyPostpaid) {
                     const convertFn = t.is_real_trip
                         ? `changeTripToPostpaid('${t.id}')`
                         : `changeTripToPostpaidGR('${t.id}')`;
