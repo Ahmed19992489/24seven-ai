@@ -1914,6 +1914,78 @@
         // --- Trip Management Logic ---
         let allTrips = []; // Cache for local filtering
 
+        function mapTripObject(t) {
+            let tDate = t.trip_date || '';
+            if (!tDate && t.admin_notes) {
+                const dMatch = t.admin_notes.match(/(?:التاريخ:|📅)\s*([0-9\-/\\]+)/);
+                if (dMatch) tDate = dMatch[1].trim();
+            }
+            if (!tDate && t.created_at) {
+                const localDate = new Date(t.created_at);
+                if (!isNaN(localDate.getTime())) {
+                    const y = localDate.getFullYear();
+                    const m = String(localDate.getMonth() + 1).padStart(2, '0');
+                    const d = String(localDate.getDate()).padStart(2, '0');
+                    tDate = `${y}-${m}-${d}`;
+                }
+            }
+            if (!tDate) {
+                tDate = t.created_at ? t.created_at.split('T')[0] : '';
+            }
+
+            // توحيد تنسيق التاريخ
+            if (tDate) {
+                tDate = tDate.replace(/\//g, '-');
+                const parts = tDate.split('-');
+                if (parts.length === 3) {
+                    if (parts[0].length === 4) {
+                        const y = parts[0];
+                        const m = parts[1].padStart(2, '0');
+                        const d = parts[2].padStart(2, '0');
+                        tDate = `${y}-${m}-${d}`;
+                    } else if (parts[2].length === 4) {
+                        const d = parts[0].padStart(2, '0');
+                        const m = parts[1].padStart(2, '0');
+                        const y = parts[2];
+                        tDate = `${y}-${m}-${d}`;
+                    }
+                }
+            }
+
+            // استخراج الوقت
+            let tTime = t.trip_time || '';
+            if (!tTime && t.admin_notes) {
+                const timeFromNotes = t.admin_notes.match(/(?:الوقت:|📅\s*[0-9\-/\\]+\s*[-|]??\s*)\s*([0-9:]+\s*[\u0623\u0625\u0627]?[مو]?)/);
+                if (timeFromNotes) tTime = timeFromNotes[1].trim();
+            }
+            if (!tTime) {
+                tTime = t.created_at?.split('T')?.[1]?.substring(0, 5) || '--:--';
+            }
+
+            // استخراج الركاب والشنط
+            const tPassengers = (t.passengers !== null && t.passengers !== undefined && t.passengers !== '') ? t.passengers
+                : (t.admin_notes?.match(/👥\s*([0-9]+)\s*أفراد/)?.[1] || t.admin_notes?.match(/ركاب:\s*([0-9]+)/)?.[1] || 1);
+            const tBags = (t.bags !== null && t.bags !== undefined && t.bags !== '') ? t.bags
+                : (t.admin_notes?.match(/🧳\s*([0-9]+)\s*شنط/)?.[1] || t.admin_notes?.match(/شنط:\s*([0-9]+)/)?.[1] || 0);
+
+            // استخراج اسم العميل
+            let tClientName = t.manual_client_name || 'عميل ويب';
+            if (t.admin_notes) {
+                const editedName = t.admin_notes.match(/العميل:\s*([^\n\r|(]+)/);
+                if (editedName && editedName[1].trim() && !t.admin_notes.includes('حجز شيت')) {
+                    tClientName = editedName[1].trim();
+                }
+            }
+
+            return {
+                tDate,
+                tTime,
+                tPassengers,
+                tBags,
+                tClientName
+            };
+        }
+
         async function loadTripsForDate(dateStr) {
             const [reservationsResult, tripsResult] = await Promise.all([
                 sbClient.from('google_reservations')
@@ -1938,26 +2010,7 @@
 
             // تحويل الرحلات الفعلية لتوافق الموديل
             const mappedTrips = trips.map(t => {
-                let tDate = '';
-                if (t.admin_notes) {
-                    const dMatch = t.admin_notes.match(/📅\s*([0-9\-/\\]+)/);
-                    if (dMatch) tDate = dMatch[1].trim();
-                }
-                if (!tDate && t.created_at) {
-                    tDate = t.created_at.split('T')[0];
-                }
-
-                // توحيد تنسيق التاريخ (مثال: استبدال الشرطة المائلة)
-                if (tDate) {
-                    tDate = tDate.replace(/\//g, '-');
-                    const parts = tDate.split('-');
-                    if (parts.length === 3) {
-                        const y = parts[0];
-                        const m = parts[1].padStart(2, '0');
-                        const d = parts[2].padStart(2, '0');
-                        tDate = `${y}-${m}-${d}`;
-                    }
-                }
+                const parsed = mapTripObject(t);
 
                 // مطابقة قرار العميل
                 let matchedRes = resBySqlIdMap[String(t.id)] || null;
@@ -1970,20 +2023,20 @@
 
                 return {
                     id: t.id,
-                    customer_name: t.manual_client_name || 'عميل ويب',
+                    customer_name: parsed.tClientName,
                     customer_phone: t.client_phone || '-',
                     pickup_location: t.pickup_location,
                     dropoff_location: t.dropoff_location,
                     pickup_address: t.pickup_location || '',
                     dropoff_address: t.dropoff_location || '',
-                    trip_date: tDate,
-                    trip_time: t.admin_notes?.match(/📅\s*[0-9\-/\\]+\s*-\s*([0-9:]+\s*[أإا]?[مو]?)/)?.[1] || t.created_at?.split('T')?.[1]?.substring(0, 5) || '--:--',
+                    trip_date: parsed.tDate,
+                    trip_time: parsed.tTime,
                     trip_type: t.admin_notes?.includes('VIP') ? 'ذهاب فقط - VIP' : 'ذهاب فقط',
                     cost: t.estimated_price || 0,
                     status: t.status,
                     car_type: t.car_type || 'سيدان',
-                    passengers: t.admin_notes?.match(/👥\s*([0-9]+)\s*أفراد/)?.[1] || 1,
-                    bags: t.admin_notes?.match(/🧳\s*([0-9]+)\s*شنط/)?.[1] || 0,
+                    passengers: parsed.tPassengers,
+                    bags: parsed.tBags,
                     is_real_trip: true,
                     original_trip: t,
                     google_res_id: matchedRes ? matchedRes.id : null,
@@ -2277,14 +2330,7 @@
 
             // تحويل الرحلات الفعلية لتوافق الموديل
             const mappedTrips = trips.map(t => {
-                let tDate = t.trip_date || '';
-                if (!tDate && t.admin_notes) {
-                    const dMatch = t.admin_notes.match(/📅\s*([0-9\-/\\]+)/);
-                    if (dMatch) tDate = dMatch[1].trim();
-                }
-                if (!tDate && t.created_at) {
-                    tDate = t.created_at.split('T')[0];
-                }
+                const parsed = mapTripObject(t);
 
                 // مطابقة قرار العميل
                 let matchedRes = resByIdMap[t.google_res_id] || resBySqlIdMap[String(t.id)] || null;
@@ -2295,46 +2341,22 @@
                     }
                 }
 
-                // استخراج الوقت: t.trip_time أولاً (يُحدَّث عند التعديل)
-                let tTime = t.trip_time || '';
-                if (!tTime) {
-                    const timeFromNotes = t.admin_notes?.match(/الوقت:\s*([0-9:]+\s*[\u0623\u0625\u0627]?[مو]?)/)
-                                      || t.admin_notes?.match(/"📅"\s*[0-9\-/\\]+\s*[-:]\s*([0-9:]+\s*[\u0623\u0625\u0627]?[مو]?)/);
-                    if (timeFromNotes) tTime = timeFromNotes[1];
-                    else tTime = t.created_at?.split('T')?.[1]?.substring(0, 5) || '--:--';
-                }
-
-                // استخراج الركاب والشنط: أعمدة trips أولاً
-                const tPassengers = (t.passengers !== null && t.passengers !== undefined && t.passengers !== '') ? t.passengers
-                    : (t.admin_notes?.match(/👥\s*([0-9]+)\s*أفراد/)?.[1] || t.admin_notes?.match(/ركاب:\s*([0-9]+)/)?.[1] || 1);
-                const tBags = (t.bags !== null && t.bags !== undefined && t.bags !== '') ? t.bags
-                    : (t.admin_notes?.match(/🧳\s*([0-9]+)\s*شنط/)?.[1] || t.admin_notes?.match(/شنط:\s*([0-9]+)/)?.[1] || 0);
-
-                // استخراج اسم العميل من admin_notes إذا كان محدَّثاً
-                let tClientName = t.manual_client_name || 'عميل ويب';
-                if (t.admin_notes) {
-                    const editedName = t.admin_notes.match(/العميل:\s*([^\n\r|(]+)/);
-                    if (editedName && editedName[1].trim() && !t.admin_notes.includes('حجز شيت')) {
-                        tClientName = editedName[1].trim();
-                    }
-                }
-
                 return {
                     id: t.id,
-                    customer_name: tClientName,
+                    customer_name: parsed.tClientName,
                     customer_phone: t.client_phone || '-',
                     pickup_location: t.pickup_location,
                     dropoff_location: t.dropoff_location,
                     pickup_address: t.pickup_location || '',
                     dropoff_address: t.dropoff_location || '',
-                    trip_date: tDate,
-                    trip_time: tTime,
+                    trip_date: parsed.tDate,
+                    trip_time: parsed.tTime,
                     trip_type: t.admin_notes?.includes('VIP') ? 'ذهاب فقط - VIP' : 'ذهاب فقط',
                     cost: t.estimated_price || 0,
                     status: t.status,
                     car_type: t.car_type || 'سيدان',
-                    passengers: tPassengers,
-                    bags: tBags,
+                    passengers: parsed.tPassengers,
+                    bags: parsed.tBags,
                     is_real_trip: true,
                     original_trip: t,
                     google_res_id: matchedRes ? matchedRes.id : null,
@@ -4102,32 +4124,25 @@ ${contextData}
                                 .eq('id', trip.id)
                                 .single();
                             if (fullTrip) {
-                                let tDate = fullTrip.trip_date || '';
-                                if (!tDate && fullTrip.admin_notes) {
-                                    const dMatch = fullTrip.admin_notes.match(/📅\s*([0-9\-/\\]+)/);
-                                    if (dMatch) tDate = dMatch[1].trim();
-                                }
-                                if (!tDate && fullTrip.created_at) {
-                                    tDate = fullTrip.created_at.split('T')[0];
-                                }
+                                const parsed = mapTripObject(fullTrip);
                                 
                                 const oldItem = allTrips[index];
                                 allTrips[index] = {
                                     id: fullTrip.id,
-                                    customer_name: fullTrip.manual_client_name || 'عميل ويب',
+                                    customer_name: parsed.tClientName,
                                     customer_phone: fullTrip.client_phone || '-',
                                     pickup_location: fullTrip.pickup_location,
                                     dropoff_location: fullTrip.dropoff_location,
                                     pickup_address: fullTrip.pickup_location || '',
                                     dropoff_address: fullTrip.dropoff_location || '',
-                                    trip_date: tDate,
-                                    trip_time: fullTrip.admin_notes?.match(/📅\s*[0-9\-/\\]+\s*-\s*([0-9:]+\s*[أإا]?[مو]?)/)?.[1] || fullTrip.created_at?.split('T')?.[1]?.substring(0, 5) || '--:--',
+                                    trip_date: parsed.tDate,
+                                    trip_time: parsed.tTime,
                                     trip_type: fullTrip.admin_notes?.includes('VIP') ? 'ذهاب فقط - VIP' : 'ذهاب فقط',
                                     cost: fullTrip.estimated_price || 0,
                                     status: fullTrip.status,
                                     car_type: fullTrip.car_type || 'سيدان',
-                                    passengers: fullTrip.admin_notes?.match(/👥\s*([0-9]+)\s*أفراد/)?.[1] || 1,
-                                    bags: fullTrip.admin_notes?.match(/🧳\s*([0-9]+)\s*شنط/)?.[1] || 0,
+                                    passengers: parsed.tPassengers,
+                                    bags: parsed.tBags,
                                     is_real_trip: true,
                                     original_trip: fullTrip,
                                     google_res_id: oldItem.google_res_id,

@@ -1704,7 +1704,7 @@
                 if (fDate || tDate) {
                     let extractedDateStr = '';
                     if (t.admin_notes) {
-                        const dMatch = t.admin_notes.match(/📅\s*([0-9\-/\\]+)/);
+                        const dMatch = t.admin_notes.match(/(?:التاريخ:|📅)\s*([0-9\-/\\]+)/);
                         if (dMatch) extractedDateStr = dMatch[1].trim();
                     }
                     
@@ -2558,10 +2558,13 @@
                     let tDate = t.trip_date || '--';
                     let tTime = t.trip_time || '--';
                     if (t.admin_notes && (tDate === '--' || tTime === '--')) {
-                        const dMatch = t.admin_notes.match(/📅\s*([0-9-/\\]+)(?:\s*[-:]\s*([0-9:amp\s]+))?/i);
+                        const dMatch = t.admin_notes.match(/(?:التاريخ:|📅)\s*([0-9\-/\\]+)/);
                         if (dMatch) {
                             tDate = dMatch[1].trim();
-                            if (dMatch[2]) tTime = dMatch[2].trim();
+                        }
+                        const tMatch = t.admin_notes.match(/(?:الوقت:|📅\s*[0-9\-/\\]+\s*[-:]\s*)([0-9:amp\s\u0623\u0625\u0627\u0645\u0648]+)/i);
+                        if (tMatch) {
+                            tTime = tMatch[1].trim();
                         }
                     }
                     const driverName = t.drivers ? t.drivers.name : '-';
