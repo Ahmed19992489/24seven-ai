@@ -13,6 +13,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- EmailJS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
     <style>
         body {
@@ -478,6 +480,44 @@
         let currentTripsFilter = 'today';
         
         let vendorProfileId = null;
+
+        // تهيئة EmailJS
+        (function () { emailjs.init('KkVNrxD2AIrmD-BxM'); })();
+
+        async function sendTripEmail(tripId, notifTitle, notifMessage) {
+            try {
+                const { data: trip } = await sb.from('trips').select('*, drivers:drivers!fk_trips_driver(*), cars:cars!fk_trips_car(*)').eq('id', tripId).single();
+                if (!trip) return;
+
+                let clientEmail = '', clientName = 'عزيزنا العميل';
+                if (trip.user_id) {
+                    const { data: profile } = await sb.from('profiles').select('full_name, email').eq('id', trip.user_id).single();
+                    if (profile) { clientName = profile.full_name || clientName; if (profile.email) clientEmail = profile.email; }
+                }
+                if (!clientEmail && trip.client_email) clientEmail = trip.client_email;
+                if (trip.manual_client_name) clientName = trip.manual_client_name;
+                if (!clientEmail) { const m = (trip.admin_notes || '').match(/[\w.-]+@[\w.-]+\.\w+/); if (m) clientEmail = m[0]; }
+
+                // تجاهل الإيميلات الوهمية لمنع خطأ Address not found
+                if (!clientEmail || clientEmail.includes('@24seven-client.app')) return;
+
+                const notes = trip.admin_notes || '';
+                let tripDate = '', tripTime = '';
+                const dm = notes.match(/📅\s*(.*?)\s*-\s*(.*?)[\n|$]/);
+                if (dm) { tripDate = dm[1].trim(); tripTime = dm[2].trim(); }
+
+                await emailjs.send('service_kq139v5', 'template_9q7kxsc', {
+                    to_email: clientEmail, client_name: clientName,
+                    notification_title: notifTitle, notification_message: notifMessage,
+                    trip_from: (trip.pickup_location || '').split(',')[0],
+                    trip_to: (trip.dropoff_location || '').split(',')[0],
+                    trip_date: tripDate || new Date().toLocaleDateString('ar-EG'),
+                    trip_time: tripTime || '--', trip_price: trip.estimated_price || '0',
+                    captain_name: trip.drivers?.name || 'الكابتن',
+                    car_model: trip.cars?.model || '--', plate_number: trip.cars?.plate_number || '--'
+                });
+            } catch (err) { console.error('Email error:', err); }
+        }
 
         async function ensureVendorProfile() {
             if (!currentVendor) return;
@@ -1043,6 +1083,16 @@
                     </button>
                 `;
 
+                // زر تم التنفيذ (إنهاء)
+                let completeBtn = '';
+                if (t.status === 'driver_assigned' || t.status === 'trip_ended') {
+                    completeBtn = `
+                        <button onclick="completeTripFromVendor('${t.id}', ${price}, ${commission}, ${isPostpaid})" class="bg-green-600 hover:bg-green-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition flex items-center justify-center gap-1">
+                            <i class="fas fa-check-circle"></i> تم التنفيذ (إنهاء)
+                        </button>
+                    `;
+                }
+
                 // اللون حسب الحالة
                 let statusText = t.status;
                 let statusColor = 'bg-slate-700 text-slate-300';
@@ -1102,6 +1152,7 @@
                         </div>
                         <div class="flex flex-row md:flex-col justify-end gap-3 items-stretch md:w-48 border-t md:border-t-0 md:border-r border-slate-800 pt-3 md:pt-0 md:pr-4">
                             ${assignBtn}
+                            ${completeBtn}
                             ${chatBtn}
                         </div>
                     </div>`;
@@ -1276,6 +1327,78 @@
 
             } catch(e) {
                 alert("❌ خطأ أثناء تحويل الرحلة لآجل: " + e.message);
+            }
+        }
+
+        async function completeTripFromVendor(tripId, price, commission, isPostpaid) {
+            const payTypeLabel = isPostpaid ? 'أجل' : 'كاش';
+            const msg = `هل أنت متأكد من تأكيد تنفيذ الرحلة #${tripId} وإنهاء حسابها يدوياً؟\n\n` +
+                        `💰 السعر: ${price} EGP\n` +
+                        `🎫 العمولة: ${commission} EGP\n` +
+                        `💳 طريقة الدفع: ${payTypeLabel}\n\n` +
+                        `سيتم إقفال حساب الرحلة وترحيل الحركة المالية فوراً وإرسال إيميل التقييم للعميل.`;
+            
+            if (!confirm(msg)) return;
+
+            try {
+                // 1. تحديث حالة الرحلة في قاعدة البيانات إلى مكتملة
+                const { error: tErr } = await sb.from('trips').update({
+                    status: 'completed',
+                    stage_status: 'trip_ended',
+                    final_price: price
+                }).eq('id', tripId);
+
+                if (tErr) throw tErr;
+
+                // 2. التحقق من وجود حركة مالية سابقة وحذفها لمنع التكرار
+                const { error: delErr } = await sb.from('vendor_transactions')
+                    .delete()
+                    .eq('trip_id', tripId);
+
+                if (delErr) throw delErr;
+
+                // 3. إدراج الحركة المالية المناسبة للمكتب الخارجي
+                if (!isPostpaid) {
+                    // كاش: العميل دفع كاش للسائق الخارجي، المكتب مدين لنا بالعمولة (قيمة سالبة)
+                    const { error: insErr } = await sb.from('vendor_transactions').insert([{
+                        vendor_id: currentVendor.id,
+                        trip_id: tripId,
+                        transaction_type: 'commission_deduction',
+                        amount: -commission,
+                        description: `خصم عمولة - رحلة كاش #${tripId} (إنهاء يدوي من المكتب)`
+                    }]);
+                    if (insErr) throw insErr;
+                } else {
+                    // أجل: العميل دفع للمنصة، نحن مدينون للمكتب بباقي الحساب (سعر الرحلة - العمولة)
+                    const payout = price - commission;
+                    const { error: insErr } = await sb.from('vendor_transactions').insert([{
+                        vendor_id: currentVendor.id,
+                        trip_id: tripId,
+                        transaction_type: 'deferred_credit',
+                        amount: payout,
+                        description: `مستحق رحلة أجل #${tripId} (سعر: ${price} - عمولة: ${commission})`
+                    }]);
+                    if (insErr) throw insErr;
+                }
+
+                // 4. إرسال إيميل التقييم للعميل عبر EmailJS
+                await sendTripEmail(tripId, '✅ رحلتك اكتملت', 'نتمنى أنك استمتعت برحلتك معنا. شكراً لاستخدامك 24Seven!');
+
+                // 5. إرسال رسالة نظام للدردشة المشتركة
+                await sb.from('chat_messages').insert([{
+                    trip_id: tripId,
+                    sender_role: 'system',
+                    sender_id: currentVendor.id,
+                    sender_name: 'النظام',
+                    message: `🏁 قام المكتب المنفذ بتأكيد تنفيذ الرحلة وإنهاء الحساب يدوياً وإرسال تقييم العميل.`,
+                    message_type: 'system'
+                }]);
+
+                alert("✅ تم إنهاء الرحلة وتسوية الحساب بنجاح وإرسال التقييم للعميل!");
+                loadDashboardData();
+
+            } catch (e) {
+                alert("❌ خطأ أثناء إنهاء الرحلة: " + e.message);
             }
         }
 
