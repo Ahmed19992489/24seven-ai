@@ -2138,23 +2138,28 @@
                     }
                 }
 
-                // التحقق من طريقة الدفع للرحلة
+                // التحقق من طريقة الدفع للرحلة - يعمل لجميع الأوردرات (trips + google_reservations)
                 let payMethodBadge = '';
-                if (t.is_real_trip) {
-                    const notesText = t.admin_notes || '';
-                    const isCash = (t.payment_method === 'cash') || 
-                                   notesText.toLowerCase().includes('cash') || 
-                                   notesText.includes('كاش') || 
-                                   notesText.includes('💵') ||
-                                   notesText.includes('نوع التحصيل: كاش');
-                    if (isCash) {
-                        payMethodBadge = `
-                            <button onclick="changeTripToPostpaid('${t.id}')" class="text-amber-600 hover:text-amber-800 text-[10px] font-bold border border-amber-200 rounded px-1.5 py-0.5 bg-amber-50/50 hover:bg-amber-50 transition cursor-pointer mt-1 inline-flex items-center gap-1" title="تحويل طريقة الدفع لآجل (تحويل للشركة)">
-                                <i class="fas fa-exchange-alt"></i> تحويل لآجل
-                            </button>
-                        `;
-                    }
+                const modNotesText = t.admin_notes || t.notes || '';
+                const modIsCash = (t.payment_method === 'cash') || 
+                                  modNotesText.toLowerCase().includes('cash') || 
+                                  modNotesText.includes('كاش') || 
+                                  modNotesText.includes('💵') ||
+                                  modNotesText.includes('نوع التحصيل: كاش');
+                const modIsPostpaid = (t.payment_method === 'postpaid') ||
+                                     modNotesText.toLowerCase().includes('postpaid') ||
+                                     modNotesText.includes('آجل') || modNotesText.includes('اجل');
+                if (modIsCash && !modIsPostpaid) {
+                    const convertFn = t.is_real_trip
+                        ? `changeTripToPostpaid('${t.id}')`
+                        : `changeTripToPostpaidGR('${t.id}')`;
+                    payMethodBadge = `
+                        <button onclick="${convertFn}" class="text-amber-600 hover:text-amber-800 text-[10px] font-bold border border-amber-200 rounded px-1.5 py-0.5 bg-amber-50/50 hover:bg-amber-50 transition cursor-pointer mt-1 inline-flex items-center gap-1" title="تحويل طريقة الدفع لآجل (تحويل للشركة)">
+                            <i class="fas fa-exchange-alt"></i> تحويل لآجل
+                        </button>
+                    `;
                 }
+
 
                 const resId = t.is_real_trip ? t.google_res_id : t.id;
                 const decisionHtml = resId ? `
@@ -3359,6 +3364,42 @@ ${contextData}
 
             } catch(e) {
                 alert("❌ خطأ أثناء تحويل الرحلة لآجل: " + e.message);
+            }
+        }
+
+        // تحويل أوردر من google_reservations (أوردرات الشيت) لآجل - للمشرف
+        async function changeTripToPostpaidGR(resId) {
+            if (!confirm("هل أنت متأكد من تحويل طريقة الدفع لهذا الحجز إلى أجل؟")) return;
+
+            try {
+                const { data: res, error: resErr } = await sbClient.from('google_reservations')
+                    .select('*').eq('id', resId).maybeSingle();
+
+                if (resErr) throw resErr;
+                if (!res) { alert("الحجز غير موجود!"); return; }
+
+                let updatedNotes = (res.notes || '').replace(/كاش/g, 'أجل').replace(/cash/gi, 'postpaid').replace(/💵/g, '💳');
+                if (!updatedNotes.includes('أجل') && !updatedNotes.includes('postpaid')) {
+                    updatedNotes += ' | نوع التحصيل: أجل';
+                }
+
+                const { error: grUpdateErr } = await sbClient.from('google_reservations')
+                    .update({ payment_method: 'postpaid', notes: updatedNotes })
+                    .eq('id', resId);
+                if (grUpdateErr) throw grUpdateErr;
+
+                alert("✅ تم تحويل الحجز لآجل بنجاح!");
+
+                // إعادة تحميل الجدول
+                const customDate = document.getElementById('custom-date-filter')?.value;
+                if (customDate) {
+                    await filterByCustomDate(customDate);
+                } else {
+                    const isTomActive = document.getElementById('filter-tomorrow')?.classList.contains('bg-teal-600');
+                    await filterTrips(isTomActive ? 'tomorrow' : 'today');
+                }
+            } catch(e) {
+                alert("❌ خطأ أثناء تحويل الحجز لآجل: " + e.message);
             }
         }
 

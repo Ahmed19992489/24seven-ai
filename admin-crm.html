@@ -1816,16 +1816,30 @@
                 }
 
                 // التحقق من طريقة الدفع للرحلة
+                // admin_notes لرحلات trips و notes لأوردارات google_reservations
                 let payMethodBadge = '';
                 const notesText = t.admin_notes || '';
+                const resNotesText = t.notes || '';
                 const isCash = (t.payment_method === 'cash') || 
                                notesText.toLowerCase().includes('cash') || 
                                notesText.includes('كاش') || 
                                notesText.includes('💵') ||
-                               notesText.includes('نوع التحصيل: كاش');
-                if (isCash) {
+                               notesText.includes('نوع التحصيل: كاش') ||
+                               resNotesText.toLowerCase().includes('cash') ||
+                               resNotesText.includes('كاش') ||
+                               resNotesText.includes('💵');
+                const isPostpaid = (t.payment_method === 'postpaid') ||
+                                   notesText.toLowerCase().includes('postpaid') ||
+                                   notesText.includes('آجل') || notesText.includes('اجل') ||
+                                   resNotesText.toLowerCase().includes('postpaid') ||
+                                   resNotesText.includes('آجل') || resNotesText.includes('اجل');
+                if (isCash && !isPostpaid) {
+                    // الدالة تختلف حسب نوع الأوردر (trips table أو google_reservations)
+                    const convertFn = t.is_google_res 
+                        ? `changeTripToPostpaidGR('${t.google_res_id || t.id}')` 
+                        : `changeTripToPostpaid('${t.id}')`;
                     payMethodBadge = `
-                        <button onclick="changeTripToPostpaid('${t.id}')" class="text-amber-600 hover:text-amber-800 text-[10px] font-bold border border-amber-200 rounded px-1.5 py-0.5 bg-amber-50/50 hover:bg-amber-50 transition cursor-pointer mt-1 inline-flex items-center gap-1" title="تحويل طريقة الدفع لآجل (تحويل للشركة)">
+                        <button onclick="${convertFn}" class="text-amber-600 hover:text-amber-800 text-[10px] font-bold border border-amber-200 rounded px-1.5 py-0.5 bg-amber-50/50 hover:bg-amber-50 transition cursor-pointer mt-1 inline-flex items-center gap-1" title="تحويل طريقة الدفع لآجل (تحويل للشركة)">
                             <i class="fas fa-exchange-alt"></i> تحويل لآجل
                         </button>
                     `;
@@ -3813,6 +3827,72 @@
 
             } catch(e) {
                 alert("❌ خطأ أثناء تحويل الرحلة لآجل: " + e.message);
+            }
+        }
+
+        // تحويل أوردر من google_reservations (أوردرات الشيت) لآجل
+        async function changeTripToPostpaidGR(resId) {
+            if (!confirm("هل أنت متأكد من تحويل طريقة الدفع لهذا الحجز إلى أجل؟")) return;
+
+            try {
+                // جلب بيانات الحجز
+                const { data: res, error: resErr } = await sbClient.from('google_reservations')
+                    .select('*')
+                    .eq('id', resId)
+                    .maybeSingle();
+
+                if (resErr) throw resErr;
+                if (!res) {
+                    alert("الحجز غير موجود في قاعدة البيانات!");
+                    return;
+                }
+
+                // تحديث payment_method في google_reservations
+                let updatedNotes = (res.notes || '').replace(/كاش/g, 'أجل').replace(/cash/gi, 'postpaid').replace(/💵/g, '💳');
+                if (!updatedNotes.includes('أجل') && !updatedNotes.includes('postpaid')) {
+                    updatedNotes += ' | نوع التحصيل: أجل';
+                }
+
+                const { error: grUpdateErr } = await sbClient.from('google_reservations')
+                    .update({ payment_method: 'postpaid', notes: updatedNotes })
+                    .eq('id', resId);
+
+                if (grUpdateErr) throw grUpdateErr;
+
+                // تحديث رحلة trips المرتبطة إن وجدت
+                if (res.sql_server_id) {
+                    const { data: linkedTrip } = await sbClient.from('trips').select('*').eq('id', res.sql_server_id).maybeSingle();
+                    if (linkedTrip) {
+                        let tNotes = linkedTrip.admin_notes || '';
+                        tNotes = tNotes.replace(/كاش/g, 'أجل').replace(/cash/gi, 'postpaid').replace(/💵/g, '💳');
+                        if (!tNotes.includes('أجل')) tNotes += '\nنوع التحصيل: أجل';
+                        tNotes += '\n(تم تحويل طريقة الدفع لآجل)';
+                        await sbClient.from('trips').update({ admin_notes: tNotes }).eq('id', res.sql_server_id);
+
+                        // تحديث الحركات المالية إن كانت الرحلة منتهية
+                        if (linkedTrip.status === 'completed' || linkedTrip.status === 'trip_ended') {
+                            await sbClient.from('vendor_transactions').delete().eq('trip_id', linkedTrip.id);
+                            const price = linkedTrip.estimated_price || 0;
+                            const commission = linkedTrip.our_commission || 0;
+                            const payout = price - commission;
+                            await sbClient.from('vendor_transactions').insert([{
+                                vendor_id: linkedTrip.vendor_id,
+                                trip_id: linkedTrip.id,
+                                transaction_type: 'deferred_credit',
+                                amount: payout,
+                                description: `مستحق رحلة أجل #${linkedTrip.id} (سعر: ${price} - عمولة: ${commission})`
+                            }]);
+                        }
+                    }
+                }
+
+                alert("✅ تم تحويل الحجز لآجل بنجاح!");
+                if (typeof loadOperations === 'function') loadOperations();
+                if (typeof loadDashboard === 'function') loadDashboard();
+                if (typeof loadFinance === 'function') loadFinance();
+
+            } catch(e) {
+                alert("❌ خطأ أثناء تحويل الحجز لآجل: " + e.message);
             }
         }
         
