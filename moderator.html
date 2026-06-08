@@ -4190,6 +4190,20 @@ ${contextData}
                         }
                     }
                 })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'google_reservations' }, async (payload) => {
+                    // Reload list to display the newly updated/inserted google reservation
+                    const dateInput = document.getElementById('custom-date-filter');
+                    if (dateInput && dateInput.value) {
+                        filterByCustomDate(dateInput.value);
+                    } else {
+                        const filterTodayBtn = document.getElementById('filter-today');
+                        if (filterTodayBtn && filterTodayBtn.classList.contains('bg-teal-600')) {
+                            filterByDate('today');
+                        } else {
+                            filterByDate('tomorrow');
+                        }
+                    }
+                })
                 .subscribe();
         }
         setTimeout(setupModTripsRealtime, 2000);

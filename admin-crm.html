@@ -1489,6 +1489,13 @@
                         loadOperations();
                     }
                 })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'google_reservations' }, () => {
+                    // تحديث الجدول تلقائياً عند أي تغيير
+                    const opsPage = document.getElementById('page-operations');
+                    if (opsPage && !opsPage.classList.contains('hidden')) {
+                        loadOperations();
+                    }
+                })
                 .subscribe();
         }
 
