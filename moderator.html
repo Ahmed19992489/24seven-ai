@@ -1462,7 +1462,88 @@
         let activeVendors = [];
 
         function toggleAssignType() {
-            const type = document.getElement        async function confirmAssignment() {
+            const type = document.getElementById('assign-type-select').value;
+            if (type === 'internal') {
+                document.getElementById('assign-internal-group').classList.remove('hidden');
+                document.getElementById('assign-external-group').classList.add('hidden');
+            } else {
+                document.getElementById('assign-internal-group').classList.add('hidden');
+                document.getElementById('assign-external-group').classList.remove('hidden');
+            }
+        }
+
+        function updateVendorCommissionDefault() {
+            const vendorId = document.getElementById('assign-vendor-select').value;
+            const tripPrice = Number(document.getElementById('modal-trip-id').getAttribute('data-price')) || 0;
+            const vendor = activeVendors.find(x => x.id === vendorId);
+            
+            if (vendor) {
+                let defaultComm = 100;
+                if (vendor.commission_type === 'percentage') {
+                    defaultComm = Math.round((tripPrice * (vendor.commission_value || 0)) / 100);
+                } else {
+                    defaultComm = vendor.commission_value || 0;
+                }
+                document.getElementById('assign-vendor-commission').value = defaultComm;
+            } else {
+                document.getElementById('assign-vendor-commission').value = 100;
+            }
+        }
+
+        async function openAssignModal(tripId) {
+            currentAssignTripId = tripId;
+            document.getElementById('modal-trip-id').value = tripId;
+            document.getElementById('assign-modal').style.display = 'flex';
+            
+            // تهيئة الخيارات كتعيين داخلي بشكل افتراضي
+            document.getElementById('assign-type-select').value = 'internal';
+            document.getElementById('assign-internal-group').classList.remove('hidden');
+            document.getElementById('assign-external-group').classList.add('hidden');
+            document.getElementById('assign-note').value = '';
+            
+            const driverSelect = document.getElementById('assign-driver-select');
+            const carSelect = document.getElementById('assign-car-select');
+            const vendorSelect = document.getElementById('assign-vendor-select');
+            
+            driverSelect.innerHTML = '<option value="">جاري التحميل...</option>';
+            carSelect.innerHTML = '<option value="">جاري التحميل...</option>';
+            vendorSelect.innerHTML = '<option value="">جاري التحميل...</option>';
+
+            // جلب قيمة الرحلة المقدرة وحفظها
+            const trip = allTrips.find(x => x.id == tripId);
+            const tripPrice = trip ? Number(trip.cost) : 0;
+            document.getElementById('modal-trip-id').setAttribute('data-price', tripPrice);
+
+            try {
+                const [{ data: drivers }, { data: cars }, { data: vendors }] = await Promise.all([
+                    sbClient.from('drivers').select('id, name, phone').eq('is_external', false).order('name'),
+                    sbClient.from('cars').select('id, brand, plate_number').eq('is_external', false).order('brand'),
+                    sbClient.from('vendors').select('*').eq('status', 'active').order('name')
+                ]);
+
+                activeVendors = vendors || [];
+
+                driverSelect.innerHTML = '<option value="">اختر كابتن</option>' + 
+                    (drivers ? drivers.map(d => `<option value="${d.id}" data-name="${d.name}" data-phone="${d.phone}">${d.name} (${d.phone})</option>`).join('') : '');
+                
+                carSelect.innerHTML = '<option value="">اختر سيارة</option>' + 
+                    (cars ? cars.map(c => `<option value="${c.id}">${c.brand} - ${c.plate_number}</option>`).join('') : '');
+
+                vendorSelect.innerHTML = '<option value="">اختر مكتب خارجي</option>' + 
+                    (activeVendors ? activeVendors.map(v => `<option value="${v.id}">${v.name}</option>`).join('') : '');
+
+                updateVendorCommissionDefault();
+            } catch (e) {
+                console.error(e);
+                alert('خطأ في تحميل البيانات من السيرفر');
+            }
+        }
+
+        function closeAssignModal() {
+            document.getElementById('assign-modal').style.display = 'none';
+        }
+
+        async function confirmAssignment() {
             const assignType = document.getElementById('assign-type-select').value;
             const note = document.getElementById('assign-note').value;
             
