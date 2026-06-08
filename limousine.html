@@ -1068,6 +1068,34 @@
         </div>
     </div>
 
+    <!-- ربط رقم الهاتف Modal -->
+    <div id="phone-link-modal" class="fixed inset-0 bg-black/80 z-[250] flex items-center justify-center p-4" style="display:none">
+        <div class="bg-slate-800 rounded-2xl w-full max-w-md p-6 border border-slate-700 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i class="fas fa-mobile-alt text-4xl text-amber-400"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white">ربط رقم الهاتف</h3>
+                <p class="text-slate-400 text-sm mt-2">يرجى إدخال رقم هاتفك المحمول لتتمكن من عرض رحلاتك السابقة والحالية ومتابعتها.</p>
+            </div>
+            
+            <div class="mb-5">
+                <label class="text-sm font-bold text-white block mb-2">📞 رقم الهاتف المحمول (11 رقم، يبدأ بـ 01)</label>
+                <input type="tel" id="link-phone-input" placeholder="01xxxxxxxxx" 
+                       class="input-field text-center text-lg tracking-wider" 
+                       maxlength="11" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                <p id="phone-link-error" class="text-red-400 text-xs mt-2 hidden text-center"></p>
+            </div>
+
+            <button onclick="submitPhoneLink()" id="submit-phone-btn"
+                class="w-full bg-amber-500 text-slate-900 font-bold py-3 rounded-xl text-sm hover:bg-amber-400 transition flex items-center justify-center gap-2">
+                <i class="fas fa-link"></i> ربط الحساب وتحديث البيانات
+            </button>
+            <button onclick="closePhoneLinkModal()"
+                class="w-full text-slate-400 text-xs mt-3 hover:text-white transition">تخطي مؤقتاً</button>
+        </div>
+    </div>
+
     <!-- Sidebar Overlay -->
     <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 
@@ -1352,7 +1380,11 @@
                 document.getElementById('header-balance').innerText = p.wallet_balance;
                 document.getElementById('wallet-page-balance').innerText = p.wallet_balance;
                 document.getElementById('guest-name').value = displayName;
-                document.getElementById('guest-phone').value = p.phone;
+                document.getElementById('guest-phone').value = p.phone || '';
+
+                if (!p.phone || p.phone.trim() === '' || p.phone === 'None') {
+                    showPhoneLinkModal();
+                }
             }
         }
 
@@ -2727,6 +2759,59 @@
             alert('شكراً لتقييمك! ❤️');
             // إرسال إيميل شكر بعد التقييم
             sendClientEmail(tripId, '❤️ شكراً لتقييمك!', 'شكراً لوقتك في تقييم رحلتك معنا! رأيك يساعدنا نقدّم خدمة أفضل. يسعدنا خدمتك دائماً - احجز رحلتك القادمة الآن!');
+        }
+
+        // ==========================================
+        // وظائف ربط رقم الهاتف
+        // ==========================================
+        function showPhoneLinkModal() {
+            document.getElementById('phone-link-modal').style.display = 'flex';
+            document.getElementById('link-phone-input').value = '';
+            document.getElementById('phone-link-error').classList.add('hidden');
+        }
+
+        function closePhoneLinkModal() {
+            document.getElementById('phone-link-modal').style.display = 'none';
+        }
+
+        async function submitPhoneLink() {
+            const phoneInput = document.getElementById('link-phone-input').value.trim();
+            const errorEl = document.getElementById('phone-link-error');
+            const submitBtn = document.getElementById('submit-phone-btn');
+            
+            const rawPhone = normalizeEgyptianPhone(phoneInput);
+            const egPhoneRegex = /^01[0125][0-9]{8}$/;
+            if (!egPhoneRegex.test(rawPhone)) {
+                errorEl.innerText = "الرجاء إدخال رقم هاتف مصري صحيح مكون من 11 رقم ويبدأ بـ 01";
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            errorEl.classList.add('hidden');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+
+            try {
+                const { error } = await sb.from('profiles').update({ phone: rawPhone }).eq('id', user.id);
+                if (error) throw error;
+
+                document.getElementById('guest-phone').value = rawPhone;
+                closePhoneLinkModal();
+                
+                await loadData();
+                await loadTrips();
+                
+                if (typeof showNotifBanner === 'function') {
+                    showNotifBanner('✅ تم ربط رقم الهاتف بنجاح وتحميل رحلاتك!');
+                }
+            } catch (err) {
+                console.error("Error updating phone:", err);
+                errorEl.innerText = "حدث خطأ أثناء حفظ الرقم: " + (err.message || err);
+                errorEl.classList.remove('hidden');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-link"></i> ربط الحساب وتحديث البيانات';
+            }
         }
 
         // مراقبة تغيير حالة الرحلة لعرض الفيدباك والإشعارات
