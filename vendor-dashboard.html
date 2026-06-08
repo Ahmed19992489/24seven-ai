@@ -889,34 +889,46 @@
                         gr = cachedReservationsMap[`row_${rowMatch[1]}`];
                     }
                 }
-                
-                // تفاصيل الرحلة الأساسية والمسار
-                const pickup = gr && gr.pickup_address ? gr.pickup_address : (t.pickup_location || '').split(',')[0];
-                const dropoff = gr && gr.dropoff_address ? gr.dropoff_address : (t.dropoff_location || '').split(',')[0];
+
+                // =====================================================
+                // الأولوية: trips table (t) + admin_notes أولاً
+                // ثم google_reservations (gr) كـ fallback فقط
+                // هذا يضمن أن التعديلات تظهر دائماً بشكل صحيح
+                // =====================================================
+
+                // --- المسار (pickup/dropoff) ---
+                // trips table لديه pickup_location و dropoff_location - هي الأحدث
+                const tPickup = (t.pickup_location || '').trim();
+                const tDropoff = (t.dropoff_location || '').trim();
+                const pickup = tPickup ? tPickup.split(',')[0] : (gr && gr.pickup_address ? gr.pickup_address : '--');
+                const dropoff = tDropoff ? tDropoff.split(',')[0] : (gr && gr.dropoff_address ? gr.dropoff_address : '--');
                 
                 const price = t.estimated_price || 0;
                 const commission = t.our_commission || 0;
                 
-                // اسم العميل مع الفولباك
+                // --- اسم العميل ---
+                // admin_notes المعدّل له الأولوية > manual_client_name > gr.customer_name
                 let customerName = 'عميل';
-                if (gr && gr.customer_name) {
-                    customerName = gr.customer_name;
+                const editedNameMatch = notesText.match(/العميل:\s*([^\n\r|(]+)/);
+                if (editedNameMatch && editedNameMatch[1].trim() && !notesText.includes('حجز شيت')) {
+                    customerName = editedNameMatch[1].trim();
                 } else if (t.manual_client_name) {
                     customerName = t.manual_client_name;
-                } else {
-                    const nameMatch = notesText.match(/العميل:\s*([^\n\r|]+)/);
-                    if (nameMatch) {
-                        customerName = nameMatch[1].trim();
-                    }
+                } else if (gr && gr.customer_name) {
+                    customerName = gr.customer_name;
+                } else if (editedNameMatch) {
+                    customerName = editedNameMatch[1].trim();
                 }
 
-                // استخراج التاريخ والوقت
-                let tripDate = t.trip_date || '--';
-                let tripTime = t.trip_time || '--';
-                if (gr && gr.trip_date) {
-                    tripDate = gr.trip_date;
-                    if (gr.trip_time) tripTime = gr.trip_time;
+                // --- التاريخ والوقت ---
+                // trips table columns أولاً (يُحدَّثان عند التعديل)
+                let tripDate = '--';
+                let tripTime = '--';
+                if (t.trip_date) {
+                    tripDate = t.trip_date;
+                    if (t.trip_time) tripTime = t.trip_time;
                 } else {
+                    // محاولة استخراج من admin_notes
                     const dtMatch = notesText.match(/التاريخ:\s*([^\s|]+)\s*\|\s*الوقت:\s*([^\n\r]+)/);
                     if (dtMatch) {
                         tripDate = dtMatch[1].trim();
@@ -926,34 +938,41 @@
                         if (dateMatch) {
                             tripDate = dateMatch[1].trim();
                             if (dateMatch[2]) tripTime = dateMatch[2].trim();
+                        } else if (gr && gr.trip_date) {
+                            // آخر fallback: google_reservations
+                            tripDate = gr.trip_date;
+                            if (gr.trip_time) tripTime = gr.trip_time;
                         }
                     }
                 }
 
-                // تفاصيل الحجز الإضافية مع الفولباك للملاحظات وقيم جدول الرحلات
+                // --- تفاصيل الحجز (ركاب / شنط / نوع السيارة / نوع الرحلة) ---
+                // استخراج من admin_notes المعدّل أولاً
+                const parsedNotes = parseReservationDetailsFromNotes(notesText);
+
                 let passengers = '--';
                 let bags = '--';
                 let reqCarType = 'غير محدد';
                 let tripTypeLabel = 'غير محدد';
 
-                if (gr) {
-                    if (gr.passengers !== null && gr.passengers !== undefined && gr.passengers !== '') passengers = gr.passengers;
-                    if (gr.bags !== null && gr.bags !== undefined && gr.bags !== '') bags = gr.bags;
-                    if (gr.car_type) reqCarType = gr.car_type;
-                    if (gr.trip_type) tripTypeLabel = gr.trip_type;
-                }
+                // أولوية: trips table > admin_notes > google_reservations
+                if (t.passengers !== null && t.passengers !== undefined && t.passengers !== '') passengers = t.passengers;
+                else if (parsedNotes.passengers) passengers = parsedNotes.passengers;
+                else if (gr && gr.passengers !== null && gr.passengers !== undefined && gr.passengers !== '') passengers = gr.passengers;
 
-                const parsedNotes = parseReservationDetailsFromNotes(notesText);
+                if (t.bags !== null && t.bags !== undefined && t.bags !== '') bags = t.bags;
+                else if (parsedNotes.bags) bags = parsedNotes.bags;
+                else if (gr && gr.bags !== null && gr.bags !== undefined && gr.bags !== '') bags = gr.bags;
 
-                if (passengers === '--' && parsedNotes.passengers) passengers = parsedNotes.passengers;
-                if (bags === '--' && parsedNotes.bags) bags = parsedNotes.bags;
-                
-                if (reqCarType === 'غير محدد') {
-                    if (t.car_type) reqCarType = t.car_type;
-                    else if (parsedNotes.carType) reqCarType = parsedNotes.carType;
-                }
-                
-                if (tripTypeLabel === 'غير محدد' && parsedNotes.tripType) tripTypeLabel = parsedNotes.tripType;
+                // نوع السيارة: trips table > parsedNotes > gr
+                if (t.car_type) reqCarType = t.car_type;
+                else if (parsedNotes.carType) reqCarType = parsedNotes.carType;
+                else if (gr && gr.car_type) reqCarType = gr.car_type;
+
+                // نوع الرحلة: parsedNotes > gr
+                if (parsedNotes.tripType) tripTypeLabel = parsedNotes.tripType;
+                else if (gr && gr.trip_type) tripTypeLabel = gr.trip_type;
+
 
                 // طريقة الدفع
                 const isCash = (gr && (gr.payment_method === 'cash' || String(gr.payment_method).includes('كاش'))) || 

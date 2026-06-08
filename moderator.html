@@ -2035,22 +2035,46 @@
                     }
                 }
 
+                // استخراج الوقت: t.trip_time أولاً (يُحدَّث عند التعديل)
+                let tTime = t.trip_time || '';
+                if (!tTime) {
+                    const timeFromNotes = t.admin_notes?.match(/الوقت:\s*([0-9:]+\s*[\u0623\u0625\u0627]?[مو]?)/)
+                                      || t.admin_notes?.match(/"📅"\s*[0-9\-/\\]+\s*[-:]\s*([0-9:]+\s*[\u0623\u0625\u0627]?[مو]?)/);
+                    if (timeFromNotes) tTime = timeFromNotes[1];
+                    else tTime = t.created_at?.split('T')?.[1]?.substring(0, 5) || '--:--';
+                }
+
+                // استخراج الركاب والشنط: أعمدة trips أولاً
+                const tPassengers = (t.passengers !== null && t.passengers !== undefined && t.passengers !== '') ? t.passengers
+                    : (t.admin_notes?.match(/👥\s*([0-9]+)\s*أفراد/)?.[1] || t.admin_notes?.match(/ركاب:\s*([0-9]+)/)?.[1] || 1);
+                const tBags = (t.bags !== null && t.bags !== undefined && t.bags !== '') ? t.bags
+                    : (t.admin_notes?.match(/🧳\s*([0-9]+)\s*شنط/)?.[1] || t.admin_notes?.match(/شنط:\s*([0-9]+)/)?.[1] || 0);
+
+                // استخراج اسم العميل من admin_notes إذا كان محدَّثاً
+                let tClientName = t.manual_client_name || 'عميل ويب';
+                if (t.admin_notes) {
+                    const editedName = t.admin_notes.match(/العميل:\s*([^\n\r|(]+)/);
+                    if (editedName && editedName[1].trim() && !t.admin_notes.includes('حجز شيت')) {
+                        tClientName = editedName[1].trim();
+                    }
+                }
+
                 return {
                     id: t.id,
-                    customer_name: t.manual_client_name || 'عميل ويب',
+                    customer_name: tClientName,
                     customer_phone: t.client_phone || '-',
                     pickup_location: t.pickup_location,
                     dropoff_location: t.dropoff_location,
                     pickup_address: t.pickup_location || '',
                     dropoff_address: t.dropoff_location || '',
                     trip_date: tDate,
-                    trip_time: t.admin_notes?.match(/📅\s*[0-9\-/\\]+\s*-\s*([0-9:]+\s*[أإا]?[مو]?)/)?.[1] || t.created_at?.split('T')?.[1]?.substring(0, 5) || '--:--',
+                    trip_time: tTime,
                     trip_type: t.admin_notes?.includes('VIP') ? 'ذهاب فقط - VIP' : 'ذهاب فقط',
                     cost: t.estimated_price || 0,
                     status: t.status,
                     car_type: t.car_type || 'سيدان',
-                    passengers: t.admin_notes?.match(/👥\s*([0-9]+)\s*أفراد/)?.[1] || 1,
-                    bags: t.admin_notes?.match(/🧳\s*([0-9]+)\s*شنط/)?.[1] || 0,
+                    passengers: tPassengers,
+                    bags: tBags,
                     is_real_trip: true,
                     original_trip: t,
                     google_res_id: matchedRes ? matchedRes.id : null,
@@ -2059,7 +2083,10 @@
                     driver_phone: t.drivers?.phone || null,
                     car_brand: t.cars?.brand || null,
                     car_plate: t.cars?.plate_number || null,
-                    stage_status: t.stage_status || null
+                    stage_status: t.stage_status || null,
+                    admin_notes: t.admin_notes || '',
+                    payment_method: t.payment_method || '',
+                    notes: t.admin_notes || ''
                 };
             });
 
