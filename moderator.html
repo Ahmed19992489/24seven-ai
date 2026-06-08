@@ -538,22 +538,50 @@
             </div>
         </section>
 
-        <!-- Modal: Assign Captain & Car -->
+        <!-- Modal: Assign Captain & Car / External Vendor -->
         <div id="assign-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
             <div class="glass-panel w-full max-w-md p-8 animate-in zoom-in-95 duration-200">
                 <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-black text-slate-800">تعيين كابتن للرحلة 🚕</h3>
+                    <h3 class="text-xl font-black text-slate-800">تعيين كابتن / تشغيل خارجي 🚕</h3>
                     <button onclick="closeAssignModal()" class="text-slate-400 hover:text-red-500 transition"><i class="fas fa-times"></i></button>
                 </div>
                 
+                <input type="hidden" id="modal-trip-id">
+                
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">اختر الكابتن</label>
-                        <select id="assign-driver-select" class="input-std bg-slate-50"></select>
+                        <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">نوع التشغيل</label>
+                        <select id="assign-type-select" class="input-std bg-slate-50" onchange="toggleAssignType()">
+                            <option value="internal">🚗 كابتن وسوّاق داخلي</option>
+                            <option value="external">🤝 مكتب خارجي (تشغيل خارجي)</option>
+                        </select>
                     </div>
+                    
+                    <div id="assign-internal-group" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">اختر الكابتن</label>
+                            <select id="assign-driver-select" class="input-std bg-slate-50"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">اختر السيارة</label>
+                            <select id="assign-car-select" class="input-std bg-slate-50"></select>
+                        </div>
+                    </div>
+
+                    <div id="assign-external-group" class="space-y-4 hidden">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">المكتب الخارجي</label>
+                            <select id="assign-vendor-select" class="input-std bg-slate-50" onchange="updateVendorCommissionDefault()"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">عمولة المنصة من الأوردر (جنيه)</label>
+                            <input type="number" id="assign-vendor-commission" class="input-std bg-slate-50" value="100">
+                        </div>
+                    </div>
+
                     <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">اختر السيارة</label>
-                        <select id="assign-car-select" class="input-std bg-slate-50"></select>
+                        <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">ملاحظات التعيين</label>
+                        <textarea id="assign-note" class="input-std bg-slate-50 h-20" placeholder="أضف أي ملاحظات إسناد هنا..."></textarea>
                     </div>
                 </div>
 
@@ -1431,46 +1459,32 @@
             }
         }
 
-        async function openAssignModal(tripId) {
-            currentAssignTripId = tripId;
-            document.getElementById('assign-modal').style.display = 'flex';
+        let activeVendors = [];
+
+        function toggleAssignType() {
+            const type = document.getElement        async function confirmAssignment() {
+            const assignType = document.getElementById('assign-type-select').value;
+            const note = document.getElementById('assign-note').value;
             
             const driverSelect = document.getElementById('assign-driver-select');
             const carSelect = document.getElementById('assign-car-select');
+            const vendorSelect = document.getElementById('assign-vendor-select');
             
-            driverSelect.innerHTML = '<option value="">جاري التحميل...</option>';
-            carSelect.innerHTML = '<option value="">جاري التحميل...</option>';
-
-            try {
-                const [{ data: drivers }, { data: cars }] = await Promise.all([
-                    sbClient.from('drivers').select('id, name, phone').order('name'),
-                    sbClient.from('cars').select('id, brand, plate_number').order('brand')
-                ]);
-
-                driverSelect.innerHTML = '<option value="">اختر كابتن</option>' + 
-                    drivers.map(d => `<option value="${d.id}" data-name="${d.name}" data-phone="${d.phone}">${d.name} (${d.phone})</option>`).join('');
-                
-                carSelect.innerHTML = '<option value="">اختر سيارة</option>' + 
-                    cars.map(c => `<option value="${c.id}">${c.brand} - ${c.plate_number}</option>`).join('');
-            } catch (e) {
-                console.error(e);
-                alert('خطأ في تحميل البيانات من السيرفر');
-            }
-        }
-
-        function closeAssignModal() {
-            document.getElementById('assign-modal').style.display = 'none';
-        }
-
-        async function confirmAssignment() {
-            const driverSelect = document.getElementById('assign-driver-select');
-            const carSelect = document.getElementById('assign-car-select');
             const driverId = driverSelect.value;
             const carId = carSelect.value;
+            const vendorId = vendorSelect.value;
+            const commission = Number(document.getElementById('assign-vendor-commission').value) || 100;
             
-            if(!driverId || !carId) {
-                alert('يرجى اختيار الكابتن والسيارة أولاً');
-                return;
+            if (assignType === 'internal') {
+                if(!driverId || !carId) {
+                    alert('يرجى اختيار الكابتن والسيارة أولاً');
+                    return;
+                }
+            } else {
+                if(!vendorId) {
+                    alert('يرجى اختيار المكتب الخارجي أولاً');
+                    return;
+                }
             }
 
             const btn = document.getElementById('confirm-assign-btn');
@@ -1485,12 +1499,17 @@
                 const driverName = driverOpt?.dataset?.name || 'كابتن معتمد';
                 const driverPhone = driverOpt?.dataset?.phone || '';
 
-                console.log('👷 Selected Driver:', { driverId, driverName, driverPhone });
+                console.log('👷 Assignment type:', assignType);
 
                 let realTripId = currentAssignTripId;
                 let finalSqlId = '';
 
                 const isGoogleRes = currentAssignTripId.toString().startsWith('gr_');
+                const existingNotes = trip.admin_notes || trip.notes || '';
+                let updatedNotes = existingNotes;
+                if (note && note.trim()) {
+                    updatedNotes = existingNotes ? existingNotes + '\n--- ملاحظات التعيين ---\n' + note : note;
+                }
 
                 if (isGoogleRes) {
                     // 1. Find or create client profile
@@ -1514,51 +1533,123 @@
                         }
                     }
 
-                    // 2. Create actual trip record
-                    const { data: newTrip, error: tripErr } = await sbClient.from('trips').insert([{
-                        user_id: clientUserId,
-                        driver_id: driverId,
-                        car_id: carId,
-                        pickup_location: trip.pickup_address || '',
-                        dropoff_location: trip.dropoff_address || '',
-                        estimated_price: Number(trip.cost) || 0,
-                        status: 'driver_assigned',
-                        admin_notes: `📅 ${trip.trip_date || '--'} - ${trip.trip_time || '--'}\n👥 ${trip.passengers || '1'}\n🧳 ${trip.bags || '0'}\nنوع التحصيل: ${trip.payment_method || 'غير محدد'}\nحجز موديتور: ${currentModName}\nالعميل: ${trip.customer_name}\nالسائق: ${driverName} (${driverPhone})\nملاحظات: ${trip.notes || ''}`,
-                        car_type: trip.car_type
-                    }]).select().single();
+                    if (assignType === 'external') {
+                        // 2. Create actual trip record for external office
+                        const { data: newTrip, error: tripErr } = await sbClient.from('trips').insert([{
+                            user_id: clientUserId,
+                            pickup_location: trip.pickup_address || '',
+                            dropoff_location: trip.dropoff_address || '',
+                            estimated_price: Number(trip.cost) || 0,
+                            status: 'approved',
+                            is_outsourced: true,
+                            vendor_id: vendorId,
+                            our_commission: commission,
+                            admin_notes: `📅 ${trip.trip_date || '--'} - ${trip.trip_time || '--'}\n👥 ${trip.passengers || '1'}\n🧳 ${trip.bags || '0'}\nنوع التحصيل: ${trip.payment_method || 'غير محدد'}\nحجز موديتور: ${currentModName}\nالعميل: ${trip.customer_name}\nملاحظات: ${trip.notes || ''}\n${note ? '--- ملاحظات التعيين ---\n' + note : ''}`,
+                            car_type: trip.car_type
+                        }]).select().single();
 
-                    if (tripErr) throw tripErr;
+                        if (tripErr) throw tripErr;
 
-                    realTripId = newTrip.id;
-                    finalSqlId = String(newTrip.id);
+                        realTripId = newTrip.id;
+                        finalSqlId = String(newTrip.id);
 
-                    // 3. Update reservation status in Supabase (don't overwrite original sql_server_id)
-                    const { error: resErr } = await sbClient
-                        .from('google_reservations')
-                        .update({ 
+                        // 3. Update reservation status in Supabase
+                        const { error: resErr } = await sbClient
+                            .from('google_reservations')
+                            .update({ 
+                                status: 'تم الترحيل',
+                                sql_server_id: finalSqlId
+                            })
+                            .eq('id', trip.google_res_id || currentAssignTripId.toString().replace('gr_', ''));
+                        
+                        if(resErr) throw resErr;
+                    } else {
+                        // 2. Create actual trip record for internal driver
+                        const { data: newTrip, error: tripErr } = await sbClient.from('trips').insert([{
+                            user_id: clientUserId,
+                            driver_id: driverId,
+                            car_id: carId,
+                            pickup_location: trip.pickup_address || '',
+                            dropoff_location: trip.dropoff_address || '',
+                            estimated_price: Number(trip.cost) || 0,
                             status: 'driver_assigned',
-                            sql_server_id: finalSqlId,
-                            modified_driver_name: driverName,
-                            modified_driver_phone: driverPhone
-                        })
-                        .eq('id', trip.google_res_id || currentAssignTripId.toString().replace('gr_', ''));
-                    
-                    if(resErr) throw resErr;
+                            admin_notes: `📅 ${trip.trip_date || '--'} - ${trip.trip_time || '--'}\n👥 ${trip.passengers || '1'}\n🧳 ${trip.bags || '0'}\nنوع التحصيل: ${trip.payment_method || 'غير محدد'}\nحجز موديتور: ${currentModName}\nالعميل: ${trip.customer_name}\nالسائق: ${driverName} (${driverPhone})\nملاحظات: ${trip.notes || ''}\n${note ? '--- ملاحظات التعيين ---\n' + note : ''}`,
+                            car_type: trip.car_type
+                        }]).select().single();
+
+                        if (tripErr) throw tripErr;
+
+                        realTripId = newTrip.id;
+                        finalSqlId = String(newTrip.id);
+
+                        // 3. Update reservation status in Supabase
+                        const { error: resErr } = await sbClient
+                            .from('google_reservations')
+                            .update({ 
+                                status: 'driver_assigned',
+                                sql_server_id: finalSqlId,
+                                modified_driver_name: driverName,
+                                modified_driver_phone: driverPhone
+                            })
+                            .eq('id', trip.google_res_id || currentAssignTripId.toString().replace('gr_', ''));
+                        
+                        if(resErr) throw resErr;
+                    }
                 } else {
                     // Update existing trip in supabase
-                    const { error: updateErr } = await sbClient.from('trips').update({
-                        driver_id: driverId,
-                        car_id: carId,
-                        status: 'driver_assigned'
-                    }).eq('id', currentAssignTripId);
+                    if (assignType === 'external') {
+                        const { error: updateErr } = await sbClient.from('trips').update({
+                            is_outsourced: true,
+                            vendor_id: vendorId,
+                            our_commission: commission,
+                            admin_notes: updatedNotes,
+                            status: 'approved'
+                        }).eq('id', currentAssignTripId);
 
-                    if (updateErr) throw updateErr;
+                        if (updateErr) throw updateErr;
+                    } else {
+                        const { error: updateErr } = await sbClient.from('trips').update({
+                            driver_id: driverId,
+                            car_id: carId,
+                            admin_notes: updatedNotes,
+                            status: 'driver_assigned'
+                        }).eq('id', currentAssignTripId);
+
+                        if (updateErr) throw updateErr;
+                    }
 
                     realTripId = currentAssignTripId;
                     finalSqlId = String(currentAssignTripId);
                 }
 
-                // --- 4. Notify Captain (App) ---
+                // --- 4. Handle Post-Assignment actions ---
+                if (assignType === 'external') {
+                    // System chat message for external assignment
+                    const pickup = (trip.pickup_address || '').split(',')[0];
+                    const dropoff = (trip.dropoff_address || '').split(',')[0];
+                    const price = Number(trip.cost || 0);
+
+                    try {
+                        const { data: vendorInfo } = await sbClient.from('vendors').select('name').eq('id', vendorId).single();
+                        
+                        await sbClient.from('chat_messages').insert([{
+                            trip_id: realTripId,
+                            sender_role: 'admin',
+                            sender_id: 'admin',
+                            sender_name: 'الإدارة',
+                            message: `🎯 تم إسناد الرحلة إلى قسم التشغيل\n📍 من: ${pickup}\n🏁 إلى: ${dropoff}\n💰 القيمة المقدرة: ${price} EGP\n\nبانتظار إسناد السائق والسيارة لتفعيل التتبع والدردشة...`,
+                            message_type: 'system'
+                        }]);
+
+                        closeAssignModal();
+                        alert(`✅ تم إسناد الرحلة للمكتب الخارجي ${vendorInfo?.name || ''} بنجاح!`);
+                        searchTrips();
+                    } catch(e) { console.error('External Assignment Post Error:', e); }
+                    return;
+                }
+
+                // Internal Assignment Post Actions: Notify Captain, Notify Client, Sync to Google Sheets
+                // --- 4.1. Notify Captain (App) ---
                 try {
                     const { data: carInfo } = await sbClient.from('cars').select('brand,model,plate_number').eq('id', carId).single();
                     await sbClient.from('chat_messages').insert([{
@@ -1571,7 +1662,7 @@
                     }]);
                 } catch(e) { console.error('Captain Notify Error:', e); }
 
-                // --- 5. Notify Client (WhatsApp/Messenger) ---
+                // --- 4.2. Notify Client (WhatsApp/Messenger) ---
                 const rawPhone = (trip.customer_phone || '').replace(/\D/g, '');
                 try {
                     const clientMsg = `✅ تم تعيين الكابتن لرحلتك!\n🚕 الكابتن: ${driverName}\n📱 هاتف: 01121748885\n🚗 السيارة: ${trip.car_type || ''}\n📍 المسار: ${trip.pickup_address} ➝ ${trip.dropoff_address}\n\nنتمنى لك رحلة سعيدة! ✨`;
@@ -1601,7 +1692,7 @@
                     });
                 } catch(e) { console.error('Client Notify Error:', e); }
 
-                // --- 6. Sync to Google Sheet ---
+                // --- 4.3. Sync to Google Sheet ---
                 let sheetSyncOk = false;
                 try {
                     console.log('📊 Syncing to sheet:', { sheetRow: trip.sheet_row, webId: realTripId, sqlId: finalSqlId, driverName, driverPhone });
@@ -1750,7 +1841,6 @@
                     .order('trip_time', { ascending: true }),
                 sbClient.from('trips')
                     .select(`*, cars:cars(brand, plate_number), drivers:drivers(name, phone)`)
-                    .eq('trip_date', dateStr)
                     .order('created_at', { ascending: false })
             ]);
 
@@ -1767,13 +1857,25 @@
 
             // تحويل الرحلات الفعلية لتوافق الموديل
             const mappedTrips = trips.map(t => {
-                let tDate = t.trip_date || '';
-                if (!tDate && t.admin_notes) {
+                let tDate = '';
+                if (t.admin_notes) {
                     const dMatch = t.admin_notes.match(/📅\s*([0-9\-/\\]+)/);
                     if (dMatch) tDate = dMatch[1].trim();
                 }
                 if (!tDate && t.created_at) {
                     tDate = t.created_at.split('T')[0];
+                }
+
+                // توحيد تنسيق التاريخ (مثال: استبدال الشرطة المائلة)
+                if (tDate) {
+                    tDate = tDate.replace(/\//g, '-');
+                    const parts = tDate.split('-');
+                    if (parts.length === 3) {
+                        const y = parts[0];
+                        const m = parts[1].padStart(2, '0');
+                        const d = parts[2].padStart(2, '0');
+                        tDate = `${y}-${m}-${d}`;
+                    }
                 }
 
                 // مطابقة قرار العميل
@@ -1804,6 +1906,7 @@
                     is_real_trip: true,
                     original_trip: t,
                     google_res_id: matchedRes ? matchedRes.id : null,
+                    sheet_row: matchedRes ? matchedRes.sheet_row : null,
                     client_decision: (matchedRes && matchedRes.client_decision) ? matchedRes.client_decision : (() => {
                         if (t.admin_notes && t.admin_notes.includes('قرار العميل:')) {
                             const match = t.admin_notes.match(/قرار العميل:\s*(.*)/);
@@ -1819,20 +1922,69 @@
                 };
             });
 
+            // فلترة الرحلات الفعلية حسب التاريخ المطلوبة
+            const filteredMappedTrips = mappedTrips.filter(t => {
+                const tDateClean = (t.trip_date || '').replace(/\//g, '-').trim();
+                const targetDateClean = dateStr.replace(/\//g, '-').trim();
+                return tDateClean === targetDateClean;
+            });
+
             // استبعاد المكرر
-            const existingTripIds = new Set(trips.map(t => String(t.id)));
+            const existingTripIds = new Set(filteredMappedTrips.map(t => String(t.id)));
             const filteredReservations = reservations.filter(r => {
                 if (r.sql_server_id && existingTripIds.has(String(r.sql_server_id))) {
                     return false;
                 }
+                if (r.status === 'تم الترحيل' || r.status === 'driver_assigned') {
+                    return false;
+                }
                 return true;
+            }).map(r => {
+                return {
+                    id: 'gr_' + r.id,
+                    google_res_id: r.id,
+                    user_id: null,
+                    pickup_location: r.pickup_address,
+                    dropoff_location: r.dropoff_address,
+                    pickup_address: r.pickup_address || '',
+                    dropoff_address: r.dropoff_address || '',
+                    estimated_price: Number(r.cost) || 0,
+                    cost: Number(r.cost) || 0,
+                    status: r.status || 'pending',
+                    admin_notes: `📝 حجز من الشيت
+👤 العميل: ${r.customer_name}
+📞 الهاتف: ${r.customer_phone}
+🚗 السيارة: ${r.car_type} | رحلة: ${r.trip_type}
+👥 ركاب: ${r.passengers} | شنط: ${r.bags}
+📅 التاريخ: ${r.trip_date} | الوقت: ${r.trip_time}
+💬 واتساب: ${r.whatsapp_num || '-'}
+نوع التحصيل: ${r.payment_method || 'غير محدد'}
+💡 ملاحظات: ${r.notes || '-'}`,
+                    created_at: r.created_at || r.sheet_timestamp,
+                    drivers: null,
+                    cars: null,
+                    manual_client_name: r.customer_name,
+                    customer_name: r.customer_name,
+                    customer_phone: r.customer_phone,
+                    client_phone: r.customer_phone,
+                    is_google_res: true,
+                    is_real_trip: false,
+                    sheet_row: r.sheet_row,
+                    trip_date: r.trip_date,
+                    trip_time: r.trip_time,
+                    trip_type: r.trip_type || 'ذهاب فقط',
+                    car_type: r.car_type || 'سيدان',
+                    passengers: r.passengers || 1,
+                    bags: r.bags || 0,
+                    client_decision: r.client_decision || null
+                };
             });
 
-            const merged = [...mappedTrips, ...filteredReservations];
+            const merged = [...filteredMappedTrips, ...filteredReservations];
             return merged;
         }
 
-        async function changeClientDecision(resId, currentDecision, tripId) {
+        async function changeClientDecision(resId, currentDecision, tripId, sheetRow) {
             const newDecision = prompt(
                 "تعديل قرار العميل للرحلة:\n\nاكتب:\n1 - للتأكيد (مؤكد)\n2 - للإلغاء (ملغي)\n3 - للمسح (لم يقرر)",
                 currentDecision === 'مؤكد' ? '1' : (currentDecision === 'ملغي' ? '2' : '')
@@ -1851,10 +2003,12 @@
                 decisionText = newDecision.trim();
             }
             
+            const cleanResId = String(resId).startsWith('gr_') ? Number(resId.replace('gr_', '')) : Number(resId);
+            
             try {
                 const { error } = await sbClient.from('google_reservations')
                     .update({ client_decision: decisionText })
-                    .eq('id', resId);
+                    .eq('id', cleanResId);
                     
                 if (error) throw error;
 
@@ -1876,13 +2030,38 @@
                             .eq('id', Number(tripId));
                     }
                 }
+
+                // 🌐 تحديث القرار في شيت جوجل لتفادي اختفائه عند التزامن
+                if (sheetRow) {
+                    try {
+                        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
+                        const cleanTripId = (tripId && !String(tripId).startsWith('gr_')) ? String(tripId) : '';
+                        
+                        const sheetData = {
+                            action: 'updateDecision',
+                            sheetRow: sheetRow,
+                            webId: cleanTripId,
+                            sqlId: cleanTripId,
+                            decision: decisionText
+                        };
+                        
+                        fetch(APPS_SCRIPT_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify(sheetData)
+                        }).catch(e => console.error("Sheet Sync Error:", e));
+                    } catch (err) {
+                        console.error("Sheet Sync Error:", err);
+                    }
+                }
                 
                 alert("✅ تم تحديث قرار العميل بنجاح!");
                 
                 // تحديث الحالة محلياً وإعادة رسم الجدول
                 allTrips = allTrips.map(t => {
                     const rId = t.is_real_trip ? t.google_res_id : t.id;
-                    if (String(rId) === String(resId)) {
+                    const cleanRId = String(rId).startsWith('gr_') ? rId.replace('gr_', '') : rId;
+                    if (String(cleanRId) === String(cleanResId)) {
                         return { ...t, client_decision: decisionText };
                     }
                     return t;
@@ -2078,6 +2257,7 @@
                     is_real_trip: true,
                     original_trip: t,
                     google_res_id: matchedRes ? matchedRes.id : null,
+                    sheet_row: matchedRes ? matchedRes.sheet_row : null,
                     client_decision: matchedRes ? matchedRes.client_decision : null,
                     driver_name: t.drivers?.name || null,
                     driver_phone: t.drivers?.phone || null,
@@ -2100,6 +2280,45 @@
                     return false;
                 }
                 return true;
+            }).map(r => {
+                return {
+                    id: 'gr_' + r.id,
+                    google_res_id: r.id,
+                    user_id: null,
+                    pickup_location: r.pickup_address,
+                    dropoff_location: r.dropoff_address,
+                    pickup_address: r.pickup_address || '',
+                    dropoff_address: r.dropoff_address || '',
+                    estimated_price: Number(r.cost) || 0,
+                    cost: Number(r.cost) || 0,
+                    status: r.status || 'pending',
+                    admin_notes: `📝 حجز من الشيت
+👤 العميل: ${r.customer_name}
+📞 الهاتف: ${r.customer_phone}
+🚗 السيارة: ${r.car_type} | رحلة: ${r.trip_type}
+👥 ركاب: ${r.passengers} | شنط: ${r.bags}
+📅 التاريخ: ${r.trip_date} | الوقت: ${r.trip_time}
+💬 واتساب: ${r.whatsapp_num || '-'}
+نوع التحصيل: ${r.payment_method || 'غير محدد'}
+💡 ملاحظات: ${r.notes || '-'}`,
+                    created_at: r.created_at || r.sheet_timestamp,
+                    drivers: null,
+                    cars: null,
+                    manual_client_name: r.customer_name,
+                    customer_name: r.customer_name,
+                    customer_phone: r.customer_phone,
+                    client_phone: r.customer_phone,
+                    is_google_res: true,
+                    is_real_trip: false,
+                    sheet_row: r.sheet_row,
+                    trip_date: r.trip_date,
+                    trip_time: r.trip_time,
+                    trip_type: r.trip_type || 'ذهاب فقط',
+                    car_type: r.car_type || 'سيدان',
+                    passengers: r.passengers || 1,
+                    bags: r.bags || 0,
+                    client_decision: r.client_decision || null
+                };
             });
 
             const merged = [...mappedTrips, ...filteredReservations];
@@ -2158,16 +2377,16 @@
                 }
 
 
-                const resId = t.is_real_trip ? t.google_res_id : t.id;
-                const decisionHtml = resId ? `
-                    <div class="mt-1 flex items-center gap-1.5 flex-wrap">
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${decisionClass} inline-flex items-center gap-1">
-                            <i class="fas ${decisionIcon}"></i> ${decision}
-                        </span>
-                        <button onclick="changeClientDecision(${resId}, '${decision}', ${t.is_real_trip ? t.id : 'null'})" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold border border-blue-200 rounded px-1.5 py-0.5 bg-blue-50/50 hover:bg-blue-50 transition cursor-pointer" title="تعديل قرار العميل">تعديل القرار</button>
-                        ${payMethodBadge}
-                    </div>
-                ` : '';
+                 const resId = t.is_real_trip ? t.google_res_id : t.id;
+                 const decisionHtml = resId ? `
+                     <div class="mt-1 flex items-center gap-1.5 flex-wrap">
+                         <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${decisionClass} inline-flex items-center gap-1">
+                             <i class="fas ${decisionIcon}"></i> ${decision}
+                         </span>
+                         <button onclick="changeClientDecision('${resId}', '${decision}', '${t.id}', ${t.sheet_row || 'null'})" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold border border-blue-200 rounded px-1.5 py-0.5 bg-blue-50/50 hover:bg-blue-50 transition cursor-pointer" title="تعديل قرار العميل">تعديل القرار</button>
+                         ${payMethodBadge}
+                     </div>
+                 ` : '';
 
                 return `
                 <tr class="border-b hover:bg-slate-50 transition border-r-4 ${t.client_status === 'قديم' ? 'border-r-blue-400' : 'border-r-teal-400'}">

@@ -1842,7 +1842,7 @@
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${decisionClass} inline-flex items-center gap-1">
                             <i class="fas ${decisionIcon}"></i> ${decision}
                         </span>
-                        ${resObj ? `<button onclick="changeClientDecision(${resObj.id}, '${decision}', '${t.id}')" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold border border-blue-200 rounded px-1.5 py-0.5 bg-blue-50/50 hover:bg-blue-50 transition cursor-pointer" title="تعديل قرار العميل">تعديل القرار</button>` : ''}
+                        ${resObj ? `<button onclick="changeClientDecision(${resObj.id}, '${decision}', '${t.id}', ${resObj.sheet_row || 'null'})" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold border border-blue-200 rounded px-1.5 py-0.5 bg-blue-50/50 hover:bg-blue-50 transition cursor-pointer" title="تعديل قرار العميل">تعديل القرار</button>` : ''}
                         ${payMethodBadge}
                     </div>
                 `;
@@ -2211,7 +2211,7 @@
             }
         }
 
-        async function changeClientDecision(resId, currentDecision, tripId) {
+        async function changeClientDecision(resId, currentDecision, tripId, sheetRow) {
             const newDecision = prompt(
                 "تعديل قرار العميل للرحلة:\n\nاكتب:\n1 - للتأكيد (مؤكد)\n2 - للإلغاء (ملغي)\n3 - للمسح (لم يقرر)",
                 currentDecision === 'مؤكد' ? '1' : (currentDecision === 'ملغي' ? '2' : '')
@@ -2253,6 +2253,30 @@
                         await sbClient.from('trips')
                             .update({ admin_notes: notes })
                             .eq('id', Number(tripId));
+                    }
+                }
+                
+                // 🌐 تحديث القرار في شيت جوجل لتفادي اختفائه عند التزامن
+                if (sheetRow) {
+                    try {
+                        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
+                        const cleanTripId = (tripId && !String(tripId).startsWith('gr_')) ? String(tripId) : '';
+                        
+                        const sheetData = {
+                            action: 'updateDecision',
+                            sheetRow: sheetRow,
+                            webId: cleanTripId,
+                            sqlId: cleanTripId,
+                            decision: decisionText
+                        };
+                        
+                        fetch(APPS_SCRIPT_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify(sheetData)
+                        }).catch(e => console.error("Sheet Sync Error:", e));
+                    } catch (err) {
+                        console.error("Sheet Sync Error:", err);
                     }
                 }
                 

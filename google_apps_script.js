@@ -14,6 +14,11 @@ function doPost(e) {
             return ContentService
                 .createTextOutput(JSON.stringify({ success: true, debug: debugInfo }))
                 .setMimeType(ContentService.MimeType.JSON);
+        } else if (data.action === 'updateDecision') {
+            var debugInfo = updateDecisionInSheet(data);
+            return ContentService
+                .createTextOutput(JSON.stringify({ success: true, debug: debugInfo }))
+                .setMimeType(ContentService.MimeType.JSON);
         } else {
             appendBookingToSheet(data);
         }
@@ -168,4 +173,62 @@ function updateDriverInSheet(data) {
       wrote: driverName,
       verified: String(verifyVal)
     };
+}
+
+function updateDecisionInSheet(data) {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const sheet = ss.getSheetByName(SHEET_TAB);
+    if (!sheet) throw new Error('الشيت غير موجود');
+
+    const webId = data.webId;
+    const sqlId = data.sqlId;
+    const rowHint = parseInt(data.sheetRow);
+    let rowNum = 0;
+    
+    Logger.log('🔍 Processing Decision: RowHint=' + rowHint + ', WebID=' + webId + ', SQLID=' + sqlId);
+
+    // 1. PRIMARY SEARCH: By Web_ID (Column Q / 17)
+    if (webId) {
+        const lastRow = sheet.getLastRow();
+        if (lastRow > 1) {
+            const values = sheet.getRange(2, 17, lastRow - 1, 1).getValues();
+            for (let i = 0; i < values.length; i++) {
+                if (String(values[i][0]).trim() === String(webId).trim()) {
+                    rowNum = i + 2;
+                    break;
+                }
+            }
+        }
+    }
+
+    // 2. SECONDARY SEARCH: By SQL_ID (Column U / 21)
+    if (!rowNum && sqlId) {
+        const lastRow = sheet.getLastRow();
+        if (lastRow > 1) {
+            const values = sheet.getRange(2, 21, lastRow - 1, 1).getValues();
+            for (let i = 0; i < values.length; i++) {
+                const currentVal = String(values[i][0]).trim();
+                const targetVal = String(sqlId).trim();
+                if (currentVal === targetVal && targetVal !== "") {
+                    rowNum = i + 2;
+                    break;
+                }
+            }
+        }
+    }
+
+    // 3. TERTIARY FALLBACK: Trust the rowHint
+    if (!rowNum && rowHint >= 2) {
+        rowNum = rowHint;
+    }
+
+    if (!rowNum || rowNum < 2) {
+        throw new Error('تعذر العثور على الحجز لتحديث القرار (Web_ID: ' + webId + ', SQL_ID: ' + sqlId + ')');
+    }
+
+    const decisionText = data.decision || '';
+    // Column AB is 28
+    sheet.getRange(rowNum, 28).setValue(decisionText);
+    
+    return { foundRow: rowNum, wroteDecision: decisionText };
 }
