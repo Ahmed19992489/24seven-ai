@@ -1176,6 +1176,7 @@
             <div class="space-y-3 text-right" dir="rtl">
                 <input type="hidden" id="edit-trip-id">
                 <input type="hidden" id="edit-trip-is-google-res">
+                <input type="hidden" id="edit-trip-sheet-row">
                 
                 <div class="grid grid-cols-2 gap-2">
                     <div>
@@ -3100,10 +3101,70 @@
         new Chart(document.getElementById('tripsChart'), { type: 'bar', data: { labels: ['S', 'M', 'T', 'W', 'T', 'F', 'S'], datasets: [{ label: 'الرحلات', data: [5, 8, 12, 7, 15, 10, 9], backgroundColor: '#3b82f6', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, display: false }, x: { grid: { display: false } } } } });
 
         // --- وظائف تعديل الأوردر بالكامل ---
+        function parseTimeTo24h(timeStr) {
+            if (!timeStr) return '';
+            timeStr = timeStr.trim();
+            if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(timeStr)) {
+                let parts = timeStr.split(':');
+                let h = parts[0].padStart(2, '0');
+                let m = parts[1].padStart(2, '0');
+                return `${h}:${m}`;
+            }
+            let isPM = false;
+            if (timeStr.includes('م') || timeStr.toLowerCase().includes('pm')) {
+                isPM = true;
+            }
+            let matches = timeStr.match(/(\d{1,2}):(\d{2})/);
+            if (!matches) {
+                let parts = timeStr.replace(/[^\d:]/g, '').split(':');
+                if (parts.length >= 2) {
+                    let h = parseInt(parts[0], 10);
+                    let m = parseInt(parts[1], 10);
+                    if (isPM && h < 12) h += 12;
+                    if (!isPM && h === 12) h = 0;
+                    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                }
+                return '';
+            }
+            let h = parseInt(matches[1], 10);
+            let m = parseInt(matches[2], 10);
+            if (isPM && h < 12) {
+                h += 12;
+            } else if (!isPM && h === 12) {
+                h = 0;
+            }
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
+
+        function formatTimeToArabic12h(timeStr) {
+            if (!timeStr) return '';
+            timeStr = timeStr.trim();
+            if (timeStr.includes('ص') || timeStr.includes('م')) {
+                return timeStr;
+            }
+            let parts = timeStr.split(':');
+            if (parts.length < 2) return timeStr;
+            let h = parseInt(parts[0], 10);
+            let m = parseInt(parts[1], 10);
+            if (isNaN(h) || isNaN(m)) return timeStr;
+            let suffix = 'ص';
+            if (h >= 12) {
+                suffix = 'م';
+                if (h > 12) h -= 12;
+            }
+            if (h === 0) {
+                h = 12;
+            }
+            return `${h}:${String(m).padStart(2, '0')}:00 ${suffix}`;
+        }
+
         async function openEditTripModal(id, isGoogleRes) {
             document.getElementById('edit-trip-id').value = id;
             document.getElementById('edit-trip-is-google-res').value = isGoogleRes ? 'true' : 'false';
+            document.getElementById('edit-trip-sheet-row').value = '';
 
+            let name = '', phone = '', pickup = '', dropoff = '', carType = 'sedan', tripType = 'one_way';
+            let passengers = 1, luggage = 0, date = '', time = '', price = 0, payMethod = 'cash', notes = '';
             let flightNumber = '', ticketUrl = '';
 
             try {
@@ -3126,6 +3187,8 @@
                     payMethod = resData.payment_method === 'postpaid' ? 'postpaid' : 'cash';
                     notes = resData.notes || '';
                     ticketUrl = resData.ticket_image || '';
+                    
+                    document.getElementById('edit-trip-sheet-row').value = resData.sheet_row || '';
                     
                     // Parse flight number from notes
                     const flightMatch = notes.match(/رقم الرحلة:\s*([^\s|]*)/);
@@ -3170,6 +3233,16 @@
                     // Extract additional notes
                     const addMatch = notesText.match(/ملاحظات إضافية:\s*(.*)/s);
                     notes = addMatch ? addMatch[1].trim() : notesText;
+
+                    // Fetch linked sheet row if any
+                    try {
+                        const { data: linkedRes } = await sbClient.from('google_reservations').select('sheet_row').eq('sql_server_id', id).maybeSingle();
+                        if (linkedRes) {
+                            document.getElementById('edit-trip-sheet-row').value = linkedRes.sheet_row || '';
+                        }
+                    } catch (e) {
+                        console.log("Error fetching linked reservation for sheet_row:", e);
+                    }
                 }
 
                 // Populate fields
@@ -3199,7 +3272,7 @@
                 document.getElementById('edit-trip-passengers').value = passengers;
                 document.getElementById('edit-trip-luggage').value = luggage;
                 document.getElementById('edit-trip-date').value = date;
-                document.getElementById('edit-trip-time').value = time;
+                document.getElementById('edit-trip-time').value = parseTimeTo24h(time);
                 document.getElementById('edit-trip-price').value = price;
                 document.getElementById('edit-trip-payment-method').value = payMethod;
                 document.getElementById('edit-trip-notes').value = notes;
@@ -3224,7 +3297,8 @@
             const passengers = document.getElementById('edit-trip-passengers').value;
             const luggage = document.getElementById('edit-trip-luggage').value;
             const date = document.getElementById('edit-trip-date').value;
-            const time = document.getElementById('edit-trip-time').value;
+            const timeRaw = document.getElementById('edit-trip-time').value;
+            const time = formatTimeToArabic12h(timeRaw);
             const price = document.getElementById('edit-trip-price').value;
             const payMethod = document.getElementById('edit-trip-payment-method').value;
             const notes = document.getElementById('edit-trip-notes').value;
@@ -3311,6 +3385,44 @@
                         }
                     } catch (syncErr) {
                         console.log("Linked reservation sync error:", syncErr);
+                    }
+                }
+
+                // Sync to Google Sheets if sheetRow exists
+                const sheetRow = document.getElementById('edit-trip-sheet-row').value;
+                if (sheetRow && Number(sheetRow) >= 2) {
+                    try {
+                        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzGoawwK6JGm5QRHt4gfIScl7DYMaCDKU-GGcdYYXXyDY888xuPF0EOZ9vxVHSqHrWv/exec';
+                        const cleanId = id.startsWith('gr_') ? id.replace('gr_', '') : id;
+                        const sheetPayload = {
+                            action: 'updateBookingDetails',
+                            sheetRow: sheetRow,
+                            webId: isGoogleRes ? cleanId : '',
+                            sqlId: isGoogleRes ? '' : id,
+                            tripDate: date,
+                            tripTime: time,
+                            customerName: name,
+                            customerPhone: rawPhone,
+                            pickupAddress: pickup,
+                            dropoffAddress: dropoff,
+                            passengers: passengers,
+                            bags: luggage,
+                            carType: carType,
+                            price: Number(price),
+                            notes: notes + (flightNumber ? ' | رقم الرحلة: ' + flightNumber : '')
+                        };
+
+                        console.log('Syncing details to Google Sheet:', sheetPayload);
+                        fetch(APPS_SCRIPT_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify(sheetPayload)
+                        })
+                        .then(res => res.json())
+                        .then(resp => console.log('Sheet sync response:', resp))
+                        .catch(e => console.error("Sheet Sync Error:", e));
+                    } catch (sheetErr) {
+                        console.error("Sheet Sync preparation error:", sheetErr);
                     }
                 }
 
