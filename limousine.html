@@ -1635,22 +1635,64 @@
             let allTrips = [];
             if (!error && trips) {
                 trips.forEach(t => activeClientTripIds.add(String(t.id)));
-                allTrips = trips.map(t => {
-                    let tDate = t.trip_date || '--', tTime = t.trip_time || '--', pax = t.passengers || '--', bags = t.bags || '--';
-                    if (t.admin_notes && (tDate === '--' || pax === '--' || bags === '--')) {
-                        const dMatch = t.admin_notes.match(/📅\s*([0-9-/\\]+)(?:\s*[-:]\s*([0-9:amp\s]+))?/i);
-                        if (dMatch) { 
-                            tDate = dMatch[1].trim(); 
-                            if(dMatch[2]) tTime = dMatch[2].trim(); 
+            allTrips = trips.map(t => {
+                    // الأولوية: أعمدة trips table أولاً (trip_date, trip_time, passengers, bags)
+                    let tDate = t.trip_date || '';
+                    let tTime = t.trip_time || '';
+                    let pax   = (t.passengers !== null && t.passengers !== undefined && t.passengers !== '') ? String(t.passengers) : '';
+                    let bags  = (t.bags !== null && t.bags !== undefined && t.bags !== '') ? String(t.bags) : '';
+
+                    // Fallback: استخراج من admin_notes إذا كانت الأعمدة فارغة
+                    if (t.admin_notes && (!tDate || !tTime || !pax || !bags)) {
+                        const n = t.admin_notes;
+                        // التاريخ والوقت: أنماط متعددة
+                        if (!tDate) {
+                            const d1 = n.match(/📅\s*([0-9]{4}-[0-9]{2}-[0-9]{2})/);
+                            const d2 = n.match(/التاريخ:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})/);
+                            const d3 = n.match(/([0-9]{2}[-/][0-9]{2}[-/][0-9]{4})/);
+                            if (d1) tDate = d1[1];
+                            else if (d2) tDate = d2[1];
+                            else if (d3) tDate = d3[1];
                         }
-                        const pMatch = t.admin_notes.match(/👥\s*(\d+)/) || t.admin_notes.match(/أفراد?:\s*(\d+)/);
-                        if (pMatch) pax = pMatch[1];
-                        const bMatch = t.admin_notes.match(/🧳\s*(\d+)/) || t.admin_notes.match(/شنط?:\s*(\d+)/);
-                        if (bMatch) bags = bMatch[1];
+                        if (!tTime) {
+                            const t1 = n.match(/الوقت:\s*([0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?(?:\s*[صم])?)/);
+                            const t2 = n.match(/📅[^\n]*?[-–]\s*([0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?(?:\s*[صم])?)/);
+                            const t3 = n.match(/([0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?\s*[صم])/);
+                            if (t1) tTime = t1[1];
+                            else if (t2) tTime = t2[1];
+                            else if (t3) tTime = t3[1];
+                        }
+                        // الركاب والشنط: أنماط متعددة
+                        if (!pax) {
+                            const p1 = n.match(/👥\s*(\d+)/);
+                            const p2 = n.match(/(\d+)\s*أفراد/);
+                            const p3 = n.match(/ركاب:\s*(\d+)/);
+                            const p4 = n.match(/شنط:\s*\d+[^0-9]*?(\d+)\s*أفراد/);
+                            if (p1) pax = p1[1];
+                            else if (p2) pax = p2[1];
+                            else if (p3) pax = p3[1];
+                            else if (p4) pax = p4[1];
+                        }
+                        if (!bags) {
+                            const b1 = n.match(/🧳\s*(\d+)/);
+                            const b2 = n.match(/(\d+)\s*شنط/);
+                            const b3 = n.match(/شنط:\s*(\d+)/);
+                            if (b1) bags = b1[1];
+                            else if (b2) bags = b2[1];
+                            else if (b3) bags = b3[1];
+                        }
                     }
-                    t.details = { date: tDate, time: tTime, pax, bags, car: t.car_type || (t.cars ? t.cars.model : '--') };
+
+                    t.details = { 
+                        date: tDate || '--', 
+                        time: tTime || '--', 
+                        pax: pax || '--', 
+                        bags: bags || '--', 
+                        car: t.car_type || (t.cars ? t.cars.model : '--') 
+                    };
                     return t;
                 });
+
             }
 
             try {
