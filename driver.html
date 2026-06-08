@@ -598,6 +598,20 @@
                     <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">💵 التكلفة</p><p class="text-[11px] text-blue-400 font-num font-bold">${price} EGP</p></div>
                 </div>
 
+                ${(() => {
+                    // عرض بيانات الطيران للكابتن
+                    const allNotes = (t.notes || '') + ' ' + (t.admin_notes || '');
+                    const flightMatch = allNotes.match(/رقم الرحلة:\s*([^|\n]+)/);
+                    const flightNum = flightMatch ? flightMatch[1].trim() : null;
+                    const ticketImg = t.ticket_image || null;
+                    if (!flightNum && !ticketImg) return '';
+                    let html = '<div class="flex flex-wrap items-center gap-3 bg-sky-950/40 border border-sky-700/40 rounded-xl px-3 py-2 mb-3">';
+                    if (flightNum) html += `<span class="text-sky-300 text-xs font-bold">✈️ رحلة طيران: ${flightNum}</span>`;
+                    if (ticketImg) html += `<a href="${ticketImg}" target="_blank" class="text-teal-400 text-xs font-bold underline">🎟️ عرض التذكرة</a>`;
+                    html += '</div>';
+                    return html;
+                })()}
+
                 <div class="flex items-center justify-between pt-3 border-t border-slate-700/60">
                     <div class="flex items-center gap-2">
                         <div class="w-8 h-8 bg-blue-600/20 border border-blue-500/30 rounded-full flex items-center justify-center text-sm">👤</div>
@@ -719,6 +733,21 @@
                     <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">💰 الدفع</p><p class="text-[11px] text-white">${payMethodClean}</p></div>
                     <div class="bg-slate-800/40 rounded-lg p-2"><p class="text-[9px] text-slate-500">💵 التكلفة</p><p class="text-[11px] text-blue-400 font-num font-bold">${t.estimated_price || '--'} EGP</p></div>
                 </div>
+
+                ${(() => {
+                    // عرض بيانات الطيران للكابتن - من admin_notes
+                    const adminNotes = t.admin_notes || '';
+                    const flightMatch = adminNotes.match(/رقم الرحلة:\s*([^|\n]+)/);
+                    const flightNum = flightMatch ? flightMatch[1].trim() : null;
+                    const ticketMatch = adminNotes.match(/تذكرة:\s*(https?:\/\/\S+)/);
+                    const ticketImg = ticketMatch ? ticketMatch[1].trim() : null;
+                    if (!flightNum && !ticketImg) return '';
+                    let html = '<div class="flex flex-wrap items-center gap-3 bg-sky-950/40 border border-sky-700/40 rounded-xl px-3 py-2 mb-3">';
+                    if (flightNum) html += `<span class="text-sky-300 text-xs font-bold">✈️ رحلة طيران: ${flightNum}</span>`;
+                    if (ticketImg) html += `<a href="${ticketImg}" target="_blank" class="text-teal-400 text-xs font-bold underline">🎟️ عرض التذكرة</a>`;
+                    html += '</div>';
+                    return html;
+                })()}
 
                 <!-- العميل -->
                 <div class="flex items-center justify-between pt-3 border-t border-slate-700/60">

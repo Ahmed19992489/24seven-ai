@@ -732,7 +732,7 @@
                     });
 
                     let query = sb.from('google_reservations')
-                        .select('id, sheet_row, sql_server_id, customer_name, passengers, bags, car_type, trip_type, pickup_address, dropoff_address, trip_date, trip_time');
+                        .select('id, sheet_row, sql_server_id, customer_name, passengers, bags, car_type, trip_type, pickup_address, dropoff_address, trip_date, trip_time, ticket_image, notes');
 
                     if (sheetRows.length > 0) {
                         query = query.or(`sql_server_id.in.(${tripIdsStr.join(',')}),sheet_row.in.(${sheetRows.join(',')})`);
@@ -1065,6 +1065,19 @@
                                 <p><i class="far fa-calendar-alt ml-2 text-xs"></i>التاريخ: <span class="font-black text-white font-num text-sm">${tripDate}</span></p>
                                 <p><i class="far fa-clock ml-2 text-xs"></i>الوقت: <span class="font-black text-white font-num text-sm">${tripTime}</span></p>
                             </div>
+                            ${(() => {
+                                // عرض بيانات الطيران والتذكرة إن وجدت
+                                const notesText = t.admin_notes || (gr?.notes) || '';
+                                const flightMatch = notesText.match(/رقم الرحلة:\s*([^|\n]+)/);
+                                const flightNum = flightMatch ? flightMatch[1].trim() : null;
+                                const ticketImg = (gr && gr.ticket_image) || null;
+                                if (!flightNum && !ticketImg) return '';
+                                let html = '<div class="flex flex-wrap items-center gap-3 bg-sky-950/30 border border-sky-800/30 rounded-xl px-3 py-2 mt-1">';
+                                if (flightNum) html += `<span class="text-sky-300 text-xs font-bold">✈️ رحلة طيران: ${flightNum}</span>`;
+                                if (ticketImg) html += `<a href="${ticketImg}" target="_blank" class="text-teal-400 text-xs font-bold underline">🎟️ عرض التذكرة</a>`;
+                                html += '</div>';
+                                return html;
+                            })()}
                             <div class="border-t border-slate-800 pt-3 flex flex-wrap gap-3 items-center justify-between">
                                 ${driverInfoHtml}
                                 <div class="flex items-center gap-3">

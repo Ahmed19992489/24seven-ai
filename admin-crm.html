@@ -1115,6 +1115,19 @@
                     </div>
                 </div>
 
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-xs font-bold text-slate-500">رقم رحلة الطيران (إن وجد)</label>
+                        <input type="text" id="manual-flight-number" class="input-std" placeholder="مثال: MS779">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-500">رفع صورة التذكرة</label>
+                        <input type="file" id="manual-ticket-file" class="input-std text-xs" accept="image/*" onchange="uploadTicketFile('manual-ticket-file', 'manual-ticket-url', 'manual-ticket-status')">
+                        <input type="hidden" id="manual-ticket-url">
+                        <span id="manual-ticket-status" class="text-[10px] text-blue-600 block mt-0.5 font-bold"></span>
+                    </div>
+                </div>
+
                 <div>
                     <label class="text-xs font-bold text-slate-500">ملاحظات</label>
                     <textarea id="manual-notes" class="input-std h-16"></textarea>
@@ -1237,6 +1250,19 @@
                             <option value="cash">💵 كاش (Cash)</option>
                             <option value="postpaid">💳 آجل (Postpaid)</option>
                         </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-xs font-bold text-slate-500">رقم رحلة الطيران</label>
+                        <input type="text" id="edit-trip-flight-number" class="input-std" placeholder="رقم الرحلة">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-500">تحديث صورة التذكرة</label>
+                        <input type="file" id="edit-trip-ticket-file" class="input-std text-xs" accept="image/*" onchange="uploadTicketFile('edit-trip-ticket-file', 'edit-trip-ticket-url', 'edit-trip-ticket-status')">
+                        <input type="hidden" id="edit-trip-ticket-url">
+                        <span id="edit-trip-ticket-status" class="text-[10px] text-blue-600 block mt-0.5 font-bold"></span>
                     </div>
                 </div>
 
@@ -1873,10 +1899,38 @@
                     `;
                 }
 
+                let flightInfoHtml = '';
+                let flightNum = '';
+                let ticketUrl = '';
+
+                if (resObj && resObj.notes && resObj.notes.includes('رقم الرحلة:')) {
+                    const match = resObj.notes.match(/رقم الرحلة:\s*([^\s|]*)/);
+                    if (match) flightNum = match[1].trim();
+                }
+                if (resObj && resObj.ticket_image) {
+                    ticketUrl = resObj.ticket_image;
+                }
+
+                if (!flightNum && t.admin_notes) {
+                    const match = t.admin_notes.match(/رقم الرحلة:\s*([^\s|\n]*)/);
+                    if (match) flightNum = match[1].trim();
+                }
+                if (!ticketUrl && t.admin_notes) {
+                    const match = t.admin_notes.match(/تذكرة:\s*([^\n]*)/);
+                    if (match) ticketUrl = match[1].trim();
+                }
+
+                if (flightNum) {
+                    flightInfoHtml += `<br><span class="text-[10px] text-blue-600 font-bold" title="رقم رحلة الطيران"><i class="fas fa-plane ml-0.5"></i> طيران: ${flightNum}</span>`;
+                }
+                if (ticketUrl) {
+                    flightInfoHtml += `<br><a href="${ticketUrl}" target="_blank" class="text-[10px] text-purple-600 hover:text-purple-800 font-bold" title="عرض صورة التذكرة"><i class="fas fa-ticket-alt ml-0.5"></i> عرض التذكرة 🎟️</a>`;
+                }
+
                 list.innerHTML += `
                     <tr class="border-b hover:bg-white text-xs">
                         <td class="p-4">#${String(t.id)}</td>
-                        <td class="p-4 font-bold text-slate-800">${displayName}<br><span class="text-[10px] text-slate-500">${displayPhone}</span>${decisionHtml}${destReqHtml}</td>
+                        <td class="p-4 font-bold text-slate-800">${displayName}<br><span class="text-[10px] text-slate-500">${displayPhone}</span>${flightInfoHtml}${decisionHtml}${destReqHtml}</td>
                         <td class="p-4 min-w-[180px] whitespace-normal leading-relaxed text-slate-600">${t.admin_notes || '-'}</td>
                         <td class="p-4 font-bold text-slate-500">${(t.pickup_location || '-').split(',')[0]} ➝ ${(t.dropoff_location || '-').split(',')[0]}</td>
                         <td class="p-4 font-bold">${driverName} / ${carInfo}</td>
@@ -3010,8 +3064,7 @@
             document.getElementById('edit-trip-id').value = id;
             document.getElementById('edit-trip-is-google-res').value = isGoogleRes ? 'true' : 'false';
 
-            let name = '', phone = '', pickup = '', dropoff = '', carType = 'sedan', tripType = 'one_way';
-            let passengers = 1, luggage = 0, date = '', time = '', price = 0, payMethod = 'cash', notes = '';
+            let flightNumber = '', ticketUrl = '';
 
             try {
                 if (isGoogleRes) {
@@ -3032,6 +3085,11 @@
                     price = resData.cost || 0;
                     payMethod = resData.payment_method === 'postpaid' ? 'postpaid' : 'cash';
                     notes = resData.notes || '';
+                    ticketUrl = resData.ticket_image || '';
+                    
+                    // Parse flight number from notes
+                    const flightMatch = notes.match(/رقم الرحلة:\s*([^\s|]*)/);
+                    if (flightMatch) flightNumber = flightMatch[1].trim();
                 } else {
                     const { data: tripData, error } = await sbClient.from('trips').select('*').eq('id', id).single();
                     if (error) throw error;
@@ -3063,6 +3121,12 @@
                     const isCash = notesText.toLowerCase().includes('cash') || notesText.includes('كاش') || notesText.includes('💵');
                     payMethod = isCash ? 'cash' : (tripData.payment_method || 'cash');
 
+                    const flightMatch = notesText.match(/رقم الرحلة:\s*([^\s|\n]*)/);
+                    if (flightMatch) flightNumber = flightMatch[1].trim();
+
+                    const ticketMatch = notesText.match(/تذكرة:\s*([^\n]*)/);
+                    if (ticketMatch) ticketUrl = ticketMatch[1].trim();
+
                     // Extract additional notes
                     const addMatch = notesText.match(/ملاحظات إضافية:\s*(.*)/s);
                     notes = addMatch ? addMatch[1].trim() : notesText;
@@ -3073,6 +3137,9 @@
                 document.getElementById('edit-trip-phone').value = phone;
                 document.getElementById('edit-trip-pickup').value = pickup;
                 document.getElementById('edit-trip-dropoff').value = dropoff;
+                document.getElementById('edit-trip-flight-number').value = flightNumber;
+                document.getElementById('edit-trip-ticket-url').value = ticketUrl;
+                document.getElementById('edit-trip-ticket-status').textContent = ticketUrl ? '✅ التذكرة مرفوعة' : '';
                 
                 // Map values
                 const carSelect = document.getElementById('edit-trip-car-type');
@@ -3121,6 +3188,8 @@
             const price = document.getElementById('edit-trip-price').value;
             const payMethod = document.getElementById('edit-trip-payment-method').value;
             const notes = document.getElementById('edit-trip-notes').value;
+            const flightNumber = document.getElementById('edit-trip-flight-number').value.trim();
+            const ticketUrl = document.getElementById('edit-trip-ticket-url').value.trim();
 
             if (!name || !phone || !pickup || !dropoff || !price) {
                 alert("يرجى ملء جميع البيانات الأساسية (الاسم، الهاتف، العنوان، السعر)");
@@ -3130,14 +3199,21 @@
             let rawPhone = phone.replace(/\D/g, '');
             rawPhone = normalizeEgyptianPhone(rawPhone);
 
-            const fullNotes = `حجز معدل 📞
+            let fullNotes = `حجز معدل 📞
 العميل: ${name}
 رقم: ${rawPhone}
 سيارة: ${carType} | رحلة: ${tripType}
 ركاب: ${passengers} | شنط: ${luggage}
 التاريخ: ${date} | الوقت: ${time}
-نوع التحصيل: ${payMethod === 'cash' ? 'cash' : 'postpaid'}
-ملاحظات إضافية: ${notes}`;
+نوع التحصيل: ${payMethod === 'cash' ? 'cash' : 'postpaid'}`;
+
+            if (flightNumber) {
+                fullNotes += `\nرقم الرحلة: ${flightNumber}`;
+            }
+            if (ticketUrl) {
+                fullNotes += `\nتذكرة: ${ticketUrl}`;
+            }
+            fullNotes += `\nملاحظات إضافية: ${notes}`;
 
             try {
                 if (isGoogleRes) {
@@ -3155,7 +3231,8 @@
                         trip_time: time,
                         cost: Number(price),
                         payment_method: payMethod,
-                        notes: notes
+                        notes: notes + (flightNumber ? ' | رقم الرحلة: ' + flightNumber : ''),
+                        ticket_image: ticketUrl
                     }).eq('id', cleanId);
                     if (error) throw error;
                 } else {
@@ -3188,7 +3265,8 @@
                                 trip_time: time,
                                 cost: Number(price),
                                 payment_method: payMethod,
-                                notes: notes
+                                notes: notes + (flightNumber ? ' | رقم الرحلة: ' + flightNumber : ''),
+                                ticket_image: ticketUrl
                             }).eq('id', linkedRes.id);
                         }
                     } catch (syncErr) {
@@ -3203,6 +3281,72 @@
             } catch (err) {
                 console.error(err);
                 alert("حدث خطأ أثناء الحفظ: " + err.message);
+            }
+        }
+
+        async function compressImage(file) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                const url = URL.createObjectURL(file);
+                img.onload = () => {
+                    try {
+                        const MAX = 900;
+                        let w = img.width, h = img.height;
+                        if (w > MAX || h > MAX) {
+                            if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+                            else { w = Math.round(w * MAX / h); h = MAX; }
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = w; canvas.height = h;
+                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                        canvas.toBlob(blob => {
+                            URL.revokeObjectURL(url);
+                            resolve(blob || file);
+                        }, 'image/jpeg', 0.70);
+                    } catch (e) {
+                        URL.revokeObjectURL(url);
+                        resolve(file);
+                    }
+                };
+                img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+                img.src = url;
+            });
+        }
+
+        async function uploadTicketFile(fileInputId, hiddenUrlInputId, statusIndicatorId) {
+            const fileInput = document.getElementById(fileInputId);
+            const hiddenInput = document.getElementById(hiddenUrlInputId);
+            const statusIndicator = document.getElementById(statusIndicatorId);
+            
+            if (!fileInput.files || fileInput.files.length === 0) return;
+            
+            const file = fileInput.files[0];
+            statusIndicator.textContent = '⏳ جاري رفع التذكرة...';
+            statusIndicator.className = 'text-[10px] text-blue-600 block mt-0.5 font-bold';
+            
+            try {
+                const compressed = await compressImage(file);
+                const fileExt = file.name.split('.').pop();
+                const path = `tickets/${Date.now()}_ticket.${fileExt}`;
+                
+                const { error } = await sbClient.storage.from('trip-photos').upload(path, compressed, { 
+                    upsert: true, 
+                    contentType: file.type 
+                });
+                
+                if (error) throw error;
+                
+                const { data: urlData } = sbClient.storage.from('trip-photos').getPublicUrl(path);
+                if (!urlData || !urlData.publicUrl) throw new Error('فشل استرجاع رابط التذكرة');
+                
+                hiddenInput.value = urlData.publicUrl;
+                statusIndicator.textContent = '✅ تم رفع صورة التذكرة بنجاح!';
+                statusIndicator.className = 'text-[10px] text-green-600 block mt-0.5 font-bold';
+            } catch (err) {
+                console.error(err);
+                statusIndicator.textContent = '❌ فشل رفع التذكرة: ' + err.message;
+                statusIndicator.className = 'text-[10px] text-red-600 block mt-0.5 font-bold';
+                alert('فشل رفع التذكرة: ' + err.message);
             }
         }
 
@@ -3255,17 +3399,26 @@
 
             const payMethod = document.getElementById('manual-payment-method').value;
             const platform = document.getElementById('manual-platform').value;
+            const flightNumber = document.getElementById('manual-flight-number').value.trim();
+            const ticketUrl = document.getElementById('manual-ticket-url').value.trim();
 
             // 4. تجميع الملاحظات
-            const fullNotes = `حجز هاتفي 📞
+            let fullNotes = `حجز هاتفي 📞
 العميل: ${name} (${clientType})
 رقم: ${phone}
 سيارة: ${carType} | رحلة: ${tripType}
 ركاب: ${passengers} | شنط: ${luggage}
 التاريخ: ${date} | الوقت: ${time}
 نوع التحصيل: ${payMethod === 'cash' ? 'cash' : 'postpaid'}
-المنصة: ${platform}
-ملاحظات إضافية: ${notes}`;
+المنصة: ${platform}`;
+
+            if (flightNumber) {
+                fullNotes += `\nرقم الرحلة: ${flightNumber}`;
+            }
+            if (ticketUrl) {
+                fullNotes += `\nتذكرة: ${ticketUrl}`;
+            }
+            fullNotes += `\nملاحظات إضافية: ${notes}`;
 
             try {
                 // 5. الإرسال إلى Supabase مع ربط user_id
@@ -3300,7 +3453,7 @@
                         clientStatus: clientType === 'vip' ? 'VIP' : (clientType === 'returning' ? 'عميل قديم' : 'عميل جديد'),
                         price: price,
                         email: '',
-                        notes: `المنصة: ${platform}${notes ? ' | ' + notes : ''}`,
+                        notes: `المنصة: ${platform}${notes ? ' | ' + notes : ''}${flightNumber ? ' | رقم الرحلة: ' + flightNumber : ''}${ticketUrl ? ' | تذكرة: ' + ticketUrl : ''}`,
                         tripType: tripType,
                         enteredBy: 'موظف',
                         sqlId: tripId || ''
