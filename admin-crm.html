@@ -2221,51 +2221,73 @@
 
         async function changeClientDecision(resId, currentDecision, tripId, sheetRow) {
             const newDecision = prompt(
-                "تعديل قرار العميل للرحلة:\n\nاكتب:\n1 - للتأكيد (مؤكد)\n2 - للإلغاء (ملغي)\n3 - للمسح (لم يقرر)",
+                "تعديل قرار العميل للرحلة:\n\nاكتب:\n1 - للتأكيد (مؤكد)\n2 - للإلغاء (ملغي)\n3 - لحذف وإلغاء الحجز بالكامل من السايت",
                 currentDecision === 'مؤكد' ? '1' : (currentDecision === 'ملغي' ? '2' : '')
             );
             
             if (newDecision === null) return;
             
             let decisionText = '';
+            let isDelete = (newDecision === '3');
+            
             if (newDecision === '1') {
                 decisionText = 'مؤكد';
             } else if (newDecision === '2') {
                 decisionText = 'ملغي';
-            } else if (newDecision === '3' || newDecision.trim() === '') {
-                decisionText = '';
+            } else if (newDecision === '3') {
+                decisionText = 'محذوف';
             } else {
                 decisionText = newDecision.trim();
             }
             
             try {
-                const { error } = await sbClient.from('google_reservations')
-                    .update({ client_decision: decisionText })
-                    .eq('id', resId);
+                const cleanResId = String(resId).startsWith('gr_') ? Number(resId.replace('gr_', '')) : Number(resId);
+                
+                if (isDelete) {
+                    if (!confirm("⚠️ هل أنت متأكد من حذف وإلغاء هذا الحجز بالكامل من السايت؟")) return;
                     
-                if (error) throw error;
+                    // 1. Delete from google_reservations
+                    const { error: resDelErr } = await sbClient.from('google_reservations')
+                        .delete()
+                        .eq('id', cleanResId);
+                    if (resDelErr) throw resDelErr;
 
-                if (tripId && !String(tripId).startsWith('gr_')) {
-                    const { data: tripData } = await sbClient.from('trips')
-                        .select('admin_notes')
-                        .eq('id', Number(tripId))
-                        .single();
-                        
-                    if (tripData) {
-                        let notes = tripData.admin_notes || '';
-                        if (notes.includes('قرار العميل:')) {
-                            notes = notes.replace(/قرار العميل:\s*.*/, `قرار العميل: ${decisionText}`);
-                        } else {
-                            notes = notes.trim() + `\nقرار العميل: ${decisionText}`;
-                        }
-                        await sbClient.from('trips')
-                            .update({ admin_notes: notes })
+                    // 2. If it has a real trip in the trips table, delete it too
+                    if (tripId && !String(tripId).startsWith('gr_')) {
+                        const { error: tripDelErr } = await sbClient.from('trips')
+                            .delete()
                             .eq('id', Number(tripId));
+                        if (tripDelErr) throw tripDelErr;
+                    }
+                } else {
+                    const { error } = await sbClient.from('google_reservations')
+                        .update({ client_decision: decisionText })
+                        .eq('id', cleanResId);
+                        
+                    if (error) throw error;
+
+                    if (tripId && !String(tripId).startsWith('gr_')) {
+                        const { data: tripData } = await sbClient.from('trips')
+                            .select('admin_notes')
+                            .eq('id', Number(tripId))
+                            .single();
+                            
+                        if (tripData) {
+                            let notes = tripData.admin_notes || '';
+                            if (notes.includes('قرار العميل:')) {
+                                notes = notes.replace(/قرار العميل:\s*.*/, `قرار العميل: ${decisionText}`);
+                            } else {
+                                notes = notes.trim() + `\nقرار العميل: ${decisionText}`;
+                            }
+                            await sbClient.from('trips')
+                                .update({ admin_notes: notes })
+                                .eq('id', Number(tripId));
+                        }
                     }
                 }
                 
                 // 🌐 تحديث القرار في شيت جوجل لتفادي اختفائه عند التزامن
-                if (sheetRow) {
+                if (sheetRow && !isDelete) {
                     try {
                         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzGoawwK6JGm5QRHt4gfIScl7DYMaCDKU-GGcdYYXXyDY888xuPF0EOZ9vxVHSqHrWv/exec';
                         const cleanTripId = (tripId && !String(tripId).startsWith('gr_')) ? String(tripId) : '';
@@ -2288,10 +2310,14 @@
                     }
                 }
                 
-                alert("✅ تم تحديث قرار العميل بنجاح!");
+                if (isDelete) {
+                    alert("🗑️ تم حذف وإلغاء الحجز من السايت بنجاح!");
+                } else {
+                    alert("✅ تم تحديث قرار العميل بنجاح!");
+                }
                 loadOperations();
             } catch (e) {
-                alert("❌ خطأ أثناء تحديث القرار: " + e.message);
+                alert("❌ خطأ أثناء تحديث القرار أو الحذف: " + e.message);
             }
         }
 
