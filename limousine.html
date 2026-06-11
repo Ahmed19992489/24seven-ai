@@ -1577,7 +1577,7 @@
             let trip1Price = tripData.type === 'round-diff' ? Number(tripData.price) / 2 : Number(tripData.price);
 
             // 2. إرسال الرحلة مع ربط user_id بالعميل الفعلي وحفظ تفاصيل العميل اليدوي
-            const { error: tripError } = await sb.from('trips').insert([{
+            const { data: insertedTrips, error: tripError } = await sb.from('trips').insert([{
                 user_id: targetUserId || user.id, 
                 pickup_location: document.getElementById('pickup').value, 
                 dropoff_location: document.getElementById('dropoff').value,
@@ -1589,7 +1589,7 @@
                 payment_status: payStatus,
                 manual_client_name: name,
                 client_phone: rawPhone
-            }]);
+            }]).select('id');
 
             if (tripError) { alert("خطأ: " + tripError.message); btn.disabled = false; return; }
 
@@ -1615,7 +1615,9 @@
             try {
                 const { data: { user: authUserFinal } } = await sb.auth.getUser();
                 const whatsappVal = document.getElementById('guest-whatsapp')?.value || phone;
+                const insertedTripId = insertedTrips && insertedTrips.length > 0 ? insertedTrips[0].id : '';
                 sendToGoogleSheet({
+                    sqlId: insertedTripId,
                     tripDate: tripData.date || '',
                     tripTime: tripData.time || '',
                     clientName: name,

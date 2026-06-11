@@ -1,4 +1,4 @@
-const CACHE_NAME = '24seven-captain-v5';
+const CACHE_NAME = '24seven-captain-v6';
 const ASSETS_TO_CACHE = [
   '/',
   '/driver.html',
