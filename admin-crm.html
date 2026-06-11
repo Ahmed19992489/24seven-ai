@@ -2091,7 +2091,7 @@
             if (!confirm('تأكيد الإنهاء؟')) return;
 
             // التحقق هل الرحلة خارجية (Outsourced)
-            const { data: trip } = await sbClient.from('trips').select('is_outsourced, vendor_id, admin_notes, driver_id, car_id').eq('id', tripId).single();
+            const { data: trip } = await sbClient.from('trips').select('is_outsourced, vendor_id, admin_notes, driver_id, car_id, user_id').eq('id', tripId).single();
             
             if (trip && trip.is_outsourced) {
                 try {
@@ -2121,6 +2121,9 @@
                             }]);
                         }
                     }
+                    
+                    // خصم من المحفظة إذا وجد رصيد
+                    await deductClientWallet(trip, price, tripId);
                     
                     document.getElementById('complete-modal').style.display = 'none';
                     alert('✅ تم إنهاء الرحلة الخارجية بنجاح وتوزيع الحسابات!');
@@ -2173,8 +2176,39 @@
                 if (vid) { const { data: v } = await sbClient.from('vaults').select('balance').eq('id', vid).single(); await sbClient.from('vaults').update({ balance: (v.balance || 0) + carNet }).eq('id', vid); }
             }
 
+            // خصم من المحفظة إذا وجد رصيد
+            await deductClientWallet(trip, price, tripId);
+
             document.getElementById('complete-modal').style.display = 'none';
             loadOperations(); loadDashboard(); loadFinance();
+        }
+
+        async function deductClientWallet(trip, price, tripId) {
+            if (trip && trip.user_id) {
+                try {
+                    const { data: profile } = await sbClient.from('profiles').select('wallet_balance, full_name').eq('id', trip.user_id).single();
+                    if (profile && (profile.wallet_balance || 0) > 0) {
+                        const walletBal = profile.wallet_balance || 0;
+                        const deduct = Math.min(walletBal, price);
+                        if (deduct > 0) {
+                            const newBalance = walletBal - deduct;
+                            await sbClient.from('profiles').update({ wallet_balance: newBalance }).eq('id', trip.user_id);
+                            
+                            let updatedNotes = (trip.admin_notes || '');
+                            updatedNotes += `\n[محاسبة المحفظة]: تم خصم مبلغ ${deduct} EGP تلقائياً من محفظة العميل عند الإنهاء. الرصيد المتبقي: ${newBalance} EGP`;
+                            
+                            await sbClient.from('trips').update({ 
+                                payment_status: newBalance >= 0 ? 'paid' : 'unpaid', 
+                                admin_notes: updatedNotes 
+                            }).eq('id', tripId);
+                            
+                            alert(`💳 [محفظة العميل]: تم خصم ${deduct} EGP تلقائياً من محفظة العميل (${profile.full_name}).\nالرصيد المتبقي في المحفظة: ${newBalance} EGP.`);
+                        }
+                    }
+                } catch (walletErr) {
+                    console.error("Error deducting from client wallet:", walletErr);
+                }
+            }
         }
 
         async function transferTripToInternal(tripId) {
