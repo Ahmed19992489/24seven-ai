@@ -1099,7 +1099,7 @@
                     console.log("🆕 New message received via Realtime:", payload.new);
                     
                     // Check if message already exists by real ID
-                    if (allMessages.find(m => m.id === payload.new.id)) return;
+                    if (allMessages.some(m => m.id === payload.new.id)) return;
                     
                     // [FIX] Normalize the incoming sender_id to match grouped keys
                     const incomingNormalized = (payload.new.channel === 'whatsapp') 
@@ -1117,17 +1117,41 @@
                         if (tempIdx !== -1) {
                             allMessages[tempIdx] = payload.new;
                             regroupChatsOnly();
-                            loadUnifiedChats();
-                            if(activeChatType === 'omni' && activeChatId === incomingNormalized) renderMessages();
+                            if (activeChatType === 'omni' && activeChatId === incomingNormalized) {
+                                renderMessages();
+                            }
+                            const existingChat = unifiedChatsList.find(c => c.id === incomingNormalized && c.type === 'omni');
+                            if (existingChat) {
+                                existingChat.lastMessage = payload.new.message_text;
+                                existingChat.lastMessageTime = new Date(payload.new.created_at);
+                            }
+                            renderUnifiedChatList();
                             return;
                         }
                     }
                     
                     allMessages.push(payload.new);
-                    regroupChatsOnly();
-                    loadUnifiedChats();
                     
-                    if(activeChatType === 'omni' && activeChatId === incomingNormalized) {
+                    // تحديث المجموعة محلياً
+                    if (groupedChats[incomingNormalized]) {
+                        const alreadyInGroup = groupedChats[incomingNormalized].messages.some(m => m.id === payload.new.id);
+                        if (!alreadyInGroup) {
+                            groupedChats[incomingNormalized].messages.push(payload.new);
+                            groupedChats[incomingNormalized].last = payload.new;
+                        }
+                    } else {
+                        // مجموعة جديدة
+                        groupedChats[incomingNormalized] = {
+                            id: incomingNormalized,
+                            originalIds: new Set([payload.new.sender_id]),
+                            name: payload.new.sender_name || incomingNormalized,
+                            channel: payload.new.channel,
+                            messages: [payload.new],
+                            last: payload.new
+                        };
+                    }
+
+                    if (activeChatType === 'omni' && activeChatId === incomingNormalized) {
                         renderMessages();
                         const container = document.getElementById('chat-messages');
                         container.scrollTop = container.scrollHeight;
@@ -1136,17 +1160,31 @@
                     // Play sound + update badge for incoming customer messages
                     if (!payload.new.is_from_admin) {
                         playNotify();
-                        // تحديث شارة المراسلات الموحدة
-                        if (activeTab !== 'chat' || activeChatId !== incomingNormalized) {
-                            const chatBadge = document.getElementById('chat-badge');
-                            if (chatBadge) {
-                                let count = parseInt(chatBadge.textContent || '0');
-                                if (isNaN(count)) count = 0;
-                                chatBadge.textContent = count + 1;
-                                chatBadge.classList.remove('hidden');
-                            }
-                        }
                     }
+
+                    // تحديث قائمة الشات الجانبية محلياً
+                    const existingChat = unifiedChatsList.find(c => c.id === incomingNormalized && c.type === 'omni');
+                    if (existingChat) {
+                        existingChat.lastMessage = payload.new.message_text || payload.new.message;
+                        existingChat.lastMessageTime = new Date(payload.new.created_at);
+                        if (!payload.new.is_from_admin && !(activeChatType === 'omni' && activeChatId === incomingNormalized)) {
+                            existingChat.unreadCount = (existingChat.unreadCount || 0) + 1;
+                        }
+                    } else {
+                        // شات جديد
+                        unifiedChatsList.unshift({
+                            id: incomingNormalized,
+                            type: 'omni',
+                            name: payload.new.sender_name || incomingNormalized,
+                            lastMessage: payload.new.message_text || payload.new.message,
+                            lastMessageTime: new Date(payload.new.created_at),
+                            unreadCount: payload.new.is_from_admin ? 0 : 1,
+                            avatar: payload.new.channel === 'messenger' ? '💬' : (payload.new.channel === 'instagram' ? '📸' : '🟢'),
+                            channel: payload.new.channel
+                        });
+                    }
+                    unifiedChatsList.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
+                    renderUnifiedChatList();
                 })
                 .subscribe();
         }
@@ -4827,6 +4865,7 @@ ${contextData}
         }
         setTimeout(initGlobalTripChatListener, 2000);
         setTimeout(initGlobalSupportListener, 2000);
+        setTimeout(loadChats, 2000);
 
         let globalModTripsSub = null;
         function setupModTripsRealtime() {
@@ -4961,9 +5000,18 @@ ${contextData}
             const omniContainer = document.getElementById('chat-messages');
             if (omniContainer && omniContainer.offsetParent !== null && typeof activeChatId !== 'undefined' && activeChatId) {
                 if (activeChatType === 'omni') {
-                    const { data: msgs } = await sbClient.from('omnichannel_messages').select('id').eq('sender_id', activeChatId);
+                    const chat = groupedChats[activeChatId];
+                    let msgsData = null;
+                    if (chat && chat.channel === 'whatsapp' && chat.originalIds) {
+                        const ids = Array.from(chat.originalIds);
+                        const { data } = await sbClient.from('omnichannel_messages').select('id').in('sender_id', ids);
+                        msgsData = data;
+                    } else {
+                        const { data } = await sbClient.from('omnichannel_messages').select('id').eq('sender_id', activeChatId);
+                        msgsData = data;
+                    }
                     const currentMsgCount = omniContainer.children.length;
-                    if (msgs && msgs.length > currentMsgCount) {
+                    if (msgsData && msgsData.length > currentMsgCount) {
                         const { data: fullMsgs } = await sbClient.from('omnichannel_messages')
                             .select('*').order('created_at', { ascending: false }).limit(1000);
                         if (fullMsgs) {

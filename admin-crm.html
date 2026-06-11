@@ -4109,9 +4109,18 @@
                 const omniContainer = document.getElementById('omni-messages-area');
                 if (omniContainer && omniContainer.offsetParent !== null && adminActiveChatId) {
                     if (adminActiveChatType === 'omni') {
-                        const { data: msgs } = await sbClient.from('omnichannel_messages').select('id').eq('sender_id', adminActiveChatId);
+                        const chat = adminGroupedChats[adminActiveChatId];
+                        let msgsData = null;
+                        if (chat && chat.channel === 'whatsapp' && chat.originalIds) {
+                            const ids = Array.from(chat.originalIds);
+                            const { data } = await sbClient.from('omnichannel_messages').select('id').in('sender_id', ids);
+                            msgsData = data;
+                        } else {
+                            const { data } = await sbClient.from('omnichannel_messages').select('id').eq('sender_id', adminActiveChatId);
+                            msgsData = data;
+                        }
                         const currentMsgCount = omniContainer.children.length;
-                        if (msgs && msgs.length > currentMsgCount) {
+                        if (msgsData && msgsData.length > currentMsgCount) {
                             loadAdminUnifiedChats();
                         }
                     } else if (adminActiveChatType === 'trip') {
