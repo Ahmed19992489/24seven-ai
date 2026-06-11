@@ -252,16 +252,15 @@ async def receive_messenger_webhook(request: Request):
             return {"status": "ok"}
 
         for entry in data["entry"]:
-            if "messaging" not in entry:
-                continue
-
-            for event in entry["messaging"]:
+            events = entry.get("messaging", []) or entry.get("standby", [])
+            for event in events:
                 if "delivery" in event or "read" in event:
                     continue
 
                 sender_id = event["sender"]["id"]
                 text = None
-                mid = event.get("message", {}).get("mid")
+                message = event.get("message", {}) or event.get("message_edit", {})
+                mid = message.get("mid")
 
                 # منع التكرار
                 if mid:
@@ -272,11 +271,11 @@ async def receive_messenger_webhook(request: Request):
                     if len(processed_mids) > 10000:
                         processed_mids.clear()
 
-                if "message" in event:
-                    if event["message"].get("is_echo"):
-                        admin_text = event["message"].get("text", "").strip()
+                if "message" in event or "message_edit" in event:
+                    if message.get("is_echo"):
+                        admin_text = message.get("text", "").strip()
                         target_user_id = event["recipient"]["id"]
-                        echo_mid = event["message"].get("mid", "")
+                        echo_mid = message.get("mid", "")
 
                         if echo_mid in sent_via_api_mids:
                             print(f"[FB->Render] (Echo) Admin via API to {target_user_id}: {admin_text} [SKIP - saved by send_reply]")
@@ -298,10 +297,10 @@ async def receive_messenger_webhook(request: Request):
                             )
                         continue
 
-                    if "quick_reply" in event["message"]:
-                        text = event["message"]["quick_reply"].get("payload")
-                    elif "text" in event["message"]:
-                        text = event["message"]["text"]
+                    if "quick_reply" in message:
+                        text = message["quick_reply"].get("payload")
+                    elif "text" in message:
+                        text = message["text"]
 
                 elif "postback" in event:
                     text = event["postback"].get("payload")
@@ -363,15 +362,50 @@ async def receive_instagram_webhook(request: Request):
             return {"status": "ok"}
 
         for entry in data["entry"]:
-            messaging_events = entry.get("messaging", [])
+            messaging_events = entry.get("messaging", []) or entry.get("standby", [])
             for event in messaging_events:
                 sender_id = event.get("sender", {}).get("id")
-                message = event.get("message", {})
+                recipient_id = event.get("recipient", {}).get("id")
+                message = event.get("message", {}) or event.get("message_edit", {})
 
-                if not sender_id or not message or "text" not in message or message.get("is_echo"):
+                if not sender_id or not message or "text" not in message:
                     continue
 
+                mid = message.get("mid")
+                # منع التكرار
+                if mid:
+                    if mid in processed_mids:
+                        print(f"[IG->Render] Skipping duplicate Instagram MID: {mid}")
+                        continue
+                    processed_mids.add(mid)
+                    if len(processed_mids) > 10000:
+                        processed_mids.clear()
+
                 text_body = message.get("text", "")
+
+                # معالجة الـ Echoes (الردود من الأدمن)
+                if message.get("is_echo"):
+                    target_user_id = recipient_id
+                    if mid in sent_via_api_mids:
+                        print(f"[IG->Render] (Echo) Admin via API to {target_user_id}: {text_body} [SKIP - saved by send_reply]")
+                        sent_via_api_mids.discard(mid)
+                    else:
+                        print(f"[IG->Render] (Echo) Admin via Business Suite to {target_user_id}: {text_body} [SAVING]")
+                        _req.post(
+                            f"{_SB_URL}/rest/v1/omnichannel_messages",
+                            headers=_SB_HEADERS,
+                            json={
+                                "channel": "instagram",
+                                "sender_id": target_user_id,
+                                "sender_name": "Admin",
+                                "message_text": text_body,
+                                "is_from_admin": True,
+                                "read_by_admin": True
+                            },
+                            timeout=5
+                        )
+                    continue
+
                 print(f"[IG->Render] from {sender_id}: {text_body}")
 
                 # جلب اسم الحساب من Meta API
