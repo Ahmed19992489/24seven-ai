@@ -10,21 +10,44 @@ SUPABASE_HEADERS = {
     'Content-Type': 'application/json'
 }
 
-FB_PAGE_TOKEN = "EAAPDbwUyvY0BQ3KLTieXWMHZAJZC92eQI9sBwEISipvaaVR9hoteMHWhx0fi8mSXIC4TnTiBHpykmsv6HyAkYK4yQUyQv81ZCF7EZA5CEZAKwPqhfl3jjmaN5muRSk1ZCpNh7OXAQ8Ey7ilMhBmjPvQpLRlzMD8MbYWChOdFxwiFKgPNAqJhg6aVZBR25rvIvChgw1vusjBwHZAeveEMSHpaQ9ps"
+FB_PAGE_TOKEN = "EAAPDbwUyvY0BRN0VW4bIHPLRpeA7qHqK5TyFpNxJ8fuFcvVCshuBwZC52F59Q6oNH671nLZBbAiEsGSB55Vq0sHjyMIB4QNStzt6sFxRL7ImzttrnuFkHVTYWGZC0J2MgbBGfqo3dOi7Wo5QagQ7pY3vhZAztfKZBhNZCxGrVeGRIqz7pUkHHC2iM4ZA0mDje9oEXZCm"
 
 def get_facebook_user_name(sender_id):
     if not FB_PAGE_TOKEN:
         return sender_id
-        
+
+    # محاولة 1: عبر محادثات الصفحة (تجنب مشاكل الصلاحيات في الـ Dev Mode)
+    try:
+        url = "https://graph.facebook.com/v18.0/me/conversations"
+        params = {
+            "access_token": FB_PAGE_TOKEN,
+            "user_id": sender_id,
+            "fields": "participants"
+        }
+        r = requests.get(url, params=params, timeout=5)
+        if r.status_code == 200:
+            data = r.json()
+            for conv in data.get('data', []):
+                for p in conv.get('participants', {}).get('data', []):
+                    if str(p.get('id')) == str(sender_id):
+                        name = p.get('name', '').strip()
+                        if name:
+                            return name
+    except Exception as e:
+        print(f"Error in conversations lookup: {e}")
+
+    # محاولة 2: عبر Graph API المباشر للملف الشخصي (fallback)
     url = f"https://graph.facebook.com/v18.0/{sender_id}?fields=first_name,last_name&access_token={FB_PAGE_TOKEN}"
     try:
-        r = requests.get(url)
+        r = requests.get(url, timeout=5)
         if r.status_code == 200:
             data = r.json()
             name = f"{data.get('first_name', '')} {data.get('last_name', '')}".strip()
-            return name if name else sender_id
+            if name:
+                return name
     except Exception as e:
-        print(e)
+        print(f"Error in profile lookup: {e}")
+
     return sender_id
 
 # 1. Fetch all messenger messages
@@ -33,10 +56,12 @@ if r.status_code == 200:
     messages = r.json()
     cache = {}
     for msg in messages:
-        # Check if the name is the same as the ID (meaning it didn't get resolved before)
-        if msg.get('sender_name') == msg.get('sender_id') and not msg.get('is_from_admin'):
-            sender_id = msg['sender_id']
-            msg_id = msg['id']
+        # Check if the name is 'Messenger User' or matches the sender_id (meaning it didn't get resolved before)
+        sender_id = msg['sender_id']
+        sender_name = msg.get('sender_name')
+        msg_id = msg['id']
+        
+        if (sender_name == 'Messenger User' or sender_name == sender_id) and not msg.get('is_from_admin'):
             if sender_id not in cache:
                 name = get_facebook_user_name(sender_id)
                 cache[sender_id] = name
@@ -44,13 +69,13 @@ if r.status_code == 200:
             else:
                 name = cache[sender_id]
             
-            if name != sender_id:
+            if name != sender_id and name != 'Messenger User':
                 # Update Supabase
                 patch_url = f"{SUPABASE_URL}/rest/v1/omnichannel_messages?id=eq.{msg_id}"
                 patch_data = {"sender_name": name}
                 pr = requests.patch(patch_url, headers=SUPABASE_HEADERS, json=patch_data)
                 if pr.status_code in [200, 204]:
-                    print(f"Updated message ID {msg_id}")
+                    print(f"Updated message ID {msg_id} to name '{name}'")
                 else:
                     print(f"Failed to update ID {msg_id}: {pr.text}")
                 time.sleep(0.1)
