@@ -17,6 +17,7 @@ router = APIRouter()
 WHATSAPP_TOKEN = "EAAPDbwUyvY0BQrm6ZB9qb62LU9hI50ZC9QOfZAO3VPA7ZCSnFSRMCb2kouBRkXu4LiVmRU2ydv1vLl00kKmgTFMN5ULJOpImor7i8oITjicjIjWiOLxTL7yltYrlF0RLxcdU6UNOaIdqo4Ouv0BnQ79OK2sgSLpHY9ZCQs4iRIxcpjnoxr8EWpV4FSgGTzgZDZD"
 PHONE_ID = "597129733493778"
 FB_PAGE_TOKEN = "EAAPDbwUyvY0BQ3KLTieXWMHZAJZC92eQI9sBwEISipvaaVR9hoteMHWhx0fi8mSXIC4TnTiBHpykmsv6HyAkYK4yQUyQv81ZCF7EZA5CEZAKwPqhfl3jjmaN5muRSk1ZCpNh7OXAQ8Ey7ilMhBmjPvQpLRlzMD8MbYWChOdFxwiFKgPNAqJhg6aVZBR25rvIvChgw1vusjBwHZAeveEMSHpaQ9ps"
+INSTAGRAM_TOKEN = "IGAAMRP14aPG1BZAFlpX3dwczlsdTdFMnlISk5keldkclZAPS3pMR1pzYXJMc2FXcjJuRnNpTnRMdWsxS2ZACS3JjQVdiUzRFWXBHUl92eDg5V1d5QmJGUnhDdHVPcFJoNnRsTG16UWxFd05sY2dkcTlaUGNuNFdsa2pyalc5UUI1cwZDZD"
 
 SUPABASE_URL = 'https://wtjwzqvmwnbvjxnmweqq.supabase.co'
 SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY'
@@ -45,7 +46,7 @@ class MessageResponse(BaseModel):
         from_attributes = True
 
 class OmnichannelReply(BaseModel):
-    channel: str # 'whatsapp' or 'messenger'
+    channel: str # 'whatsapp', 'messenger', or 'instagram'
     sender_id: str
     message: str
 
@@ -138,7 +139,7 @@ async def send_omnichannel_reply(
     # Depends(get_current_user) is omitted here for simplicity while migrating, ensuring the admin CRM works directly
 ):
     """
-    تقوم هذه الدالة بإرسال رسالة من الموظف للعميل بناءً على القناة المستخدمة (WhatsApp أو Messenger)
+    تقوم هذه الدالة بإرسال رسالة من الموظف للعميل بناءً على القناة المستخدمة (WhatsApp أو Messenger أو Instagram)
     ثم تحفظ الرسالة في Supabase
     """
     channel = data.channel.lower()
@@ -152,13 +153,11 @@ async def send_omnichannel_reply(
             r = requests.post(url, headers=headers, json=payload)
             if r.status_code not in [200, 201]:
                 print(f"❌ Failed to send WhatsApp: {r.text}")
-                # We can still proceed to save the attempt or raise an error.
         except Exception as e:
             print(f"❌ WA Send Exception: {e}")
 
     elif channel == 'messenger':
         if not FB_PAGE_TOKEN:
-            # We will still try to save the message but warning that token is missing
             print("⚠️ FB_PAGE_TOKEN is empty. Message will be saved but not sent to Facebook.")
         else:
             url = f"https://graph.facebook.com/v18.0/me/messages?access_token={FB_PAGE_TOKEN}"
@@ -170,6 +169,20 @@ async def send_omnichannel_reply(
                     print(f"❌ Failed to send Messenger: {r.text}")
             except Exception as e:
                 print(f"❌ Messenger Send Exception: {e}")
+
+    elif channel == 'instagram':
+        if not INSTAGRAM_TOKEN:
+            print("⚠️ INSTAGRAM_TOKEN is empty.")
+        else:
+            url = f"https://graph.facebook.com/v17.0/me/messages?access_token={INSTAGRAM_TOKEN}"
+            headers = {"Content-Type": "application/json"}
+            payload = { "recipient": {"id": data.sender_id}, "message": {"text": data.message} }
+            try:
+                r = requests.post(url, headers=headers, json=payload)
+                if r.status_code != 200:
+                    print(f"❌ Failed to send Instagram: {r.text}")
+            except Exception as e:
+                print(f"❌ Instagram Send Exception: {e}")
     else:
         raise HTTPException(status_code=400, detail="Invalid channel type")
 
@@ -178,7 +191,7 @@ async def send_omnichannel_reply(
     db_payload = {
         "channel": channel,
         "sender_id": data.sender_id,
-        "sender_name": "Admin", # The UI doesn't necessarily need the employee name if strictly just the agency replied
+        "sender_name": "Admin",
         "message_text": data.message,
         "is_from_admin": True,
         "read_by_admin": True

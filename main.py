@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, Request
+from fastapi import FastAPI, Depends, Request, Query
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -89,6 +89,7 @@ import requests as _req
 _WA_TOKEN = "EAAPDbwUyvY0BQrm6ZB9qb62LU9hI50ZC9QOfZAO3VPA7ZCSnFSRMCb2kouBRkXu4LiVmRU2ydv1vLl00kKmgTFMN5ULJOpImor7i8oITjicjIjWiOLxTL7yltYrlF0RLxcdU6UNOaIdqo4Ouv0BnQ79OK2sgSLpHY9ZCQs4iRIxcpjnoxr8EWpV4FSgGTzgZDZD"
 _PHONE_ID = "597129733493778"
 _FB_TOKEN = "EAAPDbwUyvY0BRN0VW4bIHPLRpeA7qHqK5TyFpNxJ8fuFcvVCshuBwZC52F59Q6oNH671nLZBbAiEsGSB55Vq0sHjyMIB4QNStzt6sFxRL7ImzttrnuFkHVTYWGZC0J2MgbBGfqo3dOi7Wo5QagQ7pY3vhZAztfKZBhNZCxGrVeGRIqz7pUkHHC2iM4ZA0mDje9oEXZCm"
+_IG_TOKEN = "IGAAMRP14aPG1BZAFlpX3dwczlsdTdFMnlISk5keldkclZAPS3pMR1pzYXJMc2FXcjJuRnNpTnRMdWsxS2ZACS3JjQVdiUzRFWXBHUl92eDg5V1d5QmJGUnhDdHVPcFJoNnRsTG16UWxFd05sY2dkcTlaUGNuNFdsa2pyalc5UUI1cwZDZD"
 _SB_URL = "https://wtjwzqvmwnbvjxnmweqq.supabase.co"
 _SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY"
 _SB_HEADERS = {"apikey": _SB_KEY, "Authorization": f"Bearer {_SB_KEY}", "Content-Type": "application/json"}
@@ -99,7 +100,7 @@ async def health_check():
 
 @app.post("/api/send_reply")
 async def send_reply_direct(data: dict):
-    """نقطة إرسال موحدة للموديتور - واتساب وماسنجر - تعمل مباشرة من Render بدون ngrok"""
+    """نقطة إرسال موحدة للموديتور - واتساب وماسنجر وإنستجرام - تعمل مباشرة من Render بدون ngrok"""
     channel = (data.get("channel") or "").lower()
     sender_id = data.get("sender_id", "")
     message = data.get("message", "")
@@ -130,6 +131,16 @@ async def send_reply_direct(data: dict):
         except Exception as e:
             print(f"❌ Messenger exception: {e}")
 
+    elif channel == "instagram":
+        url = f"https://graph.facebook.com/v17.0/me/messages?access_token={_IG_TOKEN}"
+        payload = {"recipient": {"id": sender_id}, "message": {"text": message}}
+        try:
+            r = _req.post(url, headers={"Content-Type": "application/json"}, json=payload, timeout=10)
+            if r.status_code != 200:
+                print(f"❌ Instagram Send failed: {r.text}")
+        except Exception as e:
+            print(f"❌ Instagram exception: {e}")
+
     # --- حفظ الرسالة في Supabase ---
     sb_payload = {
         "channel": channel,
@@ -147,6 +158,77 @@ async def send_reply_direct(data: dict):
     return {"status": "success"}
 
 # ==========================================
+# 📥 Instagram Webhook - رسائل إنستجرام الواردة
+# ==========================================
+_IG_VERIFY_TOKEN = "24seven_secret_token"
+
+@app.get("/api/instagram/webhook")
+async def verify_instagram_webhook(
+    hub_mode: str = Query(None, alias="hub.mode"),
+    hub_challenge: str = Query(None, alias="hub.challenge"),
+    hub_verify_token: str = Query(None, alias="hub.verify_token")
+):
+    """تحقق من webhook Meta لإنستجرام"""
+    from fastapi.responses import PlainTextResponse
+    if hub_verify_token == _IG_VERIFY_TOKEN and hub_mode == "subscribe":
+        return PlainTextResponse(hub_challenge or "")
+    return PlainTextResponse("Forbidden", status_code=403)
+
+@app.post("/api/instagram/webhook")
+async def receive_instagram_webhook(request: Request):
+    """استقبل رسائل إنستجرام الواردة وحفظها في Supabase بعد جلب اسم المستخدم"""
+    try:
+        data = await request.json()
+        if data.get("object") != "instagram" or not data.get("entry"):
+            return {"status": "ok"}
+
+        for entry in data["entry"]:
+            messaging_events = entry.get("messaging", [])
+            for event in messaging_events:
+                sender_id = event.get("sender", {}).get("id")
+                message = event.get("message", {})
+
+                if not sender_id or not message or "text" not in message or message.get("is_echo"):
+                    continue
+
+                text_body = message.get("text", "")
+                print(f"[IG->Render] from {sender_id}: {text_body}")
+
+                # جلب اسم الحساب من Meta API
+                sender_name = "Instagram User"
+                try:
+                    profile_res = _req.get(
+                        f"https://graph.facebook.com/v17.0/{sender_id}",
+                        params={"fields": "username", "access_token": _FB_TOKEN},
+                        timeout=5
+                    )
+                    if profile_res.status_code == 200:
+                        profile_data = profile_res.json()
+                        if profile_data.get("username"):
+                            sender_name = profile_data["username"]
+                except Exception as ex:
+                    print(f"[IG Profile Error] Failed to fetch IG profile for {sender_id}: {ex}")
+
+                # حفظ في Supabase
+                _req.post(
+                    f"{_SB_URL}/rest/v1/omnichannel_messages",
+                    headers=_SB_HEADERS,
+                    json={
+                        "channel": "instagram",
+                        "sender_id": sender_id,
+                        "sender_name": sender_name,
+                        "message_text": text_body,
+                        "is_from_admin": False,
+                        "read_by_admin": False
+                    },
+                    timeout=5
+                )
+    except Exception as e:
+        print(f"[IG-Webhook Error]: {e}")
+
+    return {"status": "ok"}
+
+# ==========================================
 # 📥 WhatsApp Webhook - رسائل واتساب الواردة
 # يستقبل الرسائل مباشرة من Meta على الـ production server
 # ==========================================
@@ -154,12 +236,11 @@ _WA_VERIFY_TOKEN = "24seven_secret_token"
 
 @app.get("/webhook")
 async def verify_whatsapp_webhook(
-    hub_mode: str = None,
-    hub_challenge: str = None,
-    hub_verify_token: str = None
+    hub_mode: str = Query(None, alias="hub.mode"),
+    hub_challenge: str = Query(None, alias="hub.challenge"),
+    hub_verify_token: str = Query(None, alias="hub.verify_token")
 ):
     """تحقق من webhook Meta لواتساب"""
-    from fastapi import Query
     from fastapi.responses import PlainTextResponse
     if hub_verify_token == _WA_VERIFY_TOKEN and hub_mode == "subscribe":
         return PlainTextResponse(hub_challenge or "")
@@ -195,7 +276,7 @@ async def receive_whatsapp_webhook(request: Request):
             if not text_body:
                 continue
 
-            print(f"[WA→Render] from {sender}: {text_body}")
+            print(f"[WA->Render] from {sender}: {text_body}")
 
             # تحديد اسم المرسل
             sender_name = sender

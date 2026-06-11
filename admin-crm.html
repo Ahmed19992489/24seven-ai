@@ -4946,6 +4946,8 @@
                     let initialName = groupKey;
                     if (m.channel === 'messenger' && !m.is_from_admin && m.sender_name && m.sender_name !== m.sender_id && !['Admin', 'ش', 'Messenger User'].includes(m.sender_name)) {
                         initialName = m.sender_name;
+                    } else if (m.channel === 'instagram' && !m.is_from_admin && m.sender_name && m.sender_name !== m.sender_id && !['Admin', 'ش', 'Instagram User'].includes(m.sender_name)) {
+                        initialName = m.sender_name;
                     }
                     adminGroupedChats[groupKey] = { id: groupKey, originalIds: new Set(), name: initialName, channel: m.channel, messages: [], last: m };
                 }
@@ -4955,6 +4957,22 @@
                 
                 if(m.channel === 'whatsapp') {
                     adminGroupedChats[groupKey].name = groupKey;
+                }
+                
+                if(m.channel === 'instagram') {
+                    if(!m.is_from_admin && m.sender_name && m.sender_name !== m.sender_id && !['Admin', 'ش', 'Instagram User'].includes(m.sender_name)) {
+                        adminGroupedChats[groupKey].name = m.sender_name;
+                    }
+                    const currentName = adminGroupedChats[groupKey].name;
+                    const isIdOrJunk = !currentName || currentName === m.sender_id || currentName === groupKey || ['Admin', 'ش', 'Instagram User'].includes(currentName);
+                    if (isIdOrJunk) {
+                        const savedName = localStorage.getItem(`chat_name_${m.sender_id}`) || localStorage.getItem(`chat_name_${groupKey}`);
+                        if(savedName) adminGroupedChats[groupKey].name = savedName;
+                        
+                        if(!adminGroupedChats[groupKey].name || adminGroupedChats[groupKey].name === m.sender_id || adminGroupedChats[groupKey].name === groupKey) {
+                            adminGroupedChats[groupKey].name = 'Instagram User';
+                        }
+                    }
                 }
                 
                 if(m.channel === 'messenger') {
@@ -5161,7 +5179,7 @@
                         lastMessage: c.last.message_text || c.last.message,
                         lastMessageTime: new Date(c.last.created_at),
                         unreadCount: unreadCount,
-                        avatar: c.channel === 'messenger' ? '💬' : '🟢',
+                        avatar: c.channel === 'messenger' ? '💬' : (c.channel === 'instagram' ? '📸' : '🟢'),
                         channel: c.channel
                     };
                 });
@@ -5311,7 +5329,13 @@
                 
                 let typeBadge = '';
                 if (c.type === 'omni') {
-                    typeBadge = `<span class="bg-teal-100 text-teal-700 text-[8px] font-bold px-1 py-0.5 rounded">${c.channel === 'whatsapp' ? 'واتساب' : 'ماسنجر'}</span>`;
+                    if (c.channel === 'whatsapp') {
+                        typeBadge = `<span class="bg-teal-100 text-teal-700 text-[8px] font-bold px-1 py-0.5 rounded">واتساب</span>`;
+                    } else if (c.channel === 'messenger') {
+                        typeBadge = `<span class="bg-blue-100 text-blue-700 text-[8px] font-bold px-1 py-0.5 rounded">ماسنجر</span>`;
+                    } else if (c.channel === 'instagram') {
+                        typeBadge = `<span class="bg-pink-100 text-pink-700 text-[8px] font-bold px-1 py-0.5 rounded">إنستجرام</span>`;
+                    }
                 } else if (c.type === 'trip') {
                     typeBadge = `<span class="bg-blue-100 text-blue-700 text-[8px] font-bold px-1 py-0.5 rounded">رحلة</span>`;
                 } else if (c.type === 'support') {
@@ -5396,9 +5420,12 @@
                 if (chatObj?.channel === 'whatsapp') {
                     channelIconEl.innerHTML = '<i class="fab fa-whatsapp text-green-500"></i>';
                     channelNameEl.textContent = 'WhatsApp';
-                } else {
+                } else if (chatObj?.channel === 'messenger') {
                     channelIconEl.innerHTML = '<i class="fab fa-facebook-messenger text-blue-500"></i>';
                     channelNameEl.textContent = 'Messenger';
+                } else if (chatObj?.channel === 'instagram') {
+                    channelIconEl.innerHTML = '<i class="fab fa-instagram text-pink-500"></i>';
+                    channelNameEl.textContent = 'Instagram';
                 }
 
                 document.getElementById('omni-reply-sender-id').value = id;
