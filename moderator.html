@@ -995,6 +995,36 @@
             notificationSound.play().catch(e => console.log("Sound play blocked by browser"));
         }
 
+        // --- Toast Notification ---
+        function showToast(msg, type = 'info') {
+            let toast = document.getElementById('global-toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'global-toast';
+                toast.style.cssText = `
+                    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+                    padding: 12px 22px; border-radius: 10px; font-size: 14px; font-weight: 600;
+                    z-index: 99999; max-width: 90vw; text-align: center;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.3); display: none;
+                    direction: rtl; font-family: 'Cairo', sans-serif;
+                `;
+                document.body.appendChild(toast);
+            }
+            const colors = {
+                success: { bg: '#1a7a4a', text: '#fff' },
+                warning: { bg: '#e07b00', text: '#fff' },
+                error:   { bg: '#c0392b', text: '#fff' },
+                info:    { bg: '#1565c0', text: '#fff' }
+            };
+            const c = colors[type] || colors.info;
+            toast.style.background = c.bg;
+            toast.style.color = c.text;
+            toast.textContent = msg;
+            toast.style.display = 'block';
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(() => { toast.style.display = 'none'; }, 6000);
+        }
+
         function toggleSidebar() {
             document.body.classList.toggle('sidebar-open');
         }
@@ -1983,6 +2013,9 @@
                     });
                     
                     if (res.ok) {
+                        let resJson = {};
+                        try { resJson = await res.json(); } catch(e) {}
+                        
                         const newMsg = {
                             id: 'temp_' + Date.now(),
                             sender_id: apiSenderId,
@@ -1995,7 +2028,12 @@
                         chat.messages.push(newMsg);
                         allMessages.push(newMsg);
                         renderMessages();
-                        loadUnifiedChats(); 
+                        loadUnifiedChats();
+                        
+                        // إذا كان إنستجرام في وضع التطوير - عرض تحذير بدل خطأ
+                        if (resJson.status === 'warning') {
+                            showToast('⚠️ إنستجرام (Dev Mode): الرسالة ظهرت في المحادثة لكن لم تُرسل للعميل. يحتاج التطبيق Advanced Access من Meta.', 'warning');
+                        }
                         return true;
                     } else {
                         const errText = await res.text();
