@@ -144,6 +144,9 @@ async def send_omnichannel_reply(
     """
     channel = data.channel.lower()
     
+    send_success = False
+    api_error = ""
+
     # 1. إرسال الرسالة عبر القناة المناسبة
     if channel == 'whatsapp':
         url = f"https://graph.facebook.com/v17.0/{PHONE_ID}/messages"
@@ -152,12 +155,17 @@ async def send_omnichannel_reply(
         try:
             r = requests.post(url, headers=headers, json=payload)
             if r.status_code not in [200, 201]:
+                api_error = r.text
                 print(f"❌ Failed to send WhatsApp: {r.text}")
+            else:
+                send_success = True
         except Exception as e:
+            api_error = str(e)
             print(f"❌ WA Send Exception: {e}")
 
     elif channel == 'messenger':
         if not FB_PAGE_TOKEN:
+            api_error = "FB_PAGE_TOKEN is empty"
             print("⚠️ FB_PAGE_TOKEN is empty. Message will be saved but not sent to Facebook.")
         else:
             url = f"https://graph.facebook.com/v18.0/me/messages?access_token={FB_PAGE_TOKEN}"
@@ -166,12 +174,17 @@ async def send_omnichannel_reply(
             try:
                 r = requests.post(url, headers=headers, json=payload)
                 if r.status_code != 200:
+                    api_error = r.text
                     print(f"❌ Failed to send Messenger: {r.text}")
+                else:
+                    send_success = True
             except Exception as e:
+                api_error = str(e)
                 print(f"❌ Messenger Send Exception: {e}")
 
     elif channel == 'instagram':
         if not FB_PAGE_TOKEN:
+            api_error = "FB_PAGE_TOKEN is empty"
             print("⚠️ FB_PAGE_TOKEN is empty for Instagram.")
         else:
             url = f"https://graph.facebook.com/v17.0/me/messages?access_token={FB_PAGE_TOKEN}"
@@ -179,9 +192,24 @@ async def send_omnichannel_reply(
             payload = { "recipient": {"id": data.sender_id}, "message": {"text": data.message} }
             try:
                 r = requests.post(url, headers=headers, json=payload)
-                if r.status_code != 200:
+                if r.status_code == 200:
+                    send_success = True
+                elif r.status_code == 403:
+                    err_json = {}
+                    try: err_json = r.json()
+                    except: pass
+                    err_code = err_json.get('error', {}).get('error_subcode', 0)
+                    if err_code == 2534048:
+                        api_error = "instagram_dev_mode"
+                        print("[IG-DEV-MODE] App in Dev Mode - recipient has no role on app.")
+                    else:
+                        api_error = r.text
+                        print(f"❌ Failed to send Instagram: {r.text}")
+                else:
+                    api_error = r.text
                     print(f"❌ Failed to send Instagram: {r.text}")
             except Exception as e:
+                api_error = str(e)
                 print(f"❌ Instagram Send Exception: {e}")
     else:
         raise HTTPException(status_code=400, detail="Invalid channel type")
@@ -205,5 +233,13 @@ async def send_omnichannel_reply(
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+    if api_error == "instagram_dev_mode":
+        return {
+            "status": "warning",
+            "message": "تم حفظ الرسالة، لكن لم يتم إرسالها على إنستجرام. التطبيق في وضع التطوير ويحتاج Advanced Access من Meta. الرسالة ظهرت في المحادثة فقط."
+        }
+    elif api_error:
+        raise HTTPException(status_code=502, detail=f"API Error: {api_error}")
 
     return {"status": "success", "message": f"Reply sent successfully via {channel}"}

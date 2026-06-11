@@ -164,6 +164,9 @@ async def send_reply_direct(data: dict):
     if not channel or not sender_id or not message:
         return {"status": "error", "detail": "Missing parameters"}
 
+    send_success = False
+    api_error = ""
+
     # --- إرسال الرسالة ---
     if channel == "whatsapp":
         url = f"https://graph.facebook.com/v17.0/{_PHONE_ID}/messages"
@@ -172,8 +175,12 @@ async def send_reply_direct(data: dict):
         try:
             r = _req.post(url, headers=headers, json=payload, timeout=10)
             if r.status_code not in [200, 201]:
+                api_error = r.text
                 print(f"❌ WA Send failed: {r.text}")
+            else:
+                send_success = True
         except Exception as e:
+            api_error = str(e)
             print(f"❌ WA exception: {e}")
 
     elif channel == "messenger":
@@ -182,6 +189,7 @@ async def send_reply_direct(data: dict):
         try:
             r = _req.post(url, headers={"Content-Type": "application/json"}, json=payload, timeout=10)
             if r.status_code == 200:
+                send_success = True
                 try:
                     fb_msg_id = r.json().get('message_id', '')
                     if fb_msg_id:
@@ -190,8 +198,10 @@ async def send_reply_direct(data: dict):
                         print(f"[FB-API->Render] Tracked MID: {fb_msg_id}")
                 except: pass
             else:
+                api_error = r.text
                 print(f"❌ Messenger Send failed: {r.text}")
         except Exception as e:
+            api_error = str(e)
             print(f"❌ Messenger exception: {e}")
 
     elif channel == "instagram":
@@ -200,6 +210,7 @@ async def send_reply_direct(data: dict):
         try:
             r = _req.post(url, headers={"Content-Type": "application/json"}, json=payload, timeout=10)
             if r.status_code == 200:
+                send_success = True
                 try:
                     ig_msg_id = r.json().get('message_id', '')
                     if ig_msg_id:
@@ -207,9 +218,22 @@ async def send_reply_direct(data: dict):
                         if len(sent_via_api_mids) > 500: sent_via_api_mids.clear()
                         print(f"[IG-API->Render] Tracked MID: {ig_msg_id}")
                 except: pass
+            elif r.status_code == 403:
+                err_json = {}
+                try: err_json = r.json()
+                except: pass
+                err_code = err_json.get('error', {}).get('error_subcode', 0)
+                if err_code == 2534048:
+                    api_error = "instagram_dev_mode"
+                    print("[IG-DEV-MODE->Render] App in Dev Mode - recipient has no role on app.")
+                else:
+                    api_error = r.text
+                    print(f"❌ Instagram Send failed: {r.text}")
             else:
+                api_error = r.text
                 print(f"❌ Instagram Send failed: {r.text}")
         except Exception as e:
+            api_error = str(e)
             print(f"❌ Instagram exception: {e}")
 
     # --- حفظ الرسالة في Supabase ---
@@ -226,7 +250,16 @@ async def send_reply_direct(data: dict):
     except Exception as e:
         print(f"❌ Supabase save exception: {e}")
 
-    return {"status": "success"}
+    if send_success:
+        return {"status": "success"}
+    elif api_error == "instagram_dev_mode":
+        return {
+            "status": "warning",
+            "message": "تم حفظ الرسالة، لكن لم يتم إرسالها على إنستجرام. التطبيق في وضع التطوير ويحتاج Advanced Access من Meta. الرسالة ظهرت في المحادثة فقط."
+        }
+    else:
+        return {"status": "error", "detail": f"API Error: {api_error}"}
+
 
 # ==========================================
 # 📥 Messenger Webhook - رسائل ماسنجر الواردة
