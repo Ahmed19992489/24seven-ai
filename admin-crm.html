@@ -168,7 +168,7 @@
             <p class="text-[10px] font-bold text-slate-400 mt-4 mb-1 px-3">خدمة العملاء</p>
             <div onclick="showPage('omnichannel')" id="nav-omnichannel"
                 class="sidebar-item p-3 rounded-lg flex items-center gap-3">
-                <i class="fas fa-headset w-5 text-center text-teal-600"></i> صندوق الوارد (شات)
+                <i class="fas fa-headset w-5 text-center text-teal-600"></i> صندوق الوارد الموحد
                 <span id="omnichannel-badge" class="hidden mr-auto bg-red-500 text-white text-xs rounded-full px-2 py-0.5"></span>
             </div>
 
@@ -185,7 +185,7 @@
             </div>
 
             <p class="text-[10px] font-bold text-slate-400 mt-4 mb-1 px-3">التواصل</p>
-            <div onclick="showPage('chat')" id="nav-chat" class="sidebar-item p-3 rounded-lg flex items-center gap-3">
+            <div onclick="showPage('chat')" id="nav-chat" class="sidebar-item p-3 rounded-lg flex items-center gap-3 hidden">
                 <i class="fas fa-comments w-5 text-center text-blue-500"></i> الدردشة
             </div>
             <div onclick="showPage('ratings')" id="nav-ratings"
@@ -599,13 +599,20 @@
             <div class="glass-panel w-full md:w-1/3 flex flex-col h-[calc(100vh-100px)]">
                 <div class="p-4 border-b border-slate-200">
                     <h2 class="text-xl font-bold flex items-center gap-2">
-                        <i class="fas fa-headset text-teal-600"></i> صندوق الوارد
+                        <i class="fas fa-headset text-teal-600"></i> صندوق الوارد الموحد
                     </h2>
                     <div class="mt-3 relative">
                         <i class="fas fa-search absolute right-3 top-3 text-slate-400"></i>
                         <input type="text" id="omni-search" placeholder="ابحث باسم أو رقم..." oninput="filterOmniChats()"
                             class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2 pr-10 pl-3 text-sm focus:outline-none focus:border-teal-500">
                     </div>
+                </div>
+                <!-- فلاتر صندوق الوارد الموحد -->
+                <div class="flex border-b border-slate-100 p-2 gap-1 bg-slate-50 shrink-0">
+                    <button onclick="setAdminUnifiedFilter('all')" id="admin-filter-chat-all" class="flex-1 text-center py-1.5 rounded-lg text-[10px] font-bold bg-white shadow text-teal-700 transition">الكل</button>
+                    <button onclick="setAdminUnifiedFilter('omni')" id="admin-filter-chat-omni" class="flex-1 text-center py-1.5 rounded-lg text-[10px] font-bold text-gray-500 hover:bg-white transition">سوشيال</button>
+                    <button onclick="setAdminUnifiedFilter('trip')" id="admin-filter-chat-trip" class="flex-1 text-center py-1.5 rounded-lg text-[10px] font-bold text-gray-500 hover:bg-white transition">الرحلات</button>
+                    <button onclick="setAdminUnifiedFilter('support')" id="admin-filter-chat-support" class="flex-1 text-center py-1.5 rounded-lg text-[10px] font-bold text-gray-500 hover:bg-white transition">الدعم</button>
                 </div>
                 <!-- مساحة كروت الدردشة -->
                 <div id="omni-chat-list" class="flex-1 overflow-y-auto w-full p-2 space-y-2">
@@ -4070,62 +4077,56 @@
 
         // نظام مزامنة احتياطي شامل تحسباً لتعطل WebSockets
         setInterval(async () => {
-            // -- تحديث القوائم الجانبية بذكاء --
+            const omniPage = document.getElementById('page-omnichannel');
+            if (!omniPage || omniPage.classList.contains('hidden')) return;
+
+            // 1. check support messages count
             const { count: sCount } = await sbClient.from('support_chats').select('*', { count: 'exact', head: true });
+            let needReload = false;
             if (sCount !== undefined && sCount > globalSupportCountAdmin) {
                 globalSupportCountAdmin = sCount;
-                if (typeof loadSupportChatsSilent === 'function') loadSupportChatsSilent();
+                needReload = true;
             }
 
+            // 2. check trip messages count
             const { count: tCount } = await sbClient.from('chat_messages').select('*', { count: 'exact', head: true });
             if (tCount !== undefined && tCount > globalTripChatCountAdmin) {
                 globalTripChatCountAdmin = tCount;
-                if (typeof loadAdminChats === 'function') loadAdminChats();
+                needReload = true;
             }
 
+            // 3. check omnichannel messages count
             const { count: oCount } = await sbClient.from('omnichannel_messages').select('*', { count: 'exact', head: true });
             if (oCount !== undefined && oCount > globalOmniCountAdmin) {
                 globalOmniCountAdmin = oCount;
-                if (typeof groupOmniMessages === 'function' && typeof renderOmniChatList === 'function') {
-                    const { data: fullMsgs } = await sbClient.from('omnichannel_messages').select('*').order('created_at', { ascending: false }).limit(1000);
-                    if (fullMsgs) {
-                        allOmniMessages = fullMsgs.reverse();
-                        groupOmniMessages();
-                        renderOmniChatList();
-                    }
-                }
+                needReload = true;
             }
 
-            // -- تحديث الشاشات المفتوحة للمحادثة --
-            // 1. Polling لرحلات الشات القديم أو الدعم المفتوح
-            const adminMsgContainer = document.getElementById('admin-chat-messages');
-            if (adminMsgContainer && adminMsgContainer.offsetParent !== null) {
-                if (adminChatMode === 'support' && adminCurrentSupportUserId) {
-                    const { data: msgs } = await sbClient.from('support_chats').select('id').eq('user_id', adminCurrentSupportUserId);
-                    const currentMsgCount = adminMsgContainer.querySelectorAll('div[style*="border-radius"]').length;
-                    if (msgs && msgs.length > currentMsgCount) {
-                        openSupportChat(adminCurrentSupportUserId, document.getElementById('admin-chat-header').querySelector('p')?.textContent || 'عميل');
+            if (needReload) {
+                loadAdminUnifiedChats();
+            } else {
+                // If open chat has new messages (checks for counts inside the active chat container vs database)
+                const omniContainer = document.getElementById('omni-messages-area');
+                if (omniContainer && omniContainer.offsetParent !== null && adminActiveChatId) {
+                    if (adminActiveChatType === 'omni') {
+                        const { data: msgs } = await sbClient.from('omnichannel_messages').select('id').eq('sender_id', adminActiveChatId);
+                        const currentMsgCount = omniContainer.children.length;
+                        if (msgs && msgs.length > currentMsgCount) {
+                            loadAdminUnifiedChats();
+                        }
+                    } else if (adminActiveChatType === 'trip') {
+                        const { data: msgs } = await sbClient.from('chat_messages').select('id').eq('trip_id', adminActiveChatId);
+                        const currentMsgCount = omniContainer.querySelectorAll('div[class*="flex"]').length;
+                        if (msgs && msgs.length > currentMsgCount) {
+                            loadAdminUnifiedTripChatMessages(adminActiveChatId);
+                        }
+                    } else if (adminActiveChatType === 'support') {
+                        const { data: msgs } = await sbClient.from('support_chats').select('id').eq('user_id', adminActiveChatId);
+                        const currentMsgCount = omniContainer.children.length;
+                        if (msgs && msgs.length > currentMsgCount) {
+                            loadAdminUnifiedSupportMessages(adminActiveChatId);
+                        }
                     }
-                } else if (adminCurrentTripId) {
-                    const { data: msgs } = await sbClient.from('chat_messages').select('id').eq('trip_id', adminCurrentTripId);
-                    const currentMsgCount = adminMsgContainer.querySelectorAll('div[style*="border-radius"]').length;
-                    if (msgs && msgs.length > currentMsgCount) {
-                        loadAdminChatMessages(adminCurrentTripId);
-                    }
-                }
-            }
-            
-            // 2. Polling للمحادثات الموحدة Omnichannel المفتوحة
-            const omniContainer = document.getElementById('omni-chat-messages');
-            if (omniContainer && omniContainer.offsetParent !== null && typeof omniActiveSenderId !== 'undefined' && omniActiveSenderId) {
-                const { data: msgs } = await sbClient.from('omnichannel_messages').select('id').eq('sender_id', omniActiveSenderId);
-                const currentMsgCount = omniContainer.children.length;
-                if (msgs && msgs.length > currentMsgCount) {
-                    omniContainer.innerHTML = '';
-                    if (omniGroupedChats[omniActiveSenderId]) {
-                        omniGroupedChats[omniActiveSenderId].messages.forEach(m => appendOmniMessage(m));
-                    }
-                    scrollToOmniBottom();
                 }
             }
         }, 3000);
@@ -4902,103 +4903,100 @@
         // ==========================================
         // 💬 رسائل Omnichannel (الماسنجر والواتساب)
         // ==========================================
-        let allOmniMessages = [];
-        let omniGroupedChats = {};
-        let omniActiveSenderId = null;
-        let omniSubscription = null;
+        let adminUnifiedChatsList = [];
+        let adminActiveChatId = null;
+        let adminActiveChatType = null; // 'omni', 'trip', 'support'
+        let adminCurrentUnifiedFilter = 'all'; // 'all', 'omni', 'trip', 'support'
 
-        async function loadOmnichannelChats() {
-            try {
-                // جلب أحدث الرسائل (أحدث 1000 رسالة لتفادي مشكلة الحد الافتراضي من Supabase)
-                const { data, error } = await sbClient
-                    .from('omnichannel_messages')
-                    .select('*')
-                    .order('created_at', { ascending: false })
-                    .limit(1000); 
-                
-                if (error) throw error;
-                
-                // عكس الترتيب ليكون الأقدم أولاً (التسلسل الطبيعي للشات)
-                if (data) data.reverse();
-                
-                allOmniMessages = data || [];
-                groupOmniMessages();
-                renderOmniChatList();
-                
-                // تحديث الـ Badge في الـ Sidebar للرسائل غير المقروءة (إن وجدت)
-                updateOmniBadge();
+        let adminOmniSubscription = null;
+        let adminTripChatSub = null;
+        let adminSupportChatSub = null;
 
-                // تفعيل الاستماع اللحظي (Realtime) للرسائل الجديدة
-                if(!omniSubscription) {
-                    omniSubscription = sbClient
-                        .channel('public:omnichannel_messages')
-                        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'omnichannel_messages' }, payload => {
-                            allOmniMessages.push(payload.new);
-                            groupOmniMessages();
-                            renderOmniChatList();
-                            updateOmniBadge();
-                            
-                            // لو المحادثة مفتوحة حالياً، ضيف الرسالة للشاشة
-                            if(omniActiveSenderId === payload.new.sender_id) {
-                                appendOmniMessage(payload.new);
-                                scrollToOmniBottom();
-                                // تحديث كـ مقروءة فوراً إذا كانت نافذته مفتوحة
-                                if(!payload.new.is_from_admin && !payload.new.read_by_admin) {
-                                    markOmniChatAsRead(payload.new.sender_id);
-                                }
-                            } else {
-                                // تشغيل تنبيه صوتي لرسالة جديدة من عميل آخر
-                                if(!payload.new.is_from_admin) playNotificationSound();
-                            }
-                        })
-                        .subscribe();
-                }
-            } catch (err) {
-                console.error("Error loading omnichannel:", err);
+        let adminAllMessages = [];
+        let adminGroupedChats = {};
+        let adminIdToNormalizedKey = {};
+
+        function normalizeWhatsAppId(sid) {
+            if (!sid) return sid;
+            let clean = sid.replace(/\D/g, '');
+            if (clean.length >= 11 && clean.startsWith('20')) {
+                clean = clean.substring(2);
             }
+            if (clean.length === 11 && clean.startsWith('0')) {
+                clean = clean.substring(1);
+            }
+            return clean;
         }
 
-        function groupOmniMessages() {
-            omniGroupedChats = {};
-            allOmniMessages.forEach(msg => {
-                // Ignore system messages where sender_id is literally 'Admin'
-                if (!msg.sender_id || msg.sender_id === 'Admin') return;
+        function regroupAdminChatsOnly() {
+            adminGroupedChats = {};
+            adminIdToNormalizedKey = {};
+            
+            adminAllMessages.forEach(m => {
+                if (!m.sender_id || m.sender_id === 'Admin') return;
 
-                if(!omniGroupedChats[msg.sender_id]) {
-                    let sName = msg.sender_id;
-                    if (msg.channel === 'messenger' && !msg.is_from_admin && msg.sender_name && msg.sender_name !== msg.sender_id && !['Admin', 'ش', 'Messenger User'].includes(msg.sender_name)) {
-                        sName = msg.sender_name;
+                let groupKey = m.sender_id;
+                if (m.channel === 'whatsapp') {
+                    groupKey = normalizeWhatsAppId(m.sender_id);
+                }
+                
+                adminIdToNormalizedKey[m.sender_id] = groupKey;
+
+                if(!adminGroupedChats[groupKey]) {
+                    let initialName = groupKey;
+                    if (m.channel === 'messenger' && !m.is_from_admin && m.sender_name && m.sender_name !== m.sender_id && !['Admin', 'ش', 'Messenger User'].includes(m.sender_name)) {
+                        initialName = m.sender_name;
                     }
-                    omniGroupedChats[msg.sender_id] = {
-                        sender_id: msg.sender_id,
-                        sender_name: sName,
-                        channel: msg.channel,
-                        messages: [],
-                        last_message: null,
-                        unread_count: 0
-                    };
+                    adminGroupedChats[groupKey] = { id: groupKey, originalIds: new Set(), name: initialName, channel: m.channel, messages: [], last: m };
+                }
+                adminGroupedChats[groupKey].originalIds.add(m.sender_id);
+                adminGroupedChats[groupKey].messages.push(m);
+                adminGroupedChats[groupKey].last = m;
+                
+                if(m.channel === 'whatsapp') {
+                    adminGroupedChats[groupKey].name = groupKey;
                 }
                 
-                omniGroupedChats[msg.sender_id].messages.push(msg);
-                omniGroupedChats[msg.sender_id].last_message = msg;
-                omniGroupedChats[msg.sender_id].channel = msg.channel;
-                
-                // تحديث اسم العميل من رسائله هو فقط (وليس من رسائل الموظف)
-                if (msg.channel === 'whatsapp') {
-                    omniGroupedChats[msg.sender_id].sender_name = msg.sender_id;
-                } else if (msg.channel === 'messenger' && !msg.is_from_admin && msg.sender_name && msg.sender_name !== msg.sender_id && !['Messenger User', 'Admin', 'ش'].includes(msg.sender_name)) {
-                    omniGroupedChats[msg.sender_id].sender_name = msg.sender_name;
-                }
-                
-                if(!msg.is_from_admin && !msg.read_by_admin) {
-                    omniGroupedChats[msg.sender_id].unread_count++;
+                if(m.channel === 'messenger') {
+                    if(!m.is_from_admin && m.sender_name && m.sender_name !== m.sender_id && !['Admin', 'ش', 'Messenger User'].includes(m.sender_name)) {
+                        adminGroupedChats[groupKey].name = m.sender_name;
+                    }
+                    
+                    const currentName = adminGroupedChats[groupKey].name;
+                    const isIdOrJunk = !currentName || currentName === m.sender_id || currentName === groupKey || ['Admin', 'ش', 'Messenger User'].includes(currentName);
+                    
+                    if(isIdOrJunk) {
+                        const savedName = localStorage.getItem(`chat_name_${m.sender_id}`) || localStorage.getItem(`chat_name_${groupKey}`);
+                        if(savedName) adminGroupedChats[groupKey].name = savedName;
+                        
+                        if(!adminGroupedChats[groupKey].name || adminGroupedChats[groupKey].name === m.sender_id || adminGroupedChats[groupKey].name === groupKey) {
+                            adminGroupedChats[groupKey].name = 'Messenger User';
+                        }
+                    }
                 }
             });
+            
+            Object.keys(adminGroupedChats).forEach(id => {
+                if (!adminGroupedChats[id].messages || adminGroupedChats[id].messages.length === 0) {
+                    delete adminGroupedChats[id];
+                }
+            });
+        }
 
-            // 🔄 حل أسماء "Messenger User" من الحجوزات عبر أرقام الهواتف في الرسائل
-            Object.values(omniGroupedChats).forEach(chat => {
-                if (chat.sender_name === 'Messenger User' || chat.sender_name === chat.sender_id) {
-                    // البحث عن رقم هاتف مصري في رسائل العميل
+        async function resolveAdminMessengerNames() {
+            const chatsToResolve = adminUnifiedChatsList.filter(c => 
+                c.type === 'omni' && (c.name === 'Messenger User' || c.name === c.id)
+            );
+            if (chatsToResolve.length === 0) return;
+
+            let anyResolved = false;
+            for (const chatItem of chatsToResolve) {
+                const chat = adminGroupedChats[chatItem.id];
+                if (!chat) continue;
+
+                let foundName = null;
+
+                if (!chat._phone_hint) {
                     const clientMsgs = chat.messages.filter(m => !m.is_from_admin);
                     for (const m of clientMsgs) {
                         const phoneMatch = (m.message_text || '').match(/01[0-9]{9}/);
@@ -5008,26 +5006,9 @@
                         }
                     }
                 }
-            });
 
-            // جلب الأسماء الحقيقية من الحجوزات (async - سيتم تحديث الواجهة بعد الانتهاء)
-            resolveMessengerNames();
-        }
-
-        async function resolveMessengerNames() {
-            const chatsToResolve = Object.values(omniGroupedChats).filter(c => 
-                c.sender_name === 'Messenger User' || c.sender_name === c.sender_id
-            );
-            if (chatsToResolve.length === 0) return;
-
-            let anyResolved = false;
-            for (const chat of chatsToResolve) {
-                let foundName = null;
-
-                // مصدر 1: البحث عن "👤 الاسم: ..." أو "👤 العميل: ..." في رسائل البوت
                 for (const m of chat.messages) {
                     const txt = m.message_text || '';
-                    // البحث في ملخصات الحجز ورسائل التأكيد
                     const namePatterns = [
                         /👤\s*(?:الاسم|العميل)\s*[:：]\s*(.+)/,
                         /الاسم\s*[:：]\s*(.+)/
@@ -5045,7 +5026,6 @@
                     if (foundName) break;
                 }
 
-                // مصدر 2: البحث عن رقم هاتف في رسائل العميل ثم جلب الاسم من الحجوزات
                 if (!foundName && chat._phone_hint) {
                     try {
                         const { data } = await sbClient.from('google_reservations')
@@ -5056,80 +5036,241 @@
                         if (data && data.length > 0 && data[0].customer_name) {
                             foundName = data[0].customer_name;
                         }
-                    } catch(e) { }
+                    } catch(e) {}
                 }
 
                 if (foundName) {
-                    chat.sender_name = foundName;
+                    chat.name = foundName;
+                    chatItem.name = foundName;
                     anyResolved = true;
                 }
             }
-            if (anyResolved) renderOmniChatList();
+            if (anyResolved) renderAdminUnifiedChatList();
         }
 
-        function renderOmniChatList() {
-            const listDiv = document.getElementById('omni-chat-list');
-            const search = (document.getElementById('omni-search')?.value || '').toLowerCase();
-            
-            // تحويل الـ Object إلى Array وترتيبه حسب آخر رسالة (الأحدث أولاً)
-            let chats = Object.values(omniGroupedChats).sort((a,b) => {
-                const dateA = new Date(a.last_message?.created_at || 0);
-                const dateB = new Date(b.last_message?.created_at || 0);
-                return dateB - dateA;
-            });
+        async function loadAdminUnifiedChats() {
+            try {
+                // 1. Omnichannel Messages
+                const { data: omniData } = await sbClient
+                    .from('omnichannel_messages')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(1000);
 
-            if (search) {
-                chats = chats.filter(c => 
-                    (c.sender_name || '').toLowerCase().includes(search) || 
-                    (c.sender_id || '').toLowerCase().includes(search)
-                );
+                if (omniData) {
+                    adminAllMessages = omniData.reverse();
+                    regroupAdminChatsOnly();
+                }
+
+                // 2. Support Chats
+                const { data: supportMsgs } = await sbClient.from('support_chats')
+                    .select('user_id, message, created_at, sender_role')
+                    .order('created_at', { ascending: false });
+
+                let supportChatsMapped = [];
+                if (supportMsgs && supportMsgs.length > 0) {
+                    const byUser = {};
+                    for (const m of supportMsgs) {
+                        if (!byUser[m.user_id]) {
+                            byUser[m.user_id] = { uid: m.user_id, last: m.message, time: m.created_at, unread: 0 };
+                        }
+                        if (m.sender_role === 'client' || m.sender_role === 'vendor') byUser[m.user_id].unread++;
+                    }
+
+                    const userIds = Object.keys(byUser);
+                    if (userIds.length > 0) {
+                        const [profilesRes, vendorsRes] = await Promise.all([
+                            sbClient.from('profiles').select('id, full_name').in('id', userIds),
+                            sbClient.from('vendors').select('id, name').in('id', userIds)
+                        ]);
+                        const profiles = profilesRes.data;
+                        const vendors = vendorsRes.data;
+                        if (profiles) profiles.forEach(p => { if (byUser[p.id]) byUser[p.id].name = p.full_name; });
+                        if (vendors) vendors.forEach(v => { if (byUser[v.id]) byUser[v.id].name = "🤝 مكتب: " + v.name; });
+                    }
+
+                    supportChatsMapped = Object.values(byUser).map(u => ({
+                        id: u.uid,
+                        type: 'support',
+                        name: u.name || 'عميل موقع',
+                        lastMessage: u.last,
+                        lastMessageTime: new Date(u.time),
+                        unreadCount: u.unread,
+                        avatar: '🎟️'
+                    }));
+                }
+
+                // 3. Active Trip Chats
+                const { data: trips } = await sbClient.from('trips')
+                    .select('*, drivers:drivers!fk_trips_driver(name), cars:cars!fk_trips_car(brand)')
+                    .eq('status', 'driver_assigned')
+                    .order('created_at', { ascending: false });
+
+                let tripChatsMapped = [];
+                if (trips && trips.length > 0) {
+                    const userIds = trips.map(t => t.user_id).filter(Boolean);
+                    let profilesMap = {};
+                    if (userIds.length > 0) {
+                        const { data: profiles } = await sbClient.from('profiles').select('id, full_name').in('id', userIds);
+                        if (profiles) profiles.forEach(p => profilesMap[p.id] = p);
+                    }
+
+                    for (const t of trips) {
+                        let clientName = profilesMap[t.user_id]?.full_name || 'عميل';
+                        if (t.manual_client_name) clientName = t.manual_client_name;
+                        if (t.admin_notes && t.admin_notes.includes('حجز هاتفي')) {
+                            const nm = t.admin_notes.match(/العميل: (.*?)[\n(]/);
+                            if (nm) clientName = nm[1].trim();
+                        }
+                        const driverName = t.drivers?.name || 'كابتن';
+
+                        const { data: lastMsg } = await sbClient.from('chat_messages')
+                            .select('message, sender_role, created_at').eq('trip_id', t.id)
+                            .order('created_at', { ascending: false }).limit(1);
+                        const preview = lastMsg?.[0]?.message || 'لا توجد رسائل بعد';
+                        const time = lastMsg?.[0]?.created_at || t.created_at;
+
+                        tripChatsMapped.push({
+                            id: t.id,
+                            type: 'trip',
+                            name: `${clientName} ↔ ${driverName}`,
+                            lastMessage: preview,
+                            lastMessageTime: new Date(time),
+                            unreadCount: 0,
+                            avatar: '🚗',
+                            extra: {
+                                clientName,
+                                driverName,
+                                from: (t.pickup_location || '').split(',')[0],
+                                to: (t.dropoff_location || '').split(',')[0]
+                            }
+                        });
+                    }
+                }
+
+                // 4. Omnichannel mapped
+                const omniChatsMapped = Object.values(adminGroupedChats).map(c => {
+                    let unreadCount = 0;
+                    c.messages.forEach(m => {
+                        if (!m.is_from_admin && !m.read_by_admin) unreadCount++;
+                    });
+                    return {
+                        id: c.id,
+                        type: 'omni',
+                        name: c.name || 'مراسلات سوشيال',
+                        lastMessage: c.last.message_text || c.last.message,
+                        lastMessageTime: new Date(c.last.created_at),
+                        unreadCount: unreadCount,
+                        avatar: c.channel === 'messenger' ? '💬' : '🟢',
+                        channel: c.channel
+                    };
+                });
+
+                adminUnifiedChatsList = [...omniChatsMapped, ...supportChatsMapped, ...tripChatsMapped];
+                adminUnifiedChatsList.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
+
+                renderAdminUnifiedChatList();
+                updateAdminUnifiedBadge();
+                resolveAdminMessengerNames();
+
+                initGlobalSupportListener();
+                initGlobalTripChatListener();
+                initGlobalOmniListener();
+
+            } catch (err) {
+                console.error("Error loading admin unified chats:", err);
             }
+        }
 
-            if (chats.length === 0) {
-                listDiv.innerHTML = `<div class="text-center text-slate-400 py-10">لا توجد محادثات</div>`;
-                return;
+        function initGlobalSupportListener() {
+            if (adminSupportChatSub) return;
+            adminSupportChatSub = sbClient.channel('global-admin-support')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_chats' }, payload => {
+                    const msg = payload.new;
+                    if (msg.sender_role === 'client' || msg.sender_role === 'vendor') {
+                        playNotificationSound();
+                        if (adminActiveChatType === 'support' && adminActiveChatId === msg.user_id) {
+                            appendAdminUnifiedSupportMsg(msg);
+                            markAdminUnifiedChatAsRead(msg.user_id, 'support');
+                        } else {
+                            loadAdminUnifiedChats();
+                        }
+                    }
+                }).subscribe();
+        }
+
+        function initGlobalTripChatListener() {
+            if (adminTripChatSub) return;
+            adminTripChatSub = sbClient.channel('global-admin-trip-chat')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, payload => {
+                    const msg = payload.new;
+                    if (msg.sender_role !== 'admin') {
+                        playNotificationSound();
+                        if (adminActiveChatType === 'trip' && adminActiveChatId === msg.trip_id) {
+                            appendAdminUnifiedTripMsg(msg);
+                        } else {
+                            loadAdminUnifiedChats();
+                        }
+                    }
+                }).subscribe();
+        }
+
+        function initGlobalOmniListener() {
+            if (adminOmniSubscription) return;
+            adminOmniSubscription = sbClient.channel('global-admin-omni')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'omnichannel_messages' }, payload => {
+                    const msg = payload.new;
+                    if (!msg.is_from_admin) {
+                        playNotificationSound();
+                        
+                        let groupKey = msg.sender_id;
+                        if (msg.channel === 'whatsapp') {
+                            groupKey = normalizeWhatsAppId(msg.sender_id);
+                        }
+
+                        if (adminActiveChatType === 'omni' && adminActiveChatId === groupKey) {
+                            appendAdminUnifiedOmniMsg(msg);
+                            markAdminUnifiedChatAsRead(groupKey, 'omni');
+                        } else {
+                            loadAdminUnifiedChats();
+                        }
+                    }
+                }).subscribe();
+        }
+
+        async function markAdminUnifiedChatAsRead(id, type) {
+            const chat = adminUnifiedChatsList.find(c => c.id === id && c.type === type);
+            if (chat) chat.unreadCount = 0;
+            updateAdminUnifiedBadge();
+
+            if (type === 'omni') {
+                const group = adminGroupedChats[id];
+                if (group) {
+                    const unreadIds = group.messages
+                        .filter(m => !m.is_from_admin && !m.read_by_admin)
+                        .map(m => m.id);
+
+                    if (unreadIds.length > 0) {
+                        group.messages.forEach(m => {
+                            if (unreadIds.includes(m.id)) m.read_by_admin = true;
+                        });
+                        try {
+                            await sbClient.from('omnichannel_messages')
+                                .update({ read_by_admin: true })
+                                .in('id', unreadIds);
+                        } catch(e) { console.error(e); }
+                    }
+                }
             }
-
-            listDiv.innerHTML = chats.map(chat => {
-                const lastMsg = chat.last_message;
-                const timeStr = lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString('ar-EG', {hour: '2-digit', minute:'2-digit'}) : '';
-                const msgPreview = lastMsg ? lastMsg.message_text.substring(0, 30) + (lastMsg.message_text.length > 30 ? '...' : '') : '';
-                const isActive = omniActiveSenderId === chat.sender_id;
-                const icon = chat.channel === 'whatsapp' ? '<i class="fab fa-whatsapp text-green-500"></i>' : '<i class="fab fa-facebook-messenger text-blue-500"></i>';
-                const avatarChar = (chat.sender_name || '?').charAt(0).toUpperCase();
-                const unreadBadge = chat.unread_count > 0 ? `<div class="bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full ml-1 shrink-0 font-bold">${chat.unread_count}</div>` : '';
-
-                return `
-                <div onclick="openOmniChat('${chat.sender_id}')" class="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition ${isActive ? 'bg-teal-50 border border-teal-200' : 'bg-white hover:bg-slate-50 border border-transparent'} shadow-sm">
-                    <div class="relative shrink-0">
-                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-teal-400 to-emerald-500 text-white flex items-center justify-center text-xl font-bold shadow-inner">
-                            ${avatarChar}
-                        </div>
-                        <div class="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow">
-                            ${icon}
-                        </div>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex justify-between items-baseline mb-1">
-                            <h4 class="font-bold text-slate-800 text-sm truncate">${chat.sender_name || chat.sender_id}</h4>
-                            <span class="text-[10px] text-slate-400 shrink-0 mr-2" dir="ltr">${timeStr}</span>
-                        </div>
-                        <p class="text-xs ${chat.unread_count > 0 ? 'text-slate-800 font-bold' : 'text-slate-500'} truncate">${msgPreview}</p>
-                    </div>
-                    ${unreadBadge}
-                </div>`;
-            }).join('');
+            renderAdminUnifiedChatList();
         }
 
-        function filterOmniChats() {
-            renderOmniChatList();
-        }
-
-        function updateOmniBadge() {
+        function updateAdminUnifiedBadge() {
             const badge = document.getElementById('omnichannel-badge');
             let totalUnread = 0;
-            Object.values(omniGroupedChats).forEach(c => totalUnread += c.unread_count);
-            
+            adminUnifiedChatsList.forEach(c => {
+                totalUnread += (c.unreadCount || 0);
+            });
             if (totalUnread > 0) {
                 badge.textContent = totalUnread;
                 badge.classList.remove('hidden');
@@ -5138,46 +5279,193 @@
             }
         }
 
-        async function openOmniChat(senderId) {
-            omniActiveSenderId = senderId;
-            const chat = omniGroupedChats[senderId];
-            if(!chat) return;
+        function renderAdminUnifiedChatList() {
+            const listDiv = document.getElementById('omni-chat-list');
+            if (!listDiv) return;
 
-            // تحديث الواجهة النشطة
-            renderOmniChatList();
+            const search = (document.getElementById('omni-search')?.value || '').toLowerCase();
             
+            let filtered = adminUnifiedChatsList;
+            if (adminCurrentUnifiedFilter === 'omni') {
+                filtered = filtered.filter(c => c.type === 'omni');
+            } else if (adminCurrentUnifiedFilter === 'trip') {
+                filtered = filtered.filter(c => c.type === 'trip');
+            } else if (adminCurrentUnifiedFilter === 'support') {
+                filtered = filtered.filter(c => c.type === 'support');
+            }
+
+            if (search) {
+                filtered = filtered.filter(c => 
+                    (c.name || '').toLowerCase().includes(search) || 
+                    (c.id || '').toLowerCase().includes(search)
+                );
+            }
+
+            if (filtered.length === 0) {
+                listDiv.innerHTML = `<div class="text-center text-slate-400 py-10">لا توجد محادثات</div>`;
+                return;
+            }
+
+            listDiv.innerHTML = filtered.map(c => {
+                const isActive = (adminActiveChatId === c.id && adminActiveChatType === c.type);
+                
+                let typeBadge = '';
+                if (c.type === 'omni') {
+                    typeBadge = `<span class="bg-teal-100 text-teal-700 text-[8px] font-bold px-1 py-0.5 rounded">${c.channel === 'whatsapp' ? 'واتساب' : 'ماسنجر'}</span>`;
+                } else if (c.type === 'trip') {
+                    typeBadge = `<span class="bg-blue-100 text-blue-700 text-[8px] font-bold px-1 py-0.5 rounded">رحلة</span>`;
+                } else if (c.type === 'support') {
+                    typeBadge = `<span class="bg-amber-100 text-amber-700 text-[8px] font-bold px-1 py-0.5 rounded">دعم</span>`;
+                }
+
+                const unreadBadge = c.unreadCount > 0 
+                    ? `<div class="bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full ml-1 shrink-0 font-bold">${c.unreadCount}</div>` 
+                    : '';
+
+                let borderTypeClass = 'bg-white hover:bg-slate-50 border border-transparent';
+                if (isActive) {
+                    if (c.type === 'omni') borderTypeClass = 'bg-teal-50 border border-teal-200';
+                    else if (c.type === 'trip') borderTypeClass = 'bg-blue-50 border border-blue-200';
+                    else if (c.type === 'support') borderTypeClass = 'bg-amber-50 border border-amber-200';
+                }
+
+                const timeStr = c.lastMessageTime ? c.lastMessageTime.toLocaleTimeString('ar-EG', {hour: '2-digit', minute:'2-digit'}) : '';
+                const msgPreview = c.lastMessage ? c.lastMessage.substring(0, 30) + (c.lastMessage.length > 30 ? '...' : '') : '';
+
+                return `
+                <div onclick="openAdminUnifiedChat('${c.id}', '${c.type}')" class="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition ${borderTypeClass} shadow-sm">
+                    <div class="relative shrink-0">
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 text-slate-700 flex items-center justify-center text-xl font-bold shadow-inner">
+                            ${c.avatar}
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-baseline mb-1">
+                            <h4 class="font-bold text-slate-800 text-sm truncate">${c.name}</h4>
+                            <span class="text-[10px] text-slate-400 shrink-0 mr-2" dir="ltr">${timeStr}</span>
+                        </div>
+                        <p class="text-xs ${c.unreadCount > 0 ? 'text-slate-800 font-bold' : 'text-slate-500'} truncate">${msgPreview}</p>
+                        <div class="mt-1 flex items-center gap-1">
+                            ${typeBadge}
+                        </div>
+                    </div>
+                    ${unreadBadge}
+                </div>`;
+            }).join('');
+        }
+
+        function filterOmniChats() {
+            renderAdminUnifiedChatList();
+        }
+
+        async function openAdminUnifiedChat(id, type) {
+            adminActiveChatId = id;
+            adminActiveChatType = type;
+
+            renderAdminUnifiedChatList();
+
             document.getElementById('omni-no-chat').style.display = 'none';
             document.getElementById('omni-chat-header').style.visibility = 'visible';
             document.getElementById('omni-messages-area').style.visibility = 'visible';
             document.getElementById('omni-input-area').style.visibility = 'visible';
 
-            document.getElementById('omni-active-name').textContent = chat.sender_name || chat.sender_id;
-            document.getElementById('omni-active-avatar').textContent = (chat.sender_name || '?').charAt(0).toUpperCase();
-            
-            if(chat.channel === 'whatsapp') {
-                document.getElementById('omni-active-channel-icon').innerHTML = '<i class="fab fa-whatsapp text-green-500"></i>';
-                document.getElementById('omni-active-channel-name').textContent = 'WhatsApp';
-            } else {
-                document.getElementById('omni-active-channel-icon').innerHTML = '<i class="fab fa-facebook-messenger text-blue-500"></i>';
-                document.getElementById('omni-active-channel-name').textContent = 'Messenger';
-            }
+            const header = document.getElementById('omni-chat-header');
+            const messagesArea = document.getElementById('omni-messages-area');
+            const avatarEl = document.getElementById('omni-active-avatar');
+            const nameEl = document.getElementById('omni-active-name');
+            const channelIconEl = document.getElementById('omni-active-channel-icon');
+            const channelNameEl = document.getElementById('omni-active-channel-name');
 
-            document.getElementById('omni-reply-sender-id').value = senderId;
-            document.getElementById('omni-reply-channel').value = chat.channel;
+            // Reset custom controls from header
+            const oldDestBtn = document.getElementById('admin-unified-edit-dest-btn');
+            if (oldDestBtn) oldDestBtn.remove();
+            const oldPayBtn = document.getElementById('admin-unified-pay-btn');
+            if (oldPayBtn) oldPayBtn.remove();
+            const oldPostpaidBtn = document.getElementById('admin-unified-postpaid-btn');
+            if (oldPostpaidBtn) oldPostpaidBtn.remove();
 
-            const msgsArea = document.getElementById('omni-messages-area');
-            msgsArea.innerHTML = '';
-            
-            chat.messages.forEach(msg => appendOmniMessage(msg));
-            scrollToOmniBottom();
+            messagesArea.innerHTML = '<div class="text-center text-slate-400 py-10"><i class="fas fa-spinner fa-spin text-2xl"></i><br>جاري تحميل الرسائل...</div>';
 
-            // تحديث الرسائل كـ مقروءة
-            if(chat.unread_count > 0) {
-                markOmniChatAsRead(senderId);
+            const chatObj = adminUnifiedChatsList.find(c => c.id === id && c.type === type);
+
+            if (type === 'omni') {
+                const group = adminGroupedChats[id];
+                nameEl.textContent = chatObj?.name || id;
+                avatarEl.textContent = chatObj?.avatar || '💬';
+                
+                if (chatObj?.channel === 'whatsapp') {
+                    channelIconEl.innerHTML = '<i class="fab fa-whatsapp text-green-500"></i>';
+                    channelNameEl.textContent = 'WhatsApp';
+                } else {
+                    channelIconEl.innerHTML = '<i class="fab fa-facebook-messenger text-blue-500"></i>';
+                    channelNameEl.textContent = 'Messenger';
+                }
+
+                document.getElementById('omni-reply-sender-id').value = id;
+                document.getElementById('omni-reply-channel').value = chatObj?.channel || '';
+
+                messagesArea.innerHTML = '';
+                if (group) {
+                    group.messages.forEach(m => appendAdminUnifiedOmniMsg(m));
+                }
+                scrollToOmniBottom();
+                markAdminUnifiedChatAsRead(id, 'omni');
+            } 
+            else if (type === 'trip') {
+                nameEl.textContent = chatObj?.name || 'محادثة رحلة';
+                avatarEl.textContent = '🚗';
+                channelIconEl.innerHTML = '<i class="fas fa-car text-blue-500"></i>';
+                channelNameEl.textContent = `رحلة نشطة: ${chatObj?.extra?.from || ''} ➝ ${chatObj?.extra?.to || ''}`;
+
+                document.getElementById('omni-reply-sender-id').value = id;
+                document.getElementById('omni-reply-channel').value = 'trip';
+
+                // Add trip controls to header
+                // 1. edit dropoff/price
+                const editBtn = document.createElement('button');
+                editBtn.id = 'admin-unified-edit-dest-btn';
+                editBtn.type = 'button';
+                editBtn.className = 'bg-amber-100 text-amber-700 hover:bg-amber-200 px-3 py-1.5 rounded-lg text-xs font-bold border border-amber-200 transition flex items-center gap-1';
+                editBtn.innerHTML = '<i class="fas fa-edit"></i> تعديل الوجهة والسعر';
+                editBtn.onclick = () => openDestChangeModal(id, chatObj?.extra?.to || '');
+                header.insertBefore(editBtn, header.firstChild);
+
+                // 2. payment number
+                const payBtn = document.createElement('button');
+                payBtn.id = 'admin-unified-pay-btn';
+                payBtn.type = 'button';
+                payBtn.className = 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 px-3 py-1.5 rounded-lg text-xs font-bold border border-emerald-200 transition flex items-center gap-1 ml-2';
+                payBtn.innerHTML = '<i class="fas fa-credit-card"></i> رقم الدفع';
+                payBtn.onclick = () => sendAdminPaymentNumberUnified(id);
+                header.insertBefore(payBtn, editBtn);
+
+                // 3. Postpaid converter button
+                const postpaidBtn = document.createElement('button');
+                postpaidBtn.id = 'admin-unified-postpaid-btn';
+                postpaidBtn.type = 'button';
+                postpaidBtn.className = 'bg-purple-100 text-purple-700 hover:bg-purple-200 px-3 py-1.5 rounded-lg text-xs font-bold border border-purple-200 transition flex items-center gap-1 ml-2';
+                postpaidBtn.innerHTML = '<i class="fas fa-wallet"></i> تحويل لأجل';
+                postpaidBtn.onclick = () => changeTripToPostpaid(id);
+                header.insertBefore(postpaidBtn, payBtn);
+
+                await loadAdminUnifiedTripChatMessages(id);
+                markAdminUnifiedChatAsRead(id, 'trip');
+            } 
+            else if (type === 'support') {
+                nameEl.textContent = chatObj?.name || 'عميل الموقع';
+                avatarEl.textContent = '🎟️';
+                channelIconEl.innerHTML = '<i class="fas fa-ticket-alt text-amber-500"></i>';
+                channelNameEl.textContent = 'شات الموقع المباشر';
+
+                document.getElementById('omni-reply-sender-id').value = id;
+                document.getElementById('omni-reply-channel').value = 'support';
+
+                await loadAdminUnifiedSupportMessages(id);
+                markAdminUnifiedChatAsRead(id, 'support');
             }
         }
 
-        function appendOmniMessage(msg) {
+        function appendAdminUnifiedOmniMsg(msg) {
             const area = document.getElementById('omni-messages-area');
             const timeStr = new Date(msg.created_at).toLocaleTimeString('ar-EG', {hour: '2-digit', minute:'2-digit'});
             
@@ -5208,47 +5496,172 @@
             area.appendChild(div);
         }
 
-        function scrollToOmniBottom() {
-            const area = document.getElementById('omni-messages-area');
-            area.scrollTop = area.scrollHeight;
+        async function loadAdminUnifiedTripChatMessages(tripId) {
+            const { data: msgs } = await sbClient.from('chat_messages')
+                .select('*').eq('trip_id', tripId).order('created_at', { ascending: true });
+
+            const container = document.getElementById('omni-messages-area');
+            container.innerHTML = '';
+
+            if (!msgs || msgs.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-400 py-8 text-xs">لا توجد رسائل بعد</p>';
+                return;
+            }
+
+            msgs.forEach(m => appendAdminUnifiedTripMsg(m));
+            scrollToOmniBottom();
         }
 
-        function closeOmniChat() {
-            omniActiveSenderId = null;
-            document.getElementById('omni-no-chat').style.display = 'flex';
-            document.getElementById('omni-chat-header').style.visibility = 'hidden';
-            document.getElementById('omni-messages-area').style.visibility = 'hidden';
-            document.getElementById('omni-input-area').style.visibility = 'hidden';
-            renderOmniChatList();
-        }
+        function appendAdminUnifiedTripMsg(msg) {
+            const container = document.getElementById('omni-messages-area');
+            const placeholder = container.querySelector('p.text-center');
+            if (placeholder) placeholder.remove();
 
-        async function markOmniChatAsRead(senderId) {
-            if(omniGroupedChats[senderId]) omniGroupedChats[senderId].unread_count = 0;
-            updateOmniBadge();
-            renderOmniChatList();
+            const div = document.createElement('div');
+            div.className = `flex ${msg.sender_role === 'admin' ? 'justify-center' : msg.sender_role === 'driver' ? 'justify-end' : 'justify-start'} w-full mb-3`;
             
-            // تحديث في قاعدة البيانات
-            const unreadMessagesIds = allOmniMessages
-                .filter(m => m.sender_id === senderId && !m.is_from_admin && !m.read_by_admin)
-                .map(m => m.id);
-                
-            if(unreadMessagesIds.length > 0) {
-                // تحديث الذاكرة المحلية أولا
-                allOmniMessages.forEach(m => {
-                    if(unreadMessagesIds.includes(m.id)) m.read_by_admin = true;
-                });
-                
-                // تحديث قاعدة البيانات
-                try {
-                    await sbClient.from('omnichannel_messages')
-                        .update({ read_by_admin: true })
-                        .in('id', unreadMessagesIds);
-                } catch(e) { console.error("Error marking as read", e); }
+            let bubbleClass = '';
+            let senderLabel = '';
+            if (msg.sender_role === 'client') {
+                bubbleClass = 'bg-amber-50 border text-slate-800 rounded-tl-none shadow-sm';
+                senderLabel = `👤 العميل: ${msg.sender_name || ''}`;
+            } else if (msg.sender_role === 'driver') {
+                bubbleClass = 'bg-blue-50 border text-slate-800 rounded-tr-none shadow-sm';
+                senderLabel = `🚗 الكابتن: ${msg.sender_name || ''}`;
+            } else if (msg.sender_role === 'admin') {
+                bubbleClass = 'bg-purple-50 border border-purple-200 text-slate-800 text-center';
+                senderLabel = `🛡️ الإدارة`;
+            }
+
+            let msgContent = msg.message;
+            if (msg.message_type === 'location') {
+                msgContent = `📍 <a href="https://maps.google.com/?q=${msg.location_lat},${msg.location_lng}" target="_blank" class="text-blue-600 underline font-bold">فتح الموقع</a>`;
+            } else if ((msg.message_type === 'admin_request' && msg.message.includes('يطلب تغيير الوجهة إلى:')) || (msg.message_type === 'system' && msg.message.includes('⚠️ طلب تغيير وجهة:'))) {
+                let newD = '';
+                if (msg.message_type === 'admin_request') {
+                    const match = msg.message.match(/إلى:\s*(.*)/);
+                    newD = match ? match[1].trim() : '';
+                } else {
+                    const lines = msg.message.split('\n');
+                    newD = lines[1] ? lines[1].trim() : '';
+                }
+                msgContent = `<div class="bg-orange-50 p-2 rounded border border-orange-200 mt-1 text-right">
+                    <p class="font-bold text-orange-800 text-xs mb-2 text-center">🚨 طلب تغيير وجهة</p>
+                    <p class="text-xs text-orange-700 mb-3 text-center">الكابتن يطلب تغيير الوجهة إلى:<br><strong>${newD}</strong></p>
+                    <div class="flex gap-2 justify-center">
+                        <button onclick="respondAdminUnifiedDestChange('${msg.trip_id}', '${newD}', true)" class="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-green-700 w-full">✅ موافقة</button>
+                        <button onclick="respondAdminUnifiedDestChange('${msg.trip_id}', '${newD}', false)" class="bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-700 w-full">❌ رفض</button>
+                    </div>
+                </div>`;
+            }
+
+            div.innerHTML = `
+                <div class="max-w-[75%] rounded-2xl px-4 py-2 text-sm ${bubbleClass}">
+                    <p class="text-[10px] font-bold mb-1 opacity-80">${senderLabel}</p>
+                    <p class="whitespace-pre-wrap">${msgContent}</p>
+                    <p class="text-[9px] mt-1 opacity-70 text-left">${new Date(msg.created_at).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}</p>
+                </div>
+            `;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function respondAdminUnifiedDestChange(tripId, newDest, isApproved) {
+            try {
+                if (isApproved) {
+                    await sbClient.from('trips').update({ dropoff_location: newDest }).eq('id', tripId);
+                    await sbClient.from('chat_messages').insert([{
+                        trip_id: tripId,
+                        sender_role: 'admin',
+                        sender_id: 'admin',
+                        sender_name: 'الإدارة',
+                        message: `✅ تمت الموافقة على تغيير الوجهة إلى: ${newDest}`,
+                        message_type: 'text'
+                    }]);
+                } else {
+                    await sbClient.from('chat_messages').insert([{
+                        trip_id: tripId,
+                        sender_role: 'admin',
+                        sender_id: 'admin',
+                        sender_name: 'الإدارة',
+                        message: `❌ تم رفض طلب تغيير الوجهة`,
+                        message_type: 'text'
+                    }]);
+                }
+                loadAdminUnifiedTripChatMessages(tripId);
+            } catch(e) {
+                alert("حدث خطأ: " + e.message);
+            }
+        }
+
+        async function loadAdminUnifiedSupportMessages(userId) {
+            const { data: msgs } = await sbClient.from('support_chats')
+                .select('*').eq('user_id', userId).order('created_at', { ascending: true });
+
+            const container = document.getElementById('omni-messages-area');
+            container.innerHTML = '';
+
+            if (!msgs || msgs.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-400 py-8 text-xs">لا توجد رسائل بعد</p>';
+                return;
+            }
+
+            msgs.forEach(m => appendAdminUnifiedSupportMsg(m));
+            scrollToOmniBottom();
+        }
+
+        function appendAdminUnifiedSupportMsg(m) {
+            const container = document.getElementById('omni-messages-area');
+            const placeholder = container.querySelector('p.text-center');
+            if (placeholder) placeholder.remove();
+
+            const div = document.createElement('div');
+            const isAdmin = (m.sender_role === 'admin' || m.sender_role === 'moderator');
+            div.className = `flex ${isAdmin ? 'justify-end' : 'justify-start'} w-full mb-2`;
+            
+            let bubbleClass = '';
+            let senderLabel = '';
+            if (isAdmin) {
+                bubbleClass = 'bg-teal-600 text-white rounded-tr-none shadow-sm';
+                senderLabel = '🛡️ الدعم الفني';
+            } else {
+                bubbleClass = 'bg-white border text-slate-800 rounded-tl-none shadow-sm';
+                senderLabel = m.sender_role === 'vendor' ? '🤝 مكتب منفذ' : '👤 العميل';
+            }
+
+            div.innerHTML = `
+                <div class="max-w-[75%] rounded-2xl px-4 py-2 text-sm ${bubbleClass}">
+                    <p class="text-[10px] font-bold mb-1 opacity-80">${senderLabel}</p>
+                    <p class="whitespace-pre-wrap">${m.message}</p>
+                    <p class="text-[9px] mt-1 opacity-70 text-left">${new Date(m.created_at).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}</p>
+                </div>
+            `;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendAdminPaymentNumberUnified(tripId) {
+            const paymentMsg = "رقم الدفع الموحد للشركة للتحويل (محفظة أو إنستاباي) هو: 01121748885";
+            const payMsg = {
+                trip_id: tripId,
+                sender_role: 'admin',
+                sender_id: 'admin',
+                sender_name: 'الإدارة',
+                message: paymentMsg,
+                message_type: 'text',
+                created_at: new Date().toISOString()
+            };
+            appendAdminUnifiedTripMsg(payMsg);
+            try {
+                await sbClient.from('chat_messages').insert([payMsg]);
+                loadAdminUnifiedChats();
+            } catch (error) {
+                alert('فشل إرسال الرسالة: ' + error.message);
             }
         }
 
         async function sendOmniReply(e) {
-            e.preventDefault();
+            if (e) e.preventDefault();
             const input = document.getElementById('omni-reply-text');
             const text = input.value.trim();
             if(!text) return;
@@ -5261,49 +5674,75 @@
             btn.disabled = true;
 
             try {
-                // استدعاء הـ API الموحد للإرسال عبر (WhatsApp/Messenger)
-                const apiBase = getStaffApiBaseUrl();
-                if (!apiBase) {
-                    throw new Error("لم يتم العثور على رابط اتصال بالسيرفر المحلي!\nيرجى الدخول لصفحة (الإدارة / الموظفين) وإدخال رابط ngrok المتاح فى الشاشة الرئيسية.");
-                }
-                const apiUrl = `${apiBase}/api/send_reply`;
+                if (channel === 'trip') {
+                    const newMsg = {
+                        trip_id: senderId,
+                        sender_role: 'admin',
+                        sender_id: 'admin',
+                        sender_name: 'الإدارة',
+                        message: text,
+                        message_type: 'text',
+                        created_at: new Date().toISOString()
+                    };
+                    appendAdminUnifiedTripMsg(newMsg);
+                    await sbClient.from('chat_messages').insert([newMsg]);
+                    input.value = '';
+                } 
+                else if (channel === 'support') {
+                    const newMsg = {
+                        user_id: senderId,
+                        sender_role: 'admin',
+                        message: text,
+                        created_at: new Date().toISOString()
+                    };
+                    appendAdminUnifiedSupportMsg(newMsg);
+                    await sbClient.from('support_chats').insert([newMsg]);
+                    input.value = '';
+                } 
+                else {
+                    const apiBase = getStaffApiBaseUrl();
+                    if (!apiBase) {
+                        throw new Error("لم يتم العثور على رابط اتصال بالسيرفر المحلي!\nيرجى الدخول لصفحة (الإدارة / الموظفين) وإدخال رابط ngrok المتاح فى الشاشة الرئيسية.");
+                    }
+                    const apiUrl = `${apiBase}/api/send_reply`;
 
-                const res = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'ngrok-skip-browser-warning': 'true'
-                    },
-                    body: JSON.stringify({
+                    const res = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'ngrok-skip-browser-warning': 'true'
+                        },
+                        body: JSON.stringify({
+                            channel: channel,
+                            sender_id: senderId,
+                            message: text
+                        })
+                    });
+                    
+                    if(!res.ok) {
+                        const errorTxt = await res.text();
+                        throw new Error(errorTxt);
+                    }
+
+                    const tempMsg = {
+                        id: 'temp_' + Date.now(),
                         channel: channel,
                         sender_id: senderId,
-                        message: text
-                    })
-                });
-                
-                if(!res.ok) {
-                    const errorTxt = await res.text();
-                    throw new Error(errorTxt);
+                        message_text: text,
+                        is_from_admin: true,
+                        created_at: new Date().toISOString()
+                    };
+                    
+                    adminAllMessages.push(tempMsg);
+                    const group = adminGroupedChats[senderId];
+                    if (group) {
+                        group.messages.push(tempMsg);
+                    }
+                    appendAdminUnifiedOmniMsg(tempMsg);
+                    scrollToOmniBottom();
+                    
+                    input.value = '';
                 }
-
-                // إضافة الرسالة للواجهة كشكل مبدئي لتسريع تجربة المستخدم (بدون انتظار Realtime)
-                const tempMsg = {
-                    id: 'temp_' + Date.now(),
-                    channel: channel,
-                    sender_id: senderId,
-                    message_text: text,
-                    is_from_admin: true,
-                    created_at: new Date().toISOString()
-                };
-                
-                allOmniMessages.push(tempMsg);
-                if (omniGroupedChats[senderId]) {
-                    omniGroupedChats[senderId].messages.push(tempMsg);
-                }
-                appendOmniMessage(tempMsg);
-                scrollToOmniBottom();
-                
-                input.value = '';
             } catch(e) {
                 alert('خطأ في إرسال الرسالة: ' + e.message);
             } finally {
@@ -5341,7 +5780,7 @@
                 setTimeout(loadReservationsPage, 100);
             }
             if (page === 'omnichannel') {
-                setTimeout(loadOmnichannelChats, 100);
+                setTimeout(loadAdminUnifiedChats, 100);
             }
             if (page === 'staff') {
                 setTimeout(() => {
