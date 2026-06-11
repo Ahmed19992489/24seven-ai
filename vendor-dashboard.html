@@ -437,9 +437,16 @@
         <div class="bg-slate-800 border border-slate-700 rounded-3xl w-full max-w-[550px] h-[85vh] flex flex-col shadow-2xl animate-fade overflow-hidden">
             <!-- الهيدر -->
             <div class="p-4 bg-slate-900 flex justify-between items-center border-b border-slate-700">
-                <div>
-                    <h3 class="font-bold text-white text-sm" id="chat-header-title">دردشة الرحلة المشتركة</h3>
-                    <p class="text-[10px] text-blue-400" id="chat-header-route">جاري التحميل...</p>
+                <div class="flex items-center gap-3">
+                    <div id="chat-header-car-image-container" class="hidden">
+                        <a id="chat-header-car-image-link" href="" target="_blank">
+                            <img id="chat-header-car-image" class="w-12 h-10 object-cover rounded border border-slate-700 hover:opacity-80 transition" alt="صورة السيارة">
+                        </a>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-white text-sm" id="chat-header-title">دردشة الرحلة المشتركة</h3>
+                        <p class="text-[10px] text-blue-400" id="chat-header-route">جاري التحميل...</p>
+                    </div>
                 </div>
                 <button onclick="closeChat()" class="text-slate-400 hover:text-white w-8 h-8 rounded-lg flex items-center justify-center transition">
                     <i class="fas fa-times"></i>
@@ -750,7 +757,7 @@
             try {
                 // جلب الرحلات المسندة للمكتب
                 const { data: trips, error } = await sb.from('trips')
-                    .select('*, drivers:drivers!fk_trips_driver(name, phone), cars:cars!fk_trips_car(brand, plate_number)')
+                    .select('*, drivers:drivers!fk_trips_driver(name, phone), cars:cars!fk_trips_car(brand, plate_number, car_image_url)')
                     .eq('vendor_id', currentVendor.id)
                     .order('created_at', { ascending: false });
 
@@ -1057,10 +1064,17 @@
                     const drvPhone = t.drivers ? t.drivers.phone : '-';
                     const carBrand = t.cars ? t.cars.brand : 'سيارة خارجية';
                     const carPlate = t.cars ? t.cars.plate_number : '-';
+                    const carImgUrl = t.cars?.car_image_url || '';
                     driverInfoHtml = `
-                        <div class="text-xs text-slate-300 space-y-1">
-                            <p><i class="fas fa-user text-[10px] text-blue-400 ml-1.5"></i>الكابتن: <strong>${drvName}</strong> (${drvPhone})</p>
-                            <p><i class="fas fa-car text-[10px] text-blue-400 ml-1.5"></i>السيارة: <strong>${carBrand}</strong> [ ${carPlate} ]</p>
+                        <div class="flex items-center gap-3">
+                            ${carImgUrl ? `
+                            <a href="${carImgUrl}" target="_blank" class="block w-16 h-12 rounded border border-slate-700 overflow-hidden hover:opacity-80 transition shrink-0" title="عرض صورة السيارة">
+                                <img src="${carImgUrl}" class="w-full h-full object-cover">
+                            </a>` : ''}
+                            <div class="text-xs text-slate-300 space-y-1">
+                                <p><i class="fas fa-user text-[10px] text-blue-400 ml-1.5"></i>الكابتن: <strong>${drvName}</strong> (${drvPhone})</p>
+                                <p><i class="fas fa-car text-[10px] text-blue-400 ml-1.5"></i>السيارة: <strong>${carBrand}</strong> [ ${carPlate} ]</p>
+                            </div>
                         </div>
                     `;
                 } else {
@@ -1068,10 +1082,17 @@
                     const drvPhone = t.drivers ? t.drivers.phone : '-';
                     const carBrand = t.cars ? t.cars.brand : 'سيارة خارجية';
                     const carPlate = t.cars ? t.cars.plate_number : '-';
+                    const carImgUrl = t.cars?.car_image_url || '';
                     driverInfoHtml = `
-                        <div class="text-xs text-slate-300 space-y-1">
-                            <p><i class="fas fa-user text-[10px] text-blue-400 ml-1.5"></i>الكابتن: <strong>${drvName}</strong> (${drvPhone})</p>
-                            <p><i class="fas fa-car text-[10px] text-blue-400 ml-1.5"></i>السيارة: <strong>${carBrand}</strong> [ ${carPlate} ]</p>
+                        <div class="flex items-center gap-3">
+                            ${carImgUrl ? `
+                            <a href="${carImgUrl}" target="_blank" class="block w-16 h-12 rounded border border-slate-700 overflow-hidden hover:opacity-80 transition shrink-0" title="عرض صورة السيارة">
+                                <img src="${carImgUrl}" class="w-full h-full object-cover">
+                            </a>` : ''}
+                            <div class="text-xs text-slate-300 space-y-1">
+                                <p><i class="fas fa-user text-[10px] text-blue-400 ml-1.5"></i>الكابتن: <strong>${drvName}</strong> (${drvPhone})</p>
+                                <p><i class="fas fa-car text-[10px] text-blue-400 ml-1.5"></i>السيارة: <strong>${carBrand}</strong> [ ${carPlate} ]</p>
+                            </div>
                         </div>
                     `;
                 }
@@ -1820,6 +1841,20 @@
         async function openChat(tripId, routeName) {
             activeChatTripId = tripId;
             document.getElementById('chat-header-route').textContent = routeName;
+            
+            const tripObj = (cachedTrips || []).find(t => String(t.id) === String(tripId));
+            const carImgUrl = tripObj?.cars?.car_image_url || '';
+            const carImgContainer = document.getElementById('chat-header-car-image-container');
+            const carImg = document.getElementById('chat-header-car-image');
+            const carImgLink = document.getElementById('chat-header-car-image-link');
+            if (carImgUrl && carImgContainer && carImg && carImgLink) {
+                carImg.src = carImgUrl;
+                carImgLink.href = carImgUrl;
+                carImgContainer.classList.remove('hidden');
+            } else if (carImgContainer) {
+                carImgContainer.classList.add('hidden');
+            }
+
             document.getElementById('chat-modal').style.display = 'flex';
 
             await loadChatMessages(tripId);

@@ -777,6 +777,11 @@
                         <p id="chat-driver-name" class="font-bold text-white text-sm">الكابتن</p>
                         <p id="chat-route-info" class="text-[10px] text-slate-400"></p>
                     </div>
+                    <div id="chat-car-image-container" class="hidden">
+                        <a id="chat-car-image-link" href="" target="_blank">
+                            <img id="chat-car-image" src="" class="w-12 h-10 object-cover rounded border border-slate-700 hover:opacity-80 transition" alt="صورة السيارة">
+                        </a>
+                    </div>
                 </div>
                 <div id="client-chat-messages" class="chat-messages"></div>
                 <div class="chat-input-bar">
@@ -1941,10 +1946,14 @@
                     if (driverName.includes('مكتب خارجي') || driverName.includes('خارجي') || driverName.includes('موزع') || driverName.toLowerCase().includes('فهد') || driverName.includes('الفهد')) {
                         driverName = 'قسم التشغيل';
                     }
+                    const carImgUrl = t.cars?.car_image_url || '';
                     driverHtml = `
                     <div class="mt-4 pt-3 border-t border-slate-700">
                         <div class="flex items-center gap-3 bg-slate-800/50 p-3 rounded-xl">
-                            <div class="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center text-xl">👨‍✈️</div>
+                            ${carImgUrl ? `
+                            <a href="${carImgUrl}" target="_blank" class="w-16 h-12 rounded border border-slate-700 overflow-hidden hover:opacity-80 transition shrink-0" title="عرض صورة السيارة">
+                                <img src="${carImgUrl}" class="w-full h-full object-cover">
+                            </a>` : `<div class="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center text-xl">👨‍✈️</div>`}
                             <div class="flex-1">
                                 <p class="text-white font-bold text-sm">${driverName}</p>
                                 <div class="flex gap-2 text-[10px] text-slate-400"><span>${t.cars?.model || 'سيارة'}</span> | <span class="font-num">${t.cars?.plate_number || '---'}</span></div>
@@ -2445,8 +2454,24 @@
             closeSidebar();
             document.getElementById('chat-driver-name').textContent = 'كابتن ' + driverName;
 
-            const { data: trip } = await sb.from('trips').select('pickup_location, dropoff_location').eq('id', tripId).single();
-            if (trip) document.getElementById('chat-route-info').textContent = (trip.pickup_location || '').split(',')[0] + ' ➝ ' + (trip.dropoff_location || '').split(',')[0];
+            const { data: trip } = await sb.from('trips')
+                .select('pickup_location, dropoff_location, cars:cars!fk_trips_car(car_image_url)')
+                .eq('id', tripId)
+                .single();
+            if (trip) {
+                document.getElementById('chat-route-info').textContent = (trip.pickup_location || '').split(',')[0] + ' ➝ ' + (trip.dropoff_location || '').split(',')[0];
+                const carImgUrl = trip.cars?.car_image_url;
+                const carImgContainer = document.getElementById('chat-car-image-container');
+                const carImg = document.getElementById('chat-car-image');
+                const carImgLink = document.getElementById('chat-car-image-link');
+                if (carImgUrl && carImgContainer && carImg && carImgLink) {
+                    carImg.src = carImgUrl;
+                    carImgLink.href = carImgUrl;
+                    carImgContainer.classList.remove('hidden');
+                } else if (carImgContainer) {
+                    carImgContainer.classList.add('hidden');
+                }
+            }
 
             await loadClientChatMessages(tripId);
             subscribeToClientChat(tripId);

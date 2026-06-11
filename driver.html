@@ -339,6 +339,11 @@
                         <p id="chat-client-name" class="font-bold text-white text-sm">العميل</p>
                         <p id="chat-trip-route" class="text-[10px] text-slate-400"></p>
                     </div>
+                    <div id="chat-header-car-image-container" class="hidden">
+                        <a id="chat-header-car-image-link" href="" target="_blank">
+                            <img id="chat-header-car-image" class="w-12 h-10 object-cover rounded border border-slate-700 hover:opacity-80 transition" alt="صورة السيارة">
+                        </a>
+                    </div>
                 </div>
                 <div id="chat-messages" class="chat-msgs"></div>
                 <div class="chat-bar">
@@ -704,6 +709,16 @@
             const pickup = (t.pickup_location || '').split(',')[0];
             const dropoff = (t.dropoff_location || '').split(',')[0];
 
+            let carImgHtml = '';
+            if (t.cars && t.cars.car_image_url) {
+                carImgHtml = `
+                <div class="mb-3">
+                    <a href="${t.cars.car_image_url}" target="_blank">
+                        <img src="${t.cars.car_image_url}" class="w-full h-36 object-cover rounded-xl border border-slate-700 hover:opacity-80 transition" alt="صورة السيارة">
+                    </a>
+                </div>`;
+            }
+
             return `
             <div class="glass p-4 mb-3">
                 <!-- هيدر الكارت -->
@@ -723,6 +738,8 @@
                         <p class="text-xs text-slate-200 leading-tight">${dropoff}</p>
                     </div>
                 </div>
+
+                ${carImgHtml}
 
                 <!-- البيانات -->
                 <div class="grid grid-cols-3 gap-2 mb-3 text-center">
@@ -1079,10 +1096,24 @@
             document.getElementById('main-nav').style.display = 'none';
             document.getElementById('chat-client-name').textContent = clientName;
 
-            const { data: trip } = await sb.from('trips').select('pickup_location, dropoff_location').eq('id', tripId).single();
+            const { data: trip } = await sb.from('trips')
+                .select('pickup_location, dropoff_location, cars:cars!fk_trips_car(car_image_url)')
+                .eq('id', tripId)
+                .single();
             if (trip) {
                 document.getElementById('chat-trip-route').textContent =
                     (trip.pickup_location || '').split(',')[0] + ' ➝ ' + (trip.dropoff_location || '').split(',')[0];
+                const carImgUrl = trip.cars?.car_image_url;
+                const carImgContainer = document.getElementById('chat-header-car-image-container');
+                const carImg = document.getElementById('chat-header-car-image');
+                const carImgLink = document.getElementById('chat-header-car-image-link');
+                if (carImgUrl && carImgContainer && carImg && carImgLink) {
+                    carImg.src = carImgUrl;
+                    carImgLink.href = carImgUrl;
+                    carImgContainer.classList.remove('hidden');
+                } else if (carImgContainer) {
+                    carImgContainer.classList.add('hidden');
+                }
             }
             await loadChatMsgs(tripId);
             subscribeChatMsgs(tripId);

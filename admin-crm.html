@@ -388,7 +388,14 @@
         </div>
 
         <div id="page-crm" class="page-section hidden">
-            <h2 class="text-2xl font-bold mb-6">العملاء (CRM)</h2>
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                <h2 class="text-2xl font-bold">العملاء (CRM)</h2>
+                <div class="relative w-full md:w-80">
+                    <i class="fas fa-search absolute right-3 top-3 text-slate-400"></i>
+                    <input type="text" id="crm-search" placeholder="ابحث باسم العميل أو رقم الهاتف..." oninput="loadCRM()"
+                        class="input-std pr-10 w-full bg-white/50 backdrop-blur-sm border border-slate-200 focus:border-purple-500 rounded-xl py-2 pl-4 text-sm outline-none transition">
+                </div>
+            </div>
             <div class="glass-panel overflow-hidden">
                 <div class="table-responsive">
                     <table class="w-full text-right text-sm whitespace-nowrap">
@@ -1885,9 +1892,14 @@
                 }
 
                 const driverName = t.drivers ? t.drivers.name : '-';
-                let carInfo = t.cars ? `${t.cars.brand}` : '-';
+                let carInfo = t.cars ? `<span class="font-bold">${t.cars.brand}</span>` : '-';
                 if (t.cars && t.cars.car_image_url) {
-                    carInfo += ` <a href="${t.cars.car_image_url}" target="_blank" class="text-blue-500 hover:text-blue-700 ml-1.5" title="عرض صورة السيارة"><i class="fas fa-image"></i></a>`;
+                    carInfo += `
+                        <div class="mt-1">
+                            <a href="${t.cars.car_image_url}" target="_blank" class="block w-16 h-10 rounded border border-slate-200 overflow-hidden hover:opacity-80 transition" title="عرض صورة السيارة">
+                                <img src="${t.cars.car_image_url}" class="w-full h-full object-cover">
+                            </a>
+                        </div>`;
                 }
                 let btns = '';
                 if (t.status === 'pending' || t.status === 'approved') btns = `<button onclick="openAssignModal('${t.id}')" class="bg-slate-900 text-white px-2 py-1 rounded text-xs">تعيين</button>`;
@@ -2532,6 +2544,7 @@
 
         async function loadCRM() {
             const list = document.getElementById('crm-table'); 
+            const search = (document.getElementById('crm-search')?.value || '').toLowerCase().trim();
             const { data: profiles, error: pErr } = await sbClient.from('profiles').select('*'); 
             const { data: trips, error: tErr } = await sbClient.from('trips').select('id, user_id, final_price, estimated_price, status');
             
@@ -2551,7 +2564,21 @@
                 });
             }
             
-            profiles.forEach(p => { 
+            let filteredProfiles = profiles;
+            if (search) {
+                filteredProfiles = profiles.filter(p => {
+                    const name = (p.full_name || '').toLowerCase();
+                    const phone = p.phone || '';
+                    return name.includes(search) || phone.includes(search);
+                });
+            }
+            
+            if (filteredProfiles.length === 0) {
+                list.innerHTML = '<tr><td colspan="7" class="text-center p-4">لا توجد نتائج مطابقة للبحث</td></tr>';
+                return;
+            }
+            
+            filteredProfiles.forEach(p => { 
                 const userTrips = tripsByUser[String(p.id)] || [];
                 const completedTrips = userTrips.filter(t => t.status === 'completed');
                 const totalTrips = userTrips.length;
@@ -2587,7 +2614,7 @@
             
             // جلب الرحلات
             const { data: trips, error } = await sbClient.from('trips')
-                .select('*, drivers:drivers!fk_trips_driver(name), cars:cars!fk_trips_car(brand)')
+                .select('*, drivers:drivers!fk_trips_driver(name), cars:cars!fk_trips_car(brand, car_image_url)')
                 .or(`user_id.eq.${p.id}${cleanPhone ? `,client_phone.ilike.%${cleanPhone}%,admin_notes.ilike.%${cleanPhone}%` : ''}`)
                 .order('created_at', { ascending: false });
                 
@@ -2613,7 +2640,15 @@
                         }
                     }
                     const driverName = t.drivers ? t.drivers.name : '-';
-                    const carName = t.cars ? t.cars.brand : '-';
+                    let carInfo = t.cars ? t.cars.brand : '-';
+                    if (t.cars && t.cars.car_image_url) {
+                        carInfo += `
+                            <div class="mt-1">
+                                <a href="${t.cars.car_image_url}" target="_blank" class="inline-block w-12 h-8 rounded border border-slate-200 overflow-hidden hover:opacity-80 transition" title="عرض صورة السيارة">
+                                    <img src="${t.cars.car_image_url}" class="w-full h-full object-cover">
+                                </a>
+                            </div>`;
+                    }
                     const route = `${(t.pickup_location || '-').split(',')[0]} ➝ ${(t.dropoff_location || '-').split(',')[0]}`;
                     
                     let statusColor = 'text-amber-500';
@@ -2626,7 +2661,7 @@
                             <td class="p-3">#${t.id}</td>
                             <td class="p-3">${tDate} | ${tTime}</td>
                             <td class="p-3 max-w-[220px] truncate" title="${t.pickup_location} ➝ ${t.dropoff_location}">${route}</td>
-                            <td class="p-3">${driverName} / ${carName}</td>
+                            <td class="p-3">${driverName} / ${carInfo}</td>
                             <td class="p-3 font-bold text-green-700">${t.final_price || t.estimated_price || 0} EGP</td>
                             <td class="p-3 font-bold ${statusColor}">${t.status}</td>
                         </tr>
@@ -3683,7 +3718,7 @@
             list.innerHTML = '<p class="text-center text-gray-400 p-6"><i class="fas fa-spinner fa-spin"></i></p>';
 
             const { data: trips } = await sbClient.from('trips')
-                .select('*, drivers:drivers!fk_trips_driver(name), cars:cars!fk_trips_car(brand)')
+                .select('*, drivers:drivers!fk_trips_driver(name), cars:cars!fk_trips_car(brand, model, plate_number, car_image_url)')
                 .eq('status', 'driver_assigned')
                 .order('created_at', { ascending: false });
 
@@ -3731,13 +3766,23 @@
             list.innerHTML = html;
         }
 
-        async function openAdminChat(tripId, clientName, driverName, from, to) {
+        async function openAdminChat(tripId, clientName, driverName, from, to, carImgUrl) {
             adminCurrentTripId = tripId;
+            let carImgHtml = '';
+            if (carImgUrl) {
+                carImgHtml = `
+                    <a href="${carImgUrl}" target="_blank" class="block w-12 h-8 rounded border border-gray-200 overflow-hidden hover:opacity-80 transition shrink-0" title="عرض صورة السيارة">
+                        <img src="${carImgUrl}" class="w-full h-full object-cover">
+                    </a>`;
+            }
             document.getElementById('admin-chat-header').innerHTML = `
                 <div class="flex justify-between items-center w-full">
-                    <div>
-                        <p class="font-bold text-gray-700">👤 ${clientName} ↔ 🚗 ${driverName}</p>
-                        <p id="admin-chat-route-text" class="text-xs text-gray-400">${from} ➝ ${to}</p>
+                    <div class="flex items-center gap-3">
+                        ${carImgHtml}
+                        <div>
+                            <p class="font-bold text-gray-700">👤 ${clientName} ↔ 🚗 ${driverName}</p>
+                            <p id="admin-chat-route-text" class="text-xs text-gray-400">${from} ➝ ${to}</p>
+                        </div>
                     </div>
                     <button onclick="openDestChangeModal('${tripId}', '${to}')" class="bg-amber-100 text-amber-700 hover:bg-amber-200 px-3 py-1.5 rounded-lg text-xs font-bold border border-amber-200 transition flex items-center gap-1">
                         <i class="fas fa-edit"></i> تعديل الوجهة والسعر
