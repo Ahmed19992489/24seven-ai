@@ -94,6 +94,61 @@ _SB_URL = "https://wtjwzqvmwnbvjxnmweqq.supabase.co"
 _SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY"
 _SB_HEADERS = {"apikey": _SB_KEY, "Authorization": f"Bearer {_SB_KEY}", "Content-Type": "application/json"}
 
+# --- Messenger Webhook State ---
+_FB_VERIFY_TOKEN = "messenger_secret_24seven"
+processed_mids = set()
+sent_via_api_mids = set()
+
+def get_facebook_user_name(sender_id):
+    """
+    استدعاء Graph API لجلب اسم المستخدم من ماسنجر بناءً على الـ PSID
+    """
+    # محاولة 1: عبر محادثات الصفحة
+    try:
+        url = "https://graph.facebook.com/v18.0/me/conversations"
+        params = {
+            "access_token": _FB_TOKEN,
+            "user_id": sender_id,
+            "fields": "participants"
+        }
+        r = _req.get(url, params=params, timeout=5)
+        if r.status_code == 200:
+            data = r.json()
+            for conv in data.get('data', []):
+                for p in conv.get('participants', {}).get('data', []):
+                    if str(p.get('id')) == str(sender_id):
+                        name = p.get('name', '').strip()
+                        if name:
+                            print(f"[FB->Render] Found Name via conversations: {name} (ID: {sender_id})")
+                            return name
+        else:
+            print(f"[FB->Render] Conversations lookup failed: {r.status_code} | {r.text}")
+    except Exception as e:
+        print(f"[ERROR->Render] Exception in conversations lookup for {sender_id}: {e}")
+
+    # محاولة 2: عبر Graph API المباشر للملف الشخصي (fallback)
+    parameters = {
+        "fields": "first_name,last_name",
+        "access_token": _FB_TOKEN
+    }
+    url = f"https://graph.facebook.com/v18.0/{sender_id}"
+    try:
+        r = _req.get(url, params=parameters, timeout=5)
+        if r.status_code == 200:
+            data = r.json()
+            first = data.get('first_name', '')
+            last = data.get('last_name', '')
+            name = f"{first} {last}".strip()
+            if name:
+                print(f"[FB->Render] Found FB Name: {name} (ID: {sender_id})")
+                return name
+        else:
+            print(f"[FB->Render] Direct profile lookup failed: {r.status_code} | {r.text}")
+    except Exception as e:
+        print(f"[ERROR->Render] Exception in get_facebook_user_name direct lookup: {e}")
+    
+    return "Messenger User"
+
 @app.get("/api/health")
 async def health_check():
     return {"status": "ok", "server": "24seven-render"}
@@ -126,7 +181,15 @@ async def send_reply_direct(data: dict):
         payload = {"recipient": {"id": sender_id}, "message": {"text": message}}
         try:
             r = _req.post(url, headers={"Content-Type": "application/json"}, json=payload, timeout=10)
-            if r.status_code != 200:
+            if r.status_code == 200:
+                try:
+                    fb_msg_id = r.json().get('message_id', '')
+                    if fb_msg_id:
+                        sent_via_api_mids.add(fb_msg_id)
+                        if len(sent_via_api_mids) > 500: sent_via_api_mids.clear()
+                        print(f"[FB-API->Render] Tracked MID: {fb_msg_id}")
+                except: pass
+            else:
                 print(f"❌ Messenger Send failed: {r.text}")
         except Exception as e:
             print(f"❌ Messenger exception: {e}")
@@ -136,7 +199,15 @@ async def send_reply_direct(data: dict):
         payload = {"recipient": {"id": sender_id}, "message": {"text": message}}
         try:
             r = _req.post(url, headers={"Content-Type": "application/json"}, json=payload, timeout=10)
-            if r.status_code != 200:
+            if r.status_code == 200:
+                try:
+                    ig_msg_id = r.json().get('message_id', '')
+                    if ig_msg_id:
+                        sent_via_api_mids.add(ig_msg_id)
+                        if len(sent_via_api_mids) > 500: sent_via_api_mids.clear()
+                        print(f"[IG-API->Render] Tracked MID: {ig_msg_id}")
+                except: pass
+            else:
                 print(f"❌ Instagram Send failed: {r.text}")
         except Exception as e:
             print(f"❌ Instagram exception: {e}")
@@ -156,6 +227,115 @@ async def send_reply_direct(data: dict):
         print(f"❌ Supabase save exception: {e}")
 
     return {"status": "success"}
+
+# ==========================================
+# 📥 Messenger Webhook - رسائل ماسنجر الواردة
+# ==========================================
+@app.get("/messenger")
+async def verify_messenger_webhook(
+    hub_mode: str = Query(None, alias="hub.mode"),
+    hub_challenge: str = Query(None, alias="hub.challenge"),
+    hub_verify_token: str = Query(None, alias="hub.verify_token")
+):
+    """تحقق من webhook Meta لماسنجر"""
+    from fastapi.responses import PlainTextResponse
+    if hub_verify_token == _FB_VERIFY_TOKEN and hub_mode == "subscribe":
+        return PlainTextResponse(hub_challenge or "")
+    return PlainTextResponse("Forbidden", status_code=403)
+
+@app.post("/messenger")
+async def receive_messenger_webhook(request: Request):
+    """استقبل رسائل ماسنجر الواردة وحفظها في Supabase"""
+    try:
+        data = await request.json()
+        if data.get("object") != "page" or not data.get("entry"):
+            return {"status": "ok"}
+
+        for entry in data["entry"]:
+            if "messaging" not in entry:
+                continue
+
+            for event in entry["messaging"]:
+                if "delivery" in event or "read" in event:
+                    continue
+
+                sender_id = event["sender"]["id"]
+                text = None
+                mid = event.get("message", {}).get("mid")
+
+                # منع التكرار
+                if mid:
+                    if mid in processed_mids:
+                        print(f"[FB->Render] Skipping duplicate Messenger MID: {mid}")
+                        continue
+                    processed_mids.add(mid)
+                    if len(processed_mids) > 10000:
+                        processed_mids.clear()
+
+                if "message" in event:
+                    if event["message"].get("is_echo"):
+                        admin_text = event["message"].get("text", "").strip()
+                        target_user_id = event["recipient"]["id"]
+                        echo_mid = event["message"].get("mid", "")
+
+                        if echo_mid in sent_via_api_mids:
+                            print(f"[FB->Render] (Echo) Admin via API to {target_user_id}: {admin_text} [SKIP - saved by send_reply]")
+                            sent_via_api_mids.discard(echo_mid)
+                        else:
+                            print(f"[FB->Render] (Echo) Admin via Page to {target_user_id}: {admin_text} [SAVING - direct from FB]")
+                            _req.post(
+                                f"{_SB_URL}/rest/v1/omnichannel_messages",
+                                headers=_SB_HEADERS,
+                                json={
+                                    "channel": "messenger",
+                                    "sender_id": target_user_id,
+                                    "sender_name": "Admin",
+                                    "message_text": admin_text,
+                                    "is_from_admin": True,
+                                    "read_by_admin": True
+                                },
+                                timeout=5
+                            )
+                        continue
+
+                    if "quick_reply" in event["message"]:
+                        text = event["message"]["quick_reply"].get("payload")
+                    elif "text" in event["message"]:
+                        text = event["message"]["text"]
+
+                elif "postback" in event:
+                    text = event["postback"].get("payload")
+                    mid = f"pb_{sender_id}_{event.get('timestamp')}_{text}"
+                    if mid in processed_mids:
+                        continue
+                    processed_mids.add(mid)
+
+                if not text:
+                    continue
+
+                print(f"[FB->Render] from {sender_id}: {text}")
+
+                # تحديد اسم المرسل
+                sender_name = get_facebook_user_name(sender_id)
+
+                # حفظ في Supabase
+                _req.post(
+                    f"{_SB_URL}/rest/v1/omnichannel_messages",
+                    headers=_SB_HEADERS,
+                    json={
+                        "channel": "messenger",
+                        "sender_id": sender_id,
+                        "sender_name": sender_name,
+                        "message_text": text,
+                        "is_from_admin": False,
+                        "read_by_admin": False
+                    },
+                    timeout=5
+                )
+    except Exception as e:
+        print(f"[Messenger-Webhook Error]: {e}")
+
+    return {"status": "ok"}
 
 # ==========================================
 # 📥 Instagram Webhook - رسائل إنستجرام الواردة
