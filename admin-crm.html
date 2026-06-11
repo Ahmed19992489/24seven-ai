@@ -5233,26 +5233,105 @@
                 }).subscribe();
         }
 
+        function scrollToOmniBottom() {
+            const container = document.getElementById('omni-messages-area');
+            if (container) {
+                setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
+            }
+        }
+
         function initGlobalOmniListener() {
             if (adminOmniSubscription) return;
             adminOmniSubscription = sbClient.channel('global-admin-omni')
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'omnichannel_messages' }, payload => {
                     const msg = payload.new;
-                    if (!msg.is_from_admin) {
-                        playNotificationSound();
-                        
-                        let groupKey = msg.sender_id;
-                        if (msg.channel === 'whatsapp') {
-                            groupKey = normalizeWhatsAppId(msg.sender_id);
-                        }
+                    
+                    let groupKey = msg.sender_id;
+                    if (msg.channel === 'whatsapp') {
+                        groupKey = normalizeWhatsAppId(msg.sender_id);
+                    }
 
-                        if (adminActiveChatType === 'omni' && adminActiveChatId === groupKey) {
-                            appendAdminUnifiedOmniMsg(msg);
-                            markAdminUnifiedChatAsRead(groupKey, 'omni');
+                    // تحديث البيانات المحلية (الرسائل والمجموعات)
+                    const isDuplicate = adminAllMessages.some(m => m.id === msg.id);
+                    // تحقق من الرسائل المؤقتة المرسلة محلياً (لمنع التكرار)
+                    const isLocalAdminDuplicate = msg.is_from_admin && adminAllMessages.some(m => 
+                        m._adminSentLocally && m.message_text === msg.message_text && m.sender_id === msg.sender_id
+                    );
+                    
+                    if (isLocalAdminDuplicate) {
+                        // استبدل الرسالة المؤقتة بالحقيقية من Supabase (لتحديث الـ id)
+                        const tempIdx = adminAllMessages.findIndex(m => m._adminSentLocally && m.message_text === msg.message_text && m.sender_id === msg.sender_id);
+                        if (tempIdx !== -1) adminAllMessages[tempIdx] = msg;
+                        if (adminGroupedChats[groupKey]) {
+                            const gIdx = adminGroupedChats[groupKey].messages.findIndex(m => m._adminSentLocally && m.message_text === msg.message_text);
+                            if (gIdx !== -1) adminGroupedChats[groupKey].messages[gIdx] = msg;
+                            adminGroupedChats[groupKey].last = msg;
+                        }
+                        return; // لا تضيفها مرة تانية ولا تعرضها
+                    }
+
+                    if (!isDuplicate) {
+                        adminAllMessages.push(msg);
+                        
+                        // تحديث المجموعة
+                        if (adminGroupedChats[groupKey]) {
+                            const alreadyInGroup = adminGroupedChats[groupKey].messages.some(m => m.id === msg.id);
+                            if (!alreadyInGroup) {
+                                adminGroupedChats[groupKey].messages.push(msg);
+                                adminGroupedChats[groupKey].last = msg;
+                            }
                         } else {
-                            loadAdminUnifiedChats();
+                            // مجموعة جديدة
+                            adminGroupedChats[groupKey] = {
+                                id: groupKey,
+                                originalIds: new Set([msg.sender_id]),
+                                name: msg.sender_name || groupKey,
+                                channel: msg.channel,
+                                messages: [msg],
+                                last: msg
+                            };
                         }
                     }
+
+                    if (adminActiveChatType === 'omni' && adminActiveChatId === groupKey) {
+                        // الشات مفتوح لهذا العميل - أضف الرسالة مباشرة
+                        if (!isDuplicate) {
+                            appendAdminUnifiedOmniMsg(msg);
+                            scrollToOmniBottom();
+                        }
+                        if (!msg.is_from_admin) {
+                            markAdminUnifiedChatAsRead(groupKey, 'omni');
+                        }
+                    }
+                    
+                    if (!msg.is_from_admin) {
+                        playNotificationSound();
+                    }
+
+                    // تحديث قائمة الشات الجانبية
+                    const existingChat = adminUnifiedChatsList.find(c => c.id === groupKey && c.type === 'omni');
+                    if (existingChat) {
+                        existingChat.lastMessage = msg.message_text;
+                        existingChat.lastMessageTime = new Date(msg.created_at);
+                        if (!msg.is_from_admin && !(adminActiveChatType === 'omni' && adminActiveChatId === groupKey)) {
+                            existingChat.unreadCount = (existingChat.unreadCount || 0) + 1;
+                        }
+                    } else {
+                        // شات جديد
+                        adminUnifiedChatsList.unshift({
+                            id: groupKey,
+                            type: 'omni',
+                            name: msg.sender_name || groupKey,
+                            lastMessage: msg.message_text,
+                            lastMessageTime: new Date(msg.created_at),
+                            unreadCount: msg.is_from_admin ? 0 : 1,
+                            avatar: msg.channel === 'messenger' ? '💬' : (msg.channel === 'instagram' ? '📸' : '🟢'),
+                            channel: msg.channel
+                        });
+                    }
+                    adminUnifiedChatsList.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
+                    renderAdminUnifiedChatList();
+                    updateAdminUnifiedBadge();
                 }).subscribe();
         }
 
@@ -5751,13 +5830,16 @@
                         throw new Error(errorTxt);
                     }
 
+                    // نضيف الرسالة مؤقتاً فوراً للعرض السريع
+                    // الـ realtime listener هيتجاهلها لأن is_from_admin ومش هيضيفها تاني
                     const tempMsg = {
                         id: 'temp_' + Date.now(),
                         channel: channel,
                         sender_id: senderId,
                         message_text: text,
                         is_from_admin: true,
-                        created_at: new Date().toISOString()
+                        created_at: new Date().toISOString(),
+                        _adminSentLocally: true
                     };
                     
                     adminAllMessages.push(tempMsg);
