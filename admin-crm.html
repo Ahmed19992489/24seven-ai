@@ -2235,7 +2235,7 @@
             } else if (newDecision === '2') {
                 decisionText = 'ملغي';
             } else if (newDecision === '3') {
-                decisionText = 'محذوف';
+                decisionText = 'ملغي'; // soft delete in sheet
             } else {
                 decisionText = newDecision.trim();
             }
@@ -2246,13 +2246,17 @@
                 if (isDelete) {
                     if (!confirm("⚠️ هل أنت متأكد من حذف وإلغاء هذا الحجز بالكامل من السايت؟")) return;
                     
-                    // 1. Delete from google_reservations
+                    // 1. Soft delete in google_reservations (setting trip_status and status to 'ملغاة')
                     const { error: resDelErr } = await sbClient.from('google_reservations')
-                        .delete()
+                        .update({ 
+                            client_decision: 'ملغي',
+                            trip_status: 'ملغاة',
+                            status: 'ملغاة'
+                        })
                         .eq('id', cleanResId);
                     if (resDelErr) throw resDelErr;
 
-                    // 2. If it has a real trip in the trips table, delete it too
+                    // 2. Delete the trip from the trips table completely (so it disappears from operations)
                     if (tripId && !String(tripId).startsWith('gr_')) {
                         const { error: tripDelErr } = await sbClient.from('trips')
                             .delete()
@@ -2286,8 +2290,8 @@
                     }
                 }
                 
-                // 🌐 تحديث القرار في شيت جوجل لتفادي اختفائه عند التزامن
-                if (sheetRow && !isDelete) {
+                // 🌐 تحديث القرار في شيت جوجل لتفادي اختفائه عند التزامن (نحدثه حتى في حالة الحذف لكي يتحدث في الشيت أيضاً)
+                if (sheetRow) {
                     try {
                         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzGoawwK6JGm5QRHt4gfIScl7DYMaCDKU-GGcdYYXXyDY888xuPF0EOZ9vxVHSqHrWv/exec';
                         const cleanTripId = (tripId && !String(tripId).startsWith('gr_')) ? String(tripId) : '';
@@ -2297,7 +2301,7 @@
                             sheetRow: sheetRow,
                             webId: cleanTripId,
                             sqlId: cleanTripId,
-                            decision: decisionText
+                            decision: isDelete ? 'ملغي' : decisionText
                         };
                         
                         fetch(APPS_SCRIPT_URL, {
