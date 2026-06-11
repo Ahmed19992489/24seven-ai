@@ -171,10 +171,10 @@ async def send_omnichannel_reply(
                 print(f"❌ Messenger Send Exception: {e}")
 
     elif channel == 'instagram':
-        if not INSTAGRAM_TOKEN:
-            print("⚠️ INSTAGRAM_TOKEN is empty.")
+        if not FB_PAGE_TOKEN:
+            print("⚠️ FB_PAGE_TOKEN is empty for Instagram.")
         else:
-            url = f"https://graph.facebook.com/v17.0/me/messages?access_token={INSTAGRAM_TOKEN}"
+            url = f"https://graph.facebook.com/v17.0/me/messages?access_token={FB_PAGE_TOKEN}"
             headers = {"Content-Type": "application/json"}
             payload = { "recipient": {"id": data.sender_id}, "message": {"text": data.message} }
             try:

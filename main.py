@@ -132,7 +132,7 @@ async def send_reply_direct(data: dict):
             print(f"❌ Messenger exception: {e}")
 
     elif channel == "instagram":
-        url = f"https://graph.facebook.com/v17.0/me/messages?access_token={_IG_TOKEN}"
+        url = f"https://graph.facebook.com/v17.0/me/messages?access_token={_FB_TOKEN}"
         payload = {"recipient": {"id": sender_id}, "message": {"text": message}}
         try:
             r = _req.post(url, headers={"Content-Type": "application/json"}, json=payload, timeout=10)
