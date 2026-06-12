@@ -1,4 +1,4 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const express = require('express');
 const cors = require('cors');
 const qrcode = require('qrcode');
@@ -56,8 +56,19 @@ async function initSession(id) {
     // Setup state
     const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
     
+    // Fetch latest WhatsApp version to avoid 405 error
+    let version = [2, 3000, 1017578701]; // Fallback WA version
+    try {
+        const { version: fetchedVersion, isLatest } = await fetchLatestBaileysVersion();
+        version = fetchedVersion;
+        console.log(`[Gateway] Session ${id} using WA Web version: ${version.join('.')}, isLatest: ${isLatest}`);
+    } catch (err) {
+        console.warn(`[Gateway Warning] Failed to fetch latest WhatsApp version, using fallback:`, err.message);
+    }
+    
     const sock = makeWASocket({
         auth: state,
+        version: version,
         printQRInTerminal: false,
         logger: pino({ level: 'silent' })
     });
