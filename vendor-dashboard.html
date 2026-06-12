@@ -1283,8 +1283,6 @@
         }
 
         async function changeTripToPostpaid(tripId) {
-            if (!confirm("هل أنت متأكد من تحويل طريقة الدفع للرحلة إلى أجل؟ (سيتم تعديل الحسابات المالية المرتبطة)")) return;
-
             try {
                 // 1. جلب بيانات الرحلة الحالية
                 const { data: trip, error: tripErr } = await sb.from('trips')
@@ -1295,6 +1293,21 @@
                 if (tripErr) throw tripErr;
                 if (!trip) {
                     alert("الرحلة غير موجودة!");
+                    return;
+                }
+
+                // عرض نافذة إدخال العمولة
+                const currentCommission = trip.our_commission !== null && trip.our_commission !== undefined ? trip.our_commission : 0;
+                const commInput = prompt(
+                    `سيتم تحويل طريقة الدفع للرحلة إلى أجل.\nيرجى إدخال عمولة المكتب (لتخصم من السعر الإجمالي ${trip.estimated_price || 0} EGP):`,
+                    currentCommission
+                );
+                
+                if (commInput === null) return; // المستخدم ألغى العملية
+                
+                const newCommission = parseFloat(commInput.trim());
+                if (isNaN(newCommission) || newCommission < 0) {
+                    alert("الرجاء إدخال قيمة عمولة صالحة (رقم أكبر من أو يساوي 0)");
                     return;
                 }
 
@@ -1311,7 +1324,10 @@
                 }
 
                 const { error: updateErr } = await sb.from('trips')
-                    .update({ admin_notes: notes })
+                    .update({ 
+                        admin_notes: notes,
+                        our_commission: newCommission
+                    })
                     .eq('id', tripId);
 
                 if (updateErr) throw updateErr;
@@ -1327,8 +1343,7 @@
 
                     // إدراج الحركة الجديدة كـ أجل (deferred_credit)
                     const price = trip.estimated_price || 0;
-                    const commission = trip.our_commission || 0;
-                    const payout = price - commission;
+                    const payout = price - newCommission;
 
                     const { error: insErr } = await sb.from('vendor_transactions')
                         .insert([{
@@ -1336,7 +1351,7 @@
                             trip_id: tripId,
                             transaction_type: 'deferred_credit',
                             amount: payout,
-                            description: `مستحق رحلة أجل #${tripId} (سعر: ${price} - عمولة: ${commission})`
+                            description: `مستحق رحلة أجل #${tripId} (سعر: ${price} - عمولة: ${newCommission})`
                         }]);
 
                     if (insErr) throw insErr;
