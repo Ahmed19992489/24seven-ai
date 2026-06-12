@@ -171,6 +171,10 @@
                 <i class="fas fa-headset w-5 text-center text-teal-600"></i> صندوق الوارد الموحد
                 <span id="omnichannel-badge" class="hidden mr-auto bg-red-500 text-white text-xs rounded-full px-2 py-0.5"></span>
             </div>
+            <div onclick="showPage('whatsapp-settings')" id="nav-whatsapp-settings"
+                class="sidebar-item p-3 rounded-lg flex items-center gap-3">
+                <i class="fab fa-whatsapp w-5 text-center text-emerald-600 font-bold"></i> ربط أرقام الواتساب
+            </div>
 
             <p class="text-[10px] font-bold text-slate-400 mt-4 mb-1 px-3">المالية والموارد</p>
             <div onclick="showPage('finance')" id="nav-finance"
@@ -679,6 +683,81 @@
             </div>
         </div>
         
+        <!-- ========== صفحة إعدادات أرقام الواتساب (WhatsApp Multi-Device Settings) ========== -->
+        <div id="page-whatsapp-settings" class="page-section hidden h-full">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">🟢 ربط أرقام الواتساب (Multi-Device)</h2>
+                <button onclick="openAddWhatsappModal()" class="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg hover:bg-emerald-700 transition flex items-center gap-2">
+                    <i class="fas fa-plus"></i> إضافة رقم جديد
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- قائمة الحسابات المضافة -->
+                <div class="lg:col-span-1 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-4">
+                    <h3 class="font-bold text-lg border-b pb-3 text-slate-800">الحسابات المربوطة</h3>
+                    <div id="whatsapp-instances-list" class="flex flex-col gap-3 max-h-[500px] overflow-y-auto pr-1">
+                        <!-- الحسابات ستضاف هنا برمجياً -->
+                    </div>
+                </div>
+                
+                <!-- لوحة التحكم والاتصال (تفاصيل الحساب المختار / QR Code) -->
+                <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center min-h-[400px]" id="whatsapp-details-panel">
+                    <div class="text-center text-slate-400 py-12">
+                        <i class="fab fa-whatsapp text-6xl text-slate-300 mb-4 block"></i>
+                        <p class="font-bold text-lg text-slate-600">اختر حساباً من القائمة لإدارته أو ربطه</p>
+                        <p class="text-xs text-slate-400 mt-2">يمكنك ربط عدة أرقام واتساب لعرض رسائلها والرد عليها مباشرة.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- مودال إضافة رقم واتساب جديد -->
+        <div id="add-whatsapp-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden" style="display:none;">
+            <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-slide-in">
+                <div class="flex justify-between items-center border-b pb-4 mb-4">
+                    <h3 class="font-bold text-lg text-slate-800"><i class="fab fa-whatsapp text-emerald-600 mr-1"></i> إضافة حساب واتساب جديد</h3>
+                    <button onclick="closeAddWhatsappModal()" class="text-slate-400 hover:text-slate-600 transition"><i class="fas fa-times"></i></button>
+                </div>
+                
+                <form id="add-whatsapp-form" onsubmit="saveWhatsappInstance(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">اسم الحساب (للتمييز)</label>
+                        <input type="text" id="wa-name" placeholder="مثال: رقم المبيعات، رقم الدعم" required
+                            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:border-emerald-500 focus:outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">مزود الخدمة</label>
+                        <select id="wa-provider" onchange="toggleWaProviderFields()" required
+                            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:border-emerald-500 focus:outline-none transition bg-white">
+                            <option value="ultramsg">UltraMsg API</option>
+                            <option value="greenapi">Green API</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1" id="label-wa-instance">Instance ID / IdInstance</label>
+                        <input type="text" id="wa-instance-id" placeholder="أدخل معرف الـ Instance" required
+                            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:border-emerald-500 focus:outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1" id="label-wa-token">Token / ApiTokenInstance</label>
+                        <input type="password" id="wa-token" placeholder="أدخل رمز التوكن الخاص بالحساب" required
+                            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:border-emerald-500 focus:outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">رابط API مخصص (اختياري)</label>
+                        <input type="url" id="wa-api-url" placeholder="اتركه فارغاً للافتراضي"
+                            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:border-emerald-500 focus:outline-none transition" dir="ltr">
+                        <p class="text-[10px] text-slate-400 mt-1">خاصة لـ Green API إذا تم توفير خادم مخصص لك (Dedicated Host).</p>
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition shadow-lg mt-2">
+                        حفظ الحساب 🚀
+                    </button>
+                </form>
+            </div>
+        </div>
+
         <!-- ========== صفحة إدارة الموظفين (Staff Management) ========== -->
         <div id="page-staff" class="page-section hidden">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -1428,6 +1507,7 @@
             if (pageId === 'ratings') loadRatings();
             if (pageId === 'coupons') loadCouponsPage();
             if (pageId === 'staff') loadStaff();
+            if (pageId === 'whatsapp-settings') { loadWhatsAppSettings(); resetWhatsappDetailsPanel(); }
             if (pageId === 'ai-assistant') {
                  // No specific load needed, but good to scroll to bottom
                  setTimeout(() => {
@@ -5940,6 +6020,17 @@
                     }
                     const apiUrl = `${apiBase}/api/send_reply`;
 
+                    const group = adminGroupedChats[senderId];
+                    let whatsappInstanceId = null;
+                    if (channel === 'whatsapp' && group && group.messages) {
+                        for (let i = group.messages.length - 1; i >= 0; i--) {
+                            if (group.messages[i].whatsapp_instance_id) {
+                                whatsappInstanceId = group.messages[i].whatsapp_instance_id;
+                                break;
+                            }
+                        }
+                    }
+
                     const res = await fetch(apiUrl, {
                         method: 'POST',
                         headers: {
@@ -5949,7 +6040,8 @@
                         body: JSON.stringify({
                             channel: channel,
                             sender_id: senderId,
-                            message: text
+                            message: text,
+                            whatsapp_instance_id: whatsappInstanceId
                         })
                     });
                     
@@ -5967,11 +6059,11 @@
                         message_text: text,
                         is_from_admin: true,
                         created_at: new Date().toISOString(),
-                        _adminSentLocally: true
+                        _adminSentLocally: true,
+                        whatsapp_instance_id: whatsappInstanceId
                     };
                     
                     adminAllMessages.push(tempMsg);
-                    const group = adminGroupedChats[senderId];
                     if (group) {
                         group.messages.push(tempMsg);
                     }
@@ -6025,6 +6117,12 @@
                     const input = document.getElementById('staff-api-url');
                     if (input && savedUrl) input.value = savedUrl;
                     loadStaff();
+                }, 100);
+            }
+            if (page === 'whatsapp-settings') {
+                setTimeout(() => {
+                    loadWhatsAppSettings();
+                    resetWhatsappDetailsPanel();
                 }, 100);
             }
         };
@@ -7104,6 +7202,324 @@ ${contextData}
                 console.error("Context Gather Error:", e);
             }
             return report;
+        }
+
+        // ==========================================
+        // ⚙️ إعدادات الواتساب (WhatsApp Multi-Device Settings)
+        // ==========================================
+        let selectedWaInstanceId = null;
+
+        function openAddWhatsappModal() {
+            document.getElementById('add-whatsapp-modal').style.display = 'flex';
+            document.getElementById('wa-name').value = '';
+            document.getElementById('wa-instance-id').value = '';
+            document.getElementById('wa-token').value = '';
+            document.getElementById('wa-api-url').value = '';
+            document.getElementById('wa-provider').value = 'ultramsg';
+            toggleWaProviderFields();
+        }
+
+        function closeAddWhatsappModal() {
+            document.getElementById('add-whatsapp-modal').style.display = 'none';
+        }
+
+        function toggleWaProviderFields() {
+            const provider = document.getElementById('wa-provider').value;
+            const labelInstance = document.getElementById('label-wa-instance');
+            const labelToken = document.getElementById('label-wa-token');
+            const waInstanceInput = document.getElementById('wa-instance-id');
+            const waTokenInput = document.getElementById('wa-token');
+            
+            if (provider === 'greenapi') {
+                labelInstance.innerText = 'IdInstance';
+                labelToken.innerText = 'ApiTokenInstance';
+                waInstanceInput.placeholder = 'مثال: 1101923456';
+                waTokenInput.placeholder = 'أدخل ApiTokenInstance الخاص بالحساب';
+            } else {
+                labelInstance.innerText = 'Instance ID';
+                labelToken.innerText = 'Token';
+                waInstanceInput.placeholder = 'مثال: instance12345';
+                waTokenInput.placeholder = 'أدخل رمز التوكن الخاص بالحساب';
+            }
+        }
+
+        async function saveWhatsappInstance(e) {
+            e.preventDefault();
+            const instance_name = document.getElementById('wa-name').value.trim();
+            const provider = document.getElementById('wa-provider').value;
+            const instance_id = document.getElementById('wa-instance-id').value.trim();
+            const token = document.getElementById('wa-token').value.trim();
+            const api_url = document.getElementById('wa-api-url').value.trim();
+            
+            const apiBase = getStaffApiBaseUrl();
+            if (!apiBase) {
+                alert('❌ خطأ: لم يتم العثور على رابط اتصال بالسيرفر المحلي (API).');
+                return;
+            }
+            
+            try {
+                const res = await fetch(`${apiBase}/api/whatsapp/instances`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ instance_name, provider, instance_id, token, api_url })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    alert('✅ تم إضافة الحساب بنجاح.');
+                    closeAddWhatsappModal();
+                    loadWhatsAppSettings();
+                } else {
+                    alert('❌ فشل إضافة الحساب: ' + data.message);
+                }
+            } catch (error) {
+                alert('❌ خطأ في الاتصال بالسيرفر الخلفي: ' + error.message);
+            }
+        }
+
+        async function loadWhatsAppSettings() {
+            const listContainer = document.getElementById('whatsapp-instances-list');
+            listContainer.innerHTML = '<p class="text-center text-slate-400 text-xs py-6"><i class="fas fa-spinner fa-spin mr-1"></i> جاري التحميل...</p>';
+            
+            try {
+                const { data, error } = await sbClient
+                    .from('whatsapp_instances')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                    
+                if (error) throw error;
+                
+                if (!data || data.length === 0) {
+                    listContainer.innerHTML = '<p class="text-center text-slate-400 text-xs py-12">لا توجد حسابات واتساب مضافة حالياً.</p>';
+                    return;
+                }
+                
+                listContainer.innerHTML = data.map(inst => {
+                    let badgeClass = 'bg-slate-100 text-slate-600';
+                    let statusText = 'غير متصل';
+                    if (inst.status === 'connected') {
+                        badgeClass = 'bg-emerald-50 text-emerald-600 border border-emerald-200';
+                        statusText = 'متصل';
+                    }
+                    
+                    return `
+                        <div onclick="selectWhatsappInstance('${inst.id}')" 
+                             class="p-4 cursor-pointer hover:bg-slate-50 border border-slate-100 rounded-xl transition flex justify-between items-center ${selectedWaInstanceId === inst.id ? 'bg-emerald-50/40 border-emerald-200' : 'bg-white'}">
+                            <div class="flex flex-col gap-1">
+                                <p class="font-bold text-sm text-slate-800">${inst.instance_name}</p>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="text-[10px] px-2 py-0.5 rounded-full font-bold ${badgeClass}">${statusText}</span>
+                                    <span class="text-[10px] text-slate-400">${inst.provider === 'greenapi' ? 'Green API' : 'UltraMsg'}</span>
+                                </div>
+                                ${inst.phone ? `<p class="text-[10px] text-slate-500 font-bold mt-0.5" dir="ltr">+${inst.phone}</p>` : ''}
+                            </div>
+                            <button onclick="event.stopPropagation(); deleteWhatsappInstance('${inst.id}')" 
+                                    class="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+                
+                if (selectedWaInstanceId) {
+                    const activeExists = data.some(inst => inst.id === selectedWaInstanceId);
+                    if (!activeExists) {
+                        selectedWaInstanceId = null;
+                        resetWhatsappDetailsPanel();
+                    }
+                }
+            } catch (error) {
+                listContainer.innerHTML = `<p class="text-center text-red-500 text-xs py-6">خطأ في تحميل البيانات: ${error.message}</p>`;
+            }
+        }
+
+        function resetWhatsappDetailsPanel() {
+            document.getElementById('whatsapp-details-panel').innerHTML = `
+                <div class="text-center text-slate-400 py-12">
+                    <i class="fab fa-whatsapp text-6xl text-slate-300 mb-4 block"></i>
+                    <p class="font-bold text-lg text-slate-600">اختر حساباً من القائمة لإدارته أو ربطه</p>
+                    <p class="text-xs text-slate-400 mt-2">يمكنك ربط عدة أرقام واتساب لعرض رسائلها والرد عليها مباشرة.</p>
+                </div>
+            `;
+        }
+
+        async function selectWhatsappInstance(id) {
+            selectedWaInstanceId = id;
+            
+            // Highlight active in list locally
+            loadWhatsAppSettings();
+            
+            const panel = document.getElementById('whatsapp-details-panel');
+            panel.innerHTML = '<p class="text-center text-slate-400 text-xs py-12"><i class="fas fa-spinner fa-spin mr-1"></i> جاري تحميل تفاصيل الحساب والحالة...</p>';
+            
+            try {
+                const { data: inst, error } = await sbClient.from('whatsapp_instances').select('*').eq('id', id).single();
+                if (error || !inst) throw new Error('لم يتم العثور على بيانات الحساب');
+                
+                const apiBase = getStaffApiBaseUrl();
+                let freshStatus = inst.status;
+                let freshPhone = inst.phone;
+                
+                if (apiBase) {
+                    try {
+                        const statusRes = await fetch(`${apiBase}/api/whatsapp/instance/${id}/status`);
+                        const statusData = await statusRes.json();
+                        if (statusData.status) {
+                            freshStatus = statusData.status;
+                            freshPhone = statusData.phone;
+                        }
+                    } catch (e) {
+                        console.error('Error fetching fresh status:', e);
+                    }
+                }
+                
+                let detailsHtml = '';
+                if (freshStatus === 'connected') {
+                    detailsHtml = `
+                        <div class="w-full max-w-md bg-emerald-50/50 border border-emerald-100 rounded-2xl p-6 text-center">
+                            <i class="fas fa-check-circle text-6xl text-emerald-500 mb-4"></i>
+                            <h3 class="font-bold text-lg text-slate-800 mb-1">الحساب متصل بنجاح!</h3>
+                            <p class="text-sm text-slate-600 mb-4">الحساب جاهز الآن لاستقبال وإرسال الرسائل.</p>
+                            
+                            <div class="bg-white rounded-xl p-4 text-right space-y-2 border border-slate-100 text-sm">
+                                <p class="text-slate-500">اسم الحساب: <span class="font-bold text-slate-800">${inst.instance_name}</span></p>
+                                <p class="text-slate-500">رقم الهاتف: <span class="font-bold text-slate-800" dir="ltr">+${freshPhone || ''}</span></p>
+                                <p class="text-slate-500">مزود الخدمة: <span class="font-bold text-slate-800">${inst.provider === 'greenapi' ? 'Green API' : 'UltraMsg'}</span></p>
+                                <p class="text-slate-500">معرف الحساب: <span class="font-bold text-slate-800" dir="ltr">${inst.instance_id}</span></p>
+                            </div>
+                            
+                            <div class="mt-6 flex gap-3 justify-center">
+                                <button onclick="setWhatsappInstanceWebhook('${inst.id}')" 
+                                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl transition text-sm flex items-center gap-2 shadow-md">
+                                    <i class="fas fa-link"></i> ربط الـ Webhook تلقائياً
+                                </button>
+                                <button onclick="selectWhatsappInstance('${inst.id}')" 
+                                        class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-xl transition text-sm flex items-center gap-2">
+                                    <i class="fas fa-sync-alt"></i> تحديث الحالة
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    detailsHtml = `
+                        <div class="w-full max-w-md flex flex-col items-center">
+                            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 w-full mb-6 flex gap-3 text-sm text-amber-800">
+                                <i class="fas fa-exclamation-triangle text-lg mt-0.5"></i>
+                                <div>
+                                    <p class="font-bold">الحساب غير متصل بالواتساب</p>
+                                    <p class="text-xs mt-1">يرجى مسح رمز الاستجابة السريعة (QR Code) أدناه بهاتف الحساب المراد ربطه من خلال (الأجهزة المرتبطة) في الواتساب.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-6 w-full flex flex-col items-center justify-center min-h-[300px]" id="qr-container">
+                                <i class="fas fa-spinner fa-spin text-3xl text-slate-400 mb-2"></i>
+                                <p class="text-xs text-slate-400">جاري تحميل رمز الـ QR...</p>
+                            </div>
+                            
+                            <div class="mt-6 flex gap-3 justify-center w-full">
+                                <button onclick="refreshWhatsappInstanceQR('${inst.id}')" 
+                                        class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl transition text-sm flex items-center justify-center gap-2 shadow-md">
+                                    <i class="fas fa-qrcode"></i> جلب رمز الـ QR
+                                </button>
+                                <button onclick="selectWhatsappInstance('${inst.id}')" 
+                                        class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-xl transition text-sm flex items-center justify-center gap-2">
+                                    <i class="fas fa-sync-alt"></i> فحص حالة الاتصال
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    setTimeout(() => refreshWhatsappInstanceQR(inst.id), 200);
+                }
+                
+                panel.innerHTML = detailsHtml;
+            } catch (error) {
+                panel.innerHTML = `<p class="text-center text-red-500 text-xs py-12">خطأ في تحميل تفاصيل الحساب: ${error.message}</p>`;
+            }
+        }
+
+        async function refreshWhatsappInstanceQR(id) {
+            const qrContainer = document.getElementById('qr-container');
+            if (!qrContainer) return;
+            
+            qrContainer.innerHTML = '<i class="fas fa-spinner fa-spin text-3xl text-slate-400 mb-2"></i><p class="text-xs text-slate-400">جاري جلب رمز الـ QR من السيرفر...</p>';
+            
+            const apiBase = getStaffApiBaseUrl();
+            if (!apiBase) {
+                qrContainer.innerHTML = '<p class="text-center text-red-500 text-xs font-bold">❌ خطأ: رابط الـ API للسيرفر غير متوفر. يرجى تهيئته في تبويب إدارة الموظفين.</p>';
+                return;
+            }
+            
+            try {
+                const res = await fetch(`${apiBase}/api/whatsapp/instance/${id}/qr`);
+                const data = await res.json();
+                
+                if (data.status === 'success') {
+                    if (data.type === 'image_url') {
+                        qrContainer.innerHTML = `<img src="${data.qr}" class="w-64 h-64 border rounded-xl" alt="QR Code" />`;
+                    } else if (data.type === 'base64') {
+                        qrContainer.innerHTML = `<img src="${data.qr}" class="w-64 h-64 border rounded-xl" alt="QR Code" />`;
+                    } else if (data.type === 'message') {
+                        qrContainer.innerHTML = `<div class="text-center text-emerald-600"><i class="fas fa-check-circle text-4xl mb-2"></i><p class="font-bold">${data.message}</p></div>`;
+                        setTimeout(() => selectWhatsappInstance(id), 1500);
+                    }
+                } else {
+                    qrContainer.innerHTML = `<p class="text-center text-red-500 text-xs">فشل جلب الرمز: ${data.message}</p>`;
+                }
+            } catch (error) {
+                qrContainer.innerHTML = `<p class="text-center text-red-500 text-xs">خطأ في الاتصال: ${error.message}</p>`;
+            }
+        }
+
+        async function setWhatsappInstanceWebhook(id) {
+            const apiBase = getStaffApiBaseUrl();
+            if (!apiBase) {
+                alert('❌ خطأ: رابط السيرفر (API) غير متوفر لتهيئة الـ Webhook.');
+                return;
+            }
+            
+            try {
+                const res = await fetch(`${apiBase}/api/whatsapp/instance/set-webhook`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, server_url: apiBase })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    alert(`✅ تم ربط الـ Webhook بنجاح!\nالرابط المثبت:\n${data.webhook_url}`);
+                } else {
+                    alert('❌ فشل ربط الـ Webhook: ' + data.message);
+                }
+            } catch (error) {
+                alert('❌ خطأ في الاتصال بالسيرفر: ' + error.message);
+            }
+        }
+
+        async function deleteWhatsappInstance(id) {
+            if (!confirm('هل أنت متأكد من رغبتك في حذف هذا الحساب المرتبط؟ سيؤدي ذلك لقطع الاتصال والتوقف عن استقبال وإرسال رسائله.')) return;
+            
+            const apiBase = getStaffApiBaseUrl();
+            if (!apiBase) {
+                alert('❌ خطأ: رابط السيرفر (API) غير متوفر للحذف.');
+                return;
+            }
+            
+            try {
+                const res = await fetch(`${apiBase}/api/whatsapp/instances/${id}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    alert('✅ تم حذف الحساب بنجاح.');
+                    if (selectedWaInstanceId === id) {
+                        selectedWaInstanceId = null;
+                        resetWhatsappDetailsPanel();
+                    }
+                    loadWhatsAppSettings();
+                } else {
+                    alert('❌ فشل حذف الحساب: ' + data.message);
+                }
+            } catch (error) {
+                alert('❌ خطأ في الاتصال بالسيرفر: ' + error.message);
+            }
         }
     </script>
 </body>

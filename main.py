@@ -160,6 +160,7 @@ async def send_reply_direct(data: dict):
     sender_id = data.get("sender_id", "")
     message = data.get("message", "")
     mod_name = data.get("mod_name", "Admin")
+    whatsapp_instance_id = data.get("whatsapp_instance_id")
 
     if not channel or not sender_id or not message:
         return {"status": "error", "detail": "Missing parameters"}
@@ -169,19 +170,99 @@ async def send_reply_direct(data: dict):
 
     # --- إرسال الرسالة ---
     if channel == "whatsapp":
-        url = f"https://graph.facebook.com/v17.0/{_PHONE_ID}/messages"
-        headers = {"Authorization": f"Bearer {_WA_TOKEN}", "Content-Type": "application/json"}
-        payload = {"messaging_product": "whatsapp", "to": sender_id, "type": "text", "text": {"body": message}}
-        try:
-            r = _req.post(url, headers=headers, json=payload, timeout=10)
-            if r.status_code not in [200, 201]:
-                api_error = r.text
-                print(f"❌ WA Send failed: {r.text}")
+        # Resolve custom WhatsApp instance if not specified
+        if not whatsapp_instance_id:
+            try:
+                clean_phone = sender_id.replace("+", "").replace("0020", "20")
+                local = clean_phone[2:] if clean_phone.startswith("20") else clean_phone
+                r_inst = _req.get(
+                    f"{_SB_URL}/rest/v1/omnichannel_messages",
+                    headers=_SB_HEADERS,
+                    params={
+                        "channel": "eq.whatsapp",
+                        "sender_id": f"ilike.%{local}%",
+                        "whatsapp_instance_id": "is.not.null",
+                        "select": "whatsapp_instance_id",
+                        "limit": "1",
+                        "order": "created_at.desc"
+                    },
+                    timeout=5
+                )
+                if r_inst.status_code == 200 and r_inst.json():
+                    whatsapp_instance_id = r_inst.json()[0].get("whatsapp_instance_id")
+            except Exception as ex:
+                print(f"Error resolving whatsapp_instance_id in send_reply_direct: {ex}")
+
+        # Check if we should route via custom instance
+        routed_via_custom = False
+        if whatsapp_instance_id:
+            r_creds = _req.get(f"{_SB_URL}/rest/v1/whatsapp_instances?id=eq.{whatsapp_instance_id}", headers=_SB_HEADERS, timeout=5)
+            if r_creds.status_code == 200 and r_creds.json():
+                inst = r_creds.json()[0]
+                provider = inst["provider"]
+                inst_id = inst["instance_id"]
+                token = inst["token"]
+                api_url = inst.get("api_url")
+                routed_via_custom = True
+                
+                if provider == "ultramsg":
+                    base = api_url.strip().rstrip('/') if api_url else "https://api.ultramsg.com"
+                    send_url = f"{base}/{inst_id}/messages/chat"
+                    payload = {
+                        "token": token,
+                        "to": sender_id,
+                        "body": message
+                    }
+                    try:
+                        res = _req.post(send_url, data=payload, timeout=10)
+                        if res.status_code == 200 and ("success" in res.text.lower() or "\"sent\":\"true\"" in res.text.lower()):
+                            send_success = True
+                        else:
+                            api_error = res.text
+                            print(f"❌ UltraMsg send failed: {res.text}")
+                    except Exception as e:
+                        api_error = str(e)
+                        print(f"❌ UltraMsg exception: {e}")
+                elif provider == "greenapi":
+                    base = api_url.strip().rstrip('/') if api_url else "https://api.greenapi.com"
+                    send_url = f"{base}/waInstance{inst_id}/sendMessage/{token}"
+                    clean_num = sender_id.replace("+", "").replace("0020", "20")
+                    payload = {
+                        "chatId": f"{clean_num}@c.us",
+                        "message": message
+                    }
+                    try:
+                        res = _req.post(send_url, json=payload, timeout=10)
+                        if res.status_code == 200:
+                            send_success = True
+                        else:
+                            api_error = res.text
+                            print(f"❌ GreenAPI send failed: {res.text}")
+                    except Exception as e:
+                        api_error = str(e)
+                        print(f"❌ GreenAPI exception: {e}")
             else:
-                send_success = True
-        except Exception as e:
-            api_error = str(e)
-            print(f"❌ WA exception: {e}")
+                print(f"⚠️ Could not fetch credentials for whatsapp_instance_id {whatsapp_instance_id}, falling back to Meta API")
+
+        # Fallback to Meta API
+        if not routed_via_custom or not send_success:
+            if not whatsapp_instance_id:
+                url = f"https://graph.facebook.com/v17.0/{_PHONE_ID}/messages"
+                headers = {"Authorization": f"Bearer {_WA_TOKEN}", "Content-Type": "application/json"}
+                payload = {"messaging_product": "whatsapp", "to": sender_id, "type": "text", "text": {"body": message}}
+                try:
+                    r = _req.post(url, headers=headers, json=payload, timeout=10)
+                    if r.status_code not in [200, 201]:
+                        api_error = r.text
+                        print(f"❌ Meta WA Send failed: {r.text}")
+                    else:
+                        send_success = True
+                except Exception as e:
+                    api_error = str(e)
+                    print(f"❌ Meta WA exception: {e}")
+            else:
+                if not api_error:
+                    api_error = "Custom WhatsApp instance send failed"
 
     elif channel == "messenger":
         url = f"https://graph.facebook.com/v18.0/me/messages?access_token={_FB_TOKEN}"
@@ -245,6 +326,9 @@ async def send_reply_direct(data: dict):
         "is_from_admin": True,
         "read_by_admin": True
     }
+    if channel == "whatsapp" and whatsapp_instance_id:
+        sb_payload["whatsapp_instance_id"] = whatsapp_instance_id
+
     try:
         _req.post(f"{_SB_URL}/rest/v1/omnichannel_messages", headers=_SB_HEADERS, json=sb_payload, timeout=5)
     except Exception as e:
@@ -565,6 +649,351 @@ async def receive_whatsapp_webhook(request: Request):
     except Exception as e:
         print(f"[WA-Webhook Error]: {e}")
 
+    return {"status": "ok"}
+
+# ==========================================
+# ⚙️ إدارة حسابات الواتساب المرتبطة (Multi-Device WhatsApp API)
+# ==========================================
+
+@app.post("/api/whatsapp/instances")
+async def create_whatsapp_instance(data: dict):
+    instance_name = data.get("instance_name")
+    instance_id = data.get("instance_id")
+    token = data.get("token")
+    provider = data.get("provider")
+    api_url = data.get("api_url")
+    
+    if not instance_name or not instance_id or not token or not provider:
+        return {"status": "error", "message": "جميع الحقول مطلوبة"}
+        
+    payload = {
+        "instance_name": instance_name,
+        "instance_id": instance_id,
+        "token": token,
+        "provider": provider,
+        "api_url": api_url,
+        "status": "init"
+    }
+    
+    r = _req.post(f"{_SB_URL}/rest/v1/whatsapp_instances", headers=_SB_HEADERS, json=payload, timeout=10)
+    if r.status_code in [200, 201]:
+        return {"status": "success"}
+    return {"status": "error", "message": f"Supabase Error: {r.text}"}
+
+@app.get("/api/whatsapp/instances")
+async def list_whatsapp_instances():
+    r = _req.get(f"{_SB_URL}/rest/v1/whatsapp_instances?order=created_at.desc", headers=_SB_HEADERS, timeout=10)
+    if r.status_code == 200:
+        return r.json()
+    return []
+
+@app.delete("/api/whatsapp/instances/{id}")
+async def delete_whatsapp_instance(id: str):
+    r = _req.delete(f"{_SB_URL}/rest/v1/whatsapp_instances?id=eq.{id}", headers=_SB_HEADERS, timeout=10)
+    if r.status_code in [200, 204]:
+        return {"status": "success"}
+    return {"status": "error", "message": f"Supabase Error: {r.text}"}
+
+@app.get("/api/whatsapp/instance/{id}/status")
+async def check_whatsapp_instance_status(id: str):
+    r = _req.get(f"{_SB_URL}/rest/v1/whatsapp_instances?id=eq.{id}", headers=_SB_HEADERS, timeout=10)
+    if r.status_code != 200 or not r.json():
+        return {"status": "error", "message": "Instance not found"}
+    
+    instance = r.json()[0]
+    provider = instance["provider"]
+    inst_id = instance["instance_id"]
+    token = instance["token"]
+    api_url = instance.get("api_url")
+    
+    conn_status = "disconnected"
+    phone = instance.get("phone")
+    
+    if provider == "ultramsg":
+        base = api_url.strip().rstrip('/') if api_url else "https://api.ultramsg.com"
+        status_url = f"{base}/{inst_id}/instance/status?token={token}"
+        try:
+            res = _req.get(status_url, timeout=10)
+            if res.status_code == 200:
+                try:
+                    res_data = res.json()
+                    if isinstance(res_data, dict):
+                        status_str = res_data.get("status", "")
+                    else:
+                        status_str = str(res_data)
+                except:
+                    status_str = res.text.strip()
+                    
+                if "authenticated" in status_str:
+                    conn_status = "connected"
+                    me_url = f"{base}/{inst_id}/instance/me?token={token}"
+                    me_res = _req.get(me_url, timeout=10)
+                    if me_res.status_code == 200:
+                        try:
+                            me_data = me_res.json()
+                            raw_jid = me_data.get("id") or me_data.get("jid") or ""
+                            if raw_jid:
+                                phone = raw_jid.split("@")[0]
+                        except:
+                            pass
+            else:
+                conn_status = "disconnected"
+        except Exception as e:
+            print(f"UltraMsg status check error: {e}")
+            
+    elif provider == "greenapi":
+        base = api_url.strip().rstrip('/') if api_url else "https://api.greenapi.com"
+        status_url = f"{base}/waInstance{inst_id}/getStateInstance/{token}"
+        try:
+            res = _req.get(status_url, timeout=10)
+            if res.status_code == 200:
+                data = res.json()
+                state = data.get("stateInstance", "")
+                if state == "authorized":
+                    conn_status = "connected"
+                    settings_url = f"{base}/waInstance{inst_id}/getWaSettings/{token}"
+                    settings_res = _req.get(settings_url, timeout=10)
+                    if settings_res.status_code == 200:
+                        try:
+                            settings_data = settings_res.json()
+                            raw_wid = settings_data.get("wid") or settings_data.get("number") or ""
+                            if raw_wid:
+                                phone = raw_wid.split("@")[0]
+                        except:
+                            pass
+                else:
+                    conn_status = "disconnected"
+        except Exception as e:
+            print(f"GreenAPI status check error: {e}")
+            
+    update_payload = {"status": conn_status}
+    if phone:
+        update_payload["phone"] = phone
+        
+    _req.patch(f"{_SB_URL}/rest/v1/whatsapp_instances?id=eq.{id}", headers=_SB_HEADERS, json=update_payload, timeout=10)
+    return {"status": conn_status, "phone": phone}
+
+@app.get("/api/whatsapp/instance/{id}/qr")
+async def get_whatsapp_instance_qr(id: str):
+    from datetime import datetime
+    r = _req.get(f"{_SB_URL}/rest/v1/whatsapp_instances?id=eq.{id}", headers=_SB_HEADERS, timeout=10)
+    if r.status_code != 200 or not r.json():
+        return {"status": "error", "message": "Instance not found"}
+    
+    instance = r.json()[0]
+    provider = instance["provider"]
+    inst_id = instance["instance_id"]
+    token = instance["token"]
+    api_url = instance.get("api_url")
+    
+    if provider == "ultramsg":
+        base = api_url.strip().rstrip('/') if api_url else "https://api.ultramsg.com"
+        qr_url = f"{base}/{inst_id}/instance/qrCode?token={token}&t={int(datetime.utcnow().timestamp())}"
+        return {"status": "success", "type": "image_url", "qr": qr_url}
+        
+    elif provider == "greenapi":
+        base = api_url.strip().rstrip('/') if api_url else "https://api.greenapi.com"
+        qr_url = f"{base}/waInstance{inst_id}/qr/{token}"
+        try:
+            res = _req.get(qr_url, timeout=10)
+            if res.status_code == 200:
+                data = res.json()
+                res_type = data.get("type", "")
+                if res_type == "qrCode":
+                    base64_str = data.get("message", "")
+                    return {"status": "success", "type": "base64", "qr": f"data:image/png;base64,{base64_str}"}
+                elif res_type == "alreadyLogged":
+                    return {"status": "success", "type": "message", "message": "الحساب متصل بالفعل"}
+                else:
+                    return {"status": "error", "message": data.get("message", "فشل جلب الرمز")}
+            else:
+                return {"status": "error", "message": f"GreenAPI Error: {res.text}"}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+            
+    return {"status": "error", "message": "Unknown provider"}
+
+@app.post("/api/whatsapp/instance/set-webhook")
+async def set_whatsapp_instance_webhook(data: dict):
+    id = data.get("id")
+    server_url = data.get("server_url")
+    
+    if not id or not server_url:
+        return {"status": "error", "message": "المعاملات ناقصة"}
+        
+    r = _req.get(f"{_SB_URL}/rest/v1/whatsapp_instances?id=eq.{id}", headers=_SB_HEADERS, timeout=10)
+    if r.status_code != 200 or not r.json():
+        return {"status": "error", "message": "Instance not found"}
+        
+    instance = r.json()[0]
+    provider = instance["provider"]
+    inst_id = instance["instance_id"]
+    token = instance["token"]
+    api_url = instance.get("api_url")
+    
+    server_url = server_url.strip().rstrip('/')
+    
+    if provider == "ultramsg":
+        base = api_url.strip().rstrip('/') if api_url else "https://api.ultramsg.com"
+        settings_url = f"{base}/{inst_id}/instance/settings"
+        webhook_dest = f"{server_url}/api/whatsapp/webhook/ultramsg/{id}"
+        payload = {
+            "token": token,
+            "webhook_url": webhook_dest,
+            "webhook_message_received": "true",
+            "webhook_message_create": "false",
+            "webhook_message_ack": "false",
+            "webhook_message_download_media": "false"
+        }
+        try:
+            res = _req.post(settings_url, data=payload, timeout=10)
+            if res.status_code == 200 and "success" in res.text.lower():
+                return {"status": "success", "webhook_url": webhook_dest}
+            return {"status": "error", "message": f"UltraMsg Error: {res.text}"}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+            
+    elif provider == "greenapi":
+        base = api_url.strip().rstrip('/') if api_url else "https://api.greenapi.com"
+        settings_url = f"{base}/waInstance{inst_id}/setSettings/{token}"
+        webhook_dest = f"{server_url}/api/whatsapp/webhook/greenapi/{id}"
+        payload = {
+            "webhookUrl": webhook_dest,
+            "incomingWebhook": "yes",
+            "outgoingWebhook": "no",
+            "stateWebhook": "yes"
+        }
+        try:
+            res = _req.post(settings_url, json=payload, timeout=10)
+            if res.status_code == 200:
+                return {"status": "success", "webhook_url": webhook_dest}
+            return {"status": "error", "message": f"GreenAPI Error: {res.text}"}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+            
+    return {"status": "error", "message": "Unknown provider"}
+
+# ==========================================
+# 📥 استقبال الرسائل من أرقام الواتساب المرتبطة
+# ==========================================
+
+@app.post("/api/whatsapp/webhook/ultramsg/{instance_id_db}")
+async def receive_ultramsg_webhook(instance_id_db: str, request: Request):
+    """استقبل رسائل UltraMsg الواردة وحفظها في Supabase"""
+    try:
+        data = await request.json()
+        event_type = data.get("event_type")
+        if event_type != "message_received":
+            return {"status": "ok"}
+            
+        msg_data = data.get("data", {})
+        from_me = msg_data.get("fromMe")
+        if from_me:
+            return {"status": "ok"}
+            
+        sender_raw = msg_data.get("from", "")
+        sender_phone = sender_raw.split("@")[0] if "@" in sender_raw else sender_raw
+        sender_phone = sender_phone.replace("+", "").replace("0020", "20")
+        
+        text_body = msg_data.get("body", "")
+        if not text_body:
+            msg_type = msg_data.get("type")
+            text_body = f"[وسائط: {msg_type}]" if msg_type else "[رسالة فارغة]"
+            
+        pushname = msg_data.get("pushname") or sender_phone
+        sender_name = pushname
+        try:
+            clean = sender_phone.replace("+", "").replace("0020", "20")
+            local = clean[2:] if clean.startswith("20") else clean
+            r_name = _req.get(
+                f"{_SB_URL}/rest/v1/google_reservations",
+                headers=_SB_HEADERS,
+                params={"customer_phone": f"ilike.%{local}%", "select": "customer_name", "limit": "1"},
+                timeout=5
+            )
+            if r_name.status_code == 200:
+                rows = r_name.json()
+                if rows and rows[0].get("customer_name"):
+                    sender_name = rows[0]["customer_name"]
+        except Exception:
+            pass
+            
+        sb_payload = {
+            "channel": "whatsapp",
+            "sender_id": sender_phone,
+            "sender_name": sender_name,
+            "message_text": text_body,
+            "is_from_admin": False,
+            "read_by_admin": False,
+            "whatsapp_instance_id": instance_id_db
+        }
+        
+        _req.post(f"{_SB_URL}/rest/v1/omnichannel_messages", headers=_SB_HEADERS, json=sb_payload, timeout=5)
+    except Exception as e:
+        print(f"[UltraMsg-Webhook Error]: {e}")
+    return {"status": "ok"}
+
+@app.post("/api/whatsapp/webhook/greenapi/{instance_id_db}")
+async def receive_greenapi_webhook(instance_id_db: str, request: Request):
+    """استقبل رسائل Green API الواردة وحفظها في Supabase"""
+    try:
+        data = await request.json()
+        type_webhook = data.get("typeWebhook")
+        if type_webhook != "incomingMessageReceived":
+            return {"status": "ok"}
+            
+        sender_data = data.get("senderData", {})
+        sender_raw = sender_data.get("sender", "")
+        sender_phone = sender_raw.split("@")[0] if "@" in sender_raw else sender_raw
+        sender_phone = sender_phone.replace("+", "").replace("0020", "20")
+        
+        message_data = data.get("messageData", {})
+        msg_type = message_data.get("typeMessage")
+        
+        text_body = ""
+        if msg_type == "textMessage":
+            text_body = message_data.get("textMessageData", {}).get("text", "")
+        elif msg_type == "extendedTextMessage":
+            text_body = message_data.get("extendedTextMessageData", {}).get("text", "")
+        elif msg_type in ["imageMessage", "videoMessage", "documentMessage", "audioMessage"]:
+            text_body = message_data.get("fileMessageData", {}).get("caption", f"[وسائط: {msg_type}]")
+        else:
+            text_body = f"[رسالة من نوع {msg_type}]"
+            
+        if not text_body:
+            text_body = "[رسالة فارغة]"
+            
+        pushname = sender_data.get("senderName") or sender_phone
+        sender_name = pushname
+        try:
+            clean = sender_phone.replace("+", "").replace("0020", "20")
+            local = clean[2:] if clean.startswith("20") else clean
+            r_name = _req.get(
+                f"{_SB_URL}/rest/v1/google_reservations",
+                headers=_SB_HEADERS,
+                params={"customer_phone": f"ilike.%{local}%", "select": "customer_name", "limit": "1"},
+                timeout=5
+            )
+            if r_name.status_code == 200:
+                rows = r_name.json()
+                if rows and rows[0].get("customer_name"):
+                    sender_name = rows[0]["customer_name"]
+        except Exception:
+            pass
+            
+        sb_payload = {
+            "channel": "whatsapp",
+            "sender_id": sender_phone,
+            "sender_name": sender_name,
+            "message_text": text_body,
+            "is_from_admin": False,
+            "read_by_admin": False,
+            "whatsapp_instance_id": instance_id_db
+        }
+        
+        _req.post(f"{_SB_URL}/rest/v1/omnichannel_messages", headers=_SB_HEADERS, json=sb_payload, timeout=5)
+    except Exception as e:
+        print(f"[GreenAPI-Webhook Error]: {e}")
     return {"status": "ok"}
 
 # ==========================================

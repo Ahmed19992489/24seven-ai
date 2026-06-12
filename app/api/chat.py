@@ -49,6 +49,7 @@ class OmnichannelReply(BaseModel):
     channel: str # 'whatsapp', 'messenger', or 'instagram'
     sender_id: str
     message: str
+    whatsapp_instance_id: Optional[str] = None
 
 # --- نقاط الاتصال (Endpoints) ---
 
@@ -143,25 +144,106 @@ async def send_omnichannel_reply(
     ثم تحفظ الرسالة في Supabase
     """
     channel = data.channel.lower()
+    whatsapp_instance_id = data.whatsapp_instance_id
     
     send_success = False
     api_error = ""
 
     # 1. إرسال الرسالة عبر القناة المناسبة
     if channel == 'whatsapp':
-        url = f"https://graph.facebook.com/v17.0/{PHONE_ID}/messages"
-        headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}", "Content-Type": "application/json"}
-        payload = { "messaging_product": "whatsapp", "to": data.sender_id, "type": "text", "text": {"body": data.message} }
-        try:
-            r = requests.post(url, headers=headers, json=payload)
-            if r.status_code not in [200, 201]:
-                api_error = r.text
-                print(f"❌ Failed to send WhatsApp: {r.text}")
+        # Resolve custom WhatsApp instance if not specified
+        if not whatsapp_instance_id:
+            try:
+                clean_phone = data.sender_id.replace("+", "").replace("0020", "20")
+                local = clean_phone[2:] if clean_phone.startswith("20") else clean_phone
+                r_inst = requests.get(
+                    f"{SUPABASE_URL}/rest/v1/omnichannel_messages",
+                    headers=SUPABASE_HEADERS,
+                    params={
+                        "channel": "eq.whatsapp",
+                        "sender_id": f"ilike.%{local}%",
+                        "whatsapp_instance_id": "is.not.null",
+                        "select": "whatsapp_instance_id",
+                        "limit": "1",
+                        "order": "created_at.desc"
+                    },
+                    timeout=5
+                )
+                if r_inst.status_code == 200 and r_inst.json():
+                    whatsapp_instance_id = r_inst.json()[0].get("whatsapp_instance_id")
+            except Exception as ex:
+                print(f"Error resolving whatsapp_instance_id in send_omnichannel: {ex}")
+
+        # Check if we should route via custom instance
+        routed_via_custom = False
+        if whatsapp_instance_id:
+            r_creds = requests.get(f"{SUPABASE_URL}/rest/v1/whatsapp_instances?id=eq.{whatsapp_instance_id}", headers=SUPABASE_HEADERS, timeout=5)
+            if r_creds.status_code == 200 and r_creds.json():
+                inst = r_creds.json()[0]
+                provider = inst["provider"]
+                inst_id = inst["instance_id"]
+                token = inst["token"]
+                api_url = inst.get("api_url")
+                routed_via_custom = True
+                
+                if provider == "ultramsg":
+                    base = api_url.strip().rstrip('/') if api_url else "https://api.ultramsg.com"
+                    send_url = f"{base}/{inst_id}/messages/chat"
+                    payload = {
+                        "token": token,
+                        "to": data.sender_id,
+                        "body": data.message
+                    }
+                    try:
+                        res = requests.post(send_url, data=payload, timeout=10)
+                        if res.status_code == 200 and ("success" in res.text.lower() or "\"sent\":\"true\"" in res.text.lower()):
+                            send_success = True
+                        else:
+                            api_error = res.text
+                            print(f"❌ UltraMsg send failed in chat.py: {res.text}")
+                    except Exception as e:
+                        api_error = str(e)
+                        print(f"❌ UltraMsg exception in chat.py: {e}")
+                elif provider == "greenapi":
+                    base = api_url.strip().rstrip('/') if api_url else "https://api.greenapi.com"
+                    send_url = f"{base}/waInstance{inst_id}/sendMessage/{token}"
+                    clean_num = data.sender_id.replace("+", "").replace("0020", "20")
+                    payload = {
+                        "chatId": f"{clean_num}@c.us",
+                        "message": data.message
+                    }
+                    try:
+                        res = requests.post(send_url, json=payload, timeout=10)
+                        if res.status_code == 200:
+                            send_success = True
+                        else:
+                            api_error = res.text
+                            print(f"❌ GreenAPI send failed in chat.py: {res.text}")
+                    except Exception as e:
+                        api_error = str(e)
+                        print(f"❌ GreenAPI exception in chat.py: {e}")
             else:
-                send_success = True
-        except Exception as e:
-            api_error = str(e)
-            print(f"❌ WA Send Exception: {e}")
+                print(f"⚠️ Could not fetch credentials for whatsapp_instance_id {whatsapp_instance_id}, falling back to Meta API")
+
+        # Fallback to Meta API
+        if not routed_via_custom or not send_success:
+            if not whatsapp_instance_id:
+                url = f"https://graph.facebook.com/v17.0/{PHONE_ID}/messages"
+                headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}", "Content-Type": "application/json"}
+                payload = { "messaging_product": "whatsapp", "to": data.sender_id, "type": "text", "text": {"body": data.message} }
+                try:
+                    r = requests.post(url, headers=headers, json=payload)
+                    if r.status_code not in [200, 201]:
+                        api_error = r.text
+                        print(f"❌ Meta WA send failed in chat.py: {r.text}")
+                    else:
+                        send_success = True
+                except Exception as e:
+                    api_error = str(e)
+                    print(f"❌ Meta WA Send Exception in chat.py: {e}")
+            else:
+                if not api_error:
+                    api_error = "Custom WhatsApp instance send failed"
 
     elif channel == 'messenger':
         if not FB_PAGE_TOKEN:
@@ -224,6 +306,8 @@ async def send_omnichannel_reply(
         "is_from_admin": True,
         "read_by_admin": True
     }
+    if channel == "whatsapp" and whatsapp_instance_id:
+        db_payload["whatsapp_instance_id"] = whatsapp_instance_id
     
     try:
         response = requests.post(supabase_url, headers=SUPABASE_HEADERS, json=db_payload)

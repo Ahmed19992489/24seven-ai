@@ -1992,10 +1992,21 @@
                     console.log("📤 Sending to:", targetUrl);
                     
                     let apiSenderId = activeChatId;
-                    if (chat.channel === 'whatsapp' && chat.originalIds && chat.originalIds.size > 0) {
-                        const originals = Array.from(chat.originalIds);
-                        apiSenderId = originals.reduce((a, b) => a.length >= b.length ? a : b);
-                        console.log(`📤 Resolved ${activeChatId} → ${apiSenderId} for API`);
+                    let whatsappInstanceId = null;
+                    if (chat.channel === 'whatsapp') {
+                        if (chat.originalIds && chat.originalIds.size > 0) {
+                            const originals = Array.from(chat.originalIds);
+                            apiSenderId = originals.reduce((a, b) => a.length >= b.length ? a : b);
+                            console.log(`📤 Resolved ${activeChatId} → ${apiSenderId} for API`);
+                        }
+                        if (chat.messages) {
+                            for (let i = chat.messages.length - 1; i >= 0; i--) {
+                                if (chat.messages[i].whatsapp_instance_id) {
+                                    whatsappInstanceId = chat.messages[i].whatsapp_instance_id;
+                                    break;
+                                }
+                            }
+                        }
                     }
                     
                     const res = await fetch(targetUrl, {
@@ -2008,7 +2019,8 @@
                             channel: chat.channel, 
                             sender_id: apiSenderId, 
                             message: text,
-                            mod_name: currentModName || 'Admin'
+                            mod_name: currentModName || 'Admin',
+                            whatsapp_instance_id: whatsappInstanceId
                         })
                     });
                     
@@ -2023,7 +2035,8 @@
                             message_text: text,
                             is_from_admin: true,
                             created_at: new Date().toISOString(),
-                            channel: chat.channel
+                            channel: chat.channel,
+                            whatsapp_instance_id: whatsappInstanceId
                         };
                         chat.messages.push(newMsg);
                         allMessages.push(newMsg);
