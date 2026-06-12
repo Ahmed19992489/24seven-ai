@@ -7312,17 +7312,20 @@ ${contextData}
             }
         }
 
-        async function loadWhatsAppSettings() {
+async function loadWhatsAppSettings() {
             const listContainer = document.getElementById('whatsapp-instances-list');
             listContainer.innerHTML = '<p class="text-center text-slate-400 text-xs py-6"><i class="fas fa-spinner fa-spin mr-1"></i> جاري التحميل...</p>';
             
+            const apiBase = getStaffApiBaseUrl();
+            if (!apiBase) {
+                listContainer.innerHTML = '<p class="text-center text-red-500 text-xs py-6">خطأ: لم يتم تحديد عنوان السيرفر.</p>';
+                return;
+            }
+            
             try {
-                const { data, error } = await sbClient
-                    .from('whatsapp_instances')
-                    .select('*')
-                    .order('created_at', { ascending: false });
-                    
-                if (error) throw error;
+                const res = await fetch(`${apiBase}/api/whatsapp/instances`);
+                if (!res.ok) throw new Error('فشل جلب الحسابات من السيرفر');
+                const data = await res.json();
                 
                 if (!data || data.length === 0) {
                     listContainer.innerHTML = '<p class="text-center text-slate-400 text-xs py-12">لا توجد حسابات واتساب مضافة حالياً.</p>';
@@ -7337,6 +7340,10 @@ ${contextData}
                         statusText = 'متصل';
                     }
                     
+                    let providerText = 'UltraMsg';
+                    if (inst.provider === 'greenapi') providerText = 'Green API';
+                    else if (inst.provider === 'local') providerText = 'بوابة محلية (Local)';
+                    
                     return `
                         <div onclick="selectWhatsappInstance('${inst.id}')" 
                              class="p-4 cursor-pointer hover:bg-slate-50 border border-slate-100 rounded-xl transition flex justify-between items-center ${selectedWaInstanceId === inst.id ? 'bg-emerald-50/40 border-emerald-200' : 'bg-white'}">
@@ -7344,7 +7351,7 @@ ${contextData}
                                 <p class="font-bold text-sm text-slate-800">${inst.instance_name}</p>
                                 <div class="flex items-center gap-2 mt-1">
                                     <span class="text-[10px] px-2 py-0.5 rounded-full font-bold ${badgeClass}">${statusText}</span>
-                                    <span class="text-[10px] text-slate-400">${inst.provider === 'greenapi' ? 'Green API' : 'UltraMsg'}</span>
+                                    <span class="text-[10px] text-slate-400">${providerText}</span>
                                 </div>
                                 ${inst.phone ? `<p class="text-[10px] text-slate-500 font-bold mt-0.5" dir="ltr">+${inst.phone}</p>` : ''}
                             </div>
@@ -7388,10 +7395,17 @@ ${contextData}
             panel.innerHTML = '<p class="text-center text-slate-400 text-xs py-12"><i class="fas fa-spinner fa-spin mr-1"></i> جاري تحميل تفاصيل الحساب والحالة...</p>';
             
             try {
-                const { data: inst, error } = await sbClient.from('whatsapp_instances').select('*').eq('id', id).single();
-                if (error || !inst) throw new Error('لم يتم العثور على بيانات الحساب');
-                
                 const apiBase = getStaffApiBaseUrl();
+                if (!apiBase) {
+                    panel.innerHTML = '<p class="text-center text-red-500 text-xs py-12">خطأ: لم يتم تحديد عنوان السيرفر.</p>';
+                    return;
+                }
+                const instRes = await fetch(`${apiBase}/api/whatsapp/instances`);
+                if (!instRes.ok) throw new Error('فشل تحميل تفاصيل الحساب');
+                const instances = await instRes.json();
+                const inst = instances.find(item => item.id === id);
+                if (!inst) throw new Error('لم يتم العثور على بيانات الحساب');
+                
                 let freshStatus = inst.status;
                 let freshPhone = inst.phone;
                 
