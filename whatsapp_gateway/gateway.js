@@ -130,33 +130,51 @@ async function initSession(id) {
 
     // Handle incoming messages
     sock.ev.on('messages.upsert', async (m) => {
-        if (m.type === 'notify') {
+        console.log(`[Gateway Debug] messages.upsert: type=${m.type}, count=${m.messages?.length}`);
+        
+        if (m.type === 'notify' || m.type === 'append') {
             for (const msg of m.messages) {
+                console.log(`[Gateway Debug] Processing message: fromMe=${msg.key?.fromMe}, remoteJid=${msg.key?.remoteJid}, hasMessage=${!!msg.message}`);
+                
                 if (!msg.key.fromMe && msg.message) {
                     const senderJid = msg.key.remoteJid;
                     if (senderJid && senderJid.endsWith('@s.whatsapp.net')) {
                         const senderPhone = senderJid.split('@')[0];
                         const senderName = msg.pushName || senderPhone;
                         
+                        // Extract message content, unwrapping ephemeral or view-once wrappers
+                        let messageContent = msg.message;
+                        if (messageContent.ephemeralMessage) {
+                            messageContent = messageContent.ephemeralMessage.message;
+                        }
+                        if (messageContent.viewOnceMessage) {
+                            messageContent = messageContent.viewOnceMessage.message;
+                        }
+                        if (messageContent.viewOnceMessageV2) {
+                            messageContent = messageContent.viewOnceMessageV2.message;
+                        }
+                        
                         // Extract text content
                         let text = '';
-                        if (msg.message.conversation) {
-                            text = msg.message.conversation;
-                        } else if (msg.message.extendedTextMessage) {
-                            text = msg.message.extendedTextMessage.text;
-                        } else if (msg.message.imageMessage) {
-                            text = '[صورة / Image]';
-                        } else if (msg.message.videoMessage) {
-                            text = '[فيديو / Video]';
-                        } else if (msg.message.documentMessage) {
-                            text = '[ملف / Document]';
-                        } else if (msg.message.buttonsResponseMessage) {
-                            text = msg.message.buttonsResponseMessage.selectedButtonId;
-                        } else if (msg.message.templateButtonReplyMessage) {
-                            text = msg.message.templateButtonReplyMessage.selectedId;
-                        } else if (msg.message.listResponseMessage) {
-                            text = msg.message.listResponseMessage.title;
+                        if (messageContent.conversation) {
+                            text = messageContent.conversation;
+                        } else if (messageContent.extendedTextMessage) {
+                            text = messageContent.extendedTextMessage.text;
+                        } else if (messageContent.imageMessage) {
+                            text = messageContent.imageMessage.caption || '[صورة / Image]';
+                        } else if (messageContent.videoMessage) {
+                            text = messageContent.videoMessage.caption || '[فيديو / Video]';
+                        } else if (messageContent.documentMessage) {
+                            text = messageContent.documentMessage.caption || '[ملف / Document]';
+                        } else if (messageContent.buttonsResponseMessage) {
+                            text = messageContent.buttonsResponseMessage.selectedButtonId;
+                        } else if (messageContent.templateButtonReplyMessage) {
+                            text = messageContent.templateButtonReplyMessage.selectedId;
+                        } else if (messageContent.listResponseMessage) {
+                            text = messageContent.listResponseMessage.title;
                         } else {
+                            // If we don't recognize the structure, try to check if there is a caption or text property
+                            console.log(`[Gateway Debug] Unhandled message types:`, Object.keys(messageContent));
                             text = '[رسالة وسائط]';
                         }
 
