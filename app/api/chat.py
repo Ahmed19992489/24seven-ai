@@ -17,7 +17,7 @@ router = APIRouter()
 WHATSAPP_TOKEN = "EAAPDbwUyvY0BQrm6ZB9qb62LU9hI50ZC9QOfZAO3VPA7ZCSnFSRMCb2kouBRkXu4LiVmRU2ydv1vLl00kKmgTFMN5ULJOpImor7i8oITjicjIjWiOLxTL7yltYrlF0RLxcdU6UNOaIdqo4Ouv0BnQ79OK2sgSLpHY9ZCQs4iRIxcpjnoxr8EWpV4FSgGTzgZDZD"
 PHONE_ID = "597129733493778"
 FB_PAGE_TOKEN = "EAAPDbwUyvY0BQ3KLTieXWMHZAJZC92eQI9sBwEISipvaaVR9hoteMHWhx0fi8mSXIC4TnTiBHpykmsv6HyAkYK4yQUyQv81ZCF7EZA5CEZAKwPqhfl3jjmaN5muRSk1ZCpNh7OXAQ8Ey7ilMhBmjPvQpLRlzMD8MbYWChOdFxwiFKgPNAqJhg6aVZBR25rvIvChgw1vusjBwHZAeveEMSHpaQ9ps"
-INSTAGRAM_TOKEN = "IGAAMRP14aPG1BZAGJmSTBHdjY1UGp5VEFjLTYzdGZAKaHRLaWE1Y2FuczNaeUhRYnAyRjdWX25vbktxb0xkZAEIyaWRwU2RKd201bFNaT0RzQk5INXhSTnczYnJSYUJWY05IVTBHSlQzX0libWlfTDNmZAXhROG40bmg0c2dWM2N2QQZDZD"  # Updated 2026-06-12
+INSTAGRAM_TOKEN = "IGAAMRP14aPG1BZAGFRbFAtUHd4c3BNckxCVC0xOFl4ZAmRXbzRmRVRVNmljTkFwZAzdUUlVlRHJ4dVhSTklyczJkYWlCa2VvUWJVb2w5VzZAUY1FJV2M2UHczaTdyVk9fN1NXMW5UZAUwydFhyTnFhX3RldDl3VVdiNXFKZAl9Wb0JaVQZDZD"  # Updated 2026-06-12
 
 SUPABASE_URL = 'https://wtjwzqvmwnbvjxnmweqq.supabase.co'
 SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY'
@@ -183,31 +183,31 @@ async def send_omnichannel_reply(
                 print(f"❌ Messenger Send Exception: {e}")
 
     elif channel == 'instagram':
-        if not FB_PAGE_TOKEN:
-            api_error = "FB_PAGE_TOKEN is empty"
-            print("⚠️ FB_PAGE_TOKEN is empty for Instagram.")
+        if not INSTAGRAM_TOKEN:
+            api_error = "INSTAGRAM_TOKEN is empty"
+            print("⚠️ INSTAGRAM_TOKEN is empty for Instagram.")
         else:
-            url = f"https://graph.facebook.com/v17.0/me/messages?access_token={FB_PAGE_TOKEN}"
+            url = f"https://graph.instagram.com/v18.0/me/messages?access_token={INSTAGRAM_TOKEN}"
             headers = {"Content-Type": "application/json"}
             payload = { "recipient": {"id": data.sender_id}, "message": {"text": data.message} }
             try:
                 r = requests.post(url, headers=headers, json=payload)
                 if r.status_code == 200:
                     send_success = True
-                elif r.status_code == 403:
+                else:
                     err_json = {}
                     try: err_json = r.json()
                     except: pass
                     err_code = err_json.get('error', {}).get('error_subcode', 0)
-                    if err_code == 2534048:
+                    if err_code == 2534037:
+                        api_error = "instagram_handover_error"
+                        print("[IG-HANDOVER] App has no thread control. Set App as Primary Receiver in Facebook settings.")
+                    elif err_code == 2534048:
                         api_error = "instagram_dev_mode"
                         print("[IG-DEV-MODE] App in Dev Mode - recipient has no role on app.")
                     else:
                         api_error = r.text
                         print(f"❌ Failed to send Instagram: {r.text}")
-                else:
-                    api_error = r.text
-                    print(f"❌ Failed to send Instagram: {r.text}")
             except Exception as e:
                 api_error = str(e)
                 print(f"❌ Instagram Send Exception: {e}")
@@ -234,7 +234,12 @@ async def send_omnichannel_reply(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-    if api_error == "instagram_dev_mode":
+    if api_error == "instagram_handover_error":
+        return {
+            "status": "warning",
+            "message": "تم حفظ الرسالة، لكن لم تُرسل للعميل. يرجى الذهاب لإعدادات صفحة فيسبوك -> Advanced Messaging وتعيين تطبيقك كـ Primary Receiver للإنستجرام."
+        }
+    elif api_error == "instagram_dev_mode":
         return {
             "status": "warning",
             "message": "تم حفظ الرسالة، لكن لم يتم إرسالها على إنستجرام. التطبيق في وضع التطوير ويحتاج Advanced Access من Meta. الرسالة ظهرت في المحادثة فقط."

@@ -89,7 +89,7 @@ import requests as _req
 _WA_TOKEN = "EAAPDbwUyvY0BQrm6ZB9qb62LU9hI50ZC9QOfZAO3VPA7ZCSnFSRMCb2kouBRkXu4LiVmRU2ydv1vLl00kKmgTFMN5ULJOpImor7i8oITjicjIjWiOLxTL7yltYrlF0RLxcdU6UNOaIdqo4Ouv0BnQ79OK2sgSLpHY9ZCQs4iRIxcpjnoxr8EWpV4FSgGTzgZDZD"
 _PHONE_ID = "597129733493778"
 _FB_TOKEN = "EAAPDbwUyvY0BRN0VW4bIHPLRpeA7qHqK5TyFpNxJ8fuFcvVCshuBwZC52F59Q6oNH671nLZBbAiEsGSB55Vq0sHjyMIB4QNStzt6sFxRL7ImzttrnuFkHVTYWGZC0J2MgbBGfqo3dOi7Wo5QagQ7pY3vhZAztfKZBhNZCxGrVeGRIqz7pUkHHC2iM4ZA0mDje9oEXZCm"
-_IG_TOKEN = "IGAAMRP14aPG1BZAGJmSTBHdjY1UGp5VEFjLTYzdGZAKaHRLaWE1Y2FuczNaeUhRYnAyRjdWX25vbktxb0xkZAEIyaWRwU2RKd201bFNaT0RzQk5INXhSTnczYnJSYUJWY05IVTBHSlQzX0libWlfTDNmZAXhROG40bmg0c2dWM2N2QQZDZD"  # Updated 2026-06-12
+_IG_TOKEN = "IGAAMRP14aPG1BZAGFRbFAtUHd4c3BNckxCVC0xOFl4ZAmRXbzRmRVRVNmljTkFwZAzdUUlVlRHJ4dVhSTklyczJkYWlCa2VvUWJVb2w5VzZAUY1FJV2M2UHczaTdyVk9fN1NXMW5UZAUwydFhyTnFhX3RldDl3VVdiNXFKZAl9Wb0JaVQZDZD"  # Updated 2026-06-12
 _SB_URL = "https://wtjwzqvmwnbvjxnmweqq.supabase.co"
 _SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY"
 _SB_HEADERS = {"apikey": _SB_KEY, "Authorization": f"Bearer {_SB_KEY}", "Content-Type": "application/json"}
@@ -205,7 +205,7 @@ async def send_reply_direct(data: dict):
             print(f"❌ Messenger exception: {e}")
 
     elif channel == "instagram":
-        url = f"https://graph.facebook.com/v17.0/me/messages?access_token={_FB_TOKEN}"
+        url = f"https://graph.instagram.com/v18.0/me/messages?access_token={_IG_TOKEN}"
         payload = {"recipient": {"id": sender_id}, "message": {"text": message}}
         try:
             r = _req.post(url, headers={"Content-Type": "application/json"}, json=payload, timeout=10)
@@ -218,20 +218,20 @@ async def send_reply_direct(data: dict):
                         if len(sent_via_api_mids) > 500: sent_via_api_mids.clear()
                         print(f"[IG-API->Render] Tracked MID: {ig_msg_id}")
                 except: pass
-            elif r.status_code == 403:
+            else:
                 err_json = {}
                 try: err_json = r.json()
                 except: pass
                 err_code = err_json.get('error', {}).get('error_subcode', 0)
-                if err_code == 2534048:
+                if err_code == 2534037:
+                    api_error = "instagram_handover_error"
+                    print("[IG-HANDOVER->Render] App has no thread control. Set App as Primary Receiver in Facebook settings.")
+                elif err_code == 2534048:
                     api_error = "instagram_dev_mode"
                     print("[IG-DEV-MODE->Render] App in Dev Mode - recipient has no role on app.")
                 else:
                     api_error = r.text
                     print(f"❌ Instagram Send failed: {r.text}")
-            else:
-                api_error = r.text
-                print(f"❌ Instagram Send failed: {r.text}")
         except Exception as e:
             api_error = str(e)
             print(f"❌ Instagram exception: {e}")
@@ -252,6 +252,11 @@ async def send_reply_direct(data: dict):
 
     if send_success:
         return {"status": "success"}
+    elif api_error == "instagram_handover_error":
+        return {
+            "status": "warning",
+            "message": "تم حفظ الرسالة، لكن لم تُرسل للعميل. يرجى الذهاب لإعدادات صفحة فيسبوك -> Advanced Messaging وتعيين تطبيقك كـ Primary Receiver للإنستجرام."
+        }
     elif api_error == "instagram_dev_mode":
         return {
             "status": "warning",
