@@ -29,13 +29,53 @@ app = FastAPI(
     version="2.6.0"
 )
 
+gateway_process = None
+
 @app.on_event("startup")
 async def startup_event():
     start_scheduler()
+    
+    # تشغيل بوابة الواتساب المحلية بلغة Node.js في الخلفية
+    global gateway_process
+    import subprocess
+    try:
+        gateway_dir = os.path.join(os.path.dirname(__file__), "whatsapp_gateway")
+        if os.path.exists(gateway_dir):
+            if not os.path.exists(os.path.join(gateway_dir, "node_modules")):
+                print("[Gateway] Installing Node.js dependencies...")
+                subprocess.run("npm install", shell=True, cwd=gateway_dir, check=True)
+            
+            print("[Gateway] Starting local WhatsApp gateway service...")
+            gateway_process = subprocess.Popen(
+                "node gateway.js",
+                shell=True,
+                cwd=gateway_dir,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            print("[Gateway] WhatsApp gateway service started successfully on port 3001.")
+    except Exception as e:
+        print(f"[Gateway Error] Failed to start Node.js gateway: {e}")
 
 @app.on_event("shutdown")
 async def shutdown_event():
     stop_scheduler()
+    
+    # إيقاف سيرفر Node.js
+    global gateway_process
+    if gateway_process:
+        print("[Gateway] Stopping local WhatsApp gateway service...")
+        import subprocess
+        try:
+            if os.name == 'nt':
+                subprocess.run(f"taskkill /F /T /PID {gateway_process.pid}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            else:
+                gateway_process.terminate()
+                gateway_process.wait(timeout=5)
+            print("[Gateway] Local WhatsApp gateway service stopped.")
+        except Exception as e:
+            print(f"[Gateway Error] Error stopping gateway process: {e}")
 
 # --- 2. إعدادات CORS (السماح بالاتصال من أي مكان) ---
 app.add_middleware(
@@ -241,6 +281,23 @@ async def send_reply_direct(data: dict):
                     except Exception as e:
                         api_error = str(e)
                         print(f"❌ GreenAPI exception: {e}")
+                elif provider == "local":
+                    base = api_url.strip().rstrip('/') if api_url else "http://localhost:3001"
+                    send_url = f"{base}/instance/{whatsapp_instance_id}/send"
+                    payload = {
+                        "to": sender_id,
+                        "message": message
+                    }
+                    try:
+                        res = _req.post(send_url, json=payload, timeout=10)
+                        if res.status_code == 200 and res.json().get("status") == "success":
+                            send_success = True
+                        else:
+                            api_error = res.text
+                            print(f"❌ Local WA send failed: {res.text}")
+                    except Exception as e:
+                        api_error = str(e)
+                        print(f"❌ Local WA exception: {e}")
             else:
                 print(f"⚠️ Could not fetch credentials for whatsapp_instance_id {whatsapp_instance_id}, falling back to Meta API")
 
@@ -651,6 +708,52 @@ async def receive_whatsapp_webhook(request: Request):
 
     return {"status": "ok"}
 
+@app.post("/api/whatsapp/webhook/local/{instance_id_db}")
+async def receive_local_webhook(instance_id_db: str, data: dict):
+    """استقبل رسائل البوابة المحلية الواردة وحفظها في Supabase"""
+    try:
+        sender_phone = data.get("sender_phone")
+        sender_name = data.get("sender_name")
+        message_text = data.get("message_text")
+        
+        if not sender_phone or not message_text:
+            return {"status": "error", "message": "Missing fields"}
+            
+        sender_phone = sender_phone.replace("+", "").replace("0020", "20")
+        
+        # محاولة جلب اسم العميل من الحجوزات
+        try:
+            clean = sender_phone.replace("+", "").replace("0020", "20")
+            local = clean[2:] if clean.startswith("20") else clean
+            r_name = _req.get(
+                f"{_SB_URL}/rest/v1/google_reservations",
+                headers=_SB_HEADERS,
+                params={"customer_phone": f"ilike.%{local}%", "select": "customer_name", "limit": "1"},
+                timeout=5
+            )
+            if r_name.status_code == 200:
+                rows = r_name.json()
+                if rows and rows[0].get("customer_name"):
+                    sender_name = rows[0]["customer_name"]
+        except Exception:
+            pass
+            
+        sb_payload = {
+            "channel": "whatsapp",
+            "sender_id": sender_phone,
+            "sender_name": sender_name or sender_phone,
+            "message_text": message_text,
+            "is_from_admin": False,
+            "read_by_admin": False,
+            "whatsapp_instance_id": instance_id_db
+        }
+        
+        _req.post(f"{_SB_URL}/rest/v1/omnichannel_messages", headers=_SB_HEADERS, json=sb_payload, timeout=5)
+        return {"status": "ok"}
+    except Exception as e:
+        print(f"[Local-Webhook Error]: {e}")
+        return {"status": "error", "message": str(e)}
+
 # ==========================================
 # ⚙️ إدارة حسابات الواتساب المرتبطة (Multi-Device WhatsApp API)
 # ==========================================
@@ -766,6 +869,20 @@ async def check_whatsapp_instance_status(id: str):
         except Exception as e:
             print(f"GreenAPI status check error: {e}")
             
+    elif provider == "local":
+        base = api_url.strip().rstrip('/') if api_url else "http://localhost:3001"
+        status_url = f"{base}/instance/{id}/status"
+        try:
+            res = _req.get(status_url, timeout=10)
+            if res.status_code == 200:
+                res_data = res.json()
+                conn_status = res_data.get("status", "disconnected")
+                phone = res_data.get("phone", phone)
+            else:
+                conn_status = "disconnected"
+        except Exception as e:
+            print(f"Local Gateway status check error: {e}")
+            
     update_payload = {"status": conn_status}
     if phone:
         update_payload["phone"] = phone
@@ -808,6 +925,22 @@ async def get_whatsapp_instance_qr(id: str):
                     return {"status": "error", "message": data.get("message", "فشل جلب الرمز")}
             else:
                 return {"status": "error", "message": f"GreenAPI Error: {res.text}"}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+            
+    elif provider == "local":
+        base = api_url.strip().rstrip('/') if api_url else "http://localhost:3001"
+        qr_url = f"{base}/instance/{id}/qr"
+        try:
+            res = _req.get(qr_url, timeout=10)
+            if res.status_code == 200:
+                data = res.json()
+                if data.get("status") == "success":
+                    return data
+                else:
+                    return {"status": "error", "message": data.get("message", "فشل جلب الرمز")}
+            else:
+                return {"status": "error", "message": f"Local Gateway Error: {res.text}"}
         except Exception as e:
             return {"status": "error", "message": str(e)}
             
@@ -871,6 +1004,10 @@ async def set_whatsapp_instance_webhook(data: dict):
         except Exception as e:
             return {"status": "error", "message": str(e)}
             
+    elif provider == "local":
+        webhook_dest = f"{server_url}/api/whatsapp/webhook/local/{id}"
+        return {"status": "success", "webhook_url": webhook_dest}
+        
     return {"status": "error", "message": "Unknown provider"}
 
 # ==========================================

@@ -732,14 +732,15 @@
                             class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:border-emerald-500 focus:outline-none transition bg-white">
                             <option value="ultramsg">UltraMsg API</option>
                             <option value="greenapi">Green API</option>
+                            <option value="local">بوابة محلية مجانية (Free Local Gateway)</option>
                         </select>
                     </div>
-                    <div>
+                    <div id="wa-instance-container">
                         <label class="block text-sm font-bold text-slate-700 mb-1" id="label-wa-instance">Instance ID / IdInstance</label>
                         <input type="text" id="wa-instance-id" placeholder="أدخل معرف الـ Instance" required
                             class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:border-emerald-500 focus:outline-none transition">
                     </div>
-                    <div>
+                    <div id="wa-token-container">
                         <label class="block text-sm font-bold text-slate-700 mb-1" id="label-wa-token">Token / ApiTokenInstance</label>
                         <input type="password" id="wa-token" placeholder="أدخل رمز التوكن الخاص بالحساب" required
                             class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:border-emerald-500 focus:outline-none transition">
@@ -7230,16 +7231,42 @@ ${contextData}
             const waInstanceInput = document.getElementById('wa-instance-id');
             const waTokenInput = document.getElementById('wa-token');
             
+            const tokenContainer = document.getElementById('wa-token-container');
+            const instanceContainer = document.getElementById('wa-instance-container');
+            const waApiUrlInput = document.getElementById('wa-api-url');
+            
             if (provider === 'greenapi') {
                 labelInstance.innerText = 'IdInstance';
                 labelToken.innerText = 'ApiTokenInstance';
                 waInstanceInput.placeholder = 'مثال: 1101923456';
                 waTokenInput.placeholder = 'أدخل ApiTokenInstance الخاص بالحساب';
+                if (tokenContainer) tokenContainer.style.display = 'block';
+                if (instanceContainer) instanceContainer.style.display = 'block';
+                waInstanceInput.required = true;
+                waTokenInput.required = true;
+                if (waApiUrlInput.value === 'http://localhost:3001') {
+                    waApiUrlInput.value = '';
+                }
+            } else if (provider === 'local') {
+                labelInstance.innerText = 'معرف الحساب (اختياري)';
+                waInstanceInput.placeholder = 'سيتم إنشاؤه تلقائياً إذا تركته فارغاً';
+                if (tokenContainer) tokenContainer.style.display = 'none';
+                if (instanceContainer) instanceContainer.style.display = 'none';
+                waInstanceInput.required = false;
+                waTokenInput.required = false;
+                waApiUrlInput.value = 'http://localhost:3001';
             } else {
                 labelInstance.innerText = 'Instance ID';
                 labelToken.innerText = 'Token';
                 waInstanceInput.placeholder = 'مثال: instance12345';
                 waTokenInput.placeholder = 'أدخل رمز التوكن الخاص بالحساب';
+                if (tokenContainer) tokenContainer.style.display = 'block';
+                if (instanceContainer) instanceContainer.style.display = 'block';
+                waInstanceInput.required = true;
+                waTokenInput.required = true;
+                if (waApiUrlInput.value === 'http://localhost:3001') {
+                    waApiUrlInput.value = '';
+                }
             }
         }
 
@@ -7247,9 +7274,18 @@ ${contextData}
             e.preventDefault();
             const instance_name = document.getElementById('wa-name').value.trim();
             const provider = document.getElementById('wa-provider').value;
-            const instance_id = document.getElementById('wa-instance-id').value.trim();
-            const token = document.getElementById('wa-token').value.trim();
+            let instance_id = document.getElementById('wa-instance-id').value.trim();
+            let token = document.getElementById('wa-token').value.trim();
             const api_url = document.getElementById('wa-api-url').value.trim();
+            
+            if (provider === 'local') {
+                if (!instance_id) {
+                    instance_id = 'local_' + Math.random().toString(36).substring(2, 10);
+                }
+                if (!token) {
+                    token = 'local_token';
+                }
+            }
             
             const apiBase = getStaffApiBaseUrl();
             if (!apiBase) {

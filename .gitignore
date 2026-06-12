@@ -10,3 +10,6 @@ env.bak
 env.ext
 sql_app.db
 static/uploads/
+node_modules/
+whatsapp_gateway/node_modules/
+whatsapp_gateway/sessions/

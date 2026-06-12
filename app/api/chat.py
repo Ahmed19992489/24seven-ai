@@ -222,6 +222,23 @@ async def send_omnichannel_reply(
                     except Exception as e:
                         api_error = str(e)
                         print(f"❌ GreenAPI exception in chat.py: {e}")
+                elif provider == "local":
+                    base = api_url.strip().rstrip('/') if api_url else "http://localhost:3001"
+                    send_url = f"{base}/instance/{whatsapp_instance_id}/send"
+                    payload = {
+                        "to": data.sender_id,
+                        "message": data.message
+                    }
+                    try:
+                        res = requests.post(send_url, json=payload, timeout=10)
+                        if res.status_code == 200 and res.json().get("status") == "success":
+                            send_success = True
+                        else:
+                            api_error = res.text
+                            print(f"❌ Local WA send failed in chat.py: {res.text}")
+                    except Exception as e:
+                        api_error = str(e)
+                        print(f"❌ Local WA exception in chat.py: {e}")
             else:
                 print(f"⚠️ Could not fetch credentials for whatsapp_instance_id {whatsapp_instance_id}, falling back to Meta API")
 
