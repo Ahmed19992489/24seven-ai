@@ -138,7 +138,7 @@ async function initSession(id) {
                 
                 if (!msg.key.fromMe && msg.message) {
                     const senderJid = msg.key.remoteJid;
-                    if (senderJid && senderJid.endsWith('@s.whatsapp.net')) {
+                    if (senderJid && (senderJid.endsWith('@s.whatsapp.net') || senderJid.endsWith('@lid'))) {
                         const senderPhone = senderJid.split('@')[0];
                         const senderName = msg.pushName || senderPhone;
                         
