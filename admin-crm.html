@@ -7433,7 +7433,7 @@ async function loadWhatsAppSettings() {
                             <div class="bg-white rounded-xl p-4 text-right space-y-2 border border-slate-100 text-sm">
                                 <p class="text-slate-500">اسم الحساب: <span class="font-bold text-slate-800">${inst.instance_name}</span></p>
                                 <p class="text-slate-500">رقم الهاتف: <span class="font-bold text-slate-800" dir="ltr">+${freshPhone || ''}</span></p>
-                                <p class="text-slate-500">مزود الخدمة: <span class="font-bold text-slate-800">${inst.provider === 'greenapi' ? 'Green API' : 'UltraMsg'}</span></p>
+                                <p class="text-slate-500">مزود الخدمة: <span class="font-bold text-slate-800">${inst.provider === 'greenapi' ? 'Green API' : (inst.provider === 'local' ? 'بوابة محلية (Local)' : 'UltraMsg')}</span></p>
                                 <p class="text-slate-500">معرف الحساب: <span class="font-bold text-slate-800" dir="ltr">${inst.instance_id}</span></p>
                             </div>
                             
