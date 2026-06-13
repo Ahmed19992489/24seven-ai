@@ -607,7 +607,7 @@
         <!-- ========== صفحة صندوق الوارد الموحد (Omnichannel) ========== -->
         <div id="page-omnichannel" class="page-section hidden h-full flex flex-col md:flex-row gap-4 p-4">
             <!-- قائمة المحادثات (اليسار/اليمين) -->
-            <div class="glass-panel w-full md:w-1/3 flex flex-col h-[calc(100vh-100px)]">
+            <div id="omni-chat-list-container" class="glass-panel w-full md:w-1/3 flex flex-col h-[calc(100vh-100px)]">
                 <div class="p-4 border-b border-slate-200">
                     <h2 class="text-xl font-bold flex items-center gap-2">
                         <i class="fas fa-headset text-teal-600"></i> صندوق الوارد الموحد
@@ -632,7 +632,7 @@
             </div>
 
             <!-- نافذة الدردشة الرئيسية -->
-            <div class="glass-panel w-full md:w-2/3 flex flex-col h-[calc(100vh-100px)] relative" id="omni-chat-window">
+            <div class="glass-panel w-full md:w-2/3 md:flex flex-col h-[calc(100vh-100px)] relative hidden" id="omni-chat-window">
                 <!-- شاشة بديلة عند عدم اختيار محادثة -->
                 <div id="omni-no-chat" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 rounded-xl z-10">
                     <i class="fas fa-comments text-6xl text-slate-300 mb-4"></i>
@@ -642,6 +642,9 @@
                 <!-- رأس الدردشة (Header) -->
                 <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-white rounded-t-xl" id="omni-chat-header" style="visibility: hidden;">
                     <div class="flex items-center gap-3">
+                        <button onclick="backToAdminChatList()" class="md:hidden w-8 h-8 rounded-full bg-slate-100 text-slate-500 mr-1 flex items-center justify-center">
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
                         <div class="w-10 h-10 rounded-full bg-teal-100 text-teal-600 flex items-center justify-center font-bold text-lg" id="omni-active-avatar">
                             ع
                         </div>
@@ -5679,6 +5682,21 @@
             renderAdminUnifiedChatList();
         }
 
+        function setAdminUnifiedFilter(type) {
+            adminCurrentUnifiedFilter = type;
+            ['all', 'omni', 'trip', 'support'].forEach(t => {
+                const btn = document.getElementById('admin-filter-chat-' + t);
+                if (btn) {
+                    if (t === type) {
+                        btn.className = 'flex-1 text-center py-1.5 rounded-lg text-[10px] font-bold bg-white shadow text-teal-700 transition';
+                    } else {
+                        btn.className = 'flex-1 text-center py-1.5 rounded-lg text-[10px] font-bold text-gray-500 hover:bg-white transition';
+                    }
+                }
+            });
+            renderAdminUnifiedChatList();
+        }
+
         async function openAdminUnifiedChat(id, type) {
             adminActiveChatId = id;
             adminActiveChatType = type;
@@ -5787,6 +5805,49 @@
                 await loadAdminUnifiedSupportMessages(id);
                 markAdminUnifiedChatAsRead(id, 'support');
             }
+
+            // Mobile view toggle
+            if (window.innerWidth < 768) {
+                const listContainer = document.getElementById('omni-chat-list-container');
+                if (listContainer) {
+                    listContainer.classList.add('hidden');
+                    listContainer.classList.remove('flex');
+                }
+                const win = document.getElementById('omni-chat-window');
+                if (win) {
+                    win.classList.remove('hidden');
+                    win.classList.add('flex');
+                }
+            }
+        }
+
+        function backToAdminChatList() {
+            if (window.innerWidth < 768) {
+                const listContainer = document.getElementById('omni-chat-list-container');
+                if (listContainer) {
+                    listContainer.classList.remove('hidden');
+                    listContainer.classList.add('flex');
+                }
+                const win = document.getElementById('omni-chat-window');
+                if (win) {
+                    win.classList.add('hidden');
+                    win.classList.remove('flex');
+                }
+            }
+        }
+
+        function closeOmniChat() {
+            adminActiveChatId = null;
+            adminActiveChatType = null;
+            
+            document.getElementById('omni-chat-header').style.visibility = 'hidden';
+            document.getElementById('omni-messages-area').style.visibility = 'hidden';
+            document.getElementById('omni-input-area').style.visibility = 'hidden';
+            
+            document.getElementById('omni-no-chat').style.display = 'flex';
+            
+            backToAdminChatList();
+            renderAdminUnifiedChatList();
         }
 
         function appendAdminUnifiedOmniMsg(msg) {
