@@ -1971,7 +1971,7 @@
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${decisionClass} inline-flex items-center gap-1">
                             <i class="fas ${decisionIcon}"></i> ${decision}
                         </span>
-                        ${resObj ? `<button onclick="changeClientDecision(${resObj.id}, '${decision}', '${t.id}', ${resObj.sheet_row || 'null'})" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold border border-blue-200 rounded px-1.5 py-0.5 bg-blue-50/50 hover:bg-blue-50 transition cursor-pointer" title="تعديل قرار العميل">تعديل القرار</button>` : ''}
+                        <button onclick="changeClientDecision('${resObj ? resObj.id : 'null'}', '${decision}', '${t.id}', ${resObj ? (resObj.sheet_row || 'null') : 'null'})" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold border border-blue-200 rounded px-1.5 py-0.5 bg-blue-50/50 hover:bg-blue-50 transition cursor-pointer" title="تعديل قرار العميل">تعديل القرار</button>
                         ${payMethodBadge}
                     </div>
                 `;
@@ -2400,21 +2400,23 @@
                 decisionText = newDecision.trim();
             }
             
+            const cleanResId = (resId && resId !== 'null' && resId !== 'undefined') ? (String(resId).startsWith('gr_') ? Number(resId.replace('gr_', '')) : Number(resId)) : null;
+            
             try {
-                const cleanResId = String(resId).startsWith('gr_') ? Number(resId.replace('gr_', '')) : Number(resId);
-                
                 if (isDelete) {
                     if (!confirm("⚠️ هل أنت متأكد من حذف وإلغاء هذا الحجز بالكامل من السايت؟")) return;
                     
-                    // 1. Soft delete in google_reservations (setting trip_status and status to 'ملغاة')
-                    const { error: resDelErr } = await sbClient.from('google_reservations')
-                        .update({ 
-                            client_decision: 'ملغي',
-                            trip_status: 'ملغاة',
-                            status: 'ملغاة'
-                        })
-                        .eq('id', cleanResId);
-                    if (resDelErr) throw resDelErr;
+                    if (cleanResId && !isNaN(cleanResId)) {
+                        // 1. Soft delete in google_reservations (setting trip_status and status to 'ملغاة')
+                        const { error: resDelErr } = await sbClient.from('google_reservations')
+                            .update({ 
+                                client_decision: 'ملغي',
+                                trip_status: 'ملغاة',
+                                status: 'ملغاة'
+                            })
+                            .eq('id', cleanResId);
+                        if (resDelErr) throw resDelErr;
+                    }
 
                     // 2. Delete the trip from the trips table completely (so it disappears from operations)
                     if (tripId && !String(tripId).startsWith('gr_')) {
@@ -2424,11 +2426,13 @@
                         if (tripDelErr) throw tripDelErr;
                     }
                 } else {
-                    const { error } = await sbClient.from('google_reservations')
-                        .update({ client_decision: decisionText })
-                        .eq('id', cleanResId);
-                        
-                    if (error) throw error;
+                    if (cleanResId && !isNaN(cleanResId)) {
+                        const { error } = await sbClient.from('google_reservations')
+                            .update({ client_decision: decisionText })
+                            .eq('id', cleanResId);
+                            
+                        if (error) throw error;
+                    }
 
                     if (tripId && !String(tripId).startsWith('gr_')) {
                         const { data: tripData } = await sbClient.from('trips')

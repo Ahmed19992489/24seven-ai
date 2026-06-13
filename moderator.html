@@ -3050,21 +3050,23 @@
                 decisionText = newDecision.trim();
             }
             
-            const cleanResId = String(resId).startsWith('gr_') ? Number(resId.replace('gr_', '')) : Number(resId);
+            const cleanResId = (resId && resId !== 'null' && resId !== 'undefined') ? (String(resId).startsWith('gr_') ? Number(resId.replace('gr_', '')) : Number(resId)) : null;
             
             try {
                 if (isDelete) {
                     if (!confirm("⚠️ هل أنت متأكد من حذف وإلغاء هذا الحجز بالكامل من السايت؟")) return;
                     
-                    // 1. Soft delete in google_reservations (setting trip_status and status to 'ملغاة')
-                    const { error: resDelErr } = await sbClient.from('google_reservations')
-                        .update({ 
-                            client_decision: 'ملغي',
-                            trip_status: 'ملغاة',
-                            status: 'ملغاة'
-                        })
-                        .eq('id', cleanResId);
-                    if (resDelErr) throw resDelErr;
+                    if (cleanResId && !isNaN(cleanResId)) {
+                        // 1. Soft delete in google_reservations (setting trip_status and status to 'ملغاة')
+                        const { error: resDelErr } = await sbClient.from('google_reservations')
+                            .update({ 
+                                client_decision: 'ملغي',
+                                trip_status: 'ملغاة',
+                                status: 'ملغاة'
+                            })
+                            .eq('id', cleanResId);
+                        if (resDelErr) throw resDelErr;
+                    }
 
                     // 2. Delete the trip from the trips table completely (so it disappears from operations)
                     if (tripId && !String(tripId).startsWith('gr_')) {
@@ -3074,11 +3076,13 @@
                         if (tripDelErr) throw tripDelErr;
                     }
                 } else {
-                    const { error } = await sbClient.from('google_reservations')
-                        .update({ client_decision: decisionText })
-                        .eq('id', cleanResId);
-                        
-                    if (error) throw error;
+                    if (cleanResId && !isNaN(cleanResId)) {
+                        const { error } = await sbClient.from('google_reservations')
+                            .update({ client_decision: decisionText })
+                            .eq('id', cleanResId);
+                            
+                        if (error) throw error;
+                    }
 
                     if (tripId && !String(tripId).startsWith('gr_')) {
                         const { data: tripData } = await sbClient.from('trips')
