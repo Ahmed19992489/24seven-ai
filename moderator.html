@@ -1936,8 +1936,10 @@
                     `;
                 } else if (rawText.startsWith('MEDIA_AUDIO:')) {
                     const mediaUrl = rawText.substring(12);
+                    const apiBase = getApiBaseUrl() || '';
+                    const fullUrl = mediaUrl.startsWith('http') ? mediaUrl : apiBase + mediaUrl;
                     messageHtml = `
-                        <audio src="${mediaUrl}" controls class="max-w-xs rounded-lg mt-1"></audio>
+                        <audio src="${fullUrl}" controls preload="none" class="max-w-xs rounded-lg mt-1" onerror="this.onerror=null;this.parentElement.innerHTML='<span class=\\'text-xs text-red-300\\'>⚠️ ملف صوتي غير متاح</span>';"></audio>
                     `;
                 } else {
                     messageHtml = `<p class="whitespace-pre-wrap">${escapeHtml(rawText)}</p>`;

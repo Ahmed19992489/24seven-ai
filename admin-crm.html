@@ -5808,7 +5808,7 @@
                 
                 messageHtml = `
                     <div class="flex flex-col gap-1">
-                        <img src="${fullUrl}" class="max-w-xs rounded-xl cursor-pointer border border-slate-200 shadow-sm transition hover:opacity-90" onclick="window.open('${fullUrl}', '_blank')" onerror="this.onerror=null;this.src='${mediaUrl}';" />
+                        <img src="${fullUrl}" class="max-w-xs rounded-xl cursor-pointer border border-slate-200 shadow-sm transition hover:opacity-90" onclick="window.open('${fullUrl}', '_blank')" onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','<span class=\\'text-xs text-red-400\\'>⚠️ صورة غير متاحة</span>');" />
                         ${caption ? `<p class="text-xs mt-1 ${msg.is_from_admin ? 'text-teal-100' : 'text-slate-600'}">${escapeHtml(caption)}</p>` : ''}
                     </div>
                 `;
@@ -5817,7 +5817,7 @@
                 const apiBase = (typeof getStaffApiBaseUrl === 'function') ? (getStaffApiBaseUrl() || '') : '';
                 const fullUrl = mediaUrl.startsWith('http') ? mediaUrl : apiBase + mediaUrl;
                 messageHtml = `
-                    <audio src="${fullUrl}" controls class="max-w-xs rounded-lg mt-1" onerror="this.src='${mediaUrl}';"></audio>
+                    <audio src="${fullUrl}" controls preload="none" class="max-w-xs rounded-lg mt-1" onerror="this.onerror=null;this.parentElement.innerHTML='<span class=\\'text-xs text-red-400\\'>⚠️ ملف صوتي غير متاح</span>';"></audio>
                 `;
             } else {
                 messageHtml = `<p class="text-sm whitespace-pre-wrap">${escapeHtml(rawText)}</p>`;
