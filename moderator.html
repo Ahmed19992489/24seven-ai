@@ -1562,7 +1562,7 @@
             else if (type === 'trip') {
                 inputField.placeholder = "تدخل كمشرف للرحلة...";
                 
-                const chatObj = unifiedChatsList.find(c => c.id === id && c.type === 'trip');
+                const chatObj = unifiedChatsList.find(c => String(c.id) === String(id) && c.type === 'trip');
                 const clientName = chatObj?.extra?.clientName || 'العميل';
                 const driverName = chatObj?.extra?.driverName || 'الكابتن';
                 const from = chatObj?.extra?.from || '';
@@ -1614,7 +1614,7 @@
             else if (type === 'support') {
                 inputField.placeholder = "رد الموديتور...";
 
-                const chatObj = unifiedChatsList.find(c => c.id === id && c.type === 'support');
+                const chatObj = unifiedChatsList.find(c => String(c.id) === String(id) && c.type === 'support');
                 const clientName = chatObj?.name || 'عميل الموقع';
 
                 document.getElementById('chat-name').innerHTML = `🎟️ ${clientName}`;
@@ -1629,6 +1629,13 @@
 
                 await loadUnifiedSupportMessages(id);
                 subscribeSupportChatUnified(id);
+            }
+
+            // Mobile view toggle
+            if (window.innerWidth < 1024) {
+                document.getElementById('chat-list-container').classList.add('hidden');
+                document.getElementById('chat-window-container').classList.remove('hidden');
+                document.getElementById('chat-window-container').classList.add('flex');
             }
 
             messagesArea.scrollTop = messagesArea.scrollHeight;
@@ -1686,7 +1693,7 @@
             let msgContent = msg.message;
             if (msg.message_type === 'location') {
                 msgContent = `📍 <a href="https://maps.google.com/?q=${msg.location_lat},${msg.location_lng}" target="_blank" class="text-blue-600 underline font-bold">فتح الموقع</a>`;
-            } else if ((msg.message_type === 'admin_request' && msg.message.includes('يطلب تغيير الوجهة إلى:')) || (msg.message_type === 'system' && msg.message.includes('⚠️ طلب تغيير وجهة:'))) {
+            } else if ((msg.message_type === 'admin_request' && msg.message && msg.message.includes('يطلب تغيير الوجهة إلى:')) || (msg.message_type === 'system' && msg.message && msg.message.includes('⚠️ طلب تغيير وجهة:'))) {
                 let newD = '';
                 if (msg.message_type === 'admin_request') {
                     const match = msg.message.match(/إلى:\s*(.*)/);
@@ -4576,7 +4583,7 @@ ${contextData}
 
             if (msg.message_type === 'location') {
                 div.innerHTML += `📍 <a href="https://maps.google.com/?q=${msg.location_lat},${msg.location_lng}" target="_blank" style="color:#2563eb;text-decoration:underline">فتح الموقع</a>`;
-            } else if ((msg.message_type === 'admin_request' && msg.message.includes('يطلب تغيير الوجهة إلى:')) || (msg.message_type === 'system' && msg.message.includes('⚠️ طلب تغيير وجهة:'))) {
+            } else if ((msg.message_type === 'admin_request' && msg.message && msg.message.includes('يطلب تغيير الوجهة إلى:')) || (msg.message_type === 'system' && msg.message && msg.message.includes('⚠️ طلب تغيير وجهة:'))) {
                 let newD = '';
                 if (msg.message_type === 'admin_request') {
                     const match = msg.message.match(/إلى:\s*(.*)/);

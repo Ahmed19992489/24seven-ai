@@ -1782,20 +1782,20 @@
                         let lastRequest = null;
                         let lastResponse = null;
                         msgs.forEach(m => {
-                            if (m.message_type === 'admin_request' && m.message.includes('يطلب تغيير الوجهة إلى:')) {
+                            if (m.message_type === 'admin_request' && m.message && m.message.includes('يطلب تغيير الوجهة إلى:')) {
                                 const match = m.message.match(/إلى:\s*(.*)/);
                                 if (match) {
                                     lastRequest = { newDest: match[1].trim(), time: new Date(m.created_at) };
                                     lastResponse = null;
                                 }
-                            } else if (m.message_type === 'system' && m.message.includes('⚠️ طلب تغيير وجهة:')) {
+                            } else if (m.message_type === 'system' && m.message && m.message.includes('⚠️ طلب تغيير وجهة:')) {
                                 const lines = m.message.split('\n');
                                 const newD = lines[1] ? lines[1].trim() : '';
                                 if (newD) {
                                     lastRequest = { newDest: newD, time: new Date(m.created_at) };
                                     lastResponse = null;
                                 }
-                            } else if (m.message_type === 'system' && (m.message.includes('وافقت على تغيير الوجهة') || m.message.includes('تم تعديل الوجهة') || m.message.includes('رفضت طلب تغيير الوجهة') || m.message.includes('رفض طلب تغيير الوجهة'))) {
+                            } else if (m.message_type === 'system' && m.message && (m.message.includes('وافقت على تغيير الوجهة') || m.message.includes('تم تعديل الوجهة') || m.message.includes('رفضت طلب تغيير الوجهة') || m.message.includes('رفض طلب تغيير الوجهة'))) {
                                 lastResponse = m;
                             }
                         });
@@ -3980,7 +3980,7 @@
 
             if (msg.message_type === 'location') {
                 div.innerHTML += `📍 <a href="https://maps.google.com/?q=${msg.location_lat},${msg.location_lng}" target="_blank" style="color:#2563eb;text-decoration:underline">فتح الموقع في خرائط جوجل</a>`;
-            } else if ((msg.message_type === 'admin_request' && msg.message.includes('يطلب تغيير الوجهة إلى:')) || (msg.message_type === 'system' && msg.message.includes('⚠️ طلب تغيير وجهة:'))) {
+            } else if ((msg.message_type === 'admin_request' && msg.message && msg.message.includes('يطلب تغيير الوجهة إلى:')) || (msg.message_type === 'system' && msg.message && msg.message.includes('⚠️ طلب تغيير وجهة:'))) {
                 let newD = '';
                 if (msg.message_type === 'admin_request') {
                     const match = msg.message.match(/إلى:\s*(.*)/);
@@ -5707,7 +5707,7 @@
 
             messagesArea.innerHTML = '<div class="text-center text-slate-400 py-10"><i class="fas fa-spinner fa-spin text-2xl"></i><br>جاري تحميل الرسائل...</div>';
 
-            const chatObj = adminUnifiedChatsList.find(c => c.id === id && c.type === type);
+            const chatObj = adminUnifiedChatsList.find(c => String(c.id) === String(id) && c.type === type);
 
             if (type === 'omni') {
                 const group = adminGroupedChats[id];
@@ -5887,7 +5887,7 @@
             let msgContent = msg.message;
             if (msg.message_type === 'location') {
                 msgContent = `📍 <a href="https://maps.google.com/?q=${msg.location_lat},${msg.location_lng}" target="_blank" class="text-blue-600 underline font-bold">فتح الموقع</a>`;
-            } else if ((msg.message_type === 'admin_request' && msg.message.includes('يطلب تغيير الوجهة إلى:')) || (msg.message_type === 'system' && msg.message.includes('⚠️ طلب تغيير وجهة:'))) {
+            } else if ((msg.message_type === 'admin_request' && msg.message && msg.message.includes('يطلب تغيير الوجهة إلى:')) || (msg.message_type === 'system' && msg.message && msg.message.includes('⚠️ طلب تغيير وجهة:'))) {
                 let newD = '';
                 if (msg.message_type === 'admin_request') {
                     const match = msg.message.match(/إلى:\s*(.*)/);
