@@ -299,8 +299,8 @@ async def send_omnichannel_reply(
             except Exception as tc_err:
                 print(f"[IG-Handover] Exception: {tc_err}")
 
-            # Step 2: Send the message
-            url = f"https://graph.instagram.com/v18.0/me/messages?access_token={INSTAGRAM_TOKEN}"
+            # Step 2: Send the message using the permanent FB Page Token
+            url = f"https://graph.facebook.com/v18.0/me/messages?access_token={FB_PAGE_TOKEN}"
             headers = {"Content-Type": "application/json"}
             payload = { "recipient": {"id": data.sender_id}, "message": {"text": data.message} }
             try:
@@ -314,19 +314,7 @@ async def send_omnichannel_reply(
                     err_code = err_json.get('error', {}).get('error_subcode', 0)
                     if err_code == 2534037:
                         api_error = "instagram_handover_error"
-                        print("[IG-HANDOVER] App has no thread control. Attempting send via FB Page token...")
-                        # Retry with Facebook Page token
-                        try:
-                            fb_url = f"https://graph.facebook.com/v18.0/me/messages?access_token={FB_PAGE_TOKEN}"
-                            fb_r = requests.post(fb_url, headers=headers, json=payload, timeout=10)
-                            if fb_r.status_code == 200:
-                                send_success = True
-                                api_error = ""
-                                print(f"[IG-HANDOVER] Retry via FB token succeeded for {data.sender_id}")
-                            else:
-                                print(f"[IG-HANDOVER] Retry via FB token also failed: {fb_r.status_code} {fb_r.text}")
-                        except Exception as fb_err:
-                            print(f"[IG-HANDOVER] FB token retry exception: {fb_err}")
+                        print("[IG-HANDOVER] App has no thread control.")
                     elif err_code == 2534022:
                         api_error = "instagram_window_expired"
                         print(f"[IG-WINDOW] 24-hour messaging window expired for {data.sender_id}")
