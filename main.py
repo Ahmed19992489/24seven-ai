@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, Request, Query
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -100,7 +100,16 @@ async def add_security_headers(request: Request, call_next):
 # أ) إعداد مجلد static (للملفات العامة CSS/JS)
 static_path = BASE_DIR / "static"
 upload_path = static_path / "uploads"
-os.makedirs(upload_path, exist_ok=True) 
+os.makedirs(upload_path, exist_ok=True)
+
+# [FIX] Fallback for uploads: if not found locally, redirect to production server
+@app.get("/static/uploads/{filename}")
+async def serve_or_redirect_upload(filename: str):
+    local_file = upload_path / filename
+    if local_file.exists():
+        return FileResponse(str(local_file))
+    return RedirectResponse(f"https://24seven-ai.com/static/uploads/{filename}")
+
 app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 
 # ب) إعداد مجلد images (لصور السيارات واللوجوهات) ✅
