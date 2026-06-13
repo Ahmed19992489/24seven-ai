@@ -6217,6 +6217,9 @@
                 throw new Error(errorTxt);
             }
 
+            let resJson = {};
+            try { resJson = await res.json(); } catch(e) {}
+
             const tempMsg = {
                 id: 'temp_' + Date.now(),
                 channel: channel,
@@ -6234,6 +6237,10 @@
             }
             appendAdminUnifiedOmniMsg(tempMsg);
             scrollToOmniBottom();
+
+            if (resJson.status === 'warning') {
+                alert(resJson.message || '⚠️ تم حفظ الرسالة لكن لم تُرسل للعميل.');
+            }
         }
 
         async function sendOmniReply(e) {

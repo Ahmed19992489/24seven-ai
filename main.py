@@ -343,6 +343,20 @@ async def send_reply_direct(data: dict):
             print(f"❌ Messenger exception: {e}")
 
     elif channel == "instagram":
+        # Step 1: Try to take thread control (Handover Protocol)
+        try:
+            take_url = f"https://graph.facebook.com/v18.0/me/take_thread_control"
+            take_payload = {"recipient": {"id": sender_id}}
+            tc_res = _req.post(take_url, headers={"Content-Type": "application/json"},
+                              params={"access_token": _FB_TOKEN}, json=take_payload, timeout=5)
+            if tc_res.status_code == 200:
+                print(f"[IG-Handover] Successfully took thread control for {sender_id}")
+            else:
+                print(f"[IG-Handover] take_thread_control: {tc_res.status_code} {tc_res.text}")
+        except Exception as tc_err:
+            print(f"[IG-Handover] Exception: {tc_err}")
+
+        # Step 2: Send the message
         url = f"https://graph.instagram.com/v18.0/me/messages?access_token={_IG_TOKEN}"
         payload = {"recipient": {"id": sender_id}, "message": {"text": message}}
         try:
@@ -363,10 +377,25 @@ async def send_reply_direct(data: dict):
                 err_code = err_json.get('error', {}).get('error_subcode', 0)
                 if err_code == 2534037:
                     api_error = "instagram_handover_error"
-                    print("[IG-HANDOVER->Render] App has no thread control. Set App as Primary Receiver in Facebook settings.")
+                    print("[IG-HANDOVER] App has no thread control. Attempting send via FB Page token...")
+                    # Retry with Facebook Page token
+                    try:
+                        fb_url = f"https://graph.facebook.com/v18.0/me/messages?access_token={_FB_TOKEN}"
+                        fb_r = _req.post(fb_url, headers={"Content-Type": "application/json"}, json=payload, timeout=10)
+                        if fb_r.status_code == 200:
+                            send_success = True
+                            api_error = ""
+                            print(f"[IG-HANDOVER] Retry via FB token succeeded for {sender_id}")
+                        else:
+                            print(f"[IG-HANDOVER] Retry via FB token also failed: {fb_r.status_code} {fb_r.text}")
+                    except Exception as fb_err:
+                        print(f"[IG-HANDOVER] FB token retry exception: {fb_err}")
+                elif err_code == 2534022:
+                    api_error = "instagram_window_expired"
+                    print(f"[IG-WINDOW] 24-hour messaging window expired for {sender_id}")
                 elif err_code == 2534048:
                     api_error = "instagram_dev_mode"
-                    print("[IG-DEV-MODE->Render] App in Dev Mode - recipient has no role on app.")
+                    print("[IG-DEV-MODE] App in Dev Mode - recipient has no role on app.")
                 else:
                     api_error = r.text
                     print(f"❌ Instagram Send failed: {r.text}")
@@ -397,6 +426,11 @@ async def send_reply_direct(data: dict):
         return {
             "status": "warning",
             "message": "تم حفظ الرسالة، لكن لم تُرسل للعميل. يرجى الذهاب لإعدادات صفحة فيسبوك -> Advanced Messaging وتعيين تطبيقك كـ Primary Receiver للإنستجرام."
+        }
+    elif api_error == "instagram_window_expired":
+        return {
+            "status": "warning",
+            "message": "⚠️ انتهت مهلة الـ 24 ساعة! لا يمكن الرد على هذا العميل لأنه لم يرسل رسالة خلال آخر 24 ساعة. يرجى الرد عليه من تطبيق Instagram مباشرة أو انتظار رسالة جديدة منه."
         }
     elif api_error == "instagram_dev_mode":
         return {

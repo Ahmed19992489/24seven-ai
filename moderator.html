@@ -2270,7 +2270,7 @@
             loadUnifiedChats();
 
             if (resJson.status === 'warning') {
-                showToast('⚠️ إنستجرام (Dev Mode): الرسالة ظهرت في المحادثة لكن لم تُرسل للعميل. يحتاج التطبيق Advanced Access من Meta.', 'warning');
+                showToast(resJson.message || '⚠️ تم حفظ الرسالة لكن لم تُرسل للعميل.', 'warning');
             }
         }
 
