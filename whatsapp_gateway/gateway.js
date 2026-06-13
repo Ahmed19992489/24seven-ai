@@ -1,6 +1,7 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, downloadMediaMessage } = require('@whiskeysockets/baileys');
 const express = require('express');
 const cors = require('cors');
+
 const qrcode = require('qrcode');
 const pino = require('pino');
 const axios = require('axios');
@@ -26,6 +27,13 @@ const SESSIONS_DIR = path.join(__dirname, 'sessions');
 if (!fs.existsSync(SESSIONS_DIR)) {
     fs.mkdirSync(SESSIONS_DIR);
 }
+
+// Ensure uploads directory exists
+const UPLOADS_DIR = path.join(__dirname, '..', 'static', 'uploads');
+if (!fs.existsSync(UPLOADS_DIR)) {
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
 
 // In-memory store for active sessions
 // Structure: { [id]: { sock, status: 'init'|'connected'|'disconnected', qr: '', phone: '' } }
@@ -139,7 +147,22 @@ async function initSession(id) {
                 if (!msg.key.fromMe && msg.message) {
                     const senderJid = msg.key.remoteJid;
                     if (senderJid && (senderJid.endsWith('@s.whatsapp.net') || senderJid.endsWith('@lid'))) {
-                        const senderPhone = senderJid.split('@')[0];
+                        let resolvedJid = senderJid;
+                        let senderPhone = senderJid.split('@')[0];
+                        
+                        if (senderJid.endsWith('@lid')) {
+                            try {
+                                const [result] = await sock.onWhatsApp(senderJid);
+                                if (result && result.exists && result.jid) {
+                                    resolvedJid = result.jid;
+                                    senderPhone = resolvedJid.split('@')[0];
+                                    console.log(`[Gateway] Resolved LID ${senderJid} to phone JID ${resolvedJid} (Phone: ${senderPhone})`);
+                                }
+                            } catch (lidErr) {
+                                console.warn(`[Gateway Warning] Failed to resolve LID JID ${senderJid}:`, lidErr.message);
+                            }
+                        }
+
                         const senderName = msg.pushName || senderPhone;
                         
                         // Extract message content, unwrapping ephemeral or view-once wrappers
@@ -156,31 +179,77 @@ async function initSession(id) {
                         
                         // Extract text content
                         let text = '';
-                        if (messageContent.conversation) {
-                            text = messageContent.conversation;
-                        } else if (messageContent.extendedTextMessage) {
-                            text = messageContent.extendedTextMessage.text;
-                        } else if (messageContent.imageMessage) {
-                            text = messageContent.imageMessage.caption || '[صورة / Image]';
-                        } else if (messageContent.videoMessage) {
-                            text = messageContent.videoMessage.caption || '[فيديو / Video]';
-                        } else if (messageContent.documentMessage) {
-                            text = messageContent.documentMessage.caption || '[ملف / Document]';
-                        } else if (messageContent.buttonsResponseMessage) {
-                            text = messageContent.buttonsResponseMessage.selectedButtonId;
-                        } else if (messageContent.templateButtonReplyMessage) {
-                            text = messageContent.templateButtonReplyMessage.selectedId;
-                        } else if (messageContent.listResponseMessage) {
-                            text = messageContent.listResponseMessage.title;
-                        } else {
-                            // If we don't recognize the structure, try to check if there is a caption or text property
-                            console.log(`[Gateway Debug] Unhandled message types:`, Object.keys(messageContent));
-                            text = '[رسالة وسائط]';
+                        let mediaType = null;
+                        let fileExtension = '';
+
+                        if (messageContent.imageMessage) {
+                            mediaType = 'image';
+                            const mime = messageContent.imageMessage.mimetype || 'image/jpeg';
+                            fileExtension = mime.split('/')[1] || 'jpg';
+                            if (fileExtension === 'jpeg') fileExtension = 'jpg';
+                        } else if (messageContent.audioMessage) {
+                            mediaType = 'audio';
+                            const mime = messageContent.audioMessage.mimetype || 'audio/ogg';
+                            fileExtension = mime.includes('ogg') ? 'ogg' : 'mp3';
+                        }
+
+                        if (mediaType) {
+                            try {
+                                const buffer = await downloadMediaMessage(
+                                    msg,
+                                    'buffer',
+                                    {},
+                                    {
+                                        logger: pino({ level: 'silent' }),
+                                        reuploadRequest: sock.updateMediaMessage
+                                    }
+                                );
+                                if (buffer) {
+                                    const fileName = `${mediaType}_${Date.now()}_${Math.floor(Math.random() * 10000)}.${fileExtension}`;
+                                    const filePath = path.join(UPLOADS_DIR, fileName);
+                                    fs.writeFileSync(filePath, buffer);
+                                    console.log(`[Gateway] Downloaded and saved incoming media to ${filePath}`);
+                                    
+                                    const relativeUrl = `/static/uploads/${fileName}`;
+                                    if (mediaType === 'image') {
+                                        const caption = messageContent.imageMessage.caption || '';
+                                        text = `MEDIA_IMAGE:${relativeUrl}${caption ? '|CAPTION:' + caption : ''}`;
+                                    } else {
+                                        text = `MEDIA_AUDIO:${relativeUrl}`;
+                                    }
+                                }
+                            } catch (mediaErr) {
+                                console.error(`[Gateway Error] Failed to download/save media:`, mediaErr.message);
+                            }
+                        }
+
+                        if (!text) {
+                            if (messageContent.conversation) {
+                                text = messageContent.conversation;
+                            } else if (messageContent.extendedTextMessage) {
+                                text = messageContent.extendedTextMessage.text;
+                            } else if (messageContent.imageMessage) {
+                                text = messageContent.imageMessage.caption || '[صورة / Image]';
+                            } else if (messageContent.videoMessage) {
+                                text = messageContent.videoMessage.caption || '[فيديو / Video]';
+                            } else if (messageContent.documentMessage) {
+                                text = messageContent.documentMessage.caption || '[ملف / Document]';
+                            } else if (messageContent.buttonsResponseMessage) {
+                                text = messageContent.buttonsResponseMessage.selectedButtonId;
+                            } else if (messageContent.templateButtonReplyMessage) {
+                                text = messageContent.templateButtonReplyMessage.selectedId;
+                            } else if (messageContent.listResponseMessage) {
+                                text = messageContent.listResponseMessage.title;
+                            } else {
+                                console.log(`[Gateway Debug] Unhandled message types:`, Object.keys(messageContent));
+                                text = '[رسالة وسائط]';
+                            }
                         }
 
                         if (!text) continue;
 
                         console.log(`[Gateway] Incoming msg from ${senderPhone} (Session ${id}): ${text}`);
+
                         
                         // Forward to Python backend
                         try {
@@ -288,16 +357,88 @@ app.post('/instance/:id/send', async (req, res) => {
     try {
         // Format destination JID: split by @ or just use number
         let phone = to.replace('+', '').replace('0020', '20').replace('@c.us', '');
-        const jid = `${phone}@s.whatsapp.net`;
         
-        await session.sock.sendMessage(jid, { text: message });
-        console.log(`[Gateway] Msg sent to ${phone} via session ${id}: ${message}`);
+        // Smart JID resolution: detect LID numbers vs phone numbers
+        let jid;
+        
+        // Check if this looks like a standard phone number (starts with country code) and has less than 14 digits
+        const looksLikePhone = /^(1|2[0-9]|3[0-9]|4[0-9]|5[0-9]|6[0-9]|7[0-9]|8[0-9]|9[0-9])\d{6,13}$/.test(phone) && phone.length < 14;
+        
+        if (looksLikePhone) {
+            // Standard phone number - use @s.whatsapp.net
+            jid = `${phone}@s.whatsapp.net`;
+        } else {
+            // Likely a LID number - try to resolve it first
+            try {
+                const [result] = await session.sock.onWhatsApp(`${phone}@lid`);
+                if (result && result.exists && result.jid) {
+                    jid = result.jid;
+                    console.log(`[Gateway] Resolved LID ${phone} to JID ${jid}`);
+                } else {
+                    jid = `${phone}@lid`;
+                    console.log(`[Gateway] Using LID JID for ${phone} (onWhatsApp lookup failed)`);
+                }
+            } catch (resolveErr) {
+                jid = `${phone}@lid`;
+                console.log(`[Gateway] Fallback to LID JID for ${phone}: ${resolveErr.message}`);
+            }
+        }
+        
+        console.log(`[Gateway] Sending to JID: ${jid}`);
+        
+        if (message.startsWith('MEDIA_IMAGE:')) {
+            const parts = message.substring(12).split('|CAPTION:');
+            const mediaUrl = parts[0];
+            const caption = parts[1] || '';
+            
+            const relativePath = mediaUrl.replace(/^\//, '');
+            const localFilePath = path.join(__dirname, '..', relativePath);
+            
+            if (fs.existsSync(localFilePath)) {
+                await session.sock.sendMessage(jid, { 
+                    image: fs.readFileSync(localFilePath), 
+                    caption: caption 
+                });
+            } else {
+                const fullUrl = `${PYTHON_BACKEND_URL}${mediaUrl}`;
+                await session.sock.sendMessage(jid, { 
+                    image: { url: fullUrl }, 
+                    caption: caption 
+                });
+            }
+            console.log(`[Gateway] Image sent to ${phone} via session ${id}: ${mediaUrl}`);
+        } else if (message.startsWith('MEDIA_AUDIO:')) {
+            const mediaUrl = message.substring(12);
+            const relativePath = mediaUrl.replace(/^\//, '');
+            const localFilePath = path.join(__dirname, '..', relativePath);
+            
+            if (fs.existsSync(localFilePath)) {
+                await session.sock.sendMessage(jid, { 
+                    audio: fs.readFileSync(localFilePath), 
+                    mimetype: 'audio/mp4', 
+                    ptt: true 
+                });
+            } else {
+                const fullUrl = `${PYTHON_BACKEND_URL}${mediaUrl}`;
+                await session.sock.sendMessage(jid, { 
+                    audio: { url: fullUrl }, 
+                    mimetype: 'audio/mp4', 
+                    ptt: true 
+                });
+            }
+            console.log(`[Gateway] Voice note sent to ${phone} via session ${id}: ${mediaUrl}`);
+        } else {
+            await session.sock.sendMessage(jid, { text: message });
+            console.log(`[Gateway] Msg sent to ${phone} via session ${id}: ${message}`);
+        }
+        
         return res.json({ status: 'success' });
     } catch (err) {
         console.error(`[Gateway Error] Failed to send message via ${id}:`, err.message);
         return res.status(500).json({ status: 'error', message: err.message });
     }
 });
+
 
 // Logout and delete instance
 app.post('/instance/:id/logout', async (req, res) => {
