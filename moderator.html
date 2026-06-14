@@ -2977,6 +2977,9 @@
                 if (r.sql_server_id && existingTripIds.has(String(r.sql_server_id))) {
                     return false;
                 }
+                if (existingTripIds.has(String(r.id))) {
+                    return false;
+                }
                 if (r.modified_driver_name && r.modified_driver_name.trim() !== '' && r.modified_driver_name !== '--') {
                     return false;
                 }
@@ -3321,6 +3324,9 @@
             const existingTripIds = new Set(trips.map(t => String(t.id)));
             const filteredReservations = reservations.filter(r => {
                 if (r.sql_server_id && existingTripIds.has(String(r.sql_server_id))) {
+                    return false;
+                }
+                if (existingTripIds.has(String(r.id))) {
                     return false;
                 }
                 if (r.modified_driver_name && r.modified_driver_name.trim() !== '' && r.modified_driver_name !== '--') {

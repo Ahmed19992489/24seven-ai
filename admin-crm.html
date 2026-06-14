@@ -1718,6 +1718,9 @@
                     if (r.sql_server_id && existingTripIds.has(String(r.sql_server_id))) {
                         return false;
                     }
+                    if (existingTripIds.has(String(r.id))) {
+                        return false;
+                    }
                     
                     // إذا كان الحجز له كابتن أو مكتب معين بالفعل في الشيت، نقوم بإخفائه (حتى لا يتم تعيينه مرتين)
                     if (r.modified_driver_name && r.modified_driver_name.trim() !== '' && r.modified_driver_name !== '--') {
@@ -1910,7 +1913,7 @@
                 if (t.is_google_res) {
                     resObj = resByIdMap[t.google_res_id] || null;
                 } else {
-                    resObj = resBySqlIdMap[String(t.id)] || null;
+                    resObj = resByIdMap[String(t.id)] || resBySqlIdMap[String(t.id)] || null;
                     if (!resObj && t.admin_notes) {
                         const rowMatch = t.admin_notes.match(/حجز شيت صف\s*(\d+)/);
                         if (rowMatch) {
@@ -7023,7 +7026,7 @@ async function confirmResAssign() {
                 action: 'assignDriver', 
                 sheetRow: r.sheet_row, 
                 webId: r.id,             // Supabase Reservation ID (Column Q)
-                sqlId: r.sql_server_id,   // REAL SQL ID (Column U - e.g. 9178)
+                sqlId: String(newTrip.id),   // REAL SQL ID (Column U)
                 driverName, 
                 driverPhone 
             })

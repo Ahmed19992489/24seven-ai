@@ -1622,6 +1622,7 @@
                 const whatsappVal = document.getElementById('guest-whatsapp')?.value || phone;
                 const insertedTripId = insertedTrips && insertedTrips.length > 0 ? insertedTrips[0].id : '';
                 sendToGoogleSheet({
+                    webId: insertedTripId,
                     sqlId: insertedTripId,
                     tripDate: tripData.date || '',
                     tripTime: tripData.time || '',
