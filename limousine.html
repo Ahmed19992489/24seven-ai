@@ -3488,15 +3488,16 @@
 let clientCallSystem = null;
 
 function initClientCallSystem() {
-    if (!window.user || clientCallSystem) return;
+    const currentUser = window.user || (typeof user !== 'undefined' ? user : null);
+    if (!currentUser || clientCallSystem) return;
     clientCallSystem = new CallSystem(
         sb,
-        'client_' + window.user.id,
+        'client_' + currentUser.id,
         (document.getElementById('header-user-name')?.innerText) || 'عميل',
         'client'
     );
     window.__callSystem = clientCallSystem;
-    console.log('[CallSystem] Client initialized:', window.user.id);
+    console.log('[CallSystem] Client initialized:', currentUser.id);
     requestClientPushPermission();
 }
 
@@ -3513,8 +3514,14 @@ async function requestClientPushPermission() {
 // دالة الاتصال بالكابتن (تُستدعى من زر الاتصال في كرت الرحلة)
 function clientCallDriver(driverId, driverName) {
     if (!clientCallSystem) {
-        alert('يرجى الانتظار... نظام المكالمات يتهيأ');
         initClientCallSystem();
+        setTimeout(() => {
+            if (clientCallSystem) {
+                clientCallDriver(driverId, driverName);
+            } else {
+                alert('يرجى الانتظار... نظام المكالمات يتهيأ');
+            }
+        }, 800);
         return;
     }
     if (!driverId) {
@@ -3532,7 +3539,8 @@ window.handleUserSignedIn = async function(session) {
 };
 
 // لو المستخدم بالفعل مسجل دخول
-if (typeof window.user !== 'undefined' && window.user) {
+const currentUser = window.user || (typeof user !== 'undefined' ? user : null);
+if (currentUser) {
     setTimeout(initClientCallSystem, 1000);
 }
 
