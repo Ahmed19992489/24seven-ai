@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 
 <head>
@@ -876,9 +876,16 @@
 
             progressHtml += `<div class="mt-3">${actionBtn}</div>`;
 
-            // زرار الدردشة دايماً ظاهر
+            // أزرار الدردشة والاتصال
             let clientName = t.manual_client_name || 'العميل';
-            progressHtml += `<button onclick="openDriverChat('${tid}', '${clientName}')" class="w-full mt-2 bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-xl text-xs font-bold transition"><i class="fas fa-comment ml-1"></i> فتح الدردشة</button>`;
+            const clientUserId = t.user_id || '';
+            progressHtml += `
+            <div class="flex gap-2 mt-2">
+                <button onclick="openDriverChat('${tid}', '${clientName}')" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1">
+                    <i class="fas fa-comment"></i> دردشة
+                </button>
+                ${clientUserId ? `<button onclick="driverCallClient('${clientUserId}', '${clientName}')" class="flex-1 bg-green-700/50 hover:bg-green-600 border border-green-500/40 text-green-300 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"><i class="fas fa-phone"></i> اتصال</button>` : ''}
+            </div>`;
             progressHtml += `</div>`;
             return progressHtml;
         }
@@ -1802,6 +1809,68 @@
                 }
             }
         }, 3000);
+    </script>
+
+    <!-- نظام المكالمات الداخلية -->
+    <script src="/call-system.js"></script>
+    <script>
+    // تهيئة نظام المكالمات للكابتن
+    let driverCallSystem = null;
+
+    function initDriverCallSystem() {
+        if (!currentDriver || driverCallSystem) return;
+        driverCallSystem = new CallSystem(
+            sb,
+            'driver_' + currentDriver.id,
+            currentDriver.name || 'كابتن',
+            'driver'
+        );
+        window.__callSystem = driverCallSystem;
+        console.log('[CallSystem] Driver:', currentDriver.name);
+        requestPushPermission();
+    }
+
+    async function requestPushPermission() {
+        if (!('Notification' in window)) return;
+        if (Notification.permission === 'default') {
+            await Notification.requestPermission();
+        }
+        if ('serviceWorker' in navigator) {
+            try { await navigator.serviceWorker.register('/sw.js'); } catch(e) {}
+        }
+    }
+
+    // تعديل showDriverApp ليهيئ المكالمات بعد الدخول
+    const _origShowDriverApp = window.showDriverApp;
+    window.showDriverApp = function() {
+        if (_origShowDriverApp) _origShowDriverApp();
+        setTimeout(initDriverCallSystem, 600);
+    };
+
+    // لو كان مسجل دخول بالفعل
+    if (typeof currentDriver !== 'undefined' && currentDriver) {
+        setTimeout(initDriverCallSystem, 900);
+    }
+
+    // دالة الاتصال بالعميل من الكابتن
+    function driverCallClient(clientUserId, clientName) {
+        if (!driverCallSystem) {
+            initDriverCallSystem();
+            setTimeout(() => driverCallClient(clientUserId, clientName), 1000);
+            return;
+        }
+        if (!clientUserId) { alert('الرحلة غير مرتبطة بحساب عميل'); return; }
+        driverCallSystem.startCall('client_' + clientUserId, clientName || 'العميل', 'client');
+    }
+
+    // استقبال رسائل Service Worker
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.addEventListener('message', (e) => {
+            if (e.data && e.data.type === 'PUSH_CLICK') {
+                console.log('[Push Click]', e.data.data);
+            }
+        });
+    }
     </script>
 
 </body>

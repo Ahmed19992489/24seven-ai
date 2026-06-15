@@ -1668,7 +1668,7 @@
             // 1. Fetch assigned/completed trips from 'trips'
             const { data: trips, error } = await sb
                 .from('trips')
-                .select('*, drivers:drivers!fk_trips_driver(*), cars:cars!fk_trips_car(*)')
+                .select('*, driver_id, drivers:drivers!fk_trips_driver(*), cars:cars!fk_trips_car(*)')
                 .eq('user_id', user.id)
                 .order('created_at', { ascending: false });
 
@@ -2001,7 +2001,7 @@
                     </div>`;
                 }
 
-                // زر دردشة الرحلة - يظهر للرحلات المعيّن لها كابتن (يدعم google_reservations باستخدام sql_server_id)
+                // زر دردشة ومكالمة الرحلة - يظهر للرحلات المعيّن لها كابتن
                 let chatBtnHtml = '';
                 const realTripId = String(t.id).startsWith('gr_') ? t.sql_server_id : t.id;
                 if (t.drivers && t.drivers.name && realTripId && status !== 'completed' && status !== 'trip_ended' && status !== 'cancelled' && status !== 'rejected') {
@@ -2010,12 +2010,20 @@
                         dName = 'قسم التشغيل';
                     }
                     dName = dName.replace(/'/g, '');
+                    // استخدام ID الكابتن من الـ join (drivers.id) أو من t.driver_id
+                    const driverId = t.drivers?.id || t.driver_id || '';
                     chatBtnHtml = `
-                    <div class="mt-3 pt-3 border-t border-slate-700 text-center">
-                        <button onclick="openClientChat('${realTripId}', '${dName}')"
-                            class="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600/20 border border-blue-500/40 text-blue-400 rounded-xl text-xs font-bold hover:bg-blue-600 hover:text-white transition">
-                            <i class="fas fa-comments"></i> دردشة الرحلة
-                        </button>
+                    <div class="mt-3 pt-3 border-t border-slate-700">
+                        <div class="flex gap-2">
+                            <button onclick="openClientChat('${realTripId}', '${dName}')"
+                                class="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-600/20 border border-blue-500/40 text-blue-400 rounded-xl text-xs font-bold hover:bg-blue-600 hover:text-white transition">
+                                <i class="fas fa-comments"></i> دردشة
+                            </button>
+                            ${driverId ? `<button onclick="clientCallDriver('${driverId}', '${dName}')"
+                                class="flex-1 flex items-center justify-center gap-2 py-2.5 bg-green-600/20 border border-green-500/40 text-green-400 rounded-xl text-xs font-bold hover:bg-green-600 hover:text-white transition">
+                                <i class="fas fa-phone"></i> اتصال بالكابتن
+                            </button>` : ''}
+                        </div>
                     </div>`;
                 }
 
@@ -3460,11 +3468,82 @@
             </div>
         </div>
 
-        <!-- Floating Button -->
-        <button id="widget-chat-btn" onclick="toggleWidgetChat()" class="w-14 h-14 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-full shadow-[0_10px_25px_rgba(79,70,229,0.5)] flex justify-center items-center text-xl hover:scale-110 active:scale-95 transition-all duration-300 relative border-2 border-white">
-            <i class="fas fa-headphones-alt"></i>
-            <span id="widget-chat-badge" class="hidden absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex justify-center items-center rounded-full border border-white animate-pulse">!</span>
-        </button>
+        <div class="flex gap-2">
+            <!-- Call Button (Targeting driver ID from context) -->
+            <button id="widget-call-btn" onclick="clientCallDriver(currentTrip?.driver_id, currentTrip?.driver_name)" class="w-14 h-14 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white rounded-full shadow-[0_10px_25px_rgba(5,150,105,0.4)] flex justify-center items-center text-xl hover:scale-110 active:scale-95 transition-all duration-300 border-2 border-white hidden">
+                <i class="fas fa-phone-alt"></i>
+            </button>
+            <!-- Floating Chat Button -->
+            <button id="widget-chat-btn" onclick="toggleWidgetChat()" class="w-14 h-14 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-full shadow-[0_10px_25px_rgba(79,70,229,0.5)] flex justify-center items-center text-xl hover:scale-110 active:scale-95 transition-all duration-300 relative border-2 border-white">
+                <i class="fas fa-headphones-alt"></i>
+                <span id="widget-chat-badge" class="hidden absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex justify-center items-center rounded-full border border-white animate-pulse">!</span>
+            </button>
+        </div>
     </div>
 </body>
+
+<!-- نظام المكالمات الداخلية للعميل -->
+<script src="/call-system.js"></script>
+<script>
+let clientCallSystem = null;
+
+function initClientCallSystem() {
+    if (!window.user || clientCallSystem) return;
+    clientCallSystem = new CallSystem(
+        sb,
+        'client_' + window.user.id,
+        (document.getElementById('header-user-name')?.innerText) || 'عميل',
+        'client'
+    );
+    window.__callSystem = clientCallSystem;
+    console.log('[CallSystem] Client initialized:', window.user.id);
+    requestClientPushPermission();
+}
+
+async function requestClientPushPermission() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'default') {
+        await Notification.requestPermission();
+    }
+    if ('serviceWorker' in navigator) {
+        try { await navigator.serviceWorker.register('/sw.js'); } catch(e) {}
+    }
+}
+
+// دالة الاتصال بالكابتن (تُستدعى من زر الاتصال في كرت الرحلة)
+function clientCallDriver(driverId, driverName) {
+    if (!clientCallSystem) {
+        alert('يرجى الانتظار... نظام المكالمات يتهيأ');
+        initClientCallSystem();
+        return;
+    }
+    if (!driverId) {
+        alert('لا يوجد سائق متاح للاتصال حالياً');
+        return;
+    }
+    clientCallSystem.startCall('driver_' + driverId, driverName || 'الكابتن', 'driver');
+}
+
+// تهيئة نظام المكالمات عند تسجيل الدخول
+const _origHandleUserSignedIn = window.handleUserSignedIn;
+window.handleUserSignedIn = async function(session) {
+    if (_origHandleUserSignedIn) await _origHandleUserSignedIn(session);
+    setTimeout(initClientCallSystem, 800);
+};
+
+// لو المستخدم بالفعل مسجل دخول
+if (typeof window.user !== 'undefined' && window.user) {
+    setTimeout(initClientCallSystem, 1000);
+}
+
+// استقبال رسائل Service Worker
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (e) => {
+        if (e.data && e.data.type === 'PUSH_CLICK') {
+            console.log('[Push Click - Client]', e.data.data);
+        }
+    });
+}
+</script>
+
 </html>
