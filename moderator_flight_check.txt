@@ -1,0 +1,5 @@
+﻿502:                         <input type="file" id="t-ticket-file" class="input-std text-xs" accept="image/*" onchange="uploadTicketFile('t-ticket-file', 't-ticket-url', 't-ticket-status')">
+818:                         <input type="file" id="edit-trip-ticket-file" class="input-std text-xs" accept="image/*" onchange="uploadTicketFile('edit-trip-ticket-file', 'edit-trip-ticket-url', 'edit-trip-ticket-status')">
+2270:                     ticketUrl = resData.ticket_image || '';
+2417:                         ticket_image: ticketUrl
+2451:                                 ticket_image: ticketUrl

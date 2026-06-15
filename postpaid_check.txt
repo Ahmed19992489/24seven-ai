@@ -1,0 +1,5 @@
+﻿1819:                 let payMethodBadge = '';
+1827:                     payMethodBadge = `
+1828:                         <button onclick="changeTripToPostpaid('${t.id}')" class="text-amber-600 hover:text-amber-800 text-[10px] font-bold border border-amber-200 rounded px-1.5 py-0.5 bg-amber-50/50 hover:bg-amber-50 transition cursor-pointer mt-1 inline-flex items-center gap-1" title="╪¬╪¡┘ê┘è┘ä ╪╖╪▒┘è┘é╪⌐ ╪º┘ä╪»┘ü╪╣ ┘ä╪ó╪¼┘ä (╪¬╪¡┘ê┘è┘ä ┘ä┘ä╪┤╪▒┘â╪⌐)">
+1840:                         ${payMethodBadge}
+3736:         async function changeTripToPostpaid(tripId) {

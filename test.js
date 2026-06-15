@@ -288,7 +288,7 @@
             document.body.appendChild(modal);
         }
 
-        function openCompleteModal(tripId, price, distKm, fuelCost = 0, tollCost = 0) {
+        async function openCompleteModal(tripId, price, distKm, fuelCost = 0, tollCost = 0) {
             document.getElementById('comp-trip-id').value = tripId;
             document.getElementById('comp-price').value = price;
             document.getElementById('comp-dist-km').value = distKm || 0;
@@ -298,6 +298,23 @@
             document.getElementById('comp-commission').value = 0;
             const maint = Math.round((distKm || 0) * 0.6);
             document.getElementById('comp-maintenance-display').innerText = maint + ' EGP (' + (distKm || 0) + ' km × 0.6)';
+
+            // تحقق من طريقة الدفع
+            const { data: tripData } = await sbClient.from('trips').select('payment_method, admin_notes').eq('id', tripId).single();
+            const isPostpaid = (tripData?.payment_method === 'postpaid') ||
+                (tripData?.admin_notes || '').toLowerCase().includes('postpaid') ||
+                (tripData?.admin_notes || '').includes('آجل') ||
+                (tripData?.admin_notes || '').includes('اجل');
+            const postpaidWarning = document.getElementById('comp-postpaid-warning');
+            if (postpaidWarning) {
+                if (isPostpaid) {
+                    postpaidWarning.style.display = 'block';
+                    postpaidWarning.innerHTML = `<div class="flex items-center gap-2 text-amber-800"><i class="fas fa-clock"></i><span class="font-bold">تنبيه: رحلة آجل</span></div><p class="text-xs mt-1">المبلغ الإجمالي <strong>${price} EGP</strong> مستحق التحويل للتشغيل لاحقاً. سيُسجَّل تلقائياً عند الإنهاء.</p>`;
+                } else {
+                    postpaidWarning.style.display = 'none';
+                }
+            }
+
             document.getElementById('complete-modal').style.display = 'flex';
             updateCompSummary();
         }
@@ -332,7 +349,7 @@
 
             if (!confirm('تأكيد الإنهاء؟')) return;
             await sbClient.from('trips').update({ status: 'completed', final_price: price, driver_wage: wage }).eq('id', tripId);
-            const { data: trip } = await sbClient.from('trips').select('driver_id, car_id').eq('id', tripId).single();
+            const { data: trip } = await sbClient.from('trips').select('driver_id, car_id, payment_method, admin_notes').eq('id', tripId).single();
             const tripLabel = String(tripId).slice(0, 6);
 
             // 1. يومية الكابتن → خزنة السواقين
@@ -367,6 +384,24 @@
                 const vid = await getVaultIdByName('خزنة رواتب السيارات');
                 if (vid) { const { data: v } = await sbClient.from('vaults').select('balance').eq('id', vid).single(); await sbClient.from('vaults').update({ balance: (v.balance || 0) + carNet }).eq('id', vid); }
             }
+
+            // ====== تسجيل مبلغ مستحق للرحلات الآجلة الداخلية ======
+            const isPostpaidInternal = (trip?.payment_method === 'postpaid') ||
+                (trip?.admin_notes || '').toLowerCase().includes('postpaid') ||
+                (trip?.admin_notes || '').includes('آجل') ||
+                (trip?.admin_notes || '').includes('اجل');
+
+            if (isPostpaidInternal && price > 0) {
+                await sbClient.from('vendor_transactions').insert([{
+                    vendor_id: null,
+                    trip_id: tripId,
+                    transaction_type: 'postpaid_pending',
+                    amount: price,
+                    description: `مستحق تحويل - رحلة آجل داخلية #${tripId} | السعر: ${price} EGP`
+                }]);
+                alert(`✅ تم إنهاء الرحلة الآجلة!\n💳 المبلغ المستحق تحويله للتشغيل: ${price} EGP\nتم تسجيله في سجل المستحقات.`);
+            }
+            // ====================================================
 
             document.getElementById('complete-modal').style.display = 'none';
             loadOperations(); loadDashboard(); loadFinance();

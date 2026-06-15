@@ -1,0 +1,41 @@
+﻿258:                             <h4 id="op-completed-trips" class="text-xl font-black mt-1 text-green-400 font-num">0</h4>
+482:         async function ensureVendorProfile() {
+545:         async function vendorLogin() {
+583:         function showDashboard() {
+595:         function vendorLogout() {
+614:         async function loadDashboardData() {
+665:         function setTripsFilter(filter) {
+681:         function parseDateToYMD(dateStr) {
+706:         async function loadTrips() {
+765:         function renderFilteredTrips() {
+769:             const opCompleted = cachedTrips.filter(t => t.status === 'completed' || t.status === 'trip_ended').length;
+773:             if (document.getElementById('op-completed-trips')) document.getElementById('op-completed-trips').innerText = opCompleted.toLocaleString();
+787:             function parseReservationDetailsFromNotes(notes) {
+1051:                 else if (t.status === 'completed' || t.status === 'trip_ended') { statusText = 'Γ£à ┘à┘â╪¬┘à┘ä╪⌐'; statusColor = 'bg-slate-500/10 border border-slate-600/30 text-slate-400'; }
+1114:         async function loadLedger() {
+1155:         function openAssignDriverModal(tripId, currentCommission) {
+1184:         async function compressImage(file) {
+1213:         async function changeTripToPostpaid(tripId) {
+1248:                 if (trip.status === 'completed' || trip.status === 'trip_ended') {
+1282:         async function confirmDriverAssignment() {
+1399:         function switchVendorTab(tabId) {
+1443:         function getDriverPayout(driverId) {
+1447:         function recordDriverPayout(driverId, name) {
+1459:         async function loadFleetData() {
+1470:                     sb.from('trips').select('driver_id, driver_wage').eq('vendor_id', currentVendor.id).eq('status', 'completed')
+1538:         async function openAddDriverPrompt() {
+1562:         async function openAddCarPrompt() {
+1590:         async function loadSupportChat() {
+1621:         function appendSupportMessage(msg) {
+1644:         async function sendVendorSupportMessage() {
+1672:         async function subscribeSupportChat() {
+1697:         async function openChat(tripId, routeName) {
+1706:         function closeChat() {
+1712:         async function loadChatMessages(tripId) {
+1737:         function appendChatMessage(msg) {
+1769:         async function sendMessage() {
+1795:         async function sendPaymentNumber() {
+1818:         function subscribeChat(tripId) {
+1833:         function renderLedgerTable(trips, txs) {
+1904:                 else if (t.status === 'completed' || t.status === 'trip_ended') { statusText = '┘à┘â╪¬┘à┘ä╪⌐'; statusColor = 'text-slate-400'; }
+1922:         async function loadLedger() {

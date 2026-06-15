@@ -1,0 +1,45 @@
+﻿1213:         async function checkSession() {
+1238:         async function handleUserSignedIn(session) {
+1273:         async function ensureProfileExists() {
+1289:             if (id === 'trips') loadTrips();
+1330:         async function loadData() {
+1363:                     loadTrips();
+1377:                         loadTrips();
+1392:                             loadTrips();
+1492:         async function confirmFinalBooking() {
+1625:         async function loadTrips() {
+1782:             renderTrips(allTrips);
+1785:         function renderTrips(trips) {
+1793:                     renderTripsWithRatings(trips, ratingsMap);
+1796:                     renderTripsWithRatings(trips, {});
+1799:                 renderTripsWithRatings(trips, {});
+1818:         function renderTripsWithRatings(trips, ratingsMap) {
+1922:         async function loadWallet() {
+1928:         async function loadTransactions() {
+1938:         async function submitDeposit() {
+1950:         async function applyCoupon() {
+2008:         async function openSupportChat() {
+2015:         async function loadSupportMessages() {
+2047:         async function sendSupportMessage() {
+2089:         async function handleGoogleLogin() {
+2142:         async function phoneLogin() {
+2221:         async function syncOldPhoneTrips(phone, userId) {
+2255:         async function emailLogin() {
+2264:         async function emailSignUp() {
+2278:         async function handleLogout() {
+2290:         async function loadClientChats() {
+2333:         async function openClientChat(tripId, driverName) {
+2347:         async function loadClientChatMessages(tripId) {
+2395:         async function sendClientMessage() {
+2452:                             loadTrips();
+2504:         async function shareMyLocation() {
+2591:         async function submitFeedback() {
+2631:                         loadTrips();
+2640:                             loadTrips();
+2670:                                 loadTrips();
+2688:         async function sendClientEmail(tripId, notifTitle, notifMessage) {
+2889:         async function loadLoyalty() {
+3006:         async function redeemReward(rewardType, requiredTrips, value) {
+3076:         async function loadWidgetMessages() {
+3141:         async function sendWidgetMessage() {
+Total lines: 3242

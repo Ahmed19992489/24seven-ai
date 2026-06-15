@@ -1,0 +1,5 @@
+﻿---checking new booking form for flight fields---
+498:                         <input type="text" id="t-flight-number" class="input-std" placeholder="┘à╪½╪º┘ä: MS779">
+502:                         <input type="file" id="t-ticket-file" class="input-std text-xs" accept="image/*" onchange="uploadTicketFile('t-ticket-file', 't-ticket-url', 't-ticket-status')">
+503:                         <input type="hidden" id="t-ticket-url">
+504:                         <span id="t-ticket-status" class="text-[10px] text-teal-400 block mt-1 font-bold"></span>

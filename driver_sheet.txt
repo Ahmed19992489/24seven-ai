@@ -1,0 +1,2 @@
+﻿523:                     allCards.push(...sheetTrips.map(t => ({ type: 'sheet', html: renderSheetTripCard(t), date: t.trip_date || t.created_at })));
+536:         function renderSheetTripCard(t) {

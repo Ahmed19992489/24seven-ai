@@ -1085,6 +1085,10 @@
                 </div>
 
 
+                <!-- تنبيه الرحلة الآجل - يظهر تلقائياً -->
+                <div id="comp-postpaid-warning" style="display:none;" class="bg-amber-50 border border-amber-300 rounded-lg p-3 text-xs">
+                </div>
+
                 <div class="bg-green-50 p-3 rounded-lg border border-green-200 text-xs space-y-1" id="comp-summary">
                     <p class="font-bold text-green-800 text-sm mb-2">📊 التوزيع:</p>
                     <div class="flex justify-between"><span>🔵 خزنة السواقين (يومية):</span><span id="sum-wage"
@@ -2127,7 +2131,7 @@
             document.getElementById('comp-price').value = price;
             document.getElementById('comp-dist-km').value = distKm || 0;
 
-            const { data: trip } = await sbClient.from('trips').select('is_outsourced, our_commission, admin_notes').eq('id', tripId).single();
+            const { data: trip } = await sbClient.from('trips').select('is_outsourced, our_commission, admin_notes, payment_method').eq('id', tripId).single();
             const isOutsourced = trip?.is_outsourced || false;
 
             if (isOutsourced) {
@@ -2164,6 +2168,21 @@
                 document.getElementById('comp-commission').value = 0;
                 const maint = Math.round((distKm || 0) * 0.6);
                 document.getElementById('comp-maintenance-display').innerText = maint + ' EGP (' + (distKm || 0) + ' km × 0.6)';
+
+                // تنبيه إذا كانت الرحلة آجل
+                const isPostpaid = (trip?.payment_method === 'postpaid') ||
+                    (trip?.admin_notes || '').toLowerCase().includes('postpaid') ||
+                    (trip?.admin_notes || '').includes('آجل') ||
+                    (trip?.admin_notes || '').includes('اجل');
+                const postpaidWarning = document.getElementById('comp-postpaid-warning');
+                if (postpaidWarning) {
+                    if (isPostpaid) {
+                        postpaidWarning.style.display = 'block';
+                        postpaidWarning.innerHTML = `<div class="flex items-center gap-2 text-amber-800"><i class="fas fa-clock"></i><span class="font-bold">تنبيه: رحلة آجل</span></div><p class="text-xs mt-1">المبلغ الإجمالي <strong>${price} EGP</strong> مستحق التحويل للتشغيل لاحقاً. سيُسجَّل تلقائياً عند الإنهاء.</p>`;
+                    } else {
+                        postpaidWarning.style.display = 'none';
+                    }
+                }
             }
             
             document.getElementById('complete-modal').style.display = 'flex';
@@ -2201,7 +2220,7 @@
             if (!confirm('تأكيد الإنهاء؟')) return;
 
             // التحقق هل الرحلة خارجية (Outsourced)
-            const { data: trip } = await sbClient.from('trips').select('is_outsourced, vendor_id, admin_notes, driver_id, car_id, user_id').eq('id', tripId).single();
+            const { data: trip } = await sbClient.from('trips').select('is_outsourced, vendor_id, admin_notes, driver_id, car_id, user_id, payment_method').eq('id', tripId).single();
             
             if (trip && trip.is_outsourced) {
                 try {
@@ -2288,6 +2307,26 @@
 
             // خصم من المحفظة إذا وجد رصيد
             await deductClientWallet(trip, price, tripId);
+
+            // ====== تسجيل مبلغ مستحق للرحلات الآجلة الداخلية ======
+            const isPostpaidInternal = (trip?.payment_method === 'postpaid') ||
+                (trip?.admin_notes || '').toLowerCase().includes('postpaid') ||
+                (trip?.admin_notes || '').includes('آجل') ||
+                (trip?.admin_notes || '').includes('اجل');
+
+            if (isPostpaidInternal && price > 0) {
+                // تسجيل قيد «مستحق تحويل» في vendor_transactions
+                // vendor_id = null يعني رحلة داخلية آجلة (لم يُحصَّل بعد)
+                await sbClient.from('vendor_transactions').insert([{
+                    vendor_id: null,
+                    trip_id: tripId,
+                    transaction_type: 'postpaid_pending',
+                    amount: price,
+                    description: `مستحق تحويل - رحلة آجل داخلية #${tripId} | السعر: ${price} EGP`
+                }]);
+                alert(`✅ تم إنهاء الرحلة الآجلة!\n💳 المبلغ المستحق تحويله للتشغيل: ${price} EGP\nتم تسجيله في سجل المستحقات.`);
+            }
+            // ====================================================
 
             document.getElementById('complete-modal').style.display = 'none';
             loadOperations(); loadDashboard(); loadFinance();

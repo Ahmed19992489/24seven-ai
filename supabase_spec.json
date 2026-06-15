@@ -1,0 +1,5687 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "",
+    "title": "standard public schema",
+    "version": "14.1"
+  },
+  "host": "wtjwzqvmwnbvjxnmweqq.supabase.co:443",
+  "basePath": "/",
+  "schemes": [
+    "https"
+  ],
+  "consumes": [
+    "application/json",
+    "application/vnd.pgrst.object+json;nulls=stripped",
+    "application/vnd.pgrst.object+json",
+    "text/csv"
+  ],
+  "produces": [
+    "application/json",
+    "application/vnd.pgrst.object+json;nulls=stripped",
+    "application/vnd.pgrst.object+json",
+    "text/csv"
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "produces": [
+          "application/openapi+json",
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "summary": "OpenAPI description (this document)",
+        "tags": [
+          "Introspection"
+        ]
+      }
+    },
+    "/google_reservations": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.sheet_row"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.trip_date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.trip_time"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.customer_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.customer_phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.pickup_address"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.dropoff_address"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.passengers"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.bags"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.car_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.trip_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.cost"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.payment_method"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.notes"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.booking_employee"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.sql_server_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.updated_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.sheet_timestamp"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.whatsapp_num"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.client_status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.commission"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.ticket_image"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.modified_driver_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.modified_driver_phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.column_24"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.driver_msg_status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.review_msg_status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.confirm_msg_status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.client_decision"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.location_link"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.rating_stars"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.car_cleanliness"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.driver_behavior"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.recommend_us"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.suggestions"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.trip_status"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/google_reservations"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "google_reservations"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.google_reservations"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "google_reservations"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.sheet_row"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.trip_date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.trip_time"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.customer_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.customer_phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.pickup_address"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.dropoff_address"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.passengers"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.bags"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.car_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.trip_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.cost"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.payment_method"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.notes"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.booking_employee"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.sql_server_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.updated_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.sheet_timestamp"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.whatsapp_num"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.client_status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.commission"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.ticket_image"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.modified_driver_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.modified_driver_phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.column_24"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.driver_msg_status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.review_msg_status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.confirm_msg_status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.client_decision"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.location_link"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.rating_stars"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.car_cleanliness"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.driver_behavior"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.recommend_us"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.suggestions"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.trip_status"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "google_reservations"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.sheet_row"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.trip_date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.trip_time"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.customer_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.customer_phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.pickup_address"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.dropoff_address"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.passengers"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.bags"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.car_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.trip_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.cost"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.payment_method"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.notes"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.booking_employee"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.sql_server_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.updated_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.sheet_timestamp"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.whatsapp_num"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.client_status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.commission"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.ticket_image"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.modified_driver_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.modified_driver_phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.column_24"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.driver_msg_status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.review_msg_status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.confirm_msg_status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.client_decision"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.location_link"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.rating_stars"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.car_cleanliness"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.driver_behavior"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.recommend_us"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.suggestions"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.google_reservations.trip_status"
+          },
+          {
+            "$ref": "#/parameters/body.google_reservations"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "google_reservations"
+        ]
+      }
+    },
+    "/vaults": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.vaults.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vaults.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vaults.balance"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vaults.created_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/vaults"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "vaults"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.vaults"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "vaults"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.vaults.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vaults.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vaults.balance"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vaults.created_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "vaults"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.vaults.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vaults.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vaults.balance"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vaults.created_at"
+          },
+          {
+            "$ref": "#/parameters/body.vaults"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "vaults"
+        ]
+      }
+    },
+    "/vendors": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.vendors.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendors.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendors.owner_phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendors.commission_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendors.commission_value"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendors.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendors.created_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/vendors"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "vendors"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.vendors"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "vendors"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.vendors.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendors.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendors.owner_phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendors.commission_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendors.commission_value"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendors.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendors.created_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "vendors"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.vendors.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendors.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendors.owner_phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendors.commission_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendors.commission_value"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendors.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendors.created_at"
+          },
+          {
+            "$ref": "#/parameters/body.vendors"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "vendors"
+        ]
+      }
+    },
+    "/cars": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.cars.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.model"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.plate_number"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.driver_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.brand"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.monthly_salary"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.is_external"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.vendor_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.car_image_url"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/cars"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "cars"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.cars"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "cars"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.cars.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.model"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.plate_number"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.driver_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.brand"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.monthly_salary"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.is_external"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.vendor_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.car_image_url"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "cars"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.cars.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.model"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.plate_number"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.driver_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.brand"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.monthly_salary"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.is_external"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.vendor_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.cars.car_image_url"
+          },
+          {
+            "$ref": "#/parameters/body.cars"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "cars"
+        ]
+      }
+    },
+    "/chat_messages": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.trip_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.sender_role"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.sender_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.sender_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.message"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.message_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.location_lat"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.location_lng"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.created_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/chat_messages"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "chat_messages"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.chat_messages"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "chat_messages"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.trip_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.sender_role"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.sender_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.sender_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.message"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.message_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.location_lat"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.location_lng"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.created_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "chat_messages"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.trip_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.sender_role"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.sender_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.sender_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.message"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.message_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.location_lat"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.location_lng"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.chat_messages.created_at"
+          },
+          {
+            "$ref": "#/parameters/body.chat_messages"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "chat_messages"
+        ]
+      }
+    },
+    "/trips": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.trips.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.pickup_location"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.dropoff_location"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.distance_km"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.estimated_price"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.car_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.admin_notes"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.payment_status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.driver_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.car_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.final_price"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.driver_wage"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.manual_client_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.client_phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.stage_status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.pre_inspection_photos"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.post_inspection_photos"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.fuel_cost"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.toll_cost"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.is_outsourced"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.vendor_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.our_commission"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/trips"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "trips"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.trips"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "trips"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.trips.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.pickup_location"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.dropoff_location"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.distance_km"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.estimated_price"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.car_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.admin_notes"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.payment_status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.driver_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.car_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.final_price"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.driver_wage"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.manual_client_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.client_phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.stage_status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.pre_inspection_photos"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.post_inspection_photos"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.fuel_cost"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.toll_cost"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.is_outsourced"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.vendor_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.our_commission"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "trips"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.trips.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.pickup_location"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.dropoff_location"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.distance_km"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.estimated_price"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.car_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.admin_notes"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.payment_status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.driver_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.car_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.final_price"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.driver_wage"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.manual_client_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.client_phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.stage_status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.pre_inspection_photos"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.post_inspection_photos"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.fuel_cost"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.toll_cost"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.is_outsourced"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.vendor_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trips.our_commission"
+          },
+          {
+            "$ref": "#/parameters/body.trips"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "trips"
+        ]
+      }
+    },
+    "/pricing_tiers": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.pricing_tiers.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.pricing_tiers.car_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.pricing_tiers.min_km"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.pricing_tiers.max_km"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.pricing_tiers.base_price"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.pricing_tiers.price_per_km"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/pricing_tiers"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "pricing_tiers"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.pricing_tiers"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "pricing_tiers"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.pricing_tiers.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.pricing_tiers.car_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.pricing_tiers.min_km"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.pricing_tiers.max_km"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.pricing_tiers.base_price"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.pricing_tiers.price_per_km"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "pricing_tiers"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.pricing_tiers.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.pricing_tiers.car_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.pricing_tiers.min_km"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.pricing_tiers.max_km"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.pricing_tiers.base_price"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.pricing_tiers.price_per_km"
+          },
+          {
+            "$ref": "#/parameters/body.pricing_tiers"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "pricing_tiers"
+        ]
+      }
+    },
+    "/profiles": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.profiles.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.wallet_balance"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.role"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/profiles"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "profiles"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.profiles"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "profiles"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.profiles.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.wallet_balance"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.role"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "profiles"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.profiles.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.full_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.wallet_balance"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.email"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.profiles.role"
+          },
+          {
+            "$ref": "#/parameters/body.profiles"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "profiles"
+        ]
+      }
+    },
+    "/trip_ratings": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.trip_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.driver_rating"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.car_rating"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.service_rating"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.would_recommend"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.feedback_notes"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.created_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/trip_ratings"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "trip_ratings"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.trip_ratings"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "trip_ratings"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.trip_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.driver_rating"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.car_rating"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.service_rating"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.would_recommend"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.feedback_notes"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.created_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "trip_ratings"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.trip_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.driver_rating"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.car_rating"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.service_rating"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.would_recommend"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.feedback_notes"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_ratings.created_at"
+          },
+          {
+            "$ref": "#/parameters/body.trip_ratings"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "trip_ratings"
+        ]
+      }
+    },
+    "/transactions": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.transactions.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.transactions.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.transactions.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.transactions.reference_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.transactions.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.transactions.created_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/transactions"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "transactions"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.transactions"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "transactions"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.transactions.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.transactions.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.transactions.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.transactions.reference_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.transactions.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.transactions.created_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "transactions"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.transactions.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.transactions.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.transactions.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.transactions.reference_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.transactions.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.transactions.created_at"
+          },
+          {
+            "$ref": "#/parameters/body.transactions"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "transactions"
+        ]
+      }
+    },
+    "/drivers": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.drivers.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.drivers.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.drivers.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.drivers.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.drivers.is_external"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.drivers.vendor_id"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/drivers"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "drivers"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.drivers"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "drivers"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.drivers.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.drivers.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.drivers.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.drivers.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.drivers.is_external"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.drivers.vendor_id"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "drivers"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.drivers.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.drivers.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.drivers.phone"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.drivers.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.drivers.is_external"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.drivers.vendor_id"
+          },
+          {
+            "$ref": "#/parameters/body.drivers"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "drivers"
+        ]
+      }
+    },
+    "/coupons": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.coupons.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.coupons.code"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.coupons.value"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.coupons.expires_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.coupons.is_active"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.coupons.created_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/coupons"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "coupons"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.coupons"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "coupons"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.coupons.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.coupons.code"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.coupons.value"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.coupons.expires_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.coupons.is_active"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.coupons.created_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "coupons"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.coupons.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.coupons.code"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.coupons.value"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.coupons.expires_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.coupons.is_active"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.coupons.created_at"
+          },
+          {
+            "$ref": "#/parameters/body.coupons"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "coupons"
+        ]
+      }
+    },
+    "/omnichannel_messages": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.omnichannel_messages.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.omnichannel_messages.channel"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.omnichannel_messages.sender_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.omnichannel_messages.sender_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.omnichannel_messages.message_text"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.omnichannel_messages.is_from_admin"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.omnichannel_messages.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.omnichannel_messages.read_by_admin"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/omnichannel_messages"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "omnichannel_messages"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.omnichannel_messages"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "omnichannel_messages"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.omnichannel_messages.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.omnichannel_messages.channel"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.omnichannel_messages.sender_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.omnichannel_messages.sender_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.omnichannel_messages.message_text"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.omnichannel_messages.is_from_admin"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.omnichannel_messages.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.omnichannel_messages.read_by_admin"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "omnichannel_messages"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.omnichannel_messages.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.omnichannel_messages.channel"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.omnichannel_messages.sender_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.omnichannel_messages.sender_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.omnichannel_messages.message_text"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.omnichannel_messages.is_from_admin"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.omnichannel_messages.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.omnichannel_messages.read_by_admin"
+          },
+          {
+            "$ref": "#/parameters/body.omnichannel_messages"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "omnichannel_messages"
+        ]
+      }
+    },
+    "/vendor_transactions": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.vendor_transactions.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendor_transactions.vendor_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendor_transactions.trip_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendor_transactions.transaction_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendor_transactions.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendor_transactions.description"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendor_transactions.created_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/vendor_transactions"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "vendor_transactions"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.vendor_transactions"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "vendor_transactions"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.vendor_transactions.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendor_transactions.vendor_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendor_transactions.trip_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendor_transactions.transaction_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendor_transactions.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendor_transactions.description"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendor_transactions.created_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "vendor_transactions"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.vendor_transactions.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendor_transactions.vendor_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendor_transactions.trip_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendor_transactions.transaction_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendor_transactions.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendor_transactions.description"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.vendor_transactions.created_at"
+          },
+          {
+            "$ref": "#/parameters/body.vendor_transactions"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "vendor_transactions"
+        ]
+      }
+    },
+    "/loyalty_rewards": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.loyalty_rewards.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.loyalty_rewards.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.loyalty_rewards.reward_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.loyalty_rewards.trips_at_redemption"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.loyalty_rewards.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.loyalty_rewards.created_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/loyalty_rewards"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "loyalty_rewards"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.loyalty_rewards"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "loyalty_rewards"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.loyalty_rewards.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.loyalty_rewards.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.loyalty_rewards.reward_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.loyalty_rewards.trips_at_redemption"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.loyalty_rewards.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.loyalty_rewards.created_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "loyalty_rewards"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.loyalty_rewards.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.loyalty_rewards.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.loyalty_rewards.reward_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.loyalty_rewards.trips_at_redemption"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.loyalty_rewards.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.loyalty_rewards.created_at"
+          },
+          {
+            "$ref": "#/parameters/body.loyalty_rewards"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "loyalty_rewards"
+        ]
+      }
+    },
+    "/expenses": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.expenses.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.expenses.title"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.expenses.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.expenses.category"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.expenses.related_trip_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.expenses.related_driver_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.expenses.related_car_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.expenses.related_vault_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.expenses.created_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/expenses"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "expenses"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.expenses"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "expenses"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.expenses.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.expenses.title"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.expenses.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.expenses.category"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.expenses.related_trip_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.expenses.related_driver_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.expenses.related_car_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.expenses.related_vault_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.expenses.created_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "expenses"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.expenses.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.expenses.title"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.expenses.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.expenses.category"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.expenses.related_trip_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.expenses.related_driver_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.expenses.related_car_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.expenses.related_vault_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.expenses.created_at"
+          },
+          {
+            "$ref": "#/parameters/body.expenses"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "expenses"
+        ]
+      }
+    },
+    "/support_chats": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.support_chats.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_chats.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_chats.sender_role"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_chats.message"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_chats.created_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/support_chats"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "support_chats"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.support_chats"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "support_chats"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.support_chats.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_chats.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_chats.sender_role"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_chats.message"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_chats.created_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "support_chats"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.support_chats.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_chats.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_chats.sender_role"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_chats.message"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.support_chats.created_at"
+          },
+          {
+            "$ref": "#/parameters/body.support_chats"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "support_chats"
+        ]
+      }
+    },
+    "/trip_events": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.trip_events.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_events.trip_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_events.event_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_events.notes"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_events.created_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/trip_events"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "trip_events"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.trip_events"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "trip_events"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.trip_events.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_events.trip_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_events.event_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_events.notes"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_events.created_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "trip_events"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.trip_events.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_events.trip_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_events.event_type"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_events.notes"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.trip_events.created_at"
+          },
+          {
+            "$ref": "#/parameters/body.trip_events"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "trip_events"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "google_reservations": {
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "bigint",
+          "type": "integer"
+        },
+        "sheet_row": {
+          "format": "integer",
+          "type": "integer"
+        },
+        "trip_date": {
+          "format": "date",
+          "type": "string"
+        },
+        "trip_time": {
+          "format": "character varying",
+          "maxLength": 20,
+          "type": "string"
+        },
+        "customer_name": {
+          "format": "character varying",
+          "maxLength": 100,
+          "type": "string"
+        },
+        "customer_phone": {
+          "format": "character varying",
+          "maxLength": 30,
+          "type": "string"
+        },
+        "pickup_address": {
+          "format": "text",
+          "type": "string"
+        },
+        "dropoff_address": {
+          "format": "text",
+          "type": "string"
+        },
+        "passengers": {
+          "format": "integer",
+          "type": "integer"
+        },
+        "bags": {
+          "format": "integer",
+          "type": "integer"
+        },
+        "car_type": {
+          "format": "character varying",
+          "maxLength": 50,
+          "type": "string"
+        },
+        "trip_type": {
+          "format": "character varying",
+          "maxLength": 50,
+          "type": "string"
+        },
+        "cost": {
+          "format": "numeric",
+          "type": "number"
+        },
+        "payment_method": {
+          "format": "character varying",
+          "maxLength": 30,
+          "type": "string"
+        },
+        "notes": {
+          "format": "text",
+          "type": "string"
+        },
+        "booking_employee": {
+          "format": "character varying",
+          "maxLength": 50,
+          "type": "string"
+        },
+        "status": {
+          "default": "pending",
+          "format": "character varying",
+          "maxLength": 30,
+          "type": "string"
+        },
+        "sql_server_id": {
+          "format": "character varying",
+          "maxLength": 20,
+          "type": "string"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp without time zone",
+          "type": "string"
+        },
+        "updated_at": {
+          "default": "now()",
+          "format": "timestamp without time zone",
+          "type": "string"
+        },
+        "sheet_timestamp": {
+          "format": "character varying",
+          "maxLength": 255,
+          "type": "string"
+        },
+        "whatsapp_num": {
+          "format": "character varying",
+          "maxLength": 50,
+          "type": "string"
+        },
+        "client_status": {
+          "format": "character varying",
+          "maxLength": 100,
+          "type": "string"
+        },
+        "email": {
+          "format": "character varying",
+          "maxLength": 255,
+          "type": "string"
+        },
+        "commission": {
+          "format": "character varying",
+          "maxLength": 100,
+          "type": "string"
+        },
+        "ticket_image": {
+          "format": "text",
+          "type": "string"
+        },
+        "modified_driver_name": {
+          "format": "character varying",
+          "maxLength": 255,
+          "type": "string"
+        },
+        "modified_driver_phone": {
+          "format": "character varying",
+          "maxLength": 50,
+          "type": "string"
+        },
+        "column_24": {
+          "format": "character varying",
+          "maxLength": 255,
+          "type": "string"
+        },
+        "driver_msg_status": {
+          "format": "character varying",
+          "maxLength": 100,
+          "type": "string"
+        },
+        "review_msg_status": {
+          "format": "character varying",
+          "maxLength": 100,
+          "type": "string"
+        },
+        "confirm_msg_status": {
+          "format": "character varying",
+          "maxLength": 100,
+          "type": "string"
+        },
+        "client_decision": {
+          "format": "character varying",
+          "maxLength": 100,
+          "type": "string"
+        },
+        "location_link": {
+          "format": "text",
+          "type": "string"
+        },
+        "rating_stars": {
+          "format": "character varying",
+          "maxLength": 50,
+          "type": "string"
+        },
+        "car_cleanliness": {
+          "format": "character varying",
+          "maxLength": 50,
+          "type": "string"
+        },
+        "driver_behavior": {
+          "format": "character varying",
+          "maxLength": 50,
+          "type": "string"
+        },
+        "recommend_us": {
+          "format": "character varying",
+          "maxLength": 50,
+          "type": "string"
+        },
+        "suggestions": {
+          "format": "text",
+          "type": "string"
+        },
+        "trip_status": {
+          "format": "character varying",
+          "maxLength": 100,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "vaults": {
+      "required": [
+        "id",
+        "name"
+      ],
+      "properties": {
+        "id": {
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "bigint",
+          "type": "integer"
+        },
+        "name": {
+          "format": "text",
+          "type": "string"
+        },
+        "balance": {
+          "default": 0,
+          "format": "numeric",
+          "type": "number"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "vendors": {
+      "required": [
+        "id",
+        "name",
+        "owner_phone"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "name": {
+          "format": "text",
+          "type": "string"
+        },
+        "owner_phone": {
+          "format": "text",
+          "type": "string"
+        },
+        "commission_type": {
+          "default": "fixed",
+          "format": "text",
+          "type": "string"
+        },
+        "commission_value": {
+          "default": 0,
+          "format": "numeric",
+          "type": "number"
+        },
+        "status": {
+          "default": "active",
+          "format": "text",
+          "type": "string"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "cars": {
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "bigint",
+          "type": "integer"
+        },
+        "model": {
+          "format": "text",
+          "type": "string"
+        },
+        "plate_number": {
+          "format": "text",
+          "type": "string"
+        },
+        "driver_id": {
+          "description": "Note:\nThis is a Foreign Key to `drivers.id`.<fk table='drivers' column='id'/>",
+          "format": "bigint",
+          "type": "integer"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "brand": {
+          "format": "text",
+          "type": "string"
+        },
+        "monthly_salary": {
+          "default": 0,
+          "format": "numeric",
+          "type": "number"
+        },
+        "is_external": {
+          "default": false,
+          "format": "boolean",
+          "type": "boolean"
+        },
+        "vendor_id": {
+          "description": "Note:\nThis is a Foreign Key to `vendors.id`.<fk table='vendors' column='id'/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "car_image_url": {
+          "default": "",
+          "format": "text",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "chat_messages": {
+      "required": [
+        "id",
+        "trip_id",
+        "sender_role",
+        "sender_name"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "trip_id": {
+          "description": "Note:\nThis is a Foreign Key to `trips.id`.<fk table='trips' column='id'/>",
+          "format": "bigint",
+          "type": "integer"
+        },
+        "sender_role": {
+          "format": "text",
+          "type": "string"
+        },
+        "sender_id": {
+          "format": "text",
+          "type": "string"
+        },
+        "sender_name": {
+          "format": "text",
+          "type": "string"
+        },
+        "message": {
+          "format": "text",
+          "type": "string"
+        },
+        "message_type": {
+          "default": "text",
+          "format": "text",
+          "type": "string"
+        },
+        "location_lat": {
+          "format": "double precision",
+          "type": "number"
+        },
+        "location_lng": {
+          "format": "double precision",
+          "type": "number"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "trips": {
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "bigint",
+          "type": "integer"
+        },
+        "user_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "pickup_location": {
+          "format": "text",
+          "type": "string"
+        },
+        "dropoff_location": {
+          "format": "text",
+          "type": "string"
+        },
+        "distance_km": {
+          "format": "numeric",
+          "type": "number"
+        },
+        "estimated_price": {
+          "format": "numeric",
+          "type": "number"
+        },
+        "car_type": {
+          "default": "sedan",
+          "format": "text",
+          "type": "string"
+        },
+        "status": {
+          "default": "pending",
+          "format": "text",
+          "type": "string"
+        },
+        "admin_notes": {
+          "format": "text",
+          "type": "string"
+        },
+        "payment_status": {
+          "default": "unpaid",
+          "format": "text",
+          "type": "string"
+        },
+        "driver_id": {
+          "description": "Note:\nThis is a Foreign Key to `drivers.id`.<fk table='drivers' column='id'/>",
+          "format": "bigint",
+          "type": "integer"
+        },
+        "car_id": {
+          "description": "Note:\nThis is a Foreign Key to `cars.id`.<fk table='cars' column='id'/>",
+          "format": "bigint",
+          "type": "integer"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "final_price": {
+          "format": "numeric",
+          "type": "number"
+        },
+        "driver_wage": {
+          "format": "numeric",
+          "type": "number"
+        },
+        "manual_client_name": {
+          "format": "text",
+          "type": "string"
+        },
+        "client_phone": {
+          "format": "text",
+          "type": "string"
+        },
+        "stage_status": {
+          "default": "new",
+          "format": "text",
+          "type": "string"
+        },
+        "pre_inspection_photos": {
+          "format": "jsonb"
+        },
+        "post_inspection_photos": {
+          "format": "jsonb"
+        },
+        "fuel_cost": {
+          "default": 0,
+          "format": "numeric",
+          "type": "number"
+        },
+        "toll_cost": {
+          "default": 0,
+          "format": "numeric",
+          "type": "number"
+        },
+        "is_outsourced": {
+          "default": false,
+          "format": "boolean",
+          "type": "boolean"
+        },
+        "vendor_id": {
+          "description": "Note:\nThis is a Foreign Key to `vendors.id`.<fk table='vendors' column='id'/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "our_commission": {
+          "default": 0,
+          "format": "numeric",
+          "type": "number"
+        }
+      },
+      "type": "object"
+    },
+    "pricing_tiers": {
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "bigint",
+          "type": "integer"
+        },
+        "car_type": {
+          "format": "text",
+          "type": "string"
+        },
+        "min_km": {
+          "format": "numeric",
+          "type": "number"
+        },
+        "max_km": {
+          "format": "numeric",
+          "type": "number"
+        },
+        "base_price": {
+          "format": "numeric",
+          "type": "number"
+        },
+        "price_per_km": {
+          "format": "numeric",
+          "type": "number"
+        }
+      },
+      "type": "object"
+    },
+    "profiles": {
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "full_name": {
+          "format": "text",
+          "type": "string"
+        },
+        "phone": {
+          "format": "text",
+          "type": "string"
+        },
+        "wallet_balance": {
+          "default": 0,
+          "format": "numeric",
+          "type": "number"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "email": {
+          "format": "text",
+          "type": "string"
+        },
+        "role": {
+          "default": "moderator",
+          "format": "text",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "trip_ratings": {
+      "required": [
+        "id",
+        "trip_id"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "trip_id": {
+          "description": "Note:\nThis is a Foreign Key to `trips.id`.<fk table='trips' column='id'/>",
+          "format": "bigint",
+          "type": "integer"
+        },
+        "user_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "driver_rating": {
+          "format": "integer",
+          "type": "integer"
+        },
+        "car_rating": {
+          "format": "integer",
+          "type": "integer"
+        },
+        "service_rating": {
+          "format": "integer",
+          "type": "integer"
+        },
+        "would_recommend": {
+          "format": "boolean",
+          "type": "boolean"
+        },
+        "feedback_notes": {
+          "format": "text",
+          "type": "string"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "transactions": {
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "bigint",
+          "type": "integer"
+        },
+        "user_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "amount": {
+          "format": "numeric",
+          "type": "number"
+        },
+        "reference_id": {
+          "format": "text",
+          "type": "string"
+        },
+        "status": {
+          "default": "pending",
+          "format": "text",
+          "type": "string"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "drivers": {
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "bigint",
+          "type": "integer"
+        },
+        "name": {
+          "format": "text",
+          "type": "string"
+        },
+        "phone": {
+          "format": "text",
+          "type": "string"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "is_external": {
+          "default": false,
+          "format": "boolean",
+          "type": "boolean"
+        },
+        "vendor_id": {
+          "description": "Note:\nThis is a Foreign Key to `vendors.id`.<fk table='vendors' column='id'/>",
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "coupons": {
+      "required": [
+        "id",
+        "code",
+        "value"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "code": {
+          "format": "text",
+          "type": "string"
+        },
+        "value": {
+          "format": "integer",
+          "type": "integer"
+        },
+        "expires_at": {
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "is_active": {
+          "default": true,
+          "format": "boolean",
+          "type": "boolean"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "omnichannel_messages": {
+      "required": [
+        "id",
+        "channel",
+        "sender_id",
+        "message_text",
+        "created_at"
+      ],
+      "properties": {
+        "id": {
+          "default": "extensions.uuid_generate_v4()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "channel": {
+          "format": "character varying",
+          "maxLength": 50,
+          "type": "string"
+        },
+        "sender_id": {
+          "format": "character varying",
+          "maxLength": 255,
+          "type": "string"
+        },
+        "sender_name": {
+          "format": "character varying",
+          "maxLength": 255,
+          "type": "string"
+        },
+        "message_text": {
+          "format": "text",
+          "type": "string"
+        },
+        "is_from_admin": {
+          "default": false,
+          "format": "boolean",
+          "type": "boolean"
+        },
+        "created_at": {
+          "default": "timezone('utc'::text, now())",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "read_by_admin": {
+          "default": false,
+          "format": "boolean",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "vendor_transactions": {
+      "required": [
+        "id",
+        "transaction_type",
+        "amount"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "vendor_id": {
+          "description": "Note:\nThis is a Foreign Key to `vendors.id`.<fk table='vendors' column='id'/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "trip_id": {
+          "description": "Note:\nThis is a Foreign Key to `trips.id`.<fk table='trips' column='id'/>",
+          "format": "bigint",
+          "type": "integer"
+        },
+        "transaction_type": {
+          "format": "text",
+          "type": "string"
+        },
+        "amount": {
+          "format": "numeric",
+          "type": "number"
+        },
+        "description": {
+          "format": "text",
+          "type": "string"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "loyalty_rewards": {
+      "required": [
+        "id",
+        "reward_type",
+        "trips_at_redemption"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "user_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "reward_type": {
+          "format": "text",
+          "type": "string"
+        },
+        "trips_at_redemption": {
+          "format": "integer",
+          "type": "integer"
+        },
+        "status": {
+          "default": "pending",
+          "format": "text",
+          "type": "string"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "expenses": {
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "bigint",
+          "type": "integer"
+        },
+        "title": {
+          "format": "text",
+          "type": "string"
+        },
+        "amount": {
+          "format": "numeric",
+          "type": "number"
+        },
+        "category": {
+          "format": "text",
+          "type": "string"
+        },
+        "related_trip_id": {
+          "format": "bigint",
+          "type": "integer"
+        },
+        "related_driver_id": {
+          "format": "bigint",
+          "type": "integer"
+        },
+        "related_car_id": {
+          "format": "bigint",
+          "type": "integer"
+        },
+        "related_vault_id": {
+          "format": "bigint",
+          "type": "integer"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "support_chats": {
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "user_id": {
+          "description": "Note:\nThis is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "sender_role": {
+          "format": "text",
+          "type": "string"
+        },
+        "message": {
+          "format": "text",
+          "type": "string"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "trip_events": {
+      "required": [
+        "id",
+        "trip_id",
+        "event_type"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "trip_id": {
+          "description": "Note:\nThis is a Foreign Key to `trips.id`.<fk table='trips' column='id'/>",
+          "format": "bigint",
+          "type": "integer"
+        },
+        "event_type": {
+          "format": "text",
+          "type": "string"
+        },
+        "notes": {
+          "format": "text",
+          "type": "string"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "parameters": {
+    "preferParams": {
+      "name": "Prefer",
+      "description": "Preference",
+      "required": false,
+      "in": "header",
+      "type": "string"
+    },
+    "preferReturn": {
+      "name": "Prefer",
+      "description": "Preference",
+      "required": false,
+      "enum": [
+        "return=representation",
+        "return=minimal",
+        "return=none"
+      ],
+      "in": "header",
+      "type": "string"
+    },
+    "preferCount": {
+      "name": "Prefer",
+      "description": "Preference",
+      "required": false,
+      "enum": [
+        "count=none"
+      ],
+      "in": "header",
+      "type": "string"
+    },
+    "preferPost": {
+      "name": "Prefer",
+      "description": "Preference",
+      "required": false,
+      "enum": [
+        "return=representation",
+        "return=minimal",
+        "return=none",
+        "resolution=ignore-duplicates",
+        "resolution=merge-duplicates"
+      ],
+      "in": "header",
+      "type": "string"
+    },
+    "select": {
+      "name": "select",
+      "description": "Filtering Columns",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "on_conflict": {
+      "name": "on_conflict",
+      "description": "On Conflict",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "order": {
+      "name": "order",
+      "description": "Ordering",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "range": {
+      "name": "Range",
+      "description": "Limiting and Pagination",
+      "required": false,
+      "in": "header",
+      "type": "string"
+    },
+    "rangeUnit": {
+      "name": "Range-Unit",
+      "description": "Limiting and Pagination",
+      "required": false,
+      "default": "items",
+      "in": "header",
+      "type": "string"
+    },
+    "offset": {
+      "name": "offset",
+      "description": "Limiting and Pagination",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "limit": {
+      "name": "limit",
+      "description": "Limiting and Pagination",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.google_reservations": {
+      "name": "google_reservations",
+      "description": "google_reservations",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/google_reservations"
+      }
+    },
+    "rowFilter.google_reservations.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.sheet_row": {
+      "name": "sheet_row",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.trip_date": {
+      "name": "trip_date",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.trip_time": {
+      "name": "trip_time",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.customer_name": {
+      "name": "customer_name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.customer_phone": {
+      "name": "customer_phone",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.pickup_address": {
+      "name": "pickup_address",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.dropoff_address": {
+      "name": "dropoff_address",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.passengers": {
+      "name": "passengers",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.bags": {
+      "name": "bags",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.car_type": {
+      "name": "car_type",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.trip_type": {
+      "name": "trip_type",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.cost": {
+      "name": "cost",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.payment_method": {
+      "name": "payment_method",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.notes": {
+      "name": "notes",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.booking_employee": {
+      "name": "booking_employee",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.status": {
+      "name": "status",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.sql_server_id": {
+      "name": "sql_server_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.updated_at": {
+      "name": "updated_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.sheet_timestamp": {
+      "name": "sheet_timestamp",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.whatsapp_num": {
+      "name": "whatsapp_num",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.client_status": {
+      "name": "client_status",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.email": {
+      "name": "email",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.commission": {
+      "name": "commission",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.ticket_image": {
+      "name": "ticket_image",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.modified_driver_name": {
+      "name": "modified_driver_name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.modified_driver_phone": {
+      "name": "modified_driver_phone",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.column_24": {
+      "name": "column_24",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.driver_msg_status": {
+      "name": "driver_msg_status",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.review_msg_status": {
+      "name": "review_msg_status",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.confirm_msg_status": {
+      "name": "confirm_msg_status",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.client_decision": {
+      "name": "client_decision",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.location_link": {
+      "name": "location_link",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.rating_stars": {
+      "name": "rating_stars",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.car_cleanliness": {
+      "name": "car_cleanliness",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.driver_behavior": {
+      "name": "driver_behavior",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.recommend_us": {
+      "name": "recommend_us",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.suggestions": {
+      "name": "suggestions",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.google_reservations.trip_status": {
+      "name": "trip_status",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.vaults": {
+      "name": "vaults",
+      "description": "vaults",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/vaults"
+      }
+    },
+    "rowFilter.vaults.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.vaults.name": {
+      "name": "name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.vaults.balance": {
+      "name": "balance",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.vaults.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.vendors": {
+      "name": "vendors",
+      "description": "vendors",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/vendors"
+      }
+    },
+    "rowFilter.vendors.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.vendors.name": {
+      "name": "name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.vendors.owner_phone": {
+      "name": "owner_phone",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.vendors.commission_type": {
+      "name": "commission_type",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.vendors.commission_value": {
+      "name": "commission_value",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.vendors.status": {
+      "name": "status",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.vendors.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.cars": {
+      "name": "cars",
+      "description": "cars",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/cars"
+      }
+    },
+    "rowFilter.cars.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.cars.model": {
+      "name": "model",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.cars.plate_number": {
+      "name": "plate_number",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.cars.driver_id": {
+      "name": "driver_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.cars.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.cars.brand": {
+      "name": "brand",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.cars.monthly_salary": {
+      "name": "monthly_salary",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.cars.is_external": {
+      "name": "is_external",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.cars.vendor_id": {
+      "name": "vendor_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.cars.car_image_url": {
+      "name": "car_image_url",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.chat_messages": {
+      "name": "chat_messages",
+      "description": "chat_messages",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/chat_messages"
+      }
+    },
+    "rowFilter.chat_messages.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.chat_messages.trip_id": {
+      "name": "trip_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.chat_messages.sender_role": {
+      "name": "sender_role",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.chat_messages.sender_id": {
+      "name": "sender_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.chat_messages.sender_name": {
+      "name": "sender_name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.chat_messages.message": {
+      "name": "message",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.chat_messages.message_type": {
+      "name": "message_type",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.chat_messages.location_lat": {
+      "name": "location_lat",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.chat_messages.location_lng": {
+      "name": "location_lng",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.chat_messages.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.trips": {
+      "name": "trips",
+      "description": "trips",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/trips"
+      }
+    },
+    "rowFilter.trips.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trips.user_id": {
+      "name": "user_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trips.pickup_location": {
+      "name": "pickup_location",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trips.dropoff_location": {
+      "name": "dropoff_location",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trips.distance_km": {
+      "name": "distance_km",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trips.estimated_price": {
+      "name": "estimated_price",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trips.car_type": {
+      "name": "car_type",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trips.status": {
+      "name": "status",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trips.admin_notes": {
+      "name": "admin_notes",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trips.payment_status": {
+      "name": "payment_status",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trips.driver_id": {
+      "name": "driver_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trips.car_id": {
+      "name": "car_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trips.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trips.final_price": {
+      "name": "final_price",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trips.driver_wage": {
+      "name": "driver_wage",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trips.manual_client_name": {
+      "name": "manual_client_name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trips.client_phone": {
+      "name": "client_phone",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trips.stage_status": {
+      "name": "stage_status",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trips.pre_inspection_photos": {
+      "name": "pre_inspection_photos",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trips.post_inspection_photos": {
+      "name": "post_inspection_photos",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trips.fuel_cost": {
+      "name": "fuel_cost",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trips.toll_cost": {
+      "name": "toll_cost",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trips.is_outsourced": {
+      "name": "is_outsourced",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trips.vendor_id": {
+      "name": "vendor_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trips.our_commission": {
+      "name": "our_commission",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.pricing_tiers": {
+      "name": "pricing_tiers",
+      "description": "pricing_tiers",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/pricing_tiers"
+      }
+    },
+    "rowFilter.pricing_tiers.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.pricing_tiers.car_type": {
+      "name": "car_type",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.pricing_tiers.min_km": {
+      "name": "min_km",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.pricing_tiers.max_km": {
+      "name": "max_km",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.pricing_tiers.base_price": {
+      "name": "base_price",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.pricing_tiers.price_per_km": {
+      "name": "price_per_km",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.profiles": {
+      "name": "profiles",
+      "description": "profiles",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/profiles"
+      }
+    },
+    "rowFilter.profiles.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.profiles.full_name": {
+      "name": "full_name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.profiles.phone": {
+      "name": "phone",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.profiles.wallet_balance": {
+      "name": "wallet_balance",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.profiles.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.profiles.email": {
+      "name": "email",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.profiles.role": {
+      "name": "role",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.trip_ratings": {
+      "name": "trip_ratings",
+      "description": "trip_ratings",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/trip_ratings"
+      }
+    },
+    "rowFilter.trip_ratings.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trip_ratings.trip_id": {
+      "name": "trip_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trip_ratings.user_id": {
+      "name": "user_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trip_ratings.driver_rating": {
+      "name": "driver_rating",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trip_ratings.car_rating": {
+      "name": "car_rating",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trip_ratings.service_rating": {
+      "name": "service_rating",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trip_ratings.would_recommend": {
+      "name": "would_recommend",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trip_ratings.feedback_notes": {
+      "name": "feedback_notes",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trip_ratings.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.transactions": {
+      "name": "transactions",
+      "description": "transactions",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/transactions"
+      }
+    },
+    "rowFilter.transactions.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.transactions.user_id": {
+      "name": "user_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.transactions.amount": {
+      "name": "amount",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.transactions.reference_id": {
+      "name": "reference_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.transactions.status": {
+      "name": "status",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.transactions.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.drivers": {
+      "name": "drivers",
+      "description": "drivers",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/drivers"
+      }
+    },
+    "rowFilter.drivers.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.drivers.name": {
+      "name": "name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.drivers.phone": {
+      "name": "phone",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.drivers.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.drivers.is_external": {
+      "name": "is_external",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.drivers.vendor_id": {
+      "name": "vendor_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.coupons": {
+      "name": "coupons",
+      "description": "coupons",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/coupons"
+      }
+    },
+    "rowFilter.coupons.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.coupons.code": {
+      "name": "code",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.coupons.value": {
+      "name": "value",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.coupons.expires_at": {
+      "name": "expires_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.coupons.is_active": {
+      "name": "is_active",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.coupons.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.omnichannel_messages": {
+      "name": "omnichannel_messages",
+      "description": "omnichannel_messages",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/omnichannel_messages"
+      }
+    },
+    "rowFilter.omnichannel_messages.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.omnichannel_messages.channel": {
+      "name": "channel",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.omnichannel_messages.sender_id": {
+      "name": "sender_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.omnichannel_messages.sender_name": {
+      "name": "sender_name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.omnichannel_messages.message_text": {
+      "name": "message_text",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.omnichannel_messages.is_from_admin": {
+      "name": "is_from_admin",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.omnichannel_messages.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.omnichannel_messages.read_by_admin": {
+      "name": "read_by_admin",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.vendor_transactions": {
+      "name": "vendor_transactions",
+      "description": "vendor_transactions",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/vendor_transactions"
+      }
+    },
+    "rowFilter.vendor_transactions.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.vendor_transactions.vendor_id": {
+      "name": "vendor_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.vendor_transactions.trip_id": {
+      "name": "trip_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.vendor_transactions.transaction_type": {
+      "name": "transaction_type",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.vendor_transactions.amount": {
+      "name": "amount",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.vendor_transactions.description": {
+      "name": "description",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.vendor_transactions.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.loyalty_rewards": {
+      "name": "loyalty_rewards",
+      "description": "loyalty_rewards",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/loyalty_rewards"
+      }
+    },
+    "rowFilter.loyalty_rewards.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.loyalty_rewards.user_id": {
+      "name": "user_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.loyalty_rewards.reward_type": {
+      "name": "reward_type",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.loyalty_rewards.trips_at_redemption": {
+      "name": "trips_at_redemption",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.loyalty_rewards.status": {
+      "name": "status",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.loyalty_rewards.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.expenses": {
+      "name": "expenses",
+      "description": "expenses",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/expenses"
+      }
+    },
+    "rowFilter.expenses.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.expenses.title": {
+      "name": "title",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.expenses.amount": {
+      "name": "amount",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.expenses.category": {
+      "name": "category",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.expenses.related_trip_id": {
+      "name": "related_trip_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.expenses.related_driver_id": {
+      "name": "related_driver_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.expenses.related_car_id": {
+      "name": "related_car_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.expenses.related_vault_id": {
+      "name": "related_vault_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.expenses.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.support_chats": {
+      "name": "support_chats",
+      "description": "support_chats",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/support_chats"
+      }
+    },
+    "rowFilter.support_chats.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.support_chats.user_id": {
+      "name": "user_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.support_chats.sender_role": {
+      "name": "sender_role",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.support_chats.message": {
+      "name": "message",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.support_chats.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.trip_events": {
+      "name": "trip_events",
+      "description": "trip_events",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/trip_events"
+      }
+    },
+    "rowFilter.trip_events.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trip_events.trip_id": {
+      "name": "trip_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trip_events.event_type": {
+      "name": "event_type",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trip_events.notes": {
+      "name": "notes",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.trip_events.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    }
+  },
+  "externalDocs": {
+    "description": "PostgREST Documentation",
+    "url": "https://postgrest.org/en/v14/references/api.html"
+  }
+}

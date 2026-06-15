@@ -1,0 +1,9 @@
+﻿1125:                         <input type="file" id="manual-ticket-file" class="input-std text-xs" accept="image/*" onchange="uploadTicketFile('manual-ticket-file', 'manual-ticket-url', 'manual-ticket-status')">
+1263:                         <input type="file" id="edit-trip-ticket-file" class="input-std text-xs" accept="image/*" onchange="uploadTicketFile('edit-trip-ticket-file', 'edit-trip-ticket-url', 'edit-trip-ticket-status')">
+1910:                 if (resObj && resObj.ticket_image) {
+1911:                     ticketUrl = resObj.ticket_image;
+3088:                     ticketUrl = resData.ticket_image || '';
+3235:                         ticket_image: ticketUrl
+3269:                                 ticket_image: ticketUrl
+3316:         async function uploadTicketFile(fileInputId, hiddenUrlInputId, statusIndicatorId) {
+4600:                     : (r.ticket_image ? `<a href="${r.ticket_image}" target="_blank" class="text-blue-500 underline">╪▒╪º╪¿╪╖</a>` : '--');

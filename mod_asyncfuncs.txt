@@ -1,0 +1,40 @@
+﻿872:         async function testConnection() {
+943:         async function updateHeartbeat() {
+974:         async function loadSummary() {
+1036:         async function loadChats() {
+1310:         async function sendBookingInvoice() {
+1356:         async function handleSend(e) {
+1425:         async function promptEditName() {
+1434:         async function openAssignModal(tripId) {
+1465:         async function confirmAssignment() {
+1641:         async function openTripChat(tripId) {
+1721:         async function updateChatName(senderId, newName) {
+1745:         async function loadTripsForDate(dateStr) {
+1835:         async function changeClientDecision(resId, currentDecision, tripId) {
+1915:         async function filterByDate(type) {
+1943:         async function filterByCustomDate(dateStr) {
+1964:         async function searchTrips() {
+2243:         async function openEditTripModal(id, isGoogleRes) {
+2356:         async function saveTripEdits() {
+2489:         async function createNewTrip(e) {
+2582:         async function loadPerformance() {
+2633:         async function callClaude(systemPrompt, userMessage, maxTokens = 600) {
+2660:         async function generateAiReply() {
+2706:         async function analyzeModeratorReply(sentMessage, chatContext) {
+2740:         async function manualCoachAnalyze() {
+2764:         async function suggestAiReply() {
+2852:         async function askAi(question) {
+2942:         async function gatherContextData() {
+3034:         async function loadModChats() {
+3087:         async function openModChat(tripId, clientName, driverName, from, to) {
+3106:         async function loadModChatMessages(tripId) {
+3192:         async function sendModMessage() {
+3217:         async function sendModPaymentNumber() {
+3240:         async function changeTripToPostpaid(tripId) {
+3333:         async function confirmModDestChange() {
+3362:         async function respondModDestChange(tripId, newDest, isApproved) {
+3415:         async function confirmModDestApproval(tripId, newDest) {
+3502:         async function loadModSupportChatsSilent() {
+3535:         async function loadModSupportChats() {
+3589:         async function openModSupportChat(userId, name) {
+3652:         async function sendModSupportMessage() {

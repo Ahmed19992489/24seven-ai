@@ -1,0 +1,3 @@
+﻿2154:                         ? `changeTripToPostpaid('${t.id}')`
+2155:                         : `changeTripToPostpaidGR('${t.id}')`;
+3287:         async function changeTripToPostpaid(tripId) {

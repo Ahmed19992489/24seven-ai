@@ -1,0 +1,9 @@
+﻿280:                     <button type="button" onclick="manualCoachAnalyze()" title="╪¬╪¡┘ä┘è┘ä ╪º┘ä╪▒╪│╪º┘ä╪⌐ (┘à╪│╪º╪╣╪» ╪º┘ä┘â┘ê╪¬╪┤)" class="w-10 h-10 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center hover:bg-purple-200 transition shrink-0 relative group">
+1790:                     customer_name: t.manual_client_name || '╪╣┘à┘è┘ä ┘ê┘è╪¿',
+1979:                     .or(`manual_client_name.ilike.%${query}%,client_phone.ilike.%${query}%,pickup_location.ilike.%${query}%,dropoff_location.ilike.%${query}%,admin_notes.ilike.%${query}%`)
+2040:                     customer_name: t.manual_client_name || '╪╣┘à┘è┘ä ┘ê┘è╪¿',
+2279:                     name = tripData.manual_client_name || '';
+2423:                         manual_client_name: name,
+2740:         async function manualCoachAnalyze() {
+3058:                 if (t.manual_client_name) clientName = t.manual_client_name;
+3737:                                     customer_name: fullTrip.manual_client_name || '╪╣┘à┘è┘ä ┘ê┘è╪¿',

@@ -1,0 +1,21 @@
+﻿423:         async function driverLogin() {
+477:         async function loadDriverTrips() {
+498:                     allCards.push(...trips.map(t => ({ type: 'trip', html: renderTripCard(t, profilesMap), date: t.created_at })));
+618:         function renderTripCard(t, profilesMap) {
+843:         async function tripStage(tripId, stage, notifyClientMsg = null) {
+864:         async function requestDestChange(tripId) {
+884:         async function endTripFlow(tripId, tripPrice) {
+919:         async function confirmEndTrip(tripId, tripPrice) {
+955:         async function confirmExternalEndTrip(tripId) {
+989:         async function loadDriverChats() {
+1046:         async function openDriverChat(tripId, clientName) {
+1062:         async function loadChatMsgs(tripId) {
+1106:         async function sendDriverMessage() {
+1126:         async function sendPaymentNumber() {
+1165:         async function notifyArrived(tripId) {
+1186:         async function endTrip(tripId) {
+1203:         async function loadFinancePage() {
+1323:         async function sendTripEmail(tripId, notifTitle, notifMessage) {
+1462:         async function submitInspection() {
+1477:                 async function compressImage(file) {
+1628:         async function checkUpcomingTrips() {

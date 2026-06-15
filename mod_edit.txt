@@ -1,0 +1,60 @@
+﻿727:     <div id="edit-trip-modal"
+732:                 <input type="hidden" id="edit-trip-id">
+733:                 <input type="hidden" id="edit-trip-is-google-res">
+738:                         <input type="text" id="edit-trip-name" class="input-std" placeholder="╪º┘ä╪º╪│┘à">
+742:                         <input type="tel" id="edit-trip-phone" class="input-std" placeholder="01xxxxxxxxx">
+748:                     <input type="text" id="edit-trip-pickup" class="input-std" placeholder="╪º┘ä╪╣┘å┘ê╪º┘å">
+752:                     <input type="text" id="edit-trip-dropoff" class="input-std" placeholder="╪º┘ä┘ê╪¼┘ç╪⌐">
+758:                         <select id="edit-trip-car-type" class="input-std">
+767:                         <select id="edit-trip-type-select" class="input-std">
+778:                         <input type="number" id="edit-trip-passengers" class="input-std" min="1">
+782:                         <input type="number" id="edit-trip-luggage" class="input-std" min="0">
+789:                         <input type="date" id="edit-trip-date" class="input-std">
+793:                         <input type="time" id="edit-trip-time" class="input-std">
+800:                         <input type="number" id="edit-trip-price" class="input-std text-green-700 font-bold" placeholder="0.00">
+804:                         <select id="edit-trip-payment-method" class="input-std">
+814:                         <input type="text" id="edit-trip-flight-number" class="input-std" placeholder="╪▒┘é┘à ╪º┘ä╪▒╪¡┘ä╪⌐">
+818:                         <input type="file" id="edit-trip-ticket-file" class="input-std text-xs" accept="image/*" onchange="uploadTicketFile('edit-trip-ticket-file', 'edit-trip-ticket-url', 'edit-trip-ticket-status')">
+819:                         <input type="hidden" id="edit-trip-ticket-url">
+820:                         <span id="edit-trip-ticket-status" class="text-[10px] text-teal-600 block mt-0.5 font-bold"></span>
+826:                     <textarea id="edit-trip-notes" class="input-std h-16"></textarea>
+830:                     <button onclick="saveTripEdits()"
+832:                     <button onclick="document.getElementById('edit-trip-modal').style.display='none'"
+2244:             document.getElementById('edit-trip-id').value = id;
+2245:             document.getElementById('edit-trip-is-google-res').value = isGoogleRes ? 'true' : 'false';
+2318:                 document.getElementById('edit-trip-name').value = name;
+2319:                 document.getElementById('edit-trip-phone').value = phone;
+2320:                 document.getElementById('edit-trip-pickup').value = pickup;
+2321:                 document.getElementById('edit-trip-dropoff').value = dropoff;
+2322:                 document.getElementById('edit-trip-flight-number').value = flightNumber;
+2323:                 document.getElementById('edit-trip-ticket-url').value = ticketUrl;
+2324:                 document.getElementById('edit-trip-ticket-status').textContent = ticketUrl ? 'Γ£à ╪º┘ä╪¬╪░┘â╪▒╪⌐ ┘à╪▒┘ü┘ê╪╣╪⌐' : '';
+2327:                 const carSelect = document.getElementById('edit-trip-car-type');
+2334:                 const typeSelect = document.getElementById('edit-trip-type-select');
+2341:                 document.getElementById('edit-trip-passengers').value = passengers;
+2342:                 document.getElementById('edit-trip-luggage').value = luggage;
+2343:                 document.getElementById('edit-trip-date').value = date;
+2344:                 document.getElementById('edit-trip-time').value = time;
+2345:                 document.getElementById('edit-trip-price').value = price;
+2346:                 document.getElementById('edit-trip-payment-method').value = payMethod;
+2347:                 document.getElementById('edit-trip-notes').value = notes;
+2349:                 document.getElementById('edit-trip-modal').style.display = 'flex';
+2356:         async function saveTripEdits() {
+2357:             const id = document.getElementById('edit-trip-id').value;
+2358:             const isGoogleRes = document.getElementById('edit-trip-is-google-res').value === 'true';
+2360:             const name = document.getElementById('edit-trip-name').value;
+2361:             const phone = document.getElementById('edit-trip-phone').value;
+2362:             const pickup = document.getElementById('edit-trip-pickup').value;
+2363:             const dropoff = document.getElementById('edit-trip-dropoff').value;
+2364:             const carType = document.getElementById('edit-trip-car-type').value;
+2365:             const tripType = document.getElementById('edit-trip-type-select').value;
+2366:             const passengers = document.getElementById('edit-trip-passengers').value;
+2367:             const luggage = document.getElementById('edit-trip-luggage').value;
+2368:             const date = document.getElementById('edit-trip-date').value;
+2369:             const time = document.getElementById('edit-trip-time').value;
+2370:             const price = document.getElementById('edit-trip-price').value;
+2371:             const payMethod = document.getElementById('edit-trip-payment-method').value;
+2372:             const notes = document.getElementById('edit-trip-notes').value;
+2373:             const flightNumber = document.getElementById('edit-trip-flight-number').value.trim();
+2374:             const ticketUrl = document.getElementById('edit-trip-ticket-url').value.trim();
+2460:                 document.getElementById('edit-trip-modal').style.display = 'none';
