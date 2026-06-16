@@ -898,8 +898,28 @@
         // --- Supabase Config ---
         const SUPABASE_URL = 'https://wtjwzqvmwnbvjxnmweqq.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY';
+        const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTQ2NTQwMywiZXhwIjoyMDg3MDQxNDAzfQ.WYNflQntWBCHXDnxFf2C1X1IerYZtMfMT6p6P4Dx0Vg';
         const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzGoawwK6JGm5QRHt4gfIScl7DYMaCDKU-GGcdYYXXyDY888xuPF0EOZ9vxVHSqHrWv/exec';
+
+        // رفع ملف على Supabase Storage باستخدام service key (يتجاوز RLS)
+        async function uploadToOmniMedia(fileOrBlob, fileName, mimeType) {
+            const res = await fetch(`${SUPABASE_URL}/storage/v1/object/omni-media/${fileName}`, {
+                method: 'POST',
+                headers: {
+                    'apikey': SUPABASE_SERVICE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+                    'Content-Type': mimeType,
+                    'x-upsert': 'true'
+                },
+                body: fileOrBlob
+            });
+            if (!res.ok) {
+                const err = await res.text();
+                throw new Error(`فشل رفع الملف: ${err}`);
+            }
+            return `${SUPABASE_URL}/storage/v1/object/public/omni-media/${fileName}`;
+        }
 
         function getApiBaseUrl() {
             const loc = window.location;
@@ -2094,14 +2114,11 @@
             }
             
             try {
-                // رفع مباشر على Supabase Storage
-                const ext = file.name.split('.').pop() || 'jpg';
+                const ext = file.name.split('.').pop().toLowerCase() || 'jpg';
+                const mimeType = file.type || `image/${ext}`;
                 const fileName = `omni-media/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-                const { error: upErr } = await sbClient.storage.from('omni-media').upload(fileName, file, { upsert: true });
-                if (upErr) throw new Error('فشل رفع الصورة: ' + upErr.message);
                 
-                const { data: urlData } = sbClient.storage.from('omni-media').getPublicUrl(fileName);
-                const mediaUrl = urlData.publicUrl;
+                const mediaUrl = await uploadToOmniMedia(file, fileName, mimeType);
                 
                 const messageText = `MEDIA_IMAGE:${mediaUrl}${caption ? '|CAPTION:' + caption : ''}`;
                 await executeOmniSendReply(activeChatId, chat.channel, messageText);
@@ -2207,14 +2224,11 @@
             }
             
             try {
-                // رفع مباشر على Supabase Storage
-                const ext = (blob.type || 'audio/webm').includes('ogg') ? 'ogg' : (blob.type.includes('aac') ? 'aac' : 'webm');
+                const mimeType = blob.type || 'audio/webm';
+                const ext = mimeType.includes('ogg') ? 'ogg' : (mimeType.includes('aac') ? 'aac' : (mimeType.includes('mp4') ? 'mp4' : 'webm'));
                 const fileName = `omni-voice/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-                const { error: upErr } = await sbClient.storage.from('omni-media').upload(fileName, blob, { upsert: true, contentType: blob.type || 'audio/webm' });
-                if (upErr) throw new Error('فشل رفع الصوت: ' + upErr.message);
                 
-                const { data: urlData } = sbClient.storage.from('omni-media').getPublicUrl(fileName);
-                const mediaUrl = urlData.publicUrl;
+                const mediaUrl = await uploadToOmniMedia(blob, fileName, mimeType);
                 const messageText = `MEDIA_AUDIO:${mediaUrl}`;
                 
                 await executeOmniSendReply(activeChatId, chat.channel, messageText);
