@@ -2116,7 +2116,7 @@
             try {
                 const ext = file.name.split('.').pop().toLowerCase() || 'jpg';
                 const mimeType = file.type || `image/${ext}`;
-                const fileName = `omni-media/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+                const fileName = `images/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
                 
                 const mediaUrl = await uploadToOmniMedia(file, fileName, mimeType);
                 
@@ -2226,7 +2226,7 @@
             try {
                 const mimeType = blob.type || 'audio/webm';
                 const ext = mimeType.includes('ogg') ? 'ogg' : (mimeType.includes('aac') ? 'aac' : (mimeType.includes('mp4') ? 'mp4' : 'webm'));
-                const fileName = `omni-voice/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+                const fileName = `voice/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
                 
                 const mediaUrl = await uploadToOmniMedia(blob, fileName, mimeType);
                 const messageText = `MEDIA_AUDIO:${mediaUrl}`;
