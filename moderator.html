@@ -30,7 +30,7 @@
 <body class="bg-slate-50 overflow-hidden h-screen flex">
 
     <!-- Mobile Menu Toggle -->
-    <button id="mobile-menu-toggle" onclick="toggleSidebar()" class="lg:hidden fixed bottom-6 right-6 w-14 h-14 bg-teal-600 text-white rounded-full shadow-2xl z-[60] flex items-center justify-center text-xl hover:scale-110 active:scale-90 transition-all">
+    <button id="mobile-menu-toggle" onclick="toggleSidebar()" class="lg:hidden fixed top-4 right-4 w-12 h-12 bg-teal-600 text-white rounded-full shadow-2xl z-[60] flex items-center justify-center text-xl hover:scale-110 active:scale-90 transition-all">
         <i class="fas fa-bars"></i>
     </button>
 
@@ -1011,10 +1011,21 @@
         updateHeartbeat();
         setInterval(updateHeartbeat, 120000);
 
-        // --- Notification Sound ---
-        const notificationSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3'); 
+        // --- Notification Sound (Web Audio API) ---
         function playNotify() {
-            notificationSound.play().catch(e => console.log("Sound play blocked by browser"));
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.setValueAtTime(880, ctx.currentTime);
+                osc.frequency.setValueAtTime(660, ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.5);
+            } catch(e) { console.log('Sound not supported:', e); }
         }
 
         // --- Toast Notification ---
@@ -2064,23 +2075,16 @@
             }
             
             try {
-                const formData = new FormData();
-                formData.append('file', file);
+                // رفع مباشر على Supabase Storage
+                const ext = file.name.split('.').pop() || 'jpg';
+                const fileName = `omni-media/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+                const { error: upErr } = await sbClient.storage.from('trip-photos').upload(fileName, file, { upsert: true });
+                if (upErr) throw new Error('فشل رفع الصورة: ' + upErr.message);
                 
-                const apiBase = getApiBaseUrl() || '';
-                const uploadRes = await fetch(`${apiBase}/api/upload`, {
-                    method: 'POST',
-                    body: formData
-                });
+                const { data: urlData } = sbClient.storage.from('trip-photos').getPublicUrl(fileName);
+                const mediaUrl = urlData.publicUrl;
                 
-                if (!uploadRes.ok) throw new Error('فشل رفع الصورة');
-                const uploadData = await uploadRes.json();
-                
-                if (uploadData.status !== 'success') throw new Error(uploadData.message || 'فشل الرفع');
-                
-                const mediaUrl = uploadData.url;
                 const messageText = `MEDIA_IMAGE:${mediaUrl}${caption ? '|CAPTION:' + caption : ''}`;
-                
                 await executeOmniSendReply(activeChatId, chat.channel, messageText);
                 
             } catch (err) {
@@ -2184,21 +2188,14 @@
             }
             
             try {
-                const formData = new FormData();
-                formData.append('file', blob, 'recording.webm');
+                // رفع مباشر على Supabase Storage
+                const ext = (blob.type || 'audio/webm').includes('ogg') ? 'ogg' : (blob.type.includes('aac') ? 'aac' : 'webm');
+                const fileName = `omni-voice/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+                const { error: upErr } = await sbClient.storage.from('trip-photos').upload(fileName, blob, { upsert: true, contentType: blob.type || 'audio/webm' });
+                if (upErr) throw new Error('فشل رفع الصوت: ' + upErr.message);
                 
-                const apiBase = getApiBaseUrl() || '';
-                const uploadRes = await fetch(`${apiBase}/api/upload`, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                if (!uploadRes.ok) throw new Error('فشل رفع الملف الصوتي');
-                const uploadData = await uploadRes.json();
-                
-                if (uploadData.status !== 'success') throw new Error(uploadData.message || 'فشل الرفع');
-                
-                const mediaUrl = uploadData.url;
+                const { data: urlData } = sbClient.storage.from('trip-photos').getPublicUrl(fileName);
+                const mediaUrl = urlData.publicUrl;
                 const messageText = `MEDIA_AUDIO:${mediaUrl}`;
                 
                 await executeOmniSendReply(activeChatId, chat.channel, messageText);
@@ -4057,6 +4054,11 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
              showTab('dashboard');
+             // تهيئة الاشتراكات فوراً حتى تصل الإشعارات حتى لو لم يفتح تبويب الشات
+             setTimeout(() => {
+                 if (typeof setupModSupportRealtime === 'function') setupModSupportRealtime();
+                 if (typeof loadChats === 'function') loadChats();
+             }, 1500);
         });
 
         // ============================================================
