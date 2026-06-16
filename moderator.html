@@ -2243,12 +2243,12 @@
             }
         }
 
+        // --- توكينات الإرسال المباشر (Fallback عند عدم توفر الباكيند) ---
+        const _WA_TOKEN = 'EAAPDbwUyvY0BQrm6ZB9qb62LU9hI50ZC9QOfZAO3VPA7ZCSnFSRMCb2kouBRkXu4LiVmRU2ydv1vLl00kKmgTFMN5ULJOpImor7i8oITjicjIjWiOLxTL7yltYrlF0RLxcdU6UNOaIdqo4Ouv0BnQ79OK2sgSLpHY9ZCQs4iRIxcpjnoxr8EWpV4FSgGTzgZDZD';
+        const _PHONE_ID = '597129733493778';
+        const _FB_TOKEN = 'EAAPDbwUyvY0BRN0VW4bIHPLRpeA7qHqK5TyFpNxJ8fuFcvVCshuBwZC52F59Q6oNH671nLZBbAiEsGSB55Vq0sHjyMIB4QNStzt6sFxRL7ImzttrnuFkHVTYWGZC0J2MgbBGfqo3dOi7Wo5QagQ7pY3vhZAztfKZBhNZCxGrVeGRIqz7pUkHHC2iM4ZA0mDje9oEXZCm';
+
         async function executeOmniSendReply(senderId, channel, text) {
-            const apiBaseUrl = getApiBaseUrl();
-            if (!apiBaseUrl) {
-                throw new Error("لم يتم العثور على رابط اتصال بالـ API!");
-            }
-            const targetUrl = `${apiBaseUrl}/api/send_reply`;
             const chat = groupedChats[senderId];
             
             let apiSenderId = senderId;
@@ -2276,43 +2276,135 @@
                 const parts = text.substring(12).split('|CAPTION:');
                 mediaUrl = parts[0];
                 mediaType = 'image';
-                messageToSend = parts[1] || ''; // الكابشن يُرسل كنص
+                messageToSend = parts[1] || '';
             } else if (text.startsWith('MEDIA_AUDIO:')) {
                 mediaUrl = text.substring(12);
                 mediaType = 'audio';
                 messageToSend = '🎤 رسالة صوتية';
             }
-            
-            const res = await fetch(targetUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'ngrok-skip-browser-warning': 'true'
-                },
-                body: JSON.stringify({ 
-                    channel: channel, 
-                    sender_id: apiSenderId, 
-                    message: messageToSend,
-                    media_url: mediaUrl,
-                    media_type: mediaType,
-                    mod_name: currentModName || 'Admin',
-                    whatsapp_instance_id: whatsappInstanceId
-                })
-            });
-            
-            if (!res.ok) {
-                const errorTxt = await res.text();
-                throw new Error(errorTxt);
-            }
-            
-            let resJson = {};
-            try { resJson = await res.json(); } catch(e) {}
 
+            // === محاولة 1: الباكيند (لو شغال) ===
+            let backendOk = false;
+            const apiBaseUrl = getApiBaseUrl();
+            if (apiBaseUrl) {
+                try {
+                    const targetUrl = `${apiBaseUrl}/api/send_reply`;
+                    const res = await fetch(targetUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+                        body: JSON.stringify({ 
+                            channel, sender_id: apiSenderId, message: messageToSend,
+                            media_url: mediaUrl, media_type: mediaType,
+                            mod_name: currentModName || 'Admin',
+                            whatsapp_instance_id: whatsappInstanceId
+                        })
+                    });
+                    if (res.ok) {
+                        backendOk = true;
+                        let resJson = {};
+                        try { resJson = await res.json(); } catch(e) {}
+                        if (resJson.status === 'warning') {
+                            showToast(resJson.message || '⚠️ تم حفظ الرسالة لكن لم تُرسل للعميل.', 'warning');
+                        }
+                    }
+                } catch(e) { /* الباكيند مش متوفر */ }
+            }
+
+            // === محاولة 2: إرسال مباشر من المتصفح (Fallback) ===
+            if (!backendOk) {
+                console.log('[Moderator] Backend unavailable, sending directly from browser...');
+                let sendSuccess = false;
+                let apiError = '';
+
+                // --- إرسال الرسالة حسب القناة ---
+                if (channel === 'whatsapp') {
+                    // تحقق من وجود instance مخصصة
+                    let routedViaCustom = false;
+                    if (whatsappInstanceId) {
+                        try {
+                            const instRes = await fetch(`${SUPABASE_URL}/rest/v1/whatsapp_instances?id=eq.${whatsappInstanceId}`, {
+                                headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` }
+                            });
+                            const instances = await instRes.json();
+                            if (instances && instances.length > 0) {
+                                const inst = instances[0];
+                                if (inst.provider === 'ultramsg') {
+                                    const base = (inst.api_url || 'https://api.ultramsg.com').replace(/\/+$/, '');
+                                    const sendUrl = mediaUrl ? `${base}/${inst.instance_id}/messages/image` : `${base}/${inst.instance_id}/messages/chat`;
+                                    const payload = mediaUrl 
+                                        ? { token: inst.token, to: apiSenderId, image: mediaUrl, caption: messageToSend }
+                                        : { token: inst.token, to: apiSenderId, body: messageToSend };
+                                    const r = await fetch(sendUrl, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(payload) });
+                                    if (r.ok) { sendSuccess = true; routedViaCustom = true; }
+                                    else { apiError = await r.text(); }
+                                }
+                            }
+                        } catch(e) { apiError = e.message; }
+                    }
+                    // Fallback إلى Meta WhatsApp API
+                    if (!routedViaCustom || !sendSuccess) {
+                        if (!whatsappInstanceId) {
+                            try {
+                                const url = `https://graph.facebook.com/v17.0/${_PHONE_ID}/messages`;
+                                let payload;
+                                if (mediaUrl) {
+                                    payload = { messaging_product: 'whatsapp', to: apiSenderId, type: mediaType, [mediaType]: { link: mediaUrl, caption: messageToSend } };
+                                } else {
+                                    payload = { messaging_product: 'whatsapp', to: apiSenderId, type: 'text', text: { body: messageToSend } };
+                                }
+                                const r = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${_WA_TOKEN}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                                if (r.ok) sendSuccess = true;
+                                else apiError = await r.text();
+                            } catch(e) { apiError = e.message; }
+                        }
+                    }
+                } else if (channel === 'messenger' || channel === 'instagram') {
+                    try {
+                        const url = `https://graph.facebook.com/v18.0/me/messages?access_token=${_FB_TOKEN}`;
+                        let payload;
+                        if (mediaUrl) {
+                            payload = { recipient: { id: apiSenderId }, message: { attachment: { type: mediaType, payload: { url: mediaUrl, is_reusable: true } } } };
+                        } else {
+                            payload = { recipient: { id: apiSenderId }, message: { text: messageToSend } };
+                        }
+                        const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                        if (r.ok) sendSuccess = true;
+                        else apiError = await r.text();
+                    } catch(e) { apiError = e.message; }
+                }
+
+                // --- حفظ الرسالة في Supabase ---
+                let sbMessageText = text;
+                const sbPayload = {
+                    channel: channel,
+                    sender_id: apiSenderId,
+                    sender_name: currentModName || 'Admin',
+                    message_text: sbMessageText,
+                    is_from_admin: true,
+                    read_by_admin: true
+                };
+                if (channel === 'whatsapp' && whatsappInstanceId) {
+                    sbPayload.whatsapp_instance_id = whatsappInstanceId;
+                }
+                try {
+                    await fetch(`${SUPABASE_URL}/rest/v1/omnichannel_messages`, {
+                        method: 'POST',
+                        headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+                        body: JSON.stringify(sbPayload)
+                    });
+                } catch(e) { console.error('Supabase save error:', e); }
+
+                if (!sendSuccess && apiError) {
+                    showToast('⚠️ تم حفظ الرسالة لكن فشل الإرسال للعميل: ' + apiError.substring(0, 100), 'warning');
+                }
+            }
+
+            // --- تحديث الواجهة ---
             const newMsg = {
                 id: 'temp_' + Date.now(),
                 sender_id: apiSenderId,
                 sender_name: currentModName || 'Admin',
-                message_text: text,  // نحفظ النص الأصلي مع MEDIA_ prefix للعرض
+                message_text: text,
                 is_from_admin: true,
                 created_at: new Date().toISOString(),
                 channel: channel,
@@ -2324,10 +2416,6 @@
             allMessages.push(newMsg);
             renderMessages();
             loadUnifiedChats();
-
-            if (resJson.status === 'warning') {
-                showToast(resJson.message || '⚠️ تم حفظ الرسالة لكن لم تُرسل للعميل.', 'warning');
-            }
         }
 
         async function handleSend(e) {
