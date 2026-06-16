@@ -208,10 +208,12 @@ async def send_reply_direct(data: dict):
     channel = (data.get("channel") or "").lower()
     sender_id = data.get("sender_id", "")
     message = data.get("message", "")
+    media_url = data.get("media_url", "")
+    media_type = data.get("media_type", "image")
     mod_name = data.get("mod_name", "Admin")
     whatsapp_instance_id = data.get("whatsapp_instance_id")
 
-    if not channel or not sender_id or not message:
+    if not channel or not sender_id or (not message and not media_url):
         return {"status": "error", "detail": "Missing parameters"}
 
     send_success = False
@@ -256,156 +258,73 @@ async def send_reply_direct(data: dict):
                 
                 if provider == "ultramsg":
                     base = api_url.strip().rstrip('/') if api_url else "https://api.ultramsg.com"
-                    send_url = f"{base}/{inst_id}/messages/chat"
-                    payload = {
-                        "token": token,
-                        "to": sender_id,
-                        "body": message
-                    }
+                    send_url = f"{base}/{inst_id}/messages/image" if media_url else f"{base}/{inst_id}/messages/chat"
+                    payload = {"token": token, "to": sender_id}
+                    if media_url:
+                        payload.update({"image": media_url, "caption": message})
+                    else:
+                        payload.update({"body": message})
                     try:
                         res = _req.post(send_url, data=payload, timeout=10)
                         if res.status_code == 200 and ("success" in res.text.lower() or "\"sent\":\"true\"" in res.text.lower()):
                             send_success = True
                         else:
                             api_error = res.text
-                            print(f"❌ UltraMsg send failed: {res.text}")
                     except Exception as e:
                         api_error = str(e)
-                        print(f"❌ UltraMsg exception: {e}")
-                elif provider == "greenapi":
-                    base = api_url.strip().rstrip('/') if api_url else "https://api.greenapi.com"
-                    send_url = f"{base}/waInstance{inst_id}/sendMessage/{token}"
-                    clean_num = sender_id.replace("+", "").replace("0020", "20")
-                    payload = {
-                        "chatId": f"{clean_num}@c.us",
-                        "message": message
-                    }
-                    try:
-                        res = _req.post(send_url, json=payload, timeout=10)
-                        if res.status_code == 200:
-                            send_success = True
-                        else:
-                            api_error = res.text
-                            print(f"❌ GreenAPI send failed: {res.text}")
-                    except Exception as e:
-                        api_error = str(e)
-                        print(f"❌ GreenAPI exception: {e}")
                 elif provider == "local":
                     base = api_url.strip().rstrip('/') if api_url else "http://localhost:3001"
                     send_url = f"{base}/instance/{whatsapp_instance_id}/send"
-                    payload = {
-                        "to": sender_id,
-                        "message": message
-                    }
+                    payload = {"to": sender_id, "message": message, "media_url": media_url, "media_type": media_type}
                     try:
                         res = _req.post(send_url, json=payload, timeout=10)
                         if res.status_code == 200 and res.json().get("status") == "success":
                             send_success = True
-                        else:
-                            api_error = res.text
-                            print(f"❌ Local WA send failed: {res.text}")
                     except Exception as e:
                         api_error = str(e)
-                        print(f"❌ Local WA exception: {e}")
-            else:
-                print(f"⚠️ Could not fetch credentials for whatsapp_instance_id {whatsapp_instance_id}, falling back to Meta API")
 
         # Fallback to Meta API
         if not routed_via_custom or not send_success:
             if not whatsapp_instance_id:
                 url = f"https://graph.facebook.com/v17.0/{_PHONE_ID}/messages"
                 headers = {"Authorization": f"Bearer {_WA_TOKEN}", "Content-Type": "application/json"}
-                payload = {"messaging_product": "whatsapp", "to": sender_id, "type": "text", "text": {"body": message}}
+                if media_url:
+                    payload = {"messaging_product": "whatsapp", "to": sender_id, "type": media_type, media_type: {"link": media_url, "caption": message}}
+                else:
+                    payload = {"messaging_product": "whatsapp", "to": sender_id, "type": "text", "text": {"body": message}}
                 try:
                     r = _req.post(url, headers=headers, json=payload, timeout=10)
-                    if r.status_code not in [200, 201]:
-                        api_error = r.text
-                        print(f"❌ Meta WA Send failed: {r.text}")
-                    else:
-                        send_success = True
+                    if r.status_code in [200, 201]: send_success = True
+                    else: api_error = r.text
                 except Exception as e:
                     api_error = str(e)
-                    print(f"❌ Meta WA exception: {e}")
-            else:
-                if not api_error:
-                    api_error = "Custom WhatsApp instance send failed"
 
-    elif channel == "messenger":
+    elif channel in ["messenger", "instagram"]:
         url = f"https://graph.facebook.com/v18.0/me/messages?access_token={_FB_TOKEN}"
-        payload = {"recipient": {"id": sender_id}, "message": {"text": message}}
+        if media_url:
+            payload = {"recipient": {"id": sender_id}, "message": {"attachment": {"type": media_type, "payload": {"url": media_url, "is_reusable": True}}}}
+        else:
+            payload = {"recipient": {"id": sender_id}, "message": {"text": message}}
         try:
             r = _req.post(url, headers={"Content-Type": "application/json"}, json=payload, timeout=10)
-            if r.status_code == 200:
-                send_success = True
-                try:
-                    fb_msg_id = r.json().get('message_id', '')
-                    if fb_msg_id:
-                        sent_via_api_mids.add(fb_msg_id)
-                        if len(sent_via_api_mids) > 500: sent_via_api_mids.clear()
-                        print(f"[FB-API->Render] Tracked MID: {fb_msg_id}")
-                except: pass
-            else:
-                api_error = r.text
-                print(f"❌ Messenger Send failed: {r.text}")
+            if r.status_code == 200: send_success = True
+            else: api_error = r.text
         except Exception as e:
             api_error = str(e)
-            print(f"❌ Messenger exception: {e}")
 
-    elif channel == "instagram":
-        # Step 1: Try to take thread control (Handover Protocol)
-        try:
-            take_url = f"https://graph.facebook.com/v18.0/me/take_thread_control"
-            take_payload = {"recipient": {"id": sender_id}}
-            tc_res = _req.post(take_url, headers={"Content-Type": "application/json"},
-                              params={"access_token": _FB_TOKEN}, json=take_payload, timeout=5)
-            if tc_res.status_code == 200:
-                print(f"[IG-Handover] Successfully took thread control for {sender_id}")
-            else:
-                print(f"[IG-Handover] take_thread_control: {tc_res.status_code} {tc_res.text}")
-        except Exception as tc_err:
-            print(f"[IG-Handover] Exception: {tc_err}")
+    # --- حفظ الرسالة في Supabase (مع MEDIA prefix للعرض في الموديتور) ---
+    if media_url and media_type == "image":
+        sb_message_text = f"MEDIA_IMAGE:{media_url}{('|CAPTION:' + message) if message else ''}"
+    elif media_url and media_type == "audio":
+        sb_message_text = f"MEDIA_AUDIO:{media_url}"
+    else:
+        sb_message_text = message
 
-        # Step 2: Send the message using the permanent FB Page Token
-        url = f"https://graph.facebook.com/v18.0/me/messages?access_token={_FB_TOKEN}"
-        payload = {"recipient": {"id": sender_id}, "message": {"text": message}}
-        try:
-            r = _req.post(url, headers={"Content-Type": "application/json"}, json=payload, timeout=10)
-            if r.status_code == 200:
-                send_success = True
-                try:
-                    ig_msg_id = r.json().get('message_id', '')
-                    if ig_msg_id:
-                        sent_via_api_mids.add(ig_msg_id)
-                        if len(sent_via_api_mids) > 500: sent_via_api_mids.clear()
-                        print(f"[IG-API->Render] Tracked MID: {ig_msg_id}")
-                except: pass
-            else:
-                err_json = {}
-                try: err_json = r.json()
-                except: pass
-                err_code = err_json.get('error', {}).get('error_subcode', 0)
-                if err_code == 2534037:
-                    api_error = "instagram_handover_error"
-                    print("[IG-HANDOVER] App has no thread control.")
-                elif err_code == 2534022:
-                    api_error = "instagram_window_expired"
-                    print(f"[IG-WINDOW] 24-hour messaging window expired for {sender_id}")
-                elif err_code == 2534048:
-                    api_error = "instagram_dev_mode"
-                    print("[IG-DEV-MODE] App in Dev Mode - recipient has no role on app.")
-                else:
-                    api_error = r.text
-                    print(f"❌ Instagram Send failed: {r.text}")
-        except Exception as e:
-            api_error = str(e)
-            print(f"❌ Instagram exception: {e}")
-
-    # --- حفظ الرسالة في Supabase ---
     sb_payload = {
         "channel": channel,
         "sender_id": sender_id,
         "sender_name": mod_name,
-        "message_text": message,
+        "message_text": sb_message_text,
         "is_from_admin": True,
         "read_by_admin": True
     }
@@ -419,21 +338,6 @@ async def send_reply_direct(data: dict):
 
     if send_success:
         return {"status": "success"}
-    elif api_error == "instagram_handover_error":
-        return {
-            "status": "warning",
-            "message": "تم حفظ الرسالة، لكن لم تُرسل للعميل. يرجى الذهاب لإعدادات صفحة فيسبوك -> Advanced Messaging وتعيين تطبيقك كـ Primary Receiver للإنستجرام."
-        }
-    elif api_error == "instagram_window_expired":
-        return {
-            "status": "warning",
-            "message": "⚠️ انتهت مهلة الـ 24 ساعة! لا يمكن الرد على هذا العميل لأنه لم يرسل رسالة خلال آخر 24 ساعة. يرجى الرد عليه من تطبيق Instagram مباشرة أو انتظار رسالة جديدة منه."
-        }
-    elif api_error == "instagram_dev_mode":
-        return {
-            "status": "warning",
-            "message": "تم حفظ الرسالة، لكن لم يتم إرسالها على إنستجرام. التطبيق في وضع التطوير ويحتاج Advanced Access من Meta. الرسالة ظهرت في المحادثة فقط."
-        }
     else:
         return {"status": "error", "detail": f"API Error: {api_error}"}
 

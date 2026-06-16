@@ -910,10 +910,10 @@
             // Auto-detection based on current URL
             const loc = window.location;
             
-            // [Fix] إذا كان الموقع المفتوح هو الاستضافة الأساسية 24seven-ai.com، فهناك 
-            // سيرفر مستقل محلي بـ Ngrok ولا يوجد مسار API على هذا الدومين.
-            if (loc.hostname.includes('24seven-ai.com') || loc.hostname.includes('github.io') || loc.hostname.includes('vercel.app')) {
-                return null; // سيتم التعامل معها وإظهار رسالة تنبيه
+            // 24seven-ai.com يعمل على Render الذي يخدم API مباشرة على نفس الدومين
+            // لذلك نستخدم origin الحالي مباشرة بدون ngrok
+            if (loc.hostname.includes('24seven-ai.com') || loc.hostname.includes('onrender.com')) {
+                return `${loc.protocol}//${loc.hostname}`;
             }
 
             if (loc.port === '3000' || loc.pathname.startsWith('/moderator') || loc.pathname.startsWith('/dashboard')) {
@@ -1939,26 +1939,46 @@
             const chat = groupedChats[activeChatId];
             container.innerHTML = chat.messages.map(m => {
                 const senderLabel = getSenderLabel(m);
-                const rawText = m.message_text || '';
+                const rawText = m.message_text || m.message || '';
                 let messageHtml = '';
                 
+                // رسائل العميل القادمة من واتساب/إنستجرام/ماسنجر تحتوي على صور كـ URLs مباشرة
+                const imageExtPattern = /^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i;
+                const audioPattern = /^https?:\/\/.+\.(ogg|mp3|m4a|aac|webm|opus)(\?.*)?$/i;
+
                 if (rawText.startsWith('MEDIA_IMAGE:')) {
                     const parts = rawText.substring(12).split('|CAPTION:');
                     const mediaUrl = parts[0];
                     const caption = parts[1] || '';
                     messageHtml = `
                         <div class="flex flex-col gap-1">
-                            <img src="${mediaUrl}" class="max-w-xs rounded-xl cursor-pointer border border-slate-200 shadow-sm transition hover:opacity-90" onclick="window.open('${mediaUrl}', '_blank')" />
+                            <img src="${mediaUrl}" class="max-w-xs rounded-xl cursor-pointer border border-slate-200 shadow-sm transition hover:opacity-90" onclick="window.open('${mediaUrl}', '_blank')" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" />
+                            <span style="display:none" class="text-xs text-red-400">⚠️ لا يمكن عرض الصورة</span>
                             ${caption ? `<p class="text-xs mt-1 ${m.is_from_admin ? 'text-teal-100' : 'text-slate-600'}">${escapeHtml(caption)}</p>` : ''}
                         </div>
                     `;
                 } else if (rawText.startsWith('MEDIA_AUDIO:')) {
                     const mediaUrl = rawText.substring(12);
-                    const apiBase = getApiBaseUrl() || '';
-                    const fullUrl = mediaUrl.startsWith('http') ? mediaUrl : apiBase + mediaUrl;
                     messageHtml = `
-                        <audio src="${fullUrl}" controls preload="none" class="max-w-xs rounded-lg mt-1" onerror="this.onerror=null;this.parentElement.innerHTML='<span class=\\'text-xs text-red-300\\'>⚠️ ملف صوتي غير متاح</span>';"></audio>
+                        <audio src="${mediaUrl}" controls preload="none" class="max-w-xs rounded-lg mt-1" onerror="this.onerror=null;this.parentElement.innerHTML='<span class=\'text-xs text-red-300\'>⚠️ ملف صوتي غير متاح</span>';"></audio>
                     `;
+                } else if (rawText.startsWith('MEDIA_VIDEO:') || rawText.includes('[فيديو') || rawText.includes('[Video')) {
+                    const mediaUrl = rawText.startsWith('MEDIA_VIDEO:') ? rawText.substring(12) : null;
+                    messageHtml = mediaUrl
+                        ? `<video src="${mediaUrl}" controls class="max-w-xs rounded-xl mt-1" style="max-height:200px"></video>`
+                        : `<p class="text-sm italic opacity-70">📹 ${escapeHtml(rawText)}</p>`;
+                } else if (imageExtPattern.test(rawText)) {
+                    // رابط صورة مباشر (من واتساب أو إنستجرام)
+                    messageHtml = `
+                        <div class="flex flex-col gap-1">
+                            <img src="${rawText}" class="max-w-xs rounded-xl cursor-pointer border border-slate-200 shadow-sm" onclick="window.open('${rawText}', '_blank')" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" />
+                            <span style="display:none" class="text-xs text-red-400">⚠️ انتهت صلاحية رابط الصورة</span>
+                        </div>
+                    `;
+                } else if (audioPattern.test(rawText)) {
+                    messageHtml = `<audio src="${rawText}" controls preload="none" class="max-w-xs rounded-lg mt-1"></audio>`;
+                } else if (rawText.startsWith('[رسالة وسائط]') || rawText.startsWith('[رسالة وسالطة]')) {
+                    messageHtml = `<p class="text-sm italic opacity-70">📎 ${escapeHtml(rawText)}</p>`;
                 } else {
                     messageHtml = `<p class="whitespace-pre-wrap">${escapeHtml(rawText)}</p>`;
                 }
@@ -2213,7 +2233,7 @@
         async function executeOmniSendReply(senderId, channel, text) {
             const apiBaseUrl = getApiBaseUrl();
             if (!apiBaseUrl) {
-                throw new Error("لم يتم العثور على رابط اتصال بالسيرفر المحلي (API)!");
+                throw new Error("لم يتم العثور على رابط اتصال بالـ API!");
             }
             const targetUrl = `${apiBaseUrl}/api/send_reply`;
             const chat = groupedChats[senderId];
@@ -2234,6 +2254,21 @@
                     }
                 }
             }
+
+            // --- استخراج الميديا من النص ---
+            let messageToSend = text;
+            let mediaUrl = null;
+            let mediaType = null;
+            if (text.startsWith('MEDIA_IMAGE:')) {
+                const parts = text.substring(12).split('|CAPTION:');
+                mediaUrl = parts[0];
+                mediaType = 'image';
+                messageToSend = parts[1] || ''; // الكابشن يُرسل كنص
+            } else if (text.startsWith('MEDIA_AUDIO:')) {
+                mediaUrl = text.substring(12);
+                mediaType = 'audio';
+                messageToSend = '🎤 رسالة صوتية';
+            }
             
             const res = await fetch(targetUrl, {
                 method: 'POST',
@@ -2244,7 +2279,9 @@
                 body: JSON.stringify({ 
                     channel: channel, 
                     sender_id: apiSenderId, 
-                    message: text,
+                    message: messageToSend,
+                    media_url: mediaUrl,
+                    media_type: mediaType,
                     mod_name: currentModName || 'Admin',
                     whatsapp_instance_id: whatsappInstanceId
                 })
@@ -2262,7 +2299,7 @@
                 id: 'temp_' + Date.now(),
                 sender_id: apiSenderId,
                 sender_name: currentModName || 'Admin',
-                message_text: text,
+                message_text: text,  // نحفظ النص الأصلي مع MEDIA_ prefix للعرض
                 is_from_admin: true,
                 created_at: new Date().toISOString(),
                 channel: channel,
