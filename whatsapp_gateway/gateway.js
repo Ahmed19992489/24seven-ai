@@ -206,16 +206,43 @@ async function initSession(id) {
                                 );
                                 if (buffer) {
                                     const fileName = `${mediaType}_${Date.now()}_${Math.floor(Math.random() * 10000)}.${fileExtension}`;
-                                    const filePath = path.join(UPLOADS_DIR, fileName);
-                                    fs.writeFileSync(filePath, buffer);
-                                    console.log(`[Gateway] Downloaded and saved incoming media to ${filePath}`);
                                     
-                                    const relativeUrl = `/static/uploads/${fileName}`;
-                                    if (mediaType === 'image') {
-                                        const caption = messageContent.imageMessage.caption || '';
-                                        text = `MEDIA_IMAGE:${relativeUrl}${caption ? '|CAPTION:' + caption : ''}`;
-                                    } else {
-                                        text = `MEDIA_AUDIO:${relativeUrl}`;
+                                    // رفع الملف مباشرةً على Supabase Storage (عشان يكون متاح من أي مكان)
+                                    const mimeType = mediaType === 'image' ? `image/${fileExtension}` : `audio/${fileExtension}`;
+                                    let publicUrl = null;
+                                    try {
+                                        const uploadRes = await axios.post(
+                                            `${SUPABASE_URL}/storage/v1/object/omni-media/${fileName}`,
+                                            buffer,
+                                            {
+                                                headers: {
+                                                    'apikey': SUPABASE_KEY,
+                                                    'Authorization': `Bearer ${SUPABASE_KEY}`,
+                                                    'Content-Type': mimeType,
+                                                    'x-upsert': 'true'
+                                                }
+                                            }
+                                        );
+                                        if (uploadRes.status === 200 || uploadRes.status === 201) {
+                                            publicUrl = `${SUPABASE_URL}/storage/v1/object/public/omni-media/${fileName}`;
+                                            console.log(`[Gateway] Uploaded media to Supabase Storage: ${publicUrl}`);
+                                        }
+                                    } catch (uploadErr) {
+                                        console.error(`[Gateway] Supabase Storage upload failed:`, uploadErr.message);
+                                        // fallback: save locally
+                                        const filePath = require('path').join(UPLOADS_DIR, fileName);
+                                        require('fs').writeFileSync(filePath, buffer);
+                                        publicUrl = `/static/uploads/${fileName}`;
+                                        console.log(`[Gateway] Fallback: saved media locally at ${filePath}`);
+                                    }
+                                    
+                                    if (publicUrl) {
+                                        if (mediaType === 'image') {
+                                            const caption = messageContent.imageMessage.caption || '';
+                                            text = `MEDIA_IMAGE:${publicUrl}${caption ? '|CAPTION:' + caption : ''}`;
+                                        } else {
+                                            text = `MEDIA_AUDIO:${publicUrl}`;
+                                        }
                                     }
                                 }
                             } catch (mediaErr) {
@@ -343,9 +370,9 @@ app.get('/instance/:id/qr', async (req, res) => {
 // Send message via instance
 app.post('/instance/:id/send', async (req, res) => {
     const { id } = req.params;
-    const { to, message } = req.body;
+    const { to, message, media_url, media_type } = req.body;
     
-    if (!to || !message) {
+    if (!to || (!message && !media_url)) {
         return res.status(400).json({ status: 'error', message: 'Missing parameters' });
     }
     
@@ -386,50 +413,44 @@ app.post('/instance/:id/send', async (req, res) => {
         
         console.log(`[Gateway] Sending to JID: ${jid}`);
         
-        if (message.startsWith('MEDIA_IMAGE:')) {
+        // إرسال ميديا عبر media_url منفصل (من الموديتور)
+        if (media_url && media_type === 'image') {
+            await session.sock.sendMessage(jid, { image: { url: media_url }, caption: message || '' });
+            console.log(`[Gateway] Image sent to ${phone} via media_url: ${media_url}`);
+        } else if (media_url && media_type === 'audio') {
+            await session.sock.sendMessage(jid, { audio: { url: media_url }, mimetype: 'audio/ogg; codecs=opus', ptt: true });
+            console.log(`[Gateway] Audio sent to ${phone} via media_url: ${media_url}`);
+        } else if (message && message.startsWith('MEDIA_IMAGE:')) {
             const parts = message.substring(12).split('|CAPTION:');
             const mediaUrl = parts[0];
             const caption = parts[1] || '';
-            
-            const relativePath = mediaUrl.replace(/^\//, '');
-            const localFilePath = path.join(__dirname, '..', relativePath);
-            
-            if (fs.existsSync(localFilePath)) {
-                await session.sock.sendMessage(jid, { 
-                    image: fs.readFileSync(localFilePath), 
-                    caption: caption 
-                });
+            if (mediaUrl.startsWith('http')) {
+                await session.sock.sendMessage(jid, { image: { url: mediaUrl }, caption: caption });
             } else {
-                const fullUrl = `${PYTHON_BACKEND_URL}${mediaUrl}`;
-                await session.sock.sendMessage(jid, { 
-                    image: { url: fullUrl }, 
-                    caption: caption 
-                });
+                const localFilePath = path.join(__dirname, '..', mediaUrl.replace(/^\//, ''));
+                if (fs.existsSync(localFilePath)) {
+                    await session.sock.sendMessage(jid, { image: fs.readFileSync(localFilePath), caption: caption });
+                } else {
+                    await session.sock.sendMessage(jid, { image: { url: `${PYTHON_BACKEND_URL}${mediaUrl}` }, caption: caption });
+                }
             }
-            console.log(`[Gateway] Image sent to ${phone} via session ${id}: ${mediaUrl}`);
-        } else if (message.startsWith('MEDIA_AUDIO:')) {
+            console.log(`[Gateway] Image sent to ${phone}: ${mediaUrl}`);
+        } else if (message && message.startsWith('MEDIA_AUDIO:')) {
             const mediaUrl = message.substring(12);
-            const relativePath = mediaUrl.replace(/^\//, '');
-            const localFilePath = path.join(__dirname, '..', relativePath);
-            
-            if (fs.existsSync(localFilePath)) {
-                await session.sock.sendMessage(jid, { 
-                    audio: fs.readFileSync(localFilePath), 
-                    mimetype: 'audio/mp4', 
-                    ptt: true 
-                });
+            if (mediaUrl.startsWith('http')) {
+                await session.sock.sendMessage(jid, { audio: { url: mediaUrl }, mimetype: 'audio/ogg; codecs=opus', ptt: true });
             } else {
-                const fullUrl = `${PYTHON_BACKEND_URL}${mediaUrl}`;
-                await session.sock.sendMessage(jid, { 
-                    audio: { url: fullUrl }, 
-                    mimetype: 'audio/mp4', 
-                    ptt: true 
-                });
+                const localFilePath = path.join(__dirname, '..', mediaUrl.replace(/^\//, ''));
+                if (fs.existsSync(localFilePath)) {
+                    await session.sock.sendMessage(jid, { audio: fs.readFileSync(localFilePath), mimetype: 'audio/mp4', ptt: true });
+                } else {
+                    await session.sock.sendMessage(jid, { audio: { url: `${PYTHON_BACKEND_URL}${mediaUrl}` }, mimetype: 'audio/mp4', ptt: true });
+                }
             }
-            console.log(`[Gateway] Voice note sent to ${phone} via session ${id}: ${mediaUrl}`);
+            console.log(`[Gateway] Audio sent to ${phone}: ${mediaUrl}`);
         } else {
-            await session.sock.sendMessage(jid, { text: message });
-            console.log(`[Gateway] Msg sent to ${phone} via session ${id}: ${message}`);
+            await session.sock.sendMessage(jid, { text: message || '' });
+            console.log(`[Gateway] Text sent to ${phone}: ${message}`);
         }
         
         return res.json({ status: 'success' });

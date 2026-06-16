@@ -902,22 +902,21 @@
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzGoawwK6JGm5QRHt4gfIScl7DYMaCDKU-GGcdYYXXyDY888xuPF0EOZ9vxVHSqHrWv/exec';
 
         function getApiBaseUrl() {
+            const loc = window.location;
+            
+            // ✅ على 24seven-ai.com أو Render: دائماً استخدم origin الحالي (تجاهل ngrok المحفوظ)
+            if (loc.hostname.includes('24seven-ai.com') || loc.hostname.includes('onrender.com')) {
+                return `${loc.protocol}//${loc.hostname}`;
+            }
+            
+            // على localhost أو ngrok: استخدم الرابط المحفوظ إن وُجد
             const saved = localStorage.getItem('mod_api_url');
             if (saved && saved.trim() !== '') {
                 return saved.trim().replace(/\/$/, '').replace(/\/moderator$/, '').replace(/\/dashboard$/, '');
             }
-            
-            // Auto-detection based on current URL
-            const loc = window.location;
-            
-            // 24seven-ai.com يعمل على Render الذي يخدم API مباشرة على نفس الدومين
-            // لذلك نستخدم origin الحالي مباشرة بدون ngrok
-            if (loc.hostname.includes('24seven-ai.com') || loc.hostname.includes('onrender.com')) {
-                return `${loc.protocol}//${loc.hostname}`;
-            }
 
             if (loc.port === '3000' || loc.pathname.startsWith('/moderator') || loc.pathname.startsWith('/dashboard')) {
-                return loc.origin; // Same server (clean origin)
+                return loc.origin;
             }
 
             if (loc.hostname === 'localhost' || loc.hostname === '127.0.0.1') {
@@ -2098,10 +2097,10 @@
                 // رفع مباشر على Supabase Storage
                 const ext = file.name.split('.').pop() || 'jpg';
                 const fileName = `omni-media/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-                const { error: upErr } = await sbClient.storage.from('trip-photos').upload(fileName, file, { upsert: true });
+                const { error: upErr } = await sbClient.storage.from('omni-media').upload(fileName, file, { upsert: true });
                 if (upErr) throw new Error('فشل رفع الصورة: ' + upErr.message);
                 
-                const { data: urlData } = sbClient.storage.from('trip-photos').getPublicUrl(fileName);
+                const { data: urlData } = sbClient.storage.from('omni-media').getPublicUrl(fileName);
                 const mediaUrl = urlData.publicUrl;
                 
                 const messageText = `MEDIA_IMAGE:${mediaUrl}${caption ? '|CAPTION:' + caption : ''}`;
@@ -2211,10 +2210,10 @@
                 // رفع مباشر على Supabase Storage
                 const ext = (blob.type || 'audio/webm').includes('ogg') ? 'ogg' : (blob.type.includes('aac') ? 'aac' : 'webm');
                 const fileName = `omni-voice/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-                const { error: upErr } = await sbClient.storage.from('trip-photos').upload(fileName, blob, { upsert: true, contentType: blob.type || 'audio/webm' });
+                const { error: upErr } = await sbClient.storage.from('omni-media').upload(fileName, blob, { upsert: true, contentType: blob.type || 'audio/webm' });
                 if (upErr) throw new Error('فشل رفع الصوت: ' + upErr.message);
                 
-                const { data: urlData } = sbClient.storage.from('trip-photos').getPublicUrl(fileName);
+                const { data: urlData } = sbClient.storage.from('omni-media').getPublicUrl(fileName);
                 const mediaUrl = urlData.publicUrl;
                 const messageText = `MEDIA_AUDIO:${mediaUrl}`;
                 
