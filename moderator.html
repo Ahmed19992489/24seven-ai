@@ -162,6 +162,11 @@
             <!-- Reuse Omnichannel Logic from admin-crm.html but adapted -->
             <div id="chat-list-container" class="w-full lg:w-80 flex flex-col h-full bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
                 <div class="p-4 border-b">
+                    <div class="flex items-center gap-2 mb-3">
+                        <button onclick="openNewChatModal()" class="w-full bg-teal-600 hover:bg-teal-700 text-white rounded-xl py-2 font-bold flex items-center justify-center gap-2 transition shadow-sm">
+                            <i class="fas fa-comment-medical"></i> محادثة جديدة
+                        </button>
+                    </div>
                     <div class="relative">
                         <input type="text" id="chat-search" oninput="filterChat()" placeholder="بحث في المراسلات..." class="input-std pl-10">
                         <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
@@ -889,6 +894,42 @@
                         class="flex-1 bg-teal-600 text-white py-2.5 rounded-lg font-bold hover:bg-teal-700">حفظ التغييرات</button>
                     <button onclick="document.getElementById('edit-trip-modal').style.display='none'"
                         class="flex-1 bg-slate-200 text-slate-700 py-2.5 rounded-lg font-bold">إلغاء</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Chat Modal -->
+    <div id="new-chat-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 m-4" dir="rtl">
+            <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <i class="fas fa-comment-medical text-teal-600"></i> بدء محادثة جديدة
+            </h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">رقم هاتف العميل</label>
+                    <input type="text" id="new-chat-phone" placeholder="مثال: 201000000000" class="input-std w-full" dir="ltr">
+                    <p class="text-[11px] text-slate-500 mt-1">يجب كتابة كود الدولة بدون علامة +</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">نص الرسالة</label>
+                    <textarea id="new-chat-message" rows="4" class="input-std w-full" placeholder="اكتب رسالتك هنا..."></textarea>
+                </div>
+                
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <p class="text-xs text-amber-800 font-bold flex items-center gap-1">
+                        <i class="fas fa-shield-alt"></i> حماية من الحظر (Anti-Ban)
+                    </p>
+                    <p class="text-[10px] text-amber-700 mt-1">الرسالة سيتم إرسالها من الرقم المخصص للدردشة (01121747555) لتجنب الحظر.</p>
+                </div>
+
+                <div class="flex items-center gap-3 mt-6">
+                    <button onclick="startNewChat()" id="new-chat-btn" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-bold py-2.5 rounded-xl transition">
+                        إرسال الرسالة
+                    </button>
+                    <button onclick="closeNewChatModal()" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition">
+                        إلغاء
+                    </button>
                 </div>
             </div>
         </div>
@@ -5605,6 +5646,94 @@ ${contextData}
             }
         }
 
+// --- New Chat Logic ---
+        function openNewChatModal() {
+            document.getElementById('new-chat-modal').classList.remove('hidden');
+            document.getElementById('new-chat-phone').value = '';
+            document.getElementById('new-chat-message').value = '';
+        }
+
+        function closeNewChatModal() {
+            document.getElementById('new-chat-modal').classList.add('hidden');
+        }
+
+        async function startNewChat() {
+            const phoneInput = document.getElementById('new-chat-phone').value.trim();
+            const messageInput = document.getElementById('new-chat-message').value.trim();
+            const btn = document.getElementById('new-chat-btn');
+
+            if (!phoneInput || !messageInput) {
+                alert('الرجاء إدخال رقم الهاتف ونص الرسالة');
+                return;
+            }
+
+            // تنظيف الرقم وإضافة +
+            let cleanPhone = phoneInput.replace(/\D/g, '');
+            if (cleanPhone.startsWith('00')) cleanPhone = cleanPhone.substring(2);
+            if (cleanPhone.startsWith('01')) cleanPhone = '20' + cleanPhone.substring(1); // مصري
+            const formattedPhone = '+' + cleanPhone;
+
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
+            btn.disabled = true;
+
+            try {
+                // استخدام الإنستانس المخصص للدردشة Chat Instance: 01121747555
+                const r = await fetch(`${SUPABASE_URL}/rest/v1/whatsapp_instances?phone=eq.201121747555`, {
+                    headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` }
+                });
+                const instances = await r.json();
+                
+                if (!instances || instances.length === 0) {
+                    throw new Error("لم يتم العثور على الرقم المخصص للدردشة (01121747555).");
+                }
+
+                const inst = instances[0];
+                const base = (inst.api_url || 'https://api.ultramsg.com').replace(/\/+$/, '');
+                const sendUrl = `${base}/${inst.instance_id}/messages/chat`;
+                
+                const payload = new URLSearchParams({
+                    token: inst.token,
+                    to: formattedPhone,
+                    body: messageInput
+                });
+
+                const sendRes = await fetch(sendUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: payload
+                });
+
+                if (!sendRes.ok) {
+                    const errTxt = await sendRes.text();
+                    throw new Error(errTxt);
+                }
+
+                // حفظ في Supabase
+                await fetch(`${SUPABASE_URL}/rest/v1/omnichannel_messages`, {
+                    method: 'POST',
+                    headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+                    body: JSON.stringify({
+                        channel: 'whatsapp',
+                        sender_id: formattedPhone,
+                        sender_name: 'عميل محتمل',
+                        message_text: messageInput,
+                        is_from_admin: true,
+                        read_by_admin: true,
+                        whatsapp_instance_id: inst.id
+                    })
+                });
+
+                showToast('تم بدء المحادثة وإرسال الرسالة بنجاح!', 'success');
+                closeNewChatModal();
+                loadUnifiedChats(); // تحديث القائمة
+
+            } catch (err) {
+                alert('خطأ أثناء إرسال الرسالة: ' + err.message);
+            } finally {
+                btn.innerHTML = 'إرسال الرسالة';
+                btn.disabled = false;
+            }
+        }
     </script>
 </body>
 </html>
