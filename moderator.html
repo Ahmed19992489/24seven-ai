@@ -965,15 +965,16 @@
         function getApiBaseUrl() {
             const loc = window.location;
             
-            // ✅ على 24seven-ai.com أو Render: دائماً استخدم origin الحالي (تجاهل ngrok المحفوظ)
-            if (loc.hostname.includes('24seven-ai.com') || loc.hostname.includes('onrender.com')) {
-                return `${loc.protocol}//${loc.hostname}`;
-            }
-            
-            // على localhost أو ngrok: استخدم الرابط المحفوظ إن وُجد
+            // 1. تحقق من الرابط المحفوظ في localStorage أولاً (حتى على Production)
+            // هذا يسمح لك بتشغيل الباك إند على جهازك المحلي وربطه بالدومين الحي عبر ngrok
             const saved = localStorage.getItem('mod_api_url');
             if (saved && saved.trim() !== '') {
                 return saved.trim().replace(/\/$/, '').replace(/\/moderator$/, '').replace(/\/dashboard$/, '');
+            }
+            
+            // 2. إذا لم يكن هناك رابط محفوظ، استخدم origin الحالي
+            if (loc.hostname.includes('24seven-ai.com') || loc.hostname.includes('onrender.com')) {
+                return `${loc.protocol}//${loc.hostname}`;
             }
 
             if (loc.port === '3000' || loc.pathname.startsWith('/moderator') || loc.pathname.startsWith('/dashboard')) {
