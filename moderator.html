@@ -5688,19 +5688,21 @@ ${contextData}
                 }
 
                 const inst = instances[0];
-                const base = (inst.api_url || 'https://api.ultramsg.com').replace(/\/+$/, '');
-                const sendUrl = `${base}/${inst.instance_id}/messages/chat`;
                 
-                const payload = new URLSearchParams({
-                    token: inst.token,
-                    to: formattedPhone,
-                    body: messageInput
-                });
-
-                const sendRes = await fetch(sendUrl, {
+                // إرسال الرسالة عبر الباك إند (Python) لتجنب مشاكل الـ CORS والـ Mixed Content
+                const targetUrl = `${getApiBaseUrl()}/api/send_reply`;
+                const payload = {
+                    channel: 'whatsapp',
+                    sender_id: formattedPhone,
+                    message: messageInput,
+                    whatsapp_instance_id: inst.id,
+                    mod_name: 'Admin'
+                };
+                
+                const sendRes = await fetch(targetUrl, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: payload
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
                 });
 
                 if (!sendRes.ok) {
@@ -5708,20 +5710,10 @@ ${contextData}
                     throw new Error(errTxt);
                 }
 
-                // حفظ في Supabase
-                await fetch(`${SUPABASE_URL}/rest/v1/omnichannel_messages`, {
-                    method: 'POST',
-                    headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-                    body: JSON.stringify({
-                        channel: 'whatsapp',
-                        sender_id: formattedPhone,
-                        sender_name: 'عميل محتمل',
-                        message_text: messageInput,
-                        is_from_admin: true,
-                        read_by_admin: true,
-                        whatsapp_instance_id: inst.id
-                    })
-                });
+                const result = await sendRes.json();
+                if (result.status !== 'success') {
+                    throw new Error(result.detail || 'API Error');
+                }
 
                 showToast('تم بدء المحادثة وإرسال الرسالة بنجاح!', 'success');
                 closeNewChatModal();
