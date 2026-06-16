@@ -21,6 +21,9 @@ class CallSystem {
         this.callSeconds = 0;
         this.isCallActive = false;
         this.ringtone = null;
+        this.isCallEstablished = false;
+        this._inviteInterval = null;
+        this._callTimeout = null;
 
         // إعداد STUN servers (مجانية من Google)
         this.rtcConfig = {
@@ -129,13 +132,37 @@ class CallSystem {
         const offer = await this.pc.createOffer({ offerToReceiveAudio: true });
         await this.pc.setLocalDescription(offer);
 
-        // إرسال الدعوة
+        // إرسال الدعوة أول مرة
         await this._sendSignal(toPeerId, 'call_invite', {
             sdp: offer.sdp,
             sdpType: offer.type,
             to: toPeerId,
             toName: toPeerName,
         });
+
+        // تكرار إرسال إشارة الاتصال كل 2.5 ثانية (لضمان وصولها إذا كان المتصفح في الخلفية وتم فتحه مجدداً)
+        this.isCallEstablished = false;
+        this._inviteInterval = setInterval(async () => {
+            if (this.currentPeer && !this.isCallEstablished) {
+                console.log('[CallSystem] Re-sending call invite...');
+                await this._sendSignal(toPeerId, 'call_invite', {
+                    sdp: offer.sdp,
+                    sdpType: offer.type,
+                    to: toPeerId,
+                    toName: toPeerName,
+                });
+            } else {
+                this._stopInviteLoop();
+            }
+        }, 2500);
+
+        // مهلة 30 ثانية لعدم الرد
+        this._callTimeout = setTimeout(() => {
+            if (!this.isCallEstablished && this.currentPeer) {
+                this._showToast('لم يتم الرد من الطرف الآخر', 'warning');
+                this.endCall();
+            }
+        }, 30000);
 
         // عرض واجهة "جارٍ الاتصال"
         this._showCallingUI(toPeerName);
@@ -146,8 +173,18 @@ class CallSystem {
     // ============================================
     async _onIncomingCall(signal) {
         if (this.isCallActive) {
-            // رفض تلقائي لو في مكالمة
+            // لو نفس المكالمة النشطة بالفعل، تجاهلها
+            if (this.currentCallId === signal.callId) {
+                return;
+            }
+            // رفض تلقائي لو في مكالمة أخرى
             await this._sendSignal(signal.from, 'call_reject', { reason: 'busy' });
+            return;
+        }
+
+        // لو نفس المكالمة التي ترن حالياً، لا تكرر تشغيل الرنة أو تحديث الواجهة
+        if (this.currentCallId === signal.callId) {
+            console.log('[CallSystem] Duplicate invite received for call:', signal.callId);
             return;
         }
 
@@ -232,6 +269,12 @@ class CallSystem {
     // 9. معالجة استجابات الطرف الآخر
     // ============================================
     async _onCallAnswered(signal) {
+        this.isCallEstablished = true;
+        this._stopInviteLoop();
+        if (this._callTimeout) {
+            clearTimeout(this._callTimeout);
+            this._callTimeout = null;
+        }
         if (!this.pc) return;
         await this.pc.setRemoteDescription({
             type: signal.sdpType,
@@ -292,6 +335,12 @@ class CallSystem {
             const state = this.pc?.connectionState;
             console.log('[CallSystem] Connection state:', state);
             if (state === 'connected') {
+                this.isCallEstablished = true;
+                this._stopInviteLoop();
+                if (this._callTimeout) {
+                    clearTimeout(this._callTimeout);
+                    this._callTimeout = null;
+                }
                 this._startCallTimer();
             } else if (state === 'failed' || state === 'disconnected') {
                 this._showToast('انقطع الاتصال', 'error');
@@ -304,9 +353,22 @@ class CallSystem {
     // ============================================
     // 11. إعادة تعيين الحالة
     // ============================================
+    _stopInviteLoop() {
+        if (this._inviteInterval) {
+            clearInterval(this._inviteInterval);
+            this._inviteInterval = null;
+        }
+    }
+
     _resetCall() {
         this._stopCallTimer();
         this._stopRingtone();
+        this._stopInviteLoop();
+        if (this._callTimeout) {
+            clearTimeout(this._callTimeout);
+            this._callTimeout = null;
+        }
+        this.isCallEstablished = false;
         if (this.pc) {
             this.pc.close();
             this.pc = null;
