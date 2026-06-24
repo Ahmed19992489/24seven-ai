@@ -1,0 +1,37 @@
+import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'screens/login_screen.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Supabase with your existing project credentials
+  await Supabase.initialize(
+    url: 'https://wtjwzqvmwnbvjxnmweqq.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY',
+  );
+
+  runApp(const SevenLimousineApp());
+}
+
+class SevenLimousineApp extends StatelessWidget {
+  const SevenLimousineApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: '24Seven Limousine',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF6366F1), // Indigo
+          primary: const Color(0xFF6366F1),
+          secondary: const Color(0xFFF59E0B), // Amber
+        ),
+        fontFamily: 'Roboto', // We can load Arabic fonts later like 'Cairo'
+        useMaterial3: true,
+      ),
+      home: const LoginScreen(),
+    );
+  }
+}
