@@ -1084,6 +1084,12 @@
                     document.getElementById('chat-window-container').classList.add('hidden');
                 }
             }
+            // تحميل رحلات اليوم تلقائياً عند فتح تبويب الحجوزات
+            if(tabId === 'trips') {
+                setTimeout(() => {
+                    if (typeof filterByDate === 'function') filterByDate('today');
+                }, 200);
+            }
 
             // Close sidebar on mobile after selecting tab
             if (window.innerWidth < 1024) {
