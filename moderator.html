@@ -5989,32 +5989,40 @@ ${contextData}
     <!-- ================================================ -->
     <!-- نظام المكالمات الداخلية للموديتور               -->
     <!-- ================================================ -->
-    <script src="/call-system.js"></script>
+    <script src="/call-system.js" onerror="console.warn('[CallSystem] call-system.js not found, calls disabled.')"></script>
     <script>
     let moderatorCallSystem = null;
 
     function initModeratorCallSystem() {
-        if (moderatorCallSystem) return;
-        // نستخدم اسم الموديتور الحالي إذا كان متاحاً
-        const modId = 'moderator_' + (currentModName || 'mod').replace(/\s+/g, '_');
-        const modName = currentModName || 'موديتور';
-        moderatorCallSystem = new CallSystem(
-            sbClient,
-            modId,
-            modName,
-            'moderator'
-        );
-        window.__callSystem = moderatorCallSystem;
-        console.log('[CallSystem] Moderator initialized:', modName);
+        try {
+            if (moderatorCallSystem) return;
+            if (typeof CallSystem === 'undefined') {
+                console.warn('[CallSystem] CallSystem class not loaded, skipping init.');
+                return;
+            }
+            // نستخدم اسم الموديتور الحالي إذا كان متاحاً
+            const modId = 'moderator_' + (currentModName || 'mod').replace(/\s+/g, '_');
+            const modName = currentModName || 'موديتور';
+            moderatorCallSystem = new CallSystem(
+                sbClient,
+                modId,
+                modName,
+                'moderator'
+            );
+            window.__callSystem = moderatorCallSystem;
+            console.log('[CallSystem] Moderator initialized:', modName);
+        } catch(e) {
+            console.error('[CallSystem] Init error (non-fatal):', e);
+        }
     }
 
     // تهيئة نظام المكالمات بعد تسجيل الدخول
-    // نستمع لتغير currentModName
-    const _origSetMod = window.setMod || null;
     function tryInitModCallSystem() {
-        if (typeof currentModName !== 'undefined' && currentModName && !moderatorCallSystem) {
-            initModeratorCallSystem();
-        }
+        try {
+            if (typeof currentModName !== 'undefined' && currentModName && !moderatorCallSystem) {
+                initModeratorCallSystem();
+            }
+        } catch(e) { console.warn('[CallSystem] tryInit error:', e); }
     }
     // محاولة التهيئة بعد ثانية و3 ثوانٍ (بعد تسجيل الدخول)
     setTimeout(tryInitModCallSystem, 1000);
