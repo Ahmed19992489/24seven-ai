@@ -1813,13 +1813,55 @@
                         }
                     });
 
-                    // إزالة التكرارات (نفس الـ id أو مرتبطة بـ sql_server_id)
+                    // إزالة التكرارات (نفس الـ id أو مرتبطة بـ sql_server_id أو نفس التفاصيل)
                     const existingGrIds = new Set(allTrips.map(t => t.id));
                     const existingTripsIds = new Set(allTrips.map(t => String(t.id)));
                     const pendingTrips = sheetResAll
                         .filter(r => r.booking_employee !== 'ويب سايت') // [FIX] Prevent duplicates since they are already in the trips table
-                        .filter(r => !existingTripsIds.has(String(r.sql_server_id)))
-                        .filter(r => !existingGrIds.has('gr_' + r.id))
+                        .filter(r => {
+                            // 1. فحص المطابقة المباشرة بالمعرف
+                            if (r.sql_server_id && existingTripsIds.has(String(r.sql_server_id))) {
+                                return false;
+                            }
+                            if (existingGrIds.has('gr_' + r.id)) {
+                                return false;
+                            }
+                            
+                            // 2. فحص المطابقة الذكية بالتفاصيل (التاريخ، الوقت، والمسار) لتفادي تكرار نفس الرحلة
+                            const rDate = r.trip_date || '';
+                            const rTimeClean = (r.trip_time || '').replace(/\s*(ص|م)/g, '').trim();
+                            const rTimeDigits = rTimeClean.replace(/\D/g, '');
+                            
+                            const rPickup = (r.pickup_address || '').replace(/\s+/g, '').trim();
+                            const rDropoff = (r.dropoff_address || '').replace(/\s+/g, '').trim();
+
+                            const isDuplicate = allTrips.some(t => {
+                                const tDate = t.details?.date || '';
+                                const tTimeClean = (t.details?.time || '').replace(/\s*(ص|م)/g, '').trim();
+                                const tTimeDigits = tTimeClean.replace(/\D/g, '');
+                                
+                                const tPickup = (t.pickup_location || '').replace(/\s+/g, '').trim();
+                                const tDropoff = (t.dropoff_location || '').replace(/\s+/g, '').trim();
+                                
+                                // مقارنة التاريخ
+                                if (rDate && tDate && rDate !== tDate) return false;
+                                
+                                // مقارنة الوقت
+                                if (rTimeDigits && tTimeDigits) {
+                                    const rT = parseInt(rTimeDigits);
+                                    const tT = parseInt(tTimeDigits);
+                                    if (rT !== tT) return false;
+                                }
+                                
+                                // مقارنة المسار (من وإلى) بمرونة
+                                const pickupMatch = (rPickup && tPickup && (rPickup.includes(tPickup) || tPickup.includes(rPickup)));
+                                const dropoffMatch = (rDropoff && tDropoff && (rDropoff.includes(tDropoff) || tDropoff.includes(rDropoff)));
+                                
+                                return pickupMatch && dropoffMatch;
+                            });
+                            
+                            return !isDuplicate;
+                        })
                         .map(r => {
                             let driverInfo = null;
                             if (r.modified_driver_name && r.modified_driver_name.trim()) {
@@ -2295,9 +2337,30 @@
 
             // الحساب غير موجود → إنشاء حساب جديد
             if (signInError.message.includes('Invalid login credentials') || signInError.message.includes('Email not confirmed')) {
+                // البحث عن الاسم الحقيقي من الحجوزات قبل التسجيل
+                let realName = 'عميل ' + rawPhone.slice(-4);
+                try {
+                    const cleanedPhone = rawPhone.replace(/^0+/, '');
+                    const { data: reservations } = await sb.from('google_reservations')
+                        .select('customer_name, customer_phone')
+                        .or(`customer_phone.ilike.%${cleanedPhone}%,customer_phone.ilike.%${rawPhone}%`)
+                        .order('created_at', { ascending: false })
+                        .limit(1);
+                    if (reservations && reservations.length > 0 && reservations[0].customer_name) {
+                        realName = reservations[0].customer_name;
+                    }
+                } catch(e) { console.log('Name lookup error:', e); }
+
                 const { data: signUpData, error: signUpError } = await sb.auth.signUp({
                     email: fakeEmail,
-                    password: password
+                    password: password,
+                    options: {
+                        data: {
+                            full_name: realName,
+                            phone: rawPhone,
+                            role: 'client'
+                        }
+                    }
                 });
 
                 if (signUpError) {
@@ -2310,27 +2373,14 @@
                     return;
                 }
 
-                // إنشاء profile برقم الهاتف - نبحث عن الاسم الحقيقي من الحجوزات
+                // إنشاء profile برقم الهاتف
                 if (signUpData?.user) {
-                    let realName = 'عميل ' + rawPhone.slice(-4);
-                    try {
-                        // البحث عن اسم العميل من أحدث حجز في google_reservations
-                        const cleanedPhone = rawPhone.replace(/^0+/, '');
-                        const { data: reservations } = await sb.from('google_reservations')
-                            .select('customer_name, customer_phone')
-                            .or(`customer_phone.ilike.%${cleanedPhone}%,customer_phone.ilike.%${rawPhone}%`)
-                            .order('created_at', { ascending: false })
-                            .limit(1);
-                        if (reservations && reservations.length > 0 && reservations[0].customer_name) {
-                            realName = reservations[0].customer_name;
-                        }
-                    } catch(e) { console.log('Name lookup error:', e); }
-
                     await sb.from('profiles').upsert({
                         id: signUpData.user.id,
                         phone: rawPhone,
                         full_name: realName,
-                        wallet_balance: 0
+                        wallet_balance: 0,
+                        role: 'client'
                     });
 
                     // تسجيل الدخول بعد التسجيل
@@ -2343,14 +2393,14 @@
             }
         }
 
-        // ربط الرحلات القديمة (بدون user_id) بحساب العميل عبر رقم الهاتف
+        // ربط الرحلات القديمة بحساب العميل عبر رقم الهاتف
         async function syncOldPhoneTrips(phone, userId) {
             try {
-                // ابحث عن رحلات فيها رقم التليفون في الملاحظات وبدون user_id
+                // ابحث عن جميع الرحلات الخاصة برقم التليفون لربطها
                 const { data: trips } = await sb.from('trips')
                     .select('id')
                     .is('user_id', null)
-                    .ilike('admin_notes', '%' + phone + '%');
+                    .or(`admin_notes.ilike.%${phone}%,client_phone.ilike.%${phone}%`);
 
                 if (trips && trips.length > 0) {
                     await Promise.all(trips.map(t =>
@@ -3114,6 +3164,35 @@
         }
 
         // ==========================================
+        // Auto-open support chat after 3s if logged in
+        // ==========================================
+        (function() {
+            function hideWelcomeTooltip() {
+                const tooltip = document.getElementById('widget-welcome-tooltip');
+                if (tooltip) tooltip.style.display = 'none';
+            }
+
+            // Hide tooltip when user opens the chat
+            const origToggle = window.toggleWidgetChat;
+            window.toggleWidgetChat = function() {
+                hideWelcomeTooltip();
+                if (origToggle) origToggle();
+            };
+
+            // Hide tooltip after 12 seconds
+            setTimeout(hideWelcomeTooltip, 12000);
+
+            // Auto-open if logged in
+            setTimeout(() => {
+                const currentUser = window.user || (typeof user !== 'undefined' ? user : null);
+                if (currentUser && !isWidgetChatOpen) {
+                    hideWelcomeTooltip();
+                    toggleWidgetChat();
+                }
+            }, 3000);
+        })();
+
+        // ==========================================
         // ⭐ نظام برنامج الولاء
         // ==========================================
         const LOYALTY_MILESTONES = [
@@ -3473,13 +3552,27 @@
             <button id="widget-call-btn" onclick="clientCallDriver(currentTrip?.driver_id, currentTrip?.driver_name)" class="w-14 h-14 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white rounded-full shadow-[0_10px_25px_rgba(5,150,105,0.4)] flex justify-center items-center text-xl hover:scale-110 active:scale-95 transition-all duration-300 border-2 border-white hidden">
                 <i class="fas fa-phone-alt"></i>
             </button>
-            <!-- Floating Chat Button -->
-            <button id="widget-chat-btn" onclick="toggleWidgetChat()" class="w-14 h-14 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-full shadow-[0_10px_25px_rgba(79,70,229,0.5)] flex justify-center items-center text-xl hover:scale-110 active:scale-95 transition-all duration-300 relative border-2 border-white">
-                <i class="fas fa-headphones-alt"></i>
-                <span id="widget-chat-badge" class="hidden absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex justify-center items-center rounded-full border border-white animate-pulse">!</span>
-            </button>
+            <!-- Floating Chat Button with Pulsing Welcome Tooltip -->
+            <div class="relative flex flex-col items-center">
+                <!-- Welcome Tooltip -->
+                <div id="widget-welcome-tooltip" class="absolute bottom-16 left-1/2 -translate-x-1/2 whitespace-nowrap bg-indigo-600 text-white text-xs font-bold px-3 py-2 rounded-2xl shadow-lg pointer-events-none" style="direction: rtl; animation: pulse-tooltip 2.5s ease-in-out infinite;">
+                    مرحباً! محتاج مساعدة؟ كلم الدعم 💬
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0" style="border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 6px solid #4f46e5;"></div>
+                </div>
+                <button id="widget-chat-btn" onclick="toggleWidgetChat()" class="w-14 h-14 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-full shadow-[0_10px_25px_rgba(79,70,229,0.5)] flex justify-center items-center text-xl hover:scale-110 active:scale-95 transition-all duration-300 relative border-2 border-white">
+                    <i class="fas fa-headphones-alt"></i>
+                    <span id="widget-chat-badge" class="hidden absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex justify-center items-center rounded-full border border-white animate-pulse">!</span>
+                </button>
+            </div>
         </div>
     </div>
+
+    <style>
+    @keyframes pulse-tooltip {
+        0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
+        50% { opacity: 0.85; transform: translateX(-50%) scale(1.04); }
+    }
+    </style>
 </body>
 
 <!-- نظام المكالمات الداخلية للعميل -->

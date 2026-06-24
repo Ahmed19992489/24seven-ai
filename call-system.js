@@ -1,7 +1,7 @@
 /**
  * 24Seven - نظام المكالمات الداخلية
  * يستخدم WebRTC للصوت + Supabase Realtime Broadcast للإشارات
- * لا يحتاج جداول إضافية - كل شيء عبر Realtime channels
+ * يخزن سجل المكالمات في call_logs لضمان الوصول حتى لو الطرف غير متصل
  */
 
 class CallSystem {
@@ -36,13 +36,14 @@ class CallSystem {
 
         this._injectUI();
         this._subscribeToSignals();
+        // فحص المكالمات الفائتة بعد ثانية من التهيئة
+        setTimeout(() => this._checkMissedCalls(), 1000);
     }
 
     // ============================================
     // 1. الاشتراك في قناة الإشارات
     // ============================================
     _subscribeToSignals() {
-        // كل مستخدم يستمع على قناة خاصة به: `call:USER_ID`
         this.callChannel = this.sb
             .channel(`call:${this.myId}`, { config: { broadcast: { self: false } } })
             .on('broadcast', { event: 'signal' }, (payload) => {
@@ -65,7 +66,6 @@ class CallSystem {
             callId: this.currentCallId,
             ...data
         };
-        // نرسل على قناة المستقبل
         await this.sb.channel(`call:${toUserId}`).send({
             type: 'broadcast',
             event: 'signal',
@@ -109,7 +109,6 @@ class CallSystem {
         }
 
         try {
-            // طلب إذن الميكروفون
             this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         } catch (err) {
             alert('لا يمكن الوصول للميكروفون. تأكد من منح الإذن.');
@@ -120,19 +119,28 @@ class CallSystem {
         this.currentCallId = `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         this.currentPeer = { id: toPeerId, name: toPeerName, type: toPeerType };
 
-        // إنشاء RTCPeerConnection
+        // سجّل المكالمة في قاعدة البيانات كـ "جارية"
+        await this._logCallToDb({
+            call_id: this.currentCallId,
+            caller_id: this.myId,
+            caller_name: this.myName,
+            caller_type: this.myType,
+            callee_id: toPeerId,
+            callee_name: toPeerName,
+            callee_type: toPeerType,
+            status: 'calling',
+            started_at: new Date().toISOString()
+        });
+
         this._createPeerConnection();
 
-        // إضافة المسار الصوتي
         this.localStream.getTracks().forEach(track => {
             this.pc.addTrack(track, this.localStream);
         });
 
-        // إنشاء offer
         const offer = await this.pc.createOffer({ offerToReceiveAudio: true });
         await this.pc.setLocalDescription(offer);
 
-        // إرسال الدعوة أول مرة
         await this._sendSignal(toPeerId, 'call_invite', {
             sdp: offer.sdp,
             sdpType: offer.type,
@@ -140,7 +148,7 @@ class CallSystem {
             toName: toPeerName,
         });
 
-        // تكرار إرسال إشارة الاتصال كل 2.5 ثانية (لضمان وصولها إذا كان المتصفح في الخلفية وتم فتحه مجدداً)
+        // تكرار إرسال الدعوة كل 2.5 ثانية
         this.isCallEstablished = false;
         this._inviteInterval = setInterval(async () => {
             if (this.currentPeer && !this.isCallEstablished) {
@@ -156,15 +164,15 @@ class CallSystem {
             }
         }, 2500);
 
-        // مهلة 30 ثانية لعدم الرد
-        this._callTimeout = setTimeout(() => {
+        // مهلة 30 ثانية → مكالمة فائتة
+        this._callTimeout = setTimeout(async () => {
             if (!this.isCallEstablished && this.currentPeer) {
                 this._showToast('لم يتم الرد من الطرف الآخر', 'warning');
+                await this._updateCallLog(this.currentCallId, { status: 'missed', ended_at: new Date().toISOString() });
                 this.endCall();
             }
         }, 30000);
 
-        // عرض واجهة "جارٍ الاتصال"
         this._showCallingUI(toPeerName);
     }
 
@@ -173,16 +181,11 @@ class CallSystem {
     // ============================================
     async _onIncomingCall(signal) {
         if (this.isCallActive) {
-            // لو نفس المكالمة النشطة بالفعل، تجاهلها
-            if (this.currentCallId === signal.callId) {
-                return;
-            }
-            // رفض تلقائي لو في مكالمة أخرى
+            if (this.currentCallId === signal.callId) return;
             await this._sendSignal(signal.from, 'call_reject', { reason: 'busy' });
             return;
         }
 
-        // لو نفس المكالمة التي ترن حالياً، لا تكرر تشغيل الرنة أو تحديث الواجهة
         if (this.currentCallId === signal.callId) {
             console.log('[CallSystem] Duplicate invite received for call:', signal.callId);
             return;
@@ -192,10 +195,7 @@ class CallSystem {
         this.currentPeer = { id: signal.from, name: signal.fromName, type: signal.fromType };
         this._pendingOffer = { sdp: signal.sdp, type: signal.sdpType };
 
-        // تشغيل رنة
         this._playRingtone();
-
-        // عرض واجهة "مكالمة واردة"
         this._showIncomingUI(signal.fromName, signal.fromType);
     }
 
@@ -217,26 +217,25 @@ class CallSystem {
 
         this._createPeerConnection();
 
-        // إضافة الصوت المحلي
         this.localStream.getTracks().forEach(track => {
             this.pc.addTrack(track, this.localStream);
         });
 
-        // تحديد الـ offer الواردة
         await this.pc.setRemoteDescription({
             type: this._pendingOffer.type,
             sdp: this._pendingOffer.sdp
         });
 
-        // إنشاء answer
         const answer = await this.pc.createAnswer();
         await this.pc.setLocalDescription(answer);
 
-        // إرسال الـ answer
         await this._sendSignal(this.currentPeer.id, 'call_answer', {
             sdp: answer.sdp,
             sdpType: answer.type
         });
+
+        // تحديث سجل المكالمة
+        await this._updateCallLog(this.currentCallId, { status: 'answered', answered_at: new Date().toISOString() });
 
         this._pendingOffer = null;
         this._showActiveCallUI(this.currentPeer.name);
@@ -249,6 +248,7 @@ class CallSystem {
         this._stopRingtone();
         if (this.currentPeer) {
             await this._sendSignal(this.currentPeer.id, 'call_reject', { reason: 'rejected' });
+            await this._updateCallLog(this.currentCallId, { status: 'rejected', ended_at: new Date().toISOString() });
         }
         this._resetCall();
         this._hideAllCallUI();
@@ -260,6 +260,13 @@ class CallSystem {
     async endCall() {
         if (this.currentPeer) {
             await this._sendSignal(this.currentPeer.id, 'call_end', {});
+        }
+        if (this.currentCallId && this.isCallEstablished) {
+            await this._updateCallLog(this.currentCallId, {
+                status: 'ended',
+                ended_at: new Date().toISOString(),
+                duration_seconds: this.callSeconds
+            });
         }
         this._resetCall();
         this._hideAllCallUI();
@@ -312,7 +319,6 @@ class CallSystem {
         this.pc = new RTCPeerConnection(this.rtcConfig);
         this.isCallActive = true;
 
-        // إرسال ICE candidates
         this.pc.onicecandidate = async (event) => {
             if (event.candidate && this.currentPeer) {
                 await this._sendSignal(this.currentPeer.id, 'ice_candidate', {
@@ -321,7 +327,6 @@ class CallSystem {
             }
         };
 
-        // استقبال الصوت من الطرف الآخر
         this.pc.ontrack = (event) => {
             const remoteAudio = document.getElementById('cs-remote-audio');
             if (remoteAudio) {
@@ -330,7 +335,6 @@ class CallSystem {
             }
         };
 
-        // مراقبة حالة الاتصال
         this.pc.onconnectionstatechange = () => {
             const state = this.pc?.connectionState;
             console.log('[CallSystem] Connection state:', state);
@@ -410,7 +414,6 @@ class CallSystem {
     // ============================================
     _playRingtone() {
         try {
-            // نستخدم Web Audio API لإنشاء رنة بسيطة
             const ctx = new (window.AudioContext || window.webkitAudioContext)();
             let ringCount = 0;
             const maxRings = 20;
@@ -459,13 +462,7 @@ class CallSystem {
     _injectUI() {
         if (document.getElementById('cs-root')) return;
 
-        const typeLabels = {
-            client: '👤 عميل', driver: '🚗 كابتن',
-            admin: '🏢 إدارة', ops: '⚙️ تشغيل', moderator: '👮 موديتور'
-        };
-
         const html = `
-        <!-- عنصر الصوت المخفي -->
         <audio id="cs-remote-audio" autoplay playsinline style="display:none"></audio>
 
         <!-- شاشة: مكالمة واردة -->
@@ -534,8 +531,18 @@ class CallSystem {
             </div>
         </div>
 
-        <!-- شاشة: Toast notification -->
+        <!-- Toast notification -->
         <div id="cs-toast" class="cs-toast" style="display:none"></div>
+
+        <!-- إشعار المكالمة الفائتة -->
+        <div id="cs-missed-banner" class="cs-missed-banner" style="display:none">
+            <div class="cs-missed-icon"><i class="fas fa-phone-missed"></i></div>
+            <div class="cs-missed-content">
+                <span class="cs-missed-title">📵 مكالمة فائتة</span>
+                <span id="cs-missed-text" class="cs-missed-sub">...</span>
+            </div>
+            <button onclick="document.getElementById('cs-missed-banner').style.display='none'" class="cs-missed-close">✕</button>
+        </div>
 
         <style>
         .cs-overlay {
@@ -575,7 +582,6 @@ class CallSystem {
             background: linear-gradient(135deg, #fbbf24, #f59e0b);
             display: flex; align-items: center; justify-content: center;
             margin: 0 auto 20px;
-            position: relative;
             box-shadow: 0 0 30px rgba(251,191,36,0.4);
         }
         .cs-incoming-card .cs-avatar-ring {
@@ -584,17 +590,12 @@ class CallSystem {
         }
         .cs-avatar-icon { font-size: 36px; color: white; }
 
-        /* حلقة نبض للمكالمة الواردة */
         .cs-pulse-ring {
-            position: absolute;
             width: 130px; height: 130px;
             border-radius: 50%;
             border: 3px solid rgba(74,222,128,0.4);
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
+            margin: 0 auto;
             animation: cs-pulse 1.5s infinite;
-            margin-top: -65px; margin-left: -65px;
-            position: relative;
         }
         @keyframes cs-pulse {
             0% { transform: scale(1); opacity:0.8; }
@@ -606,7 +607,7 @@ class CallSystem {
             from { box-shadow: 0 0 20px rgba(251,191,36,0.3); }
             to { box-shadow: 0 0 50px rgba(251,191,36,0.8); }
         }
-        .cs-active-ring { background: linear-gradient(135deg, #3b82f6, #1d4ed8); box-shadow: 0 0 30px rgba(59,130,246,0.5); }
+        .cs-active-ring { background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important; box-shadow: 0 0 30px rgba(59,130,246,0.5) !important; }
 
         .cs-label { color: #94a3b8; font-size: 13px; margin-bottom: 8px; }
         .cs-peer-name { color: white; font-size: 22px; font-weight: 800; margin-bottom: 6px; }
@@ -637,7 +638,6 @@ class CallSystem {
         .cs-btn-wide { width: 80%; margin: 10px auto 0; }
         .cs-btn.active-btn { background: rgba(251,191,36,0.2); color: #fbbf24; border-color: rgba(251,191,36,0.4); }
 
-        /* نقاط الانتظار */
         .cs-calling-dots { display: flex; gap: 6px; justify-content: center; margin: 16px 0 24px; }
         .cs-calling-dots span {
             width: 8px; height: 8px; border-radius: 50%;
@@ -648,7 +648,6 @@ class CallSystem {
         .cs-calling-dots span:nth-child(3) { animation-delay: 0.4s; }
         @keyframes cs-bounce { 0%,80%,100%{transform:scale(0)} 40%{transform:scale(1)} }
 
-        /* زر الاتصال العائم (الذي يُضاف لكل عنصر) */
         .call-btn {
             display: inline-flex; align-items: center; gap: 5px;
             padding: 6px 12px;
@@ -662,7 +661,6 @@ class CallSystem {
         .call-btn:active { transform: scale(0.95); }
         .call-btn i { font-size: 13px; }
 
-        /* Toast */
         .cs-toast {
             position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
             background: #1e293b; border: 1px solid rgba(255,255,255,0.1);
@@ -671,6 +669,35 @@ class CallSystem {
             box-shadow: 0 10px 30px rgba(0,0,0,0.4);
             animation: cs-fadein 0.3s ease;
         }
+
+        /* بانر المكالمة الفائتة */
+        .cs-missed-banner {
+            position: fixed; bottom: 24px; left: 24px;
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            border: 1px solid rgba(239,68,68,0.5);
+            border-radius: 16px; padding: 14px 16px;
+            display: flex; align-items: center; gap: 12px;
+            z-index: 99998; color: white;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(239,68,68,0.2);
+            animation: cs-slidein 0.4s ease;
+            max-width: 320px; min-width: 260px;
+        }
+        .cs-missed-icon { 
+            width: 40px; height: 40px; border-radius: 50%;
+            background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3);
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .cs-missed-icon i { color: #f87171; font-size: 16px; }
+        .cs-missed-content { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+        .cs-missed-title { font-size: 13px; font-weight: 800; color: #f87171; }
+        .cs-missed-sub { font-size: 11px; color: #94a3b8; }
+        .cs-missed-close { 
+            background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.2);
+            color: #f87171; border-radius: 50%; width: 26px; height: 26px; cursor: pointer;
+            font-size: 12px; display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s; flex-shrink: 0;
+        }
+        .cs-missed-close:hover { background: rgba(239,68,68,0.3); }
         </style>
         `;
 
@@ -684,7 +711,10 @@ class CallSystem {
     // 15. تحكم في الواجهة
     // ============================================
     _showIncomingUI(peerName, peerType) {
-        const typeMap = { client: '👤 عميل', driver: '🚗 كابتن', admin: '🏢 إدارة', ops: '⚙️ تشغيل', moderator: '👮 موديتور' };
+        const typeMap = {
+            client: '👤 عميل', driver: '🚗 كابتن',
+            admin: '🏢 إدارة', ops: '⚙️ تشغيل', moderator: '👮 موديتور'
+        };
         document.getElementById('cs-in-name').textContent = peerName;
         document.getElementById('cs-in-type').textContent = typeMap[peerType] || peerType;
         document.getElementById('cs-incoming').style.display = 'flex';
@@ -730,10 +760,8 @@ class CallSystem {
     }
 
     toggleSpeaker() {
-        const audio = document.getElementById('cs-remote-audio');
         const btn = document.getElementById('cs-speaker-btn');
-        if (!audio) return;
-        // على الموبايل: التبديل بين السماعة الخارجية والداخلية
+        if (!btn) return;
         const isSpeaker = btn.classList.contains('active-btn');
         btn.classList.toggle('active-btn');
         btn.innerHTML = isSpeaker
@@ -765,6 +793,87 @@ class CallSystem {
         toast.textContent = `${icons[type] || ''} ${message}`;
         toast.style.display = 'block';
         setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    }
+
+    // ============================================
+    // 19. نظام سجل المكالمات (Persistent Call Logs)
+    // يحل مشكلة: "الكابتن مش فاتح السايت مش بتوصل الاتصال"
+    // الحل: نخزن كل مكالمة في call_logs، وعند فتح الصفحة نشوف المفائتة
+    // ============================================
+    async _logCallToDb(callData) {
+        try {
+            const { error } = await this.sb.from('call_logs').upsert([callData], { onConflict: 'call_id' });
+            if (error) console.log('[CallSystem] log error:', error.message);
+        } catch (e) {
+            console.log('[CallSystem] call_logs not available (table may not exist):', e.message);
+        }
+    }
+
+    async _updateCallLog(callId, updates) {
+        if (!callId) return;
+        try {
+            await this.sb.from('call_logs').update(updates).eq('call_id', callId);
+        } catch (e) {
+            console.log('[CallSystem] update call_log error:', e.message);
+        }
+    }
+
+    // فحص المكالمات الفائتة عند فتح الصفحة
+    async _checkMissedCalls() {
+        try {
+            // آخر 10 دقائق
+            const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+            const { data: missed } = await this.sb
+                .from('call_logs')
+                .select('*')
+                .eq('callee_id', this.myId)
+                .eq('status', 'missed')
+                .gte('started_at', tenMinAgo)
+                .order('started_at', { ascending: false })
+                .limit(5);
+
+            if (missed && missed.length > 0) {
+                const latest = missed[0];
+                const typeMap = { driver: '🚗 كابتن', client: '👤 عميل', admin: '🏢 إدارة', moderator: '👮 موديتور', ops: '⚙️ تشغيل' };
+                const banner = document.getElementById('cs-missed-banner');
+                const text = document.getElementById('cs-missed-text');
+                if (banner && text) {
+                    const callerType = typeMap[latest.caller_type] || latest.caller_type;
+                    const timeAgo = this._timeAgo(latest.started_at);
+                    text.textContent = `${latest.caller_name} (${callerType}) - ${timeAgo}`;
+                    banner.style.display = 'flex';
+                    setTimeout(() => { if (banner) banner.style.display = 'none'; }, 12000);
+                }
+                // تحديث السجلات كـ "تمت رؤيتها"
+                for (const call of missed) {
+                    await this._updateCallLog(call.call_id, { status: 'seen' });
+                }
+            }
+        } catch (e) {
+            console.log('[CallSystem] missed calls check skipped (table may not exist)');
+        }
+    }
+
+    _timeAgo(isoString) {
+        const diff = Date.now() - new Date(isoString).getTime();
+        const mins = Math.floor(diff / 60000);
+        if (mins < 1) return 'الآن';
+        if (mins < 60) return `منذ ${mins} دقيقة`;
+        return `منذ ${Math.floor(mins / 60)} ساعة`;
+    }
+
+    // جلب سجل المكالمات للعرض (للموديتور/الإدارة)
+    async getCallLogs(limit = 50) {
+        try {
+            const { data, error } = await this.sb
+                .from('call_logs')
+                .select('*')
+                .order('started_at', { ascending: false })
+                .limit(limit);
+            return error ? [] : (data || []);
+        } catch (e) {
+            return [];
+        }
     }
 }
 

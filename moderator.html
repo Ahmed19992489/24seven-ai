@@ -324,6 +324,31 @@
                     </div>
                 </form>
             </div>
+
+            <!-- Chat Profile Sidebar -->
+            <div id="chat-profile-container" class="hidden lg:flex w-72 flex-col h-full bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden p-5 shrink-0" style="direction: rtl;">
+                <h3 class="font-black text-slate-800 text-sm mb-4 pb-2 border-b flex items-center gap-2">
+                    <i class="fas fa-id-card text-teal-600 text-lg"></i>
+                    <span>ملف العميل</span>
+                </h3>
+                <div class="flex flex-col items-center text-center mb-6">
+                    <div id="profile-avatar" class="w-16 h-16 rounded-2xl bg-teal-50 text-teal-700 font-black text-2xl flex items-center justify-center mb-2 shadow-inner">👤</div>
+                    <h4 id="profile-name" class="font-bold text-slate-800 text-sm">-</h4>
+                    <p id="profile-phone" class="text-xs text-slate-500 mt-1 select-all">-</p>
+                </div>
+                <div class="flex-1 overflow-y-auto space-y-4 no-scrollbar">
+                    <div>
+                        <p class="text-[10px] text-slate-400 font-bold mb-1">إجمالي الحجوزات</p>
+                        <p id="profile-trips-count" class="text-sm font-black text-teal-700">0 رحلة</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-slate-400 font-bold mb-2">سجل الرحلات</p>
+                        <div id="profile-trips-list" class="space-y-3">
+                            <p class="text-xs text-slate-400 italic text-center py-4">لا توجد رحلات سابقة</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <!-- Tab: Trip Chats -->
@@ -606,6 +631,15 @@
                         <div>
                             <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">المكتب الخارجي</label>
                             <select id="assign-vendor-select" class="input-std bg-slate-50" onchange="updateVendorCommissionDefault()"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">📱 رقم هاتف السائق الخارجي</label>
+                            <input type="tel" id="assign-external-driver-phone" class="input-std bg-slate-50" placeholder="مثال: 01012345678" dir="ltr">
+                            <p class="text-[10px] text-slate-400 mt-1">اختياري - رقم السائق من المكتب الخارجي</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">👤 اسم السائق الخارجي</label>
+                            <input type="text" id="assign-external-driver-name" class="input-std bg-slate-50" placeholder="اسم السائق (اختياري)">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">عمولة المنصة من الأوردر (جنيه)</label>
@@ -941,6 +975,7 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY';
         const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTQ2NTQwMywiZXhwIjoyMDg3MDQxNDAzfQ.WYNflQntWBCHXDnxFf2C1X1IerYZtMfMT6p6P4Dx0Vg';
         const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const sbService = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzGoawwK6JGm5QRHt4gfIScl7DYMaCDKU-GGcdYYXXyDY888xuPF0EOZ9vxVHSqHrWv/exec';
 
         // رفع ملف على Supabase Storage باستخدام service key (يتجاوز RLS)
@@ -1218,96 +1253,92 @@
             // --- 🛡️ Prevent Multiple Subscriptions ---
             if (chatSubscription) return; // Already subscribed
 
-            chatSubscription = sbClient.channel('omni-realtime')
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'omnichannel_messages' }, payload => {
-                    console.log("🆕 New message received via Realtime:", payload.new);
+            chatSubscription = sbService.channel('omni-realtime')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'omnichannel_messages' }, payload => {
+                    console.log("🆕 Realtime Omnichannel Change:", payload);
                     
-                    // Check if message already exists by real ID
-                    if (allMessages.some(m => m.id === payload.new.id)) return;
-                    
-                    // [FIX] Normalize the incoming sender_id to match grouped keys
-                    const incomingNormalized = (payload.new.channel === 'whatsapp') 
-                        ? normalizeWhatsAppId(payload.new.sender_id) 
-                        : payload.new.sender_id;
-                    
-                    // [FIX] Check for temp admin messages (added locally by handleSend)
-                    if (payload.new.is_from_admin) {
-                        const tempIdx = allMessages.findIndex(m => 
-                            m.id && String(m.id).startsWith('temp_') && 
-                            (m.sender_id === payload.new.sender_id || 
-                             (m.channel === 'whatsapp' && normalizeWhatsAppId(m.sender_id) === incomingNormalized)) &&
-                            m.message_text === payload.new.message_text
-                        );
-                        if (tempIdx !== -1) {
-                            allMessages[tempIdx] = payload.new;
-                            regroupChatsOnly();
-                            if (activeChatType === 'omni' && activeChatId === incomingNormalized) {
-                                renderMessages();
+                    if (payload.eventType === 'INSERT') {
+                        if (!allMessages.some(m => m.id === payload.new.id)) {
+                            // Check for temp admin messages
+                            if (payload.new.is_from_admin) {
+                                const incomingNormalized = (payload.new.channel === 'whatsapp') 
+                                    ? normalizeWhatsAppId(payload.new.sender_id) 
+                                    : payload.new.sender_id;
+                                const tempIdx = allMessages.findIndex(m => 
+                                    m.id && String(m.id).startsWith('temp_') && 
+                                    (m.sender_id === payload.new.sender_id || 
+                                     (m.channel === 'whatsapp' && normalizeWhatsAppId(m.sender_id) === incomingNormalized)) &&
+                                    m.message_text === payload.new.message_text
+                                );
+                                if (tempIdx !== -1) {
+                                    allMessages[tempIdx] = payload.new;
+                                } else {
+                                    allMessages.push(payload.new);
+                                }
+                            } else {
+                                allMessages.push(payload.new);
                             }
-                            const existingChat = unifiedChatsList.find(c => c.id === incomingNormalized && c.type === 'omni');
-                            if (existingChat) {
-                                existingChat.lastMessage = payload.new.message_text;
-                                existingChat.lastMessageTime = new Date(payload.new.created_at);
-                            }
-                            renderUnifiedChatList();
-                            return;
                         }
-                    }
-                    
-                    allMessages.push(payload.new);
-                    
-                    // تحديث المجموعة محلياً
-                    if (groupedChats[incomingNormalized]) {
-                        const alreadyInGroup = groupedChats[incomingNormalized].messages.some(m => m.id === payload.new.id);
-                        if (!alreadyInGroup) {
-                            groupedChats[incomingNormalized].messages.push(payload.new);
-                            groupedChats[incomingNormalized].last = payload.new;
+                    } else if (payload.eventType === 'UPDATE') {
+                        const idx = allMessages.findIndex(m => m.id === payload.new.id);
+                        if (idx !== -1) {
+                            allMessages[idx] = payload.new;
+                        } else {
+                            allMessages.push(payload.new);
                         }
-                    } else {
-                        // مجموعة جديدة
-                        groupedChats[incomingNormalized] = {
-                            id: incomingNormalized,
-                            originalIds: new Set([payload.new.sender_id]),
-                            name: payload.new.sender_name || incomingNormalized,
-                            channel: payload.new.channel,
-                            messages: [payload.new],
-                            last: payload.new
-                        };
+                    } else if (payload.eventType === 'DELETE') {
+                        allMessages = allMessages.filter(m => m.id !== payload.old.id);
                     }
 
-                    if (activeChatType === 'omni' && activeChatId === incomingNormalized) {
-                        renderMessages();
-                        const container = document.getElementById('chat-messages');
-                        container.scrollTop = container.scrollHeight;
-                    }
+                    // Re-group and recalculate
+                    regroupChatsOnly();
+
+                    // Resolve incoming normalized sender key
+                    const activeKey = payload.new ? (payload.new.channel === 'whatsapp' ? normalizeWhatsAppId(payload.new.sender_id) : payload.new.sender_id) : null;
                     
-                    // Play sound + update badge for incoming customer messages
-                    if (!payload.new.is_from_admin) {
+                    // Render messages if we are currently looking at this chat
+                    if (activeKey && activeChatType === 'omni' && activeChatId === activeKey) {
+                        renderMessages();
+                        // Update profile sidebar if open
+                        const chat = groupedChats[activeKey];
+                        if (chat) {
+                            updateProfileSidebar(activeKey, chat.channel);
+                        }
+                    }
+
+                    // Play sound for incoming customer messages
+                    if (payload.eventType === 'INSERT' && payload.new && !payload.new.is_from_admin) {
                         playNotify();
                     }
 
-                    // تحديث قائمة الشات الجانبية محلياً
-                    const existingChat = unifiedChatsList.find(c => c.id === incomingNormalized && c.type === 'omni');
-                    if (existingChat) {
-                        existingChat.lastMessage = payload.new.message_text || payload.new.message;
-                        existingChat.lastMessageTime = new Date(payload.new.created_at);
-                        if (!payload.new.is_from_admin && !(activeChatType === 'omni' && activeChatId === incomingNormalized)) {
-                            existingChat.unreadCount = (existingChat.unreadCount || 0) + 1;
+                    // Re-map and sort unified list
+                    const omniChatsMapped = Object.values(groupedChats).map(c => {
+                        let preview = c.last.message_text || c.last.message || '';
+                        if (preview.startsWith('MEDIA_IMAGE:')) {
+                            const parts = preview.substring(12).split('|CAPTION:');
+                            preview = parts[1] ? `📷 صورة: ${parts[1]}` : '📷 صورة';
+                        } else if (preview.startsWith('MEDIA_AUDIO:')) {
+                            preview = '🎵 رسالة صوتية';
+                        } else if (preview.startsWith('MEDIA_VIDEO:') || preview.includes('[فيديو') || preview.includes('[Video')) {
+                            preview = '🎬 مقطع فيديو';
                         }
-                    } else {
-                        // شات جديد
-                        unifiedChatsList.unshift({
-                            id: incomingNormalized,
+                        return {
+                            id: c.id,
                             type: 'omni',
-                            name: payload.new.sender_name || incomingNormalized,
-                            lastMessage: payload.new.message_text || payload.new.message,
-                            lastMessageTime: new Date(payload.new.created_at),
-                            unreadCount: payload.new.is_from_admin ? 0 : 1,
-                            avatar: payload.new.channel === 'messenger' ? '💬' : (payload.new.channel === 'instagram' ? '📸' : '🟢'),
-                            channel: payload.new.channel
-                        });
-                    }
+                            name: c.name || 'مراسلات سوشيال',
+                            lastMessage: preview,
+                            lastMessageTime: new Date(c.last.created_at),
+                            unreadCount: c.unrepliedCount || 0,
+                            avatar: c.channel === 'messenger' ? '💬' : (c.channel === 'instagram' ? '📸' : '🟢'),
+                            channel: c.channel
+                        };
+                    });
+
+                    // Keep non-omni chats from existing unifiedChatsList
+                    const nonOmni = unifiedChatsList.filter(c => c.type !== 'omni');
+                    unifiedChatsList = [...omniChatsMapped, ...nonOmni];
                     unifiedChatsList.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
+                    
                     renderUnifiedChatList();
                 })
                 .subscribe();
@@ -1331,6 +1362,18 @@
             groupedChats = {};
             idToNormalizedKey = {};
             
+            function getCorePhone(num) {
+                if (!num) return '';
+                let clean = String(num).replace(/\D/g, '');
+                if (clean.startsWith('20') && clean.length >= 11) {
+                    clean = clean.substring(2);
+                }
+                if (clean.startsWith('0') && clean.length >= 11) {
+                    clean = clean.substring(1);
+                }
+                return clean;
+            }
+            
             allMessages.forEach(m => {
                 if (!m.sender_id || m.sender_id === 'Admin') return;
 
@@ -1348,14 +1391,54 @@
                     } else if (m.channel === 'instagram' && !m.is_from_admin && m.sender_name && m.sender_name !== m.sender_id && !['Admin', 'ش', 'Instagram User'].includes(m.sender_name)) {
                         initialName = m.sender_name;
                     }
-                    groupedChats[groupKey] = { id: groupKey, originalIds: new Set(), name: initialName, channel: m.channel, messages: [], last: m };
+                    groupedChats[groupKey] = { 
+                        id: groupKey, 
+                        originalIds: new Set(), 
+                        name: initialName, 
+                        channel: m.channel, 
+                        messages: [], 
+                        last: m,
+                        unrepliedCount: 0
+                    };
                 }
                 groupedChats[groupKey].originalIds.add(m.sender_id);
                 groupedChats[groupKey].messages.push(m);
                 groupedChats[groupKey].last = m;
+
+                // Calculate unreplied status badge
+                const isFromAdmin = m.is_from_admin === true || String(m.is_from_admin) === 'true';
+                if (isFromAdmin) {
+                    groupedChats[groupKey].unrepliedCount = 0;
+                } else {
+                    groupedChats[groupKey].unrepliedCount++;
+                }
                 
                 if(m.channel === 'whatsapp') {
-                    groupedChats[groupKey].name = groupKey;
+                    // Priority 1: Use sender_name from DB if it's a real name (not a phone number)
+                    const dbName = m.sender_name;
+                    const isRealName = dbName && !dbName.match(/^\d+$/) && !['Admin', 'ش', 'Bot', 'بوت'].includes(dbName);
+                    if (isRealName && !m.is_from_admin) {
+                        groupedChats[groupKey].name = dbName;
+                    } else {
+                        // Priority 2: Match from reservations (google_reservations)
+                        const cleanKey = getCorePhone(groupKey);
+                        const matchedTrip = allTrips.find(t => {
+                            const cleanPhone = getCorePhone(t.customer_phone);
+                            const cleanWA = getCorePhone(t.whatsapp_num);
+                            return (cleanPhone && cleanPhone === cleanKey) || (cleanWA && cleanWA === cleanKey);
+                        });
+                        if (matchedTrip && matchedTrip.customer_name) {
+                            groupedChats[groupKey].name = matchedTrip.customer_name;
+                        } else {
+                            // Priority 3: localStorage saved name
+                            const savedName = localStorage.getItem(`chat_name_${groupKey}`);
+                            if (savedName) {
+                                groupedChats[groupKey].name = savedName;
+                            } else {
+                                groupedChats[groupKey].name = groupKey.startsWith('0') ? groupKey : '0' + groupKey;
+                            }
+                        }
+                    }
                 }
                 
                 if(m.channel === 'instagram') {
@@ -1516,16 +1599,27 @@
                 }
             }
 
-            const omniChatsMapped = Object.values(groupedChats).map(c => ({
-                id: c.id,
-                type: 'omni',
-                name: c.name || 'مراسلات سوشيال',
-                lastMessage: c.last.message_text || c.last.message,
-                lastMessageTime: new Date(c.last.created_at),
-                unreadCount: 0,
-                avatar: c.channel === 'messenger' ? '💬' : (c.channel === 'instagram' ? '📸' : '🟢'),
-                channel: c.channel
-            }));
+            const omniChatsMapped = Object.values(groupedChats).map(c => {
+                let preview = c.last.message_text || c.last.message || '';
+                if (preview.startsWith('MEDIA_IMAGE:')) {
+                    const parts = preview.substring(12).split('|CAPTION:');
+                    preview = parts[1] ? `📷 صورة: ${parts[1]}` : '📷 صورة';
+                } else if (preview.startsWith('MEDIA_AUDIO:')) {
+                    preview = '🎵 رسالة صوتية';
+                } else if (preview.startsWith('MEDIA_VIDEO:') || preview.includes('[فيديو') || preview.includes('[Video')) {
+                    preview = '🎬 مقطع فيديو';
+                }
+                return {
+                    id: c.id,
+                    type: 'omni',
+                    name: c.name || 'مراسلات سوشيال',
+                    lastMessage: preview,
+                    lastMessageTime: new Date(c.last.created_at),
+                    unreadCount: c.unrepliedCount || 0,
+                    avatar: c.channel === 'messenger' ? '💬' : (c.channel === 'instagram' ? '📸' : '🟢'),
+                    channel: c.channel
+                };
+            });
 
             unifiedChatsList = [...omniChatsMapped, ...supportChatsMapped, ...tripChatsMapped];
             unifiedChatsList.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
@@ -1568,6 +1662,9 @@
                         typeBadge = `<span class="bg-blue-100 text-blue-700 text-[8px] font-bold px-1 py-0.5 rounded">ماسنجر</span>`;
                     } else if (c.channel === 'instagram') {
                         typeBadge = `<span class="bg-pink-100 text-pink-700 text-[8px] font-bold px-1 py-0.5 rounded">إنستجرام</span>`;
+                    }
+                    if (c.unreadCount > 0) {
+                        typeBadge += `<span class="bg-rose-100 text-rose-700 text-[8px] font-bold px-1 py-0.5 rounded ml-1">لم يتم الرد</span>`;
                     }
                 } else if (c.type === 'trip') {
                     typeBadge = `<span class="bg-blue-100 text-blue-700 text-[8px] font-bold px-1 py-0.5 rounded">رحلة</span>`;
@@ -1701,6 +1798,12 @@
 
                 await loadUnifiedSupportMessages(id);
                 subscribeSupportChatUnified(id);
+            }
+
+            // Hide client profile sidebar for non-omni chats
+            if (type !== 'omni') {
+                const profileContainer = document.getElementById('chat-profile-container');
+                if (profileContainer) profileContainer.classList.add('hidden');
             }
 
             // Mobile view toggle
@@ -1867,8 +1970,8 @@
         }
 
         function subscribeModChatUnified(tripId) {
-            if (modChatSub) sbClient.removeChannel(modChatSub);
-            modChatSub = sbClient.channel('chat-mod-' + tripId)
+            if (modChatSub) sbService.removeChannel(modChatSub);
+            modChatSub = sbService.channel('chat-mod-' + tripId)
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: 'trip_id=eq.' + tripId }, (payload) => {
                     if (payload.new.sender_role === 'admin' && payload.new.sender_id === 'moderator') return;
                     if (activeChatType === 'trip' && activeChatId === tripId) {
@@ -1878,8 +1981,8 @@
         }
 
         function subscribeSupportChatUnified(userId) {
-            if (supportChatSub) sbClient.removeChannel(supportChatSub);
-            supportChatSub = sbClient.channel('support-chat-' + userId)
+            if (supportChatSub) sbService.removeChannel(supportChatSub);
+            supportChatSub = sbService.channel('support-chat-' + userId)
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_chats', filter: 'user_id=eq.' + userId }, (payload) => {
                     if (payload.new.sender_role === 'admin' || payload.new.sender_role === 'moderator') return;
                     if (activeChatType === 'support' && activeChatId === userId) {
@@ -1932,6 +2035,7 @@
 
         function openChat(id) {
             activeChatId = id;
+            activeChatType = 'omni';
             document.getElementById('no-chat').classList.add('hidden');
             const chat = groupedChats[id];
             document.getElementById('chat-name').textContent = chat.name || chat.id;
@@ -1965,6 +2069,107 @@
                 document.getElementById('chat-list-container').classList.add('hidden');
                 document.getElementById('chat-window-container').classList.remove('hidden');
                 document.getElementById('chat-window-container').classList.add('flex');
+            }
+
+            // Show client profile sidebar
+            updateProfileSidebar(id, chat.channel);
+        }
+
+        /**
+         * updateProfileSidebar - يجلب ويعرض ملف العميل وتاريخ رحلاته في الـ sidebar الجانبي
+         */
+        async function updateProfileSidebar(senderId, channel) {
+            const container = document.getElementById('chat-profile-container');
+            if (!container) return;
+
+            // Show sidebar
+            container.classList.remove('hidden');
+
+            // Reset fields
+            document.getElementById('profile-name').textContent = '-';
+            document.getElementById('profile-phone').textContent = '-';
+            document.getElementById('profile-trips-count').textContent = '0 رحلة';
+            document.getElementById('profile-trips-list').innerHTML = '<p class="text-xs text-slate-400 italic text-center py-4">جاري التحميل...</p>';
+            document.getElementById('profile-avatar').textContent = '👤';
+
+            // Determine phone or ID based on channel
+            let clientPhone = null;
+            let clientName = null;
+
+            const chat = groupedChats[senderId];
+            if (chat) {
+                clientName = chat.name;
+            }
+
+            if (channel === 'whatsapp') {
+                // senderId is normalized phone (e.g. 1121748885)
+                clientPhone = senderId;
+                document.getElementById('profile-phone').textContent = '+2' + (senderId.startsWith('0') ? senderId : '0' + senderId);
+            } else {
+                document.getElementById('profile-phone').textContent = senderId;
+            }
+
+            // Set name from chat
+            if (clientName && clientName !== senderId) {
+                document.getElementById('profile-name').textContent = clientName;
+                document.getElementById('profile-avatar').textContent = clientName.charAt(0).toUpperCase();
+            }
+
+            // Fetch trips from google_reservations by phone (for WhatsApp)
+            let trips = [];
+            if (channel === 'whatsapp' && clientPhone) {
+                // Use last 8 digits for fuzzy match
+                const last8 = String(clientPhone).replace(/\D/g,'').slice(-8);
+                try {
+                    const { data } = await sbClient
+                        .from('google_reservations')
+                        .select('customer_name, trip_date, trip_time, pickup_address, dropoff_address, cost, status, trip_type')
+                        .ilike('customer_phone', `%${last8}%`)
+                        .order('created_at', { ascending: false })
+                        .limit(20);
+                    if (data && data.length > 0) {
+                        trips = data;
+                        // Use real name from reservation if we didn't have one
+                        if (trips[0].customer_name && (!clientName || clientName === senderId)) {
+                            clientName = trips[0].customer_name;
+                            document.getElementById('profile-name').textContent = clientName;
+                            document.getElementById('profile-avatar').textContent = clientName.charAt(0).toUpperCase();
+                        }
+                    }
+                } catch(e) { console.error('Profile trips fetch error:', e); }
+            }
+
+            // Update count
+            document.getElementById('profile-trips-count').textContent = `${trips.length} رحلة`;
+
+            // Render trip list
+            const tripsList = document.getElementById('profile-trips-list');
+            if (trips.length === 0) {
+                tripsList.innerHTML = '<p class="text-xs text-slate-400 italic text-center py-4">لا توجد رحلات سابقة</p>';
+            } else {
+                tripsList.innerHTML = trips.map(t => {
+                    const statusColors = {
+                        'تم الترحيل': 'bg-teal-100 text-teal-700',
+                        'ملغي': 'bg-red-100 text-red-700',
+                        'مؤجل': 'bg-amber-100 text-amber-700',
+                    };
+                    const statusColor = statusColors[t.status] || 'bg-slate-100 text-slate-600';
+                    const pickup = (t.pickup_address || '').split(',')[0] || '-';
+                    const dropoff = (t.dropoff_address || '').split(',')[0] || '-';
+                    return `
+                    <div class="bg-slate-50 rounded-xl p-3 border border-slate-200 text-right">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[10px] font-bold text-slate-500">${t.trip_date || '-'} ${t.trip_time ? '• ' + t.trip_time : ''}</span>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${statusColor}">${t.status || '-'}</span>
+                        </div>
+                        <p class="text-[11px] text-slate-700 font-bold truncate">📍 ${pickup}</p>
+                        <p class="text-[11px] text-slate-500 truncate">🏁 ${dropoff}</p>
+                        <div class="flex justify-between items-center mt-1.5">
+                            <span class="text-[10px] text-slate-400">${t.trip_type || ''}</span>
+                            <span class="text-[11px] font-black text-teal-700">${t.cost ? t.cost + ' ج' : '-'}</span>
+                        </div>
+                    </div>`;
+                }).join('');
             }
         }
 
@@ -2021,7 +2226,7 @@
                 } else if (rawText.startsWith('MEDIA_AUDIO:')) {
                     const mediaUrl = rawText.substring(12);
                     messageHtml = `
-                        <audio src="${mediaUrl}" controls preload="none" class="max-w-xs rounded-lg mt-1" onerror="this.onerror=null;this.parentElement.innerHTML='<span class=\'text-xs text-red-300\'>⚠️ ملف صوتي غير متاح</span>';"></audio>
+                        <audio data-src="${mediaUrl}" controls preload="none" class="max-w-xs rounded-lg mt-1" onerror="this.onerror=null;this.parentElement.innerHTML='<span class=\'text-xs text-red-300\'>⚠️ ملف صوتي غير متاح</span>';"></audio>
                     `;
                 } else if (rawText.startsWith('MEDIA_VIDEO:') || rawText.includes('[فيديو') || rawText.includes('[Video')) {
                     const mediaUrl = rawText.startsWith('MEDIA_VIDEO:') ? rawText.substring(12) : null;
@@ -2037,7 +2242,7 @@
                         </div>
                     `;
                 } else if (audioPattern.test(rawText)) {
-                    messageHtml = `<audio src="${rawText}" controls preload="none" class="max-w-xs rounded-lg mt-1"></audio>`;
+                    messageHtml = `<audio data-src="${rawText}" controls preload="none" class="max-w-xs rounded-lg mt-1"></audio>`;
                 } else if (rawText.startsWith('[رسالة وسائط]') || rawText.startsWith('[رسالة وسالطة]')) {
                     messageHtml = `<p class="text-sm italic opacity-70">📎 ${escapeHtml(rawText)}</p>`;
                 } else {
@@ -2054,7 +2259,24 @@
                 </div>
             `}).join('');
             container.scrollTop = container.scrollHeight;
+            preloadAudioBlobs(container);
         }
+
+        function preloadAudioBlobs(container) {
+            if (!container) return;
+            container.querySelectorAll('audio[data-src]').forEach(async audioEl => {
+                const realSrc = audioEl.getAttribute('data-src');
+                if (audioEl.src && audioEl.src.startsWith('blob:')) return;
+                try {
+                    const response = await fetch(realSrc);
+                    const blob = await response.blob();
+                    const blobUrl = URL.createObjectURL(blob);
+                    audioEl.src = blobUrl;
+                } catch (e) {
+                    console.error("Error preloading audio blob:", e);
+                    audioEl.src = realSrc;
+                }
+            });
 
         // --- Added Chat Features ---
         function toggleEmoji() {
@@ -2639,6 +2861,9 @@
             const carId = carSelect.value;
             const vendorId = vendorSelect.value;
             const commission = Number(document.getElementById('assign-vendor-commission').value) || 100;
+            // بيانات السائق الخارجي (جديد)
+            const externalDriverPhone = (document.getElementById('assign-external-driver-phone')?.value || '').trim();
+            const externalDriverName = (document.getElementById('assign-external-driver-name')?.value || '').trim();
             
             if (assignType === 'internal') {
                 if(!driverId || !carId) {
@@ -2700,6 +2925,7 @@
 
                     if (assignType === 'external') {
                         // 2. Create actual trip record for external office
+                        const extDriverInfo = externalDriverPhone ? `\n🚕 السائق الخارجي: ${externalDriverName || 'غير محدد'} | 📱 ${externalDriverPhone}` : '';
                         const { data: newTrip, error: tripErr } = await sbClient.from('trips').insert([{
                             user_id: clientUserId,
                             pickup_location: trip.pickup_address || '',
@@ -2709,7 +2935,7 @@
                             is_outsourced: true,
                             vendor_id: vendorId,
                             our_commission: commission,
-                            admin_notes: `📅 ${trip.trip_date || '--'} - ${trip.trip_time || '--'}\n👥 ${trip.passengers || '1'}\n🧳 ${trip.bags || '0'}\nنوع التحصيل: ${trip.payment_method || 'غير محدد'}\nحجز موديتور: ${currentModName}\nالعميل: ${trip.customer_name}\nملاحظات: ${trip.notes || ''}\n${note ? '--- ملاحظات التعيين ---\n' + note : ''}`,
+                            admin_notes: `📅 ${trip.trip_date || '--'} - ${trip.trip_time || '--'}\n👥 ${trip.passengers || '1'}\n🧳 ${trip.bags || '0'}\nنوع التحصيل: ${trip.payment_method || 'غير محدد'}\nحجز موديتور: ${currentModName}\nالعميل: ${trip.customer_name}${extDriverInfo}\nملاحظات: ${trip.notes || ''}\n${note ? '--- ملاحظات التعيين ---\n' + note : ''}`,
                             car_type: trip.car_type
                         }]).select().single();
 
@@ -3163,7 +3389,38 @@
                 if (r.trip_status === 'مكتملة' || r.trip_status === 'ملغاة') {
                     return false;
                 }
-                return true;
+
+                // مقارنة ذكية بالتفاصيل (التاريخ، الوقت، والمسار) لمنع ظهور الحجز والرحلة معاً
+                const rDate = r.trip_date || '';
+                const rTimeClean = (r.trip_time || '').replace(/\s*(ص|م)/g, '').trim();
+                const rTimeDigits = rTimeClean.replace(/\D/g, '');
+                
+                const rPickup = (r.pickup_address || '').replace(/\s+/g, '').trim();
+                const rDropoff = (r.dropoff_address || '').replace(/\s+/g, '').trim();
+
+                const isDuplicate = filteredMappedTrips.some(t => {
+                    const tDate = t.trip_date || '';
+                    const tTimeClean = (t.trip_time || '').replace(/\s*(ص|م)/g, '').trim();
+                    const tTimeDigits = tTimeClean.replace(/\D/g, '');
+                    
+                    const tPickup = (t.pickup_address || '').replace(/\s+/g, '').trim();
+                    const tDropoff = (t.dropoff_address || '').replace(/\s+/g, '').trim();
+                    
+                    if (rDate && tDate && rDate !== tDate) return false;
+                    
+                    if (rTimeDigits && tTimeDigits) {
+                        const rT = parseInt(rTimeDigits);
+                        const tT = parseInt(tTimeDigits);
+                        if (rT !== tT) return false;
+                    }
+                    
+                    const pickupMatch = (rPickup && tPickup && (rPickup.includes(tPickup) || tPickup.includes(rPickup)));
+                    const dropoffMatch = (rDropoff && tDropoff && (rDropoff.includes(tDropoff) || tDropoff.includes(rDropoff)));
+                    
+                    return pickupMatch && dropoffMatch;
+                });
+
+                return !isDuplicate;
             }).map(r => {
                 return {
                     id: 'gr_' + r.id,
@@ -5039,8 +5296,8 @@ ${contextData}
         }
 
         function subscribeModChat(tripId) {
-            if (modChatSub) sbClient.removeChannel(modChatSub);
-            modChatSub = sbClient.channel('chat-mod-' + tripId)
+            if (modChatSub) sbService.removeChannel(modChatSub);
+            modChatSub = sbService.channel('chat-mod-' + tripId)
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: 'trip_id=eq.' + tripId }, (payload) => {
                     // تجاهل رسائل المشرف نفسه - لأنها ظهرت فوراً بالـ Optimistic UI
                     if (payload.new.sender_role === 'admin' && payload.new.sender_id === 'moderator') return;
@@ -5178,7 +5435,7 @@ ${contextData}
 
         function setupModSupportRealtime() {
             if (globalModSupportSub) return;
-            globalModSupportSub = sbClient.channel('global-mod-support-chats')
+            globalModSupportSub = sbService.channel('global-mod-support-chats')
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_chats' }, (payload) => {
                     const msg = payload.new;
                     if (msg.sender_role === 'client' || msg.sender_role === 'vendor') {
@@ -5402,7 +5659,7 @@ ${contextData}
         // مراقبة كل رسائل الدعم في الخلفية لإظهار إشعارات
         function initGlobalSupportListener() {
             if (globalModSupportSubUnified) return;
-            globalModSupportSubUnified = sbClient.channel('global-mod-support-chats-unified')
+            globalModSupportSubUnified = sbService.channel('global-mod-support-chats-unified')
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_chats' }, (payload) => {
                     const msg = payload.new;
                     if (msg.sender_role === 'client' || msg.sender_role === 'vendor') {
@@ -5426,7 +5683,7 @@ ${contextData}
 
         function initGlobalTripChatListener() {
             if (globalModTripChatSubUnified) return;
-            globalModTripChatSubUnified = sbClient.channel('global-mod-trip-chats-unified')
+            globalModTripChatSubUnified = sbService.channel('global-mod-trip-chats-unified')
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, (payload) => {
                     const msg = payload.new;
                     if (msg.sender_role === 'client' || msg.sender_role === 'driver') {
@@ -5454,7 +5711,7 @@ ${contextData}
         let globalModTripsSub = null;
         function setupModTripsRealtime() {
             if (globalModTripsSub) return;
-            globalModTripsSub = sbClient.channel('global-mod-trips-realtime')
+            globalModTripsSub = sbService.channel('global-mod-trips-realtime')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'trips' }, async (payload) => {
                     const trip = payload.new;
                     if (payload.eventType === 'UPDATE') {
@@ -5727,6 +5984,111 @@ ${contextData}
                 btn.disabled = false;
             }
         }
+    </script>
+
+    <!-- ================================================ -->
+    <!-- نظام المكالمات الداخلية للموديتور               -->
+    <!-- ================================================ -->
+    <script src="/call-system.js"></script>
+    <script>
+    let moderatorCallSystem = null;
+
+    function initModeratorCallSystem() {
+        if (moderatorCallSystem) return;
+        // نستخدم اسم الموديتور الحالي إذا كان متاحاً
+        const modId = 'moderator_' + (currentModName || 'mod').replace(/\s+/g, '_');
+        const modName = currentModName || 'موديتور';
+        moderatorCallSystem = new CallSystem(
+            sbClient,
+            modId,
+            modName,
+            'moderator'
+        );
+        window.__callSystem = moderatorCallSystem;
+        console.log('[CallSystem] Moderator initialized:', modName);
+    }
+
+    // تهيئة نظام المكالمات بعد تسجيل الدخول
+    // نستمع لتغير currentModName
+    const _origSetMod = window.setMod || null;
+    function tryInitModCallSystem() {
+        if (typeof currentModName !== 'undefined' && currentModName && !moderatorCallSystem) {
+            initModeratorCallSystem();
+        }
+    }
+    // محاولة التهيئة بعد ثانية و3 ثوانٍ (بعد تسجيل الدخول)
+    setTimeout(tryInitModCallSystem, 1000);
+    setTimeout(tryInitModCallSystem, 3000);
+    setTimeout(tryInitModCallSystem, 6000);
+
+    // دالة الاتصال بكابتن من الموديتور
+    function modCallDriver(driverId, driverName) {
+        if (!moderatorCallSystem) {
+            tryInitModCallSystem();
+            setTimeout(() => modCallDriver(driverId, driverName), 1000);
+            return;
+        }
+        moderatorCallSystem.startCall('driver_' + driverId, driverName || 'كابتن', 'driver');
+    }
+
+    // دالة الاتصال بعميل من الموديتور
+    function modCallClient(clientId, clientName) {
+        if (!moderatorCallSystem) {
+            tryInitModCallSystem();
+            setTimeout(() => modCallClient(clientId, clientName), 1000);
+            return;
+        }
+        moderatorCallSystem.startCall('client_' + clientId, clientName || 'عميل', 'client');
+    }
+
+    // عرض سجل المكالمات
+    async function showCallLogsModal() {
+        if (!moderatorCallSystem) { alert('يرجى الانتظار، جارٍ تهيئة نظام المكالمات...'); return; }
+        const logs = await moderatorCallSystem.getCallLogs(30);
+        const statusMap = { calling: '📞 يتصل', answered: '✅ مجاب', missed: '📵 فائتة', rejected: '❌ مرفوضة', ended: '📴 منتهية', seen: '👁️ مشاهدة' };
+        const typeMap = { driver: '🚗 كابتن', client: '👤 عميل', admin: '🏢 إدارة', moderator: '👮 موديتور', ops: '⚙️ تشغيل' };
+        
+        const rows = logs.length === 0
+            ? '<tr><td colspan="5" class="text-center py-8 text-slate-400">لا توجد مكالمات مسجلة</td></tr>'
+            : logs.map(log => {
+                const time = new Date(log.started_at).toLocaleString('ar-EG');
+                const dur = log.duration_seconds ? `${Math.floor(log.duration_seconds/60)}:${String(log.duration_seconds%60).padStart(2,'0')}` : '--';
+                return `<tr class="border-b border-slate-100 hover:bg-slate-50">
+                    <td class="py-2 px-3 text-sm">${time}</td>
+                    <td class="py-2 px-3 text-sm font-bold">${log.caller_name} <span class="text-xs text-slate-400">(${typeMap[log.caller_type]||log.caller_type})</span></td>
+                    <td class="py-2 px-3 text-sm">${log.callee_name} <span class="text-xs text-slate-400">(${typeMap[log.callee_type]||log.callee_type})</span></td>
+                    <td class="py-2 px-3 text-sm">${statusMap[log.status]||log.status}</td>
+                    <td class="py-2 px-3 text-sm font-mono">${dur}</td>
+                </tr>`;
+            }).join('');
+
+        const modal = document.createElement('div');
+        modal.id = 'call-logs-modal';
+        modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4';
+        modal.innerHTML = `
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col">
+                <div class="flex justify-between items-center p-5 border-b border-slate-100">
+                    <h3 class="text-lg font-black text-slate-800">📞 سجل المكالمات</h3>
+                    <button onclick="document.getElementById('call-logs-modal').remove()" class="text-slate-400 hover:text-red-500"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="overflow-auto flex-1">
+                    <table class="w-full text-right">
+                        <thead class="bg-slate-50 sticky top-0">
+                            <tr>
+                                <th class="py-3 px-3 text-xs text-slate-500 font-bold">الوقت</th>
+                                <th class="py-3 px-3 text-xs text-slate-500 font-bold">المتصل</th>
+                                <th class="py-3 px-3 text-xs text-slate-500 font-bold">المُتَّصَل به</th>
+                                <th class="py-3 px-3 text-xs text-slate-500 font-bold">الحالة</th>
+                                <th class="py-3 px-3 text-xs text-slate-500 font-bold">المدة</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    }
     </script>
 </body>
 </html>

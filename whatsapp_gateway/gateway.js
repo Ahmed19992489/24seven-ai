@@ -144,22 +144,30 @@ async function initSession(id) {
             for (const msg of m.messages) {
                 console.log(`[Gateway Debug] Processing message: fromMe=${msg.key?.fromMe}, remoteJid=${msg.key?.remoteJid}, hasMessage=${!!msg.message}`);
                 
-                if (!msg.key.fromMe && msg.message) {
+                if (msg.message) {
                     const senderJid = msg.key.remoteJid;
                     if (senderJid && (senderJid.endsWith('@s.whatsapp.net') || senderJid.endsWith('@lid'))) {
                         let resolvedJid = senderJid;
                         let senderPhone = senderJid.split('@')[0];
                         
                         if (senderJid.endsWith('@lid')) {
-                            try {
-                                const [result] = await sock.onWhatsApp(senderJid);
-                                if (result && result.exists && result.jid) {
-                                    resolvedJid = result.jid;
-                                    senderPhone = resolvedJid.split('@')[0];
-                                    console.log(`[Gateway] Resolved LID ${senderJid} to phone JID ${resolvedJid} (Phone: ${senderPhone})`);
+                            // Try metadata extraction first
+                            const possiblePn = msg.senderPn || (msg.key && (msg.key.participantAlt || msg.key.remoteJidAlt));
+                            if (possiblePn) {
+                                resolvedJid = possiblePn;
+                                senderPhone = resolvedJid.split('@')[0];
+                                console.log(`[Gateway] Resolved LID ${senderJid} to phone JID ${resolvedJid} via metadata (Phone: ${senderPhone})`);
+                            } else {
+                                try {
+                                    const [result] = await sock.onWhatsApp(senderJid);
+                                    if (result && result.exists && result.jid) {
+                                        resolvedJid = result.jid;
+                                        senderPhone = resolvedJid.split('@')[0];
+                                        console.log(`[Gateway] Resolved LID ${senderJid} to phone JID ${resolvedJid} via onWhatsApp (Phone: ${senderPhone})`);
+                                    }
+                                } catch (lidErr) {
+                                    console.warn(`[Gateway Warning] Failed to resolve LID JID ${senderJid} via onWhatsApp:`, lidErr.message);
                                 }
-                            } catch (lidErr) {
-                                console.warn(`[Gateway Warning] Failed to resolve LID JID ${senderJid}:`, lidErr.message);
                             }
                         }
 
@@ -255,6 +263,14 @@ async function initSession(id) {
                                 text = messageContent.conversation;
                             } else if (messageContent.extendedTextMessage) {
                                 text = messageContent.extendedTextMessage.text;
+                            } else if (messageContent.locationMessage) {
+                                const lat = messageContent.locationMessage.degreesLatitude;
+                                const lng = messageContent.locationMessage.degreesLongitude;
+                                text = `https://maps.google.com/maps?q=${lat},${lng}`;
+                            } else if (messageContent.liveLocationMessage) {
+                                const lat = messageContent.liveLocationMessage.degreesLatitude;
+                                const lng = messageContent.liveLocationMessage.degreesLongitude;
+                                text = `https://maps.google.com/maps?q=${lat},${lng}`;
                             } else if (messageContent.imageMessage) {
                                 text = messageContent.imageMessage.caption || '[صورة / Image]';
                             } else if (messageContent.videoMessage) {
@@ -282,8 +298,9 @@ async function initSession(id) {
                         try {
                             await axios.post(`${PYTHON_BACKEND_URL}/api/whatsapp/webhook/local/${id}`, {
                                 sender_phone: senderPhone,
-                                sender_name: senderName,
-                                message_text: text
+                                sender_name: msg.key.fromMe ? 'Admin' : senderName,
+                                message_text: text,
+                                is_from_admin: msg.key.fromMe ? true : false
                             });
                         } catch (err) {
                             console.error(`[Webhook Error] Failed to forward message to Python:`, err.message);
@@ -414,46 +431,48 @@ app.post('/instance/:id/send', async (req, res) => {
         console.log(`[Gateway] Sending to JID: ${jid}`);
         
         // إرسال ميديا عبر media_url منفصل (من الموديتور)
+        let sentMsg;
         if (media_url && media_type === 'image') {
-            await session.sock.sendMessage(jid, { image: { url: media_url }, caption: message || '' });
+            sentMsg = await session.sock.sendMessage(jid, { image: { url: media_url }, caption: message || '' });
             console.log(`[Gateway] Image sent to ${phone} via media_url: ${media_url}`);
         } else if (media_url && media_type === 'audio') {
-            await session.sock.sendMessage(jid, { audio: { url: media_url }, mimetype: 'audio/ogg; codecs=opus', ptt: true });
+            sentMsg = await session.sock.sendMessage(jid, { audio: { url: media_url }, mimetype: 'audio/ogg; codecs=opus', ptt: true });
             console.log(`[Gateway] Audio sent to ${phone} via media_url: ${media_url}`);
         } else if (message && message.startsWith('MEDIA_IMAGE:')) {
             const parts = message.substring(12).split('|CAPTION:');
             const mediaUrl = parts[0];
             const caption = parts[1] || '';
             if (mediaUrl.startsWith('http')) {
-                await session.sock.sendMessage(jid, { image: { url: mediaUrl }, caption: caption });
+                sentMsg = await session.sock.sendMessage(jid, { image: { url: mediaUrl }, caption: caption });
             } else {
                 const localFilePath = path.join(__dirname, '..', mediaUrl.replace(/^\//, ''));
                 if (fs.existsSync(localFilePath)) {
-                    await session.sock.sendMessage(jid, { image: fs.readFileSync(localFilePath), caption: caption });
+                    sentMsg = await session.sock.sendMessage(jid, { image: fs.readFileSync(localFilePath), caption: caption });
                 } else {
-                    await session.sock.sendMessage(jid, { image: { url: `${PYTHON_BACKEND_URL}${mediaUrl}` }, caption: caption });
+                    sentMsg = await session.sock.sendMessage(jid, { image: { url: `${PYTHON_BACKEND_URL}${mediaUrl}` }, caption: caption });
                 }
             }
             console.log(`[Gateway] Image sent to ${phone}: ${mediaUrl}`);
         } else if (message && message.startsWith('MEDIA_AUDIO:')) {
             const mediaUrl = message.substring(12);
             if (mediaUrl.startsWith('http')) {
-                await session.sock.sendMessage(jid, { audio: { url: mediaUrl }, mimetype: 'audio/ogg; codecs=opus', ptt: true });
+                sentMsg = await session.sock.sendMessage(jid, { audio: { url: mediaUrl }, mimetype: 'audio/ogg; codecs=opus', ptt: true });
             } else {
                 const localFilePath = path.join(__dirname, '..', mediaUrl.replace(/^\//, ''));
                 if (fs.existsSync(localFilePath)) {
-                    await session.sock.sendMessage(jid, { audio: fs.readFileSync(localFilePath), mimetype: 'audio/mp4', ptt: true });
+                    sentMsg = await session.sock.sendMessage(jid, { audio: fs.readFileSync(localFilePath), mimetype: 'audio/mp4', ptt: true });
                 } else {
-                    await session.sock.sendMessage(jid, { audio: { url: `${PYTHON_BACKEND_URL}${mediaUrl}` }, mimetype: 'audio/mp4', ptt: true });
+                    sentMsg = await session.sock.sendMessage(jid, { audio: { url: `${PYTHON_BACKEND_URL}${mediaUrl}` }, mimetype: 'audio/mp4', ptt: true });
                 }
             }
             console.log(`[Gateway] Audio sent to ${phone}: ${mediaUrl}`);
         } else {
-            await session.sock.sendMessage(jid, { text: message || '' });
+            sentMsg = await session.sock.sendMessage(jid, { text: message || '' });
             console.log(`[Gateway] Text sent to ${phone}: ${message}`);
         }
         
-        return res.json({ status: 'success' });
+        const msgId = sentMsg?.key?.id;
+        return res.json({ status: 'success', message_id: msgId });
     } catch (err) {
         console.error(`[Gateway Error] Failed to send message via ${id}:`, err.message);
         return res.status(500).json({ status: 'error', message: err.message });

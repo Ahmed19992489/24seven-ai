@@ -266,6 +266,10 @@
                         class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-bold text-sm flex-1 md:flex-none shadow-lg">
                         <i class="fas fa-plus mr-2"></i> حجز يدوي
                     </button>
+                    <button onclick="showAdminCallLogs()"
+                        class="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 font-bold text-sm flex-1 md:flex-none shadow-lg">
+                        <i class="fas fa-phone-alt mr-2"></i> سجل المكالمات
+                    </button>
                 </div>
             </div>
 
@@ -1507,6 +1511,8 @@
         const supabaseUrl = 'https://wtjwzqvmwnbvjxnmweqq.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY';
         const sbClient = supabase.createClient(supabaseUrl, supabaseKey);
+        const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTQ2NTQwMywiZXhwIjoyMDg3MDQxNDAzfQ.WYNflQntWBCHXDnxFf2C1X1IerYZtMfMT6p6P4Dx0Vg';
+        const sbService = supabase.createClient(supabaseUrl, supabaseServiceKey);
         let activeVendors = [];
 
         showPage('dashboard');
@@ -1607,7 +1613,7 @@
         let opsRealtimeChannel = null;
         function setupOpsRealtime() {
             if (opsRealtimeChannel) return; // لا تسجّل مرتين
-            opsRealtimeChannel = sbClient.channel('ops-realtime')
+            opsRealtimeChannel = sbService.channel('ops-realtime')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'trips' }, () => {
                     // تحديث الجدول تلقائياً عند أي تغيير
                     const opsPage = document.getElementById('page-operations');
@@ -2074,13 +2080,24 @@
                     flightInfoHtml += `<br><a href="${ticketUrl}" target="_blank" class="text-[10px] text-purple-600 hover:text-purple-800 font-bold" title="عرض صورة التذكرة"><i class="fas fa-ticket-alt ml-0.5"></i> عرض التذكرة 🎟️</a>`;
                 }
 
+                // أزرار الاتصال
+                const clientCallBtn = t.user_id
+                    ? `<button onclick="adminCallClient('${t.user_id}', '${displayName.replace(/'/g,"'")}')" class="inline-flex items-center gap-1 text-[10px] bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded px-1.5 py-0.5 mt-1 font-bold transition" title="اتصال بالعميل">📞 اتصال</button>`
+                    : (displayPhone && displayPhone !== '-'
+                        ? `<a href="tel:${displayPhone}" class="inline-flex items-center gap-1 text-[10px] bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded px-1.5 py-0.5 mt-1 font-bold transition" title="اتصال هاتفي">📞 ${displayPhone}</a>`
+                        : '');
+
+                const driverCallBtn = t.driver_id
+                    ? `<br><button onclick="adminCallDriver('${t.driver_id}', '${driverName.replace(/'/g,"'")}')" class="inline-flex items-center gap-1 text-[10px] bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded px-1.5 py-0.5 mt-1 font-bold transition" title="اتصال بالكابتن">📞 كابتن</button>`
+                    : '';
+
                 list.innerHTML += `
                     <tr class="border-b hover:bg-white text-xs">
                         <td class="p-4">#${String(t.id)}</td>
-                        <td class="p-4 font-bold text-slate-800">${displayName}<br><span class="text-[10px] text-slate-500">${displayPhone}</span>${flightInfoHtml}${decisionHtml}${destReqHtml}</td>
+                        <td class="p-4 font-bold text-slate-800">${displayName}<br><span class="text-[10px] text-slate-500">${displayPhone}</span>${clientCallBtn}${flightInfoHtml}${decisionHtml}${destReqHtml}</td>
                         <td class="p-4 min-w-[180px] whitespace-normal leading-relaxed text-slate-600">${t.admin_notes || '-'}</td>
                         <td class="p-4 font-bold text-slate-500">${(t.pickup_location || '-').split(',')[0]} ➝ ${(t.dropoff_location || '-').split(',')[0]}</td>
-                        <td class="p-4 font-bold">${driverName} / ${carInfo}</td>
+                        <td class="p-4 font-bold">${driverName} / ${carInfo}${driverCallBtn}</td>
                         <td class="p-4 font-bold text-green-700">${t.estimated_price}</td>
                         <td class="p-4"><span class="px-2 py-1 rounded text-[10px] ${statusColor}">${t.status}</span>${stageText}</td>
                         <td class="p-4">${btns}</td>
@@ -4421,7 +4438,7 @@
 
         function setupSupportRealtime() {
             if (globalSupportSub) return;
-            globalSupportSub = sbClient.channel('global-support-chats')
+            globalSupportSub = sbService.channel('global-support-chats')
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_chats' }, (payload) => {
                     const msg = payload.new;
                     // إذا كان المرسل هو العميل أو المكتب الشريك
@@ -4688,8 +4705,8 @@
         }
 
         function subscribeAdminChat(tripId) {
-            if (adminChatSub) sbClient.removeChannel(adminChatSub);
-            adminChatSub = sbClient.channel('chat-admin-' + tripId)
+            if (adminChatSub) sbService.removeChannel(adminChatSub);
+            adminChatSub = sbService.channel('chat-admin-' + tripId)
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: 'trip_id=eq.' + tripId }, (payload) => {
                     // تجاهل رسائل الإدارة نفسها - لأنها ظهرت فوراً بالـ Optimistic UI
                     if (payload.new.sender_role === 'admin') return;
@@ -5488,7 +5505,7 @@
 
         function initGlobalSupportListener() {
             if (adminSupportChatSub) return;
-            adminSupportChatSub = sbClient.channel('global-admin-support')
+            adminSupportChatSub = sbService.channel('global-admin-support')
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_chats' }, payload => {
                     const msg = payload.new;
                     if (msg.sender_role === 'client' || msg.sender_role === 'vendor') {
@@ -5505,7 +5522,7 @@
 
         function initGlobalTripChatListener() {
             if (adminTripChatSub) return;
-            adminTripChatSub = sbClient.channel('global-admin-trip-chat')
+            adminTripChatSub = sbService.channel('global-admin-trip-chat')
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, payload => {
                     const msg = payload.new;
                     if (msg.sender_role !== 'admin') {
@@ -5528,7 +5545,7 @@
 
         function initGlobalOmniListener() {
             if (adminOmniSubscription) return;
-            adminOmniSubscription = sbClient.channel('global-admin-omni')
+            adminOmniSubscription = sbService.channel('global-admin-omni')
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'omnichannel_messages' }, payload => {
                     const msg = payload.new;
                     
@@ -5924,7 +5941,7 @@
                 const apiBase = (typeof getStaffApiBaseUrl === 'function') ? (getStaffApiBaseUrl() || '') : '';
                 const fullUrl = mediaUrl.startsWith('http') ? mediaUrl : apiBase + mediaUrl;
                 messageHtml = `
-                    <audio src="${fullUrl}" controls preload="none" class="max-w-xs rounded-lg mt-1" onerror="this.onerror=null;this.parentElement.innerHTML='<span class=\\'text-xs text-red-400\\'>⚠️ ملف صوتي غير متاح</span>';"></audio>
+                    <audio data-src="${fullUrl}" controls preload="none" class="max-w-xs rounded-lg mt-1" onerror="this.onerror=null;this.parentElement.innerHTML='<span class=\\'text-xs text-red-400\\'>⚠️ ملف صوتي غير متاح</span>';"></audio>
                 `;
             } else {
                 messageHtml = `<p class="text-sm whitespace-pre-wrap">${escapeHtml(rawText)}</p>`;
@@ -5952,6 +5969,24 @@
                     </div>`;
             }
             area.appendChild(div);
+            preloadAudioBlobs(area);
+        }
+
+        function preloadAudioBlobs(container) {
+            if (!container) return;
+            container.querySelectorAll('audio[data-src]').forEach(async audioEl => {
+                const realSrc = audioEl.getAttribute('data-src');
+                if (audioEl.src && audioEl.src.startsWith('blob:')) return;
+                try {
+                    const response = await fetch(realSrc);
+                    const blob = await response.blob();
+                    const blobUrl = URL.createObjectURL(blob);
+                    audioEl.src = blobUrl;
+                } catch (e) {
+                    console.error("Error preloading audio blob:", e);
+                    audioEl.src = realSrc;
+                }
+            });
         }
 
         async function loadAdminUnifiedTripChatMessages(tripId) {
@@ -7891,6 +7926,123 @@ async function loadWhatsAppSettings() {
                 alert('❌ خطأ في الاتصال بالسيرفر: ' + error.message);
             }
         }
+    </script>
+
+    <!-- ================================================ -->
+    <!-- نظام المكالمات الداخلية للإدارة (Admin)          -->
+    <!-- ================================================ -->
+    <script src="/call-system.js"></script>
+    <script>
+    let adminCallSystem = null;
+
+    function initAdminCallSystem() {
+        if (adminCallSystem) return;
+        // Admin يعمل بـ ID ثابت "admin_main"
+        adminCallSystem = new CallSystem(
+            sbClient,
+            'admin_main',
+            'الإدارة',
+            'admin'
+        );
+        window.__callSystem = adminCallSystem;
+        console.log('[CallSystem] Admin initialized');
+    }
+
+    // تهيئة فورية لأن الأدمن لا يحتاج تسجيل دخول انتظار
+    setTimeout(initAdminCallSystem, 800);
+
+    // ====== دوال الاتصال من الإدارة ======
+
+    // الاتصال بكابتن
+    function adminCallDriver(driverId, driverName) {
+        if (!adminCallSystem) { initAdminCallSystem(); setTimeout(() => adminCallDriver(driverId, driverName), 1000); return; }
+        adminCallSystem.startCall('driver_' + driverId, driverName || 'كابتن', 'driver');
+    }
+
+    // الاتصال بعميل
+    function adminCallClient(clientId, clientName) {
+        if (!adminCallSystem) { initAdminCallSystem(); setTimeout(() => adminCallClient(clientId, clientName), 1000); return; }
+        adminCallSystem.startCall('client_' + clientId, clientName || 'عميل', 'client');
+    }
+
+    // الاتصال بموديتور
+    function adminCallModerator(modName) {
+        if (!adminCallSystem) { initAdminCallSystem(); setTimeout(() => adminCallModerator(modName), 1000); return; }
+        const modId = 'moderator_' + (modName || 'mod').replace(/\s+/g, '_');
+        adminCallSystem.startCall(modId, modName || 'موديتور', 'moderator');
+    }
+
+    // الاتصال بتشغيل (ops)
+    function adminCallOps(opsId, opsName) {
+        if (!adminCallSystem) { initAdminCallSystem(); setTimeout(() => adminCallOps(opsId, opsName), 1000); return; }
+        adminCallSystem.startCall('ops_' + opsId, opsName || 'تشغيل', 'ops');
+    }
+
+    // عرض سجل المكالمات (للإدارة - يرى الكل)
+    async function showAdminCallLogs() {
+        if (!adminCallSystem) { alert('جارٍ تهيئة نظام المكالمات...'); return; }
+        const logs = await adminCallSystem.getCallLogs(50);
+        const statusMap = {
+            calling: '📞 يتصل', answered: '✅ مجاب', missed: '📵 فائتة',
+            rejected: '❌ مرفوضة', ended: '📴 منتهية', seen: '👁️ مشاهدة'
+        };
+        const typeMap = {
+            driver: '🚗 كابتن', client: '👤 عميل',
+            admin: '🏢 إدارة', moderator: '👮 موديتور', ops: '⚙️ تشغيل'
+        };
+
+        const rows = logs.length === 0
+            ? '<tr><td colspan="5" style="text-align:center;padding:32px;color:#94a3b8">لا توجد مكالمات مسجلة</td></tr>'
+            : logs.map(log => {
+                const time = new Date(log.started_at).toLocaleString('ar-EG');
+                const dur = log.duration_seconds
+                    ? `${Math.floor(log.duration_seconds/60)}:${String(log.duration_seconds%60).padStart(2,'0')}`
+                    : '--';
+                const statusColor = {
+                    missed: '#ef4444', answered: '#22c55e', rejected: '#f97316',
+                    ended: '#64748b', calling: '#3b82f6', seen: '#94a3b8'
+                }[log.status] || '#64748b';
+                return `<tr style="border-bottom:1px solid #f1f5f9">
+                    <td style="padding:10px 12px;font-size:12px;color:#64748b">${time}</td>
+                    <td style="padding:10px 12px;font-size:13px;font-weight:700">${log.caller_name} <span style="font-size:11px;color:#94a3b8">(${typeMap[log.caller_type]||log.caller_type})</span></td>
+                    <td style="padding:10px 12px;font-size:13px">${log.callee_name} <span style="font-size:11px;color:#94a3b8">(${typeMap[log.callee_type]||log.callee_type})</span></td>
+                    <td style="padding:10px 12px"><span style="color:${statusColor};font-weight:700;font-size:12px">${statusMap[log.status]||log.status}</span></td>
+                    <td style="padding:10px 12px;font-size:13px;font-family:monospace">${dur}</td>
+                </tr>`;
+            }).join('');
+
+        // احذف modal قديم لو موجود
+        const old = document.getElementById('admin-call-logs-modal');
+        if (old) old.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'admin-call-logs-modal';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+        modal.innerHTML = `
+            <div style="background:white;border-radius:20px;width:100%;max-width:860px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 25px 60px rgba(0,0,0,0.3)">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid #f1f5f9">
+                    <h3 style="font-size:18px;font-weight:900;color:#1e293b;margin:0">📞 سجل المكالمات الكامل</h3>
+                    <button onclick="document.getElementById('admin-call-logs-modal').remove()"
+                        style="background:#f1f5f9;border:none;border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:#64748b">✕</button>
+                </div>
+                <div style="overflow:auto;flex:1">
+                    <table style="width:100%;text-align:right;border-collapse:collapse">
+                        <thead style="background:#f8fafc;position:sticky;top:0">
+                            <tr>
+                                <th style="padding:12px;font-size:11px;color:#64748b;font-weight:700">الوقت</th>
+                                <th style="padding:12px;font-size:11px;color:#64748b;font-weight:700">المتصل</th>
+                                <th style="padding:12px;font-size:11px;color:#64748b;font-weight:700">المُتَّصَل به</th>
+                                <th style="padding:12px;font-size:11px;color:#64748b;font-weight:700">الحالة</th>
+                                <th style="padding:12px;font-size:11px;color:#64748b;font-weight:700">المدة</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    }
     </script>
 </body>
 </html>
