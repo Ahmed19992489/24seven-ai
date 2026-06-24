@@ -1051,6 +1051,32 @@
         }
         let currentModName = localStorage.getItem('mod_name');
         let currentModId = localStorage.getItem('mod_id');
+
+        function getModeratorAliases(modName) {
+            if (!modName) return [];
+            const name = modName.trim();
+            const aliases = [name];
+
+            const lowerName = name.toLowerCase();
+            if (lowerName.includes('noha') || lowerName.includes('نهى')) {
+                aliases.push('noha', 'Noha', 'نهى', 'نهى مصطفي', 'نهى مصطفى', 'موديتور: noha', 'موديتور: Noha', 'موديتور: نهى', 'موديتور: نهى مصطفي', 'موديتور: نهى مصطفى');
+            }
+            if (lowerName.includes('hanen') || lowerName.includes('حنين') || lowerName.includes('hanan') || lowerName.includes('حنان')) {
+                aliases.push('hanen', 'Hanen', 'حنين', 'حنان', 'hanan', 'Hanan', 'موديتور: hanen', 'موديتور: Hanen', 'موديتور: حنين', 'موديتور: حنان');
+            }
+            if (lowerName.includes('فاطم') || lowerName.includes('فاطيم') || lowerName.includes('fatma') || lowerName.includes('fatima')) {
+                aliases.push('فاطمة', 'فاطمه', 'فاطيمه', 'فاطيمه علام', 'فاطمة علام', 'fatma', 'Fatma', 'fatima', 'Fatima', 'موديتور: فاطمه', 'موديتور: fatma', 'موديتور: Fatma', 'موديتور: fatima', 'موديتور: Fatima', 'موديتور: فاطمة');
+            }
+            if (lowerName.includes('خديج') || lowerName.includes('khadij') || lowerName.includes('khadeeg')) {
+                aliases.push('خديجة', 'خديجه', 'khadija', 'Khadija', 'khadiga', 'Khadiga', 'khadeega', 'Khadeega', 'موديتور: khadija', 'موديتور: Khadija', 'موديتور: khadiga', 'موديتور: Khadiga', 'موديتور: خديجة', 'موديتور: خديجه');
+            }
+            if (lowerName.includes('احمد') || lowerName.includes('ahmed')) {
+                aliases.push('احمد', 'ahmed', 'Ahmed', 'احمد هاشم', 'احمد هشام', 'ahmed hashem', 'ahmed hisham', 'Ahmed Hashem', 'Ahmed Hisham', 'موديتور: ahmed', 'موديتور: Ahmed', 'موديتور: احمد');
+            }
+
+            return [...new Set(aliases.map(a => a.trim()))];
+        }
+
         let activeTab = "dashboard";
 
         // --- Session check ---
@@ -1175,39 +1201,62 @@
             document.getElementById('user-name').textContent = currentModName;
             document.getElementById('user-avatar').textContent = currentModName.charAt(0);
 
-            // 1. Fetch ALL trips (or large recent batch) for global name resolution
-            const { data: allRes, error: allErr } = await sbClient.from('google_reservations')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .limit(1000);
-            
-            if(allRes) {
-                allTrips = allRes; // Critical for name resolution across all chats
-                
-                // 2. Filter locally for THIS moderator's stats
-                const myRes = allRes.filter(r => r.booking_employee === currentModName);
-                
+            try {
                 // Get local date formatted as YYYY-MM-DD
                 const now = new Date();
                 const year = now.getFullYear();
                 const month = String(now.getMonth() + 1).padStart(2, '0');
                 const day = String(now.getDate()).padStart(2, '0');
                 const localTodayStr = `${year}-${month}-${day}`;
-                
-                // Filter stats for TODAY only
-                const myResToday = myRes.filter(r => r.trip_date === localTodayStr);
-                
-                document.getElementById('stat-count-today').textContent = myResToday.length;
-                const vips = myResToday.filter(r => (r.trip_type || '').toLowerCase().includes('vip')).length;
-                const offers = myResToday.filter(r => (r.trip_type || '').toLowerCase().includes('offer')).length;
-                document.getElementById('stat-vip-today').textContent = vips;
-                document.getElementById('stat-offer-today').textContent = offers;
-                
-                const comm = (vips * 15) + (offers * 5);
-                document.getElementById('stat-commission-today').textContent = comm + " EGP";
 
-                renderRecentTrips(myRes.slice(0, 10));
-                regroupAndRender(); // Refresh chat list with newly resolved names
+                // 1. Fetch ALL reservations for today + all recent (for chat name resolution)
+                const { data: allRes } = await sbClient.from('google_reservations')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(1000);
+
+                // 2. Also fetch from trips table for today
+                const { data: tripsToday } = await sbClient.from('trips')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(200);
+
+                if (allRes) {
+                    allTrips = allRes; // for chat name resolution
+
+                    // --- Stats: filter by mod name if we have matching records, else show ALL today ---
+                    const aliases = getModeratorAliases(currentModName);
+                    const isMyRes = (bookingEmp) => {
+                        if (!bookingEmp) return false;
+                        const emp = bookingEmp.trim().toLowerCase();
+                        return aliases.some(alias => emp === alias.toLowerCase() || emp.includes(alias.toLowerCase()) || alias.toLowerCase().includes(emp));
+                    };
+                    const myRes = allRes.filter(r => isMyRes(r.booking_employee));
+                    const allResToday = allRes.filter(r => r.trip_date === localTodayStr);
+                    
+                    // Use "my" stats if moderator has bookings, otherwise show all today's stats
+                    const statsSource = myRes.length > 0 ? myRes.filter(r => r.trip_date === localTodayStr) : allResToday;
+                    const statsLabel = myRes.length > 0 ? 'حجوزاتك اليوم' : 'كل حجوزات اليوم';
+
+                    // Update stat card labels if needed
+                    const statEl = document.querySelector('[for-stat="count-today"]');
+                    
+                    document.getElementById('stat-count-today').textContent = statsSource.length;
+                    const vips = statsSource.filter(r => (r.trip_type || '').toLowerCase().includes('vip')).length;
+                    const offers = statsSource.filter(r => (r.trip_type || '').toLowerCase().includes('offer')).length;
+                    document.getElementById('stat-vip-today').textContent = vips;
+                    document.getElementById('stat-offer-today').textContent = offers;
+                    
+                    const comm = (vips * 15) + (offers * 5);
+                    document.getElementById('stat-commission-today').textContent = comm + " EGP";
+
+                    // Recent trips: show moderator's own, or latest from trips table
+                    const recentSource = myRes.length > 0 ? myRes.slice(0, 10) : (tripsToday || []).slice(0, 10);
+                    renderRecentTrips(recentSource);
+                    regroupAndRender();
+                }
+            } catch(e) {
+                console.error('[loadSummary] Error:', e);
             }
         }
 
@@ -2283,6 +2332,7 @@
                     audioEl.src = realSrc;
                 }
             });
+        }
 
         // --- Added Chat Features ---
         function toggleEmoji() {
@@ -4456,9 +4506,10 @@
         async function loadPerformance() {
             try {
                 const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+                const aliases = getModeratorAliases(currentModName);
                 const { data: bookings } = await sbClient.from('google_reservations')
                     .select('*')
-                    .eq('booking_employee', currentModName)
+                    .in('booking_employee', aliases)
                     .gte('created_at', monthStart);
 
                 if (bookings) {
