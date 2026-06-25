@@ -2137,8 +2137,12 @@
             const container = document.getElementById('chat-profile-container');
             if (!container) return;
 
-            // Show sidebar
-            container.classList.remove('hidden');
+            // Show sidebar (only on desktop to prevent blocking chat input on mobile)
+            if (window.innerWidth >= 1024) {
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
 
             // Reset fields
             document.getElementById('profile-name').textContent = '-';
