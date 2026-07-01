@@ -1508,6 +1508,22 @@
     </div>
 
     <script>
+        // 🚀 Intercept fetch to automatically skip ngrok browser warnings
+        const originalFetch = window.fetch;
+        window.fetch = async function(input, init) {
+            let url = typeof input === 'string' ? input : (input && input.url);
+            if (url && (url.includes('ngrok') || url.includes('localhost') || url.includes('127.0.0.1') || url.includes('24seven-ai.com') || url.includes('api/whatsapp'))) {
+                init = init || {};
+                init.headers = init.headers || {};
+                if (init.headers instanceof Headers) {
+                    init.headers.set('ngrok-skip-browser-warning', 'true');
+                } else {
+                    init.headers['ngrok-skip-browser-warning'] = 'true';
+                }
+            }
+            return originalFetch(input, init);
+        };
+
         const supabaseUrl = 'https://wtjwzqvmwnbvjxnmweqq.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY';
         const sbClient = supabase.createClient(supabaseUrl, supabaseKey);
