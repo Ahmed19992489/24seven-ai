@@ -6815,31 +6815,46 @@ ${contextData}
     // --- محاكاة العميل عبر Claude / Groq ---
     async function getAIClientResponse(userMessage) {
         const apiBase = getApiBaseUrl();
-        const systemPrompt = `أنت تلعب الآن دور عميل حقيقي متشكك يبحث عن رحلة ليموزين مع شركة 24Seven.
-        معلومات وتفاصيل سيناريو رحلتك الحالية: [ ${academyScenario.system} ].
-        الآن أنت تحاور موظف المبيعات. ردودك يجب أن تكون عامية مصرية، قصيرة، واقعية جداً، ومقاومة للحجز إلا لو أقنعك الموظف بجودة الخدمة والأمان والضمانات. لا تذكر أسعاراً غير السعر المحدد في سيناريو رحلتك.`;
+        // سيستم برومبت مختصر لتجنب خطأ 413 (حجم الطلب كبير)
+        const scenarioInfo = (academyScenario.system || '').substring(0, 180);
+        const systemPrompt = `عميل ليموزين مصري متشكك. ${scenarioInfo}. ردود قصيرة بالعامية. مقاوم للحجز.`;
 
-        // إبقاء الرسائل الأخيرة فقط لتجنب طول الحوار
-        const messagesToSend = academyMessages.filter(m => m.content !== "جاري تشغيل محاكاة العميل... يرجى الانتظار لحين بدء الحوار.");
+        // آخر 8 رسائل فقط مع تقليص المحتوى لتجنب 413 Entity Too Large
+        const skipMsg = "جاري تشغيل محاكاة العميل... يرجى الانتظار لحين بدء الحوار.";
+        const allMsgs = academyMessages.filter(m => m.content && m.content !== skipMsg);
+        const messagesToSend = allMsgs.slice(-8).map(m => ({
+            role: m.role === 'user' ? 'user' : 'assistant',
+            content: m.content.replace(/<[^>]*>/g, '').substring(0, 250)
+        }));
 
         try {
             const res = await fetch(`${apiBase}/api/ai_chat`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'ngrok-skip-browser-warning': 'true'
+                },
                 body: JSON.stringify({
                     system: systemPrompt,
-                    messages: messagesToSend
+                    messages: messagesToSend,
+                    max_tokens: 200
                 })
             });
+            if (!res.ok) {
+                const errText = await res.text().catch(() => res.status);
+                console.error('[AI Chat] Error:', res.status, errText);
+                appendAcademyMessage("assistant", `⚠️ خطأ ${res.status} في الاتصال. تأكد من تشغيل السيرفر ورابط ngrok في الإعدادات.`);
+                return;
+            }
             const data = await res.json();
-            if (res.ok && data.answer) {
+            if (data.answer) {
                 appendAcademyMessage("assistant", data.answer);
             } else {
-                appendAcademyMessage("assistant", "⚠️ حدث خطأ في محاذاة العميل الذكي، يرجى المحاولة لاحقاً.");
+                appendAcademyMessage("assistant", "⚠️ حدث خطأ في استجابة الذكاء الاصطناعي.");
             }
         } catch (e) {
-            console.error(e);
-            appendAcademyMessage("assistant", "⚠️ خطأ في الاتصال بالسيرفر.");
+            console.error('[AI Chat] Exception:', e);
+            appendAcademyMessage("assistant", "⚠️ خطأ في الاتصال: " + e.message);
         }
     }
 
