@@ -976,7 +976,7 @@
         const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTQ2NTQwMywiZXhwIjoyMDg3MDQxNDAzfQ.WYNflQntWBCHXDnxFf2C1X1IerYZtMfMT6p6P4Dx0Vg';
         const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         const sbService = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzGoawwK6JGm5QRHt4gfIScl7DYMaCDKU-GGcdYYXXyDY888xuPF0EOZ9vxVHSqHrWv/exec';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
 
         // رفع ملف على Supabase Storage باستخدام service key (يتجاوز RLS)
         async function uploadToOmniMedia(fileOrBlob, fileName, mimeType) {
@@ -3604,7 +3604,7 @@
                 // 🌐 تحديث القرار في شيت جوجل لتفادي اختفائه عند التزامن (نحدثه حتى في حالة الحذف لكي يتحدث في الشيت أيضاً)
                 if (sheetRow) {
                     try {
-                        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzGoawwK6JGm5QRHt4gfIScl7DYMaCDKU-GGcdYYXXyDY888xuPF0EOZ9vxVHSqHrWv/exec';
+                        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
                         const cleanTripId = (tripId && !String(tripId).startsWith('gr_')) ? String(tripId) : '';
                         
                         const sheetData = {
@@ -4344,7 +4344,7 @@
                 const sheetRow = document.getElementById('edit-trip-sheet-row').value;
                 if (sheetRow && Number(sheetRow) >= 2) {
                     try {
-                        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzGoawwK6JGm5QRHt4gfIScl7DYMaCDKU-GGcdYYXXyDY888xuPF0EOZ9vxVHSqHrWv/exec';
+                        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
                         const cleanId = id.startsWith('gr_') ? id.replace('gr_', '') : id;
                         const sheetPayload = {
                             action: 'updateBookingDetails',
