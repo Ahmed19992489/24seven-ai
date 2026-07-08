@@ -3092,6 +3092,19 @@
                             message_type: 'system'
                         }]);
 
+                        // ✅ إصلاح: مزامنة الشيت للإسناد الخارجي أيضاً (كانت مفقودة!)
+                        try {
+                            await sendToGoogleSheet({
+                                action: 'assignDriver',
+                                sheetRow: trip.sheet_row,
+                                webId: trip.google_res_id || currentAssignTripId.toString().replace('gr_', ''),
+                                sqlId: finalSqlId,
+                                driverName: externalDriverName || vendorInfo?.name || '',
+                                driverPhone: externalDriverPhone || ''
+                            });
+                            console.log('✅ External Sheet Sync Done');
+                        } catch(sheetErr) { console.error('External Sheet Sync Error:', sheetErr); }
+
                         closeAssignModal();
                         alert(`✅ تم إسناد الرحلة للمكتب الخارجي ${vendorInfo?.name || ''} بنجاح!`);
                         searchTrips();

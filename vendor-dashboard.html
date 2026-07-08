@@ -1488,7 +1488,9 @@
                 if (photoFileInput && photoFileInput.files[0]) {
                     btn.textContent = '⏳ جاري رفع صورة السيارة...';
                     const compressed = await compressImage(photoFileInput.files[0]);
-                    const path = `cars/${carPlate.replace(/\s+/g, '_')}_${Date.now()}.jpg`;
+                    // ✅ إصلاح: إزالة الحروف العربية والمسافات من اسم الملف لمنع خطأ "Invalid key"
+                    const safePlate = carPlate.replace(/[^\w\d]/g, '_').replace(/_+/g, '_');
+                    const path = `cars/${safePlate}_${Date.now()}.jpg`;
                     const { error: uploadErr } = await sb.storage.from('trip-photos').upload(path, compressed, { upsert: true, contentType: 'image/jpeg' });
                     if (uploadErr) throw uploadErr;
 
