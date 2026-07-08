@@ -176,7 +176,7 @@ class _CaptainDashboardState extends State<CaptainDashboard> {
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 36,
-                              fontWeight: FontWeight.black,
+                              fontWeight: FontWeight.w900,
                             ),
                           ),
                         ],

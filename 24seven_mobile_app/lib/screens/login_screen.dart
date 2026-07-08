@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'captain_dashboard.dart';
 import 'client_dashboard.dart';
+import 'admin_dashboard_webview.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -83,7 +84,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               .from('google_reservations')
               .select('customer_name')
               .or('customer_phone.ilike.%$phone%')
-              .order('created_at', {ascending: false})
+              .order('created_at', ascending: false)
               .limit(1);
 
           if (reservations.isNotEmpty && reservations[0]['customer_name'] != null) {
@@ -175,8 +176,12 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             .maybeSingle();
 
         if (profile != null) {
-          // You can navigate to Moderator screen or webview
-          _showError('مرحباً ${profile['full_name']}. يفضل استخدام لوحة تحكم الويب للموديتور.');
+          final role = profile['role'] ?? 'admin';
+          if (role == 'admin' || role == 'moderator' || role == 'staff') {
+            _navigateToDashboard(const AdminDashboardWebView(), role, email);
+          } else {
+            _navigateToDashboard(const ClientDashboard(), role, email);
+          }
         } else {
           _showError('الملف الشخصي غير موجود');
         }
@@ -227,7 +232,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 '24Seven Limousine',
                 style: TextStyle(
                   fontSize: 24,
-                  fontWeight: FontWeight.black,
+                  fontWeight: FontWeight.w900,
                   color: Color(0xFF1E293B),
                 ),
               ),
@@ -249,7 +254,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 ),
                 child: Container(
                   width: double.infinity,
-                  maxWidth: 400,
+                  constraints: const BoxConstraints(maxWidth: 400),
                   padding: const EdgeInsets.all(20.0),
                   child: Column(
                     children: [

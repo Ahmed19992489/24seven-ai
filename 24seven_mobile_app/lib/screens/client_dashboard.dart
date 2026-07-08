@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong2.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'dart:convert';
+import 'dart:async';
+import 'package:http/http.dart' as http;
 import 'login_screen.dart';
 
 class ClientDashboard extends StatefulWidget {
@@ -34,8 +36,13 @@ class _ClientDashboardState extends State<ClientDashboard> {
   int _passengers = 1;
   int _bags = 0;
 
-  // Estimated Price Calculation
+  // Real calculated price and loading state
+  int _calculatedPrice = 0;
+  bool _isCalculatingPrice = false;
+  Timer? _debounceTimer;
+
   int get _estimatedPrice {
+    if (_calculatedPrice > 0) return _calculatedPrice;
     int base = 500;
     if (_selectedCarType.contains('SUV')) base = 850;
     if (_selectedCarType.contains('فان')) base = 1200;
@@ -43,14 +50,78 @@ class _ClientDashboardState extends State<ClientDashboard> {
     return base;
   }
 
+  void _onRouteChanged() {
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 1000), () {
+      _fetchCalculatedPrice();
+    });
+  }
+
+  Future<void> _fetchCalculatedPrice() async {
+    final pickup = _pickupController.text.trim();
+    final dropoff = _dropoffController.text.trim();
+
+    if (pickup.isEmpty || dropoff.isEmpty) return;
+
+    setState(() {
+      _isCalculatingPrice = true;
+    });
+
+    try {
+      // Map display car type to backend expected car type (سيدان or ميني فان or هايس)
+      String backendCarType = 'سيدان';
+      if (_selectedCarType.contains('فان') || _selectedCarType.contains('H1')) {
+        backendCarType = 'ميني فان';
+      } else if (_selectedCarType.contains('SUV') || _selectedCarType.contains('هايس')) {
+        backendCarType = 'هايس';
+      }
+
+      final uri = Uri.parse('https://24seven-ai.com/api/whatsapp/calculate-price').replace(
+        queryParameters: {
+          'origin': pickup,
+          'destination': dropoff,
+          'car_type': backendCarType,
+        },
+      );
+
+      final response = await http.get(uri).timeout(const Duration(seconds: 8));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'success') {
+          final isRoundTrip = _selectedTripType.contains('ذهاب وعودة') || _selectedTripType.contains('عودة');
+          final priceKey = isRoundTrip ? 'price_round_trip' : 'price_one_way';
+          final priceVal = data[priceKey] ?? data['price_one_way'];
+          if (priceVal != null && priceVal.toString().isNotEmpty) {
+            setState(() {
+              _calculatedPrice = int.tryParse(priceVal.toString()) ?? 0;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error calculating price: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCalculatingPrice = false;
+        });
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _fetchUserInfoAndTrips();
+    _pickupController.addListener(_onRouteChanged);
+    _dropoffController.addListener(_onRouteChanged);
   }
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
+    _pickupController.removeListener(_onRouteChanged);
+    _dropoffController.removeListener(_onRouteChanged);
     _pickupController.dispose();
     _dropoffController.dispose();
     _notesController.dispose();
@@ -215,25 +286,21 @@ class _ClientDashboardState extends State<ClientDashboard> {
                             color: Colors.grey.shade200,
                           ),
                           clipBehavior: Clip.antiAlias,
-                          child: FlutterMap(
-                            options: const MapOptions(
-                              initialCenter: LatLng(30.0444, 31.2357), // Cairo Center
-                              initialZoom: 13.0,
+                          child: GoogleMap(
+                            initialCameraPosition: const CameraPosition(
+                              target: LatLng(30.0444, 31.2357), // Cairo Center
+                              zoom: 13.0,
                             ),
-                            children: [
-                              TileLayer(
-                                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                userAgentPackageName: 'com.example.app',
+                            markers: {
+                              const Marker(
+                                markerId: MarkerId('cairo_center'),
+                                position: LatLng(30.0444, 31.2357),
+                                infoWindow: InfoWindow(title: 'موقعك الحالي'),
                               ),
-                              const MarkerLayer(
-                                markers: [
-                                  Marker(
-                                    point: LatLng(30.0444, 31.2357),
-                                    child: Icon(Icons.my_location, color: Colors.blue, size: 30),
-                                  ),
-                                ],
-                              ),
-                            ],
+                            },
+                            myLocationEnabled: true,
+                            myLocationButtonEnabled: true,
+                            zoomControlsEnabled: false,
                           ),
                         ),
                         const SizedBox(height: 20),
@@ -293,15 +360,21 @@ class _ClientDashboardState extends State<ClientDashboard> {
                                   'سيدان VIP (مرسيدس)',
                                   'سيارة عائلية SUV',
                                   'فان سياحي (H1)'
-                                ], (v) => setState(() => _selectedCarType = v!)),
+                                ], (v) {
+                                  setState(() => _selectedCarType = v!);
+                                  _fetchCalculatedPrice();
+                                }),
                                 const SizedBox(height: 12),
                                 
                                 _buildDropdown('نوع الخدمة', _selectedTripType, [
                                   'مطار القاهرة',
-                                  'ليموزين بين المحافظات',
-                                  'مشوار داخل القاهرة',
-                                  'عرض اليوم الكامل'
-                                ], (v) => setState(() => _selectedTripType = v!)),
+                                  'الإسكندرية',
+                                  'القاهرة ذهاب وعودة',
+                                  'مشوار داخلي'
+                                ], (v) {
+                                  setState(() => _selectedTripType = v!);
+                                  _fetchCalculatedPrice();
+                                }),
                                 const SizedBox(height: 12),
 
                                 _buildDropdown('طريقة الدفع', _selectedPaymentMethod, [
@@ -327,10 +400,16 @@ class _ClientDashboardState extends State<ClientDashboard> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               const Text('السعر التقديري للرحلة', style: TextStyle(fontWeight: FontWeight.bold)),
-                              Text(
-                                '$_estimatedPrice ج.م',
-                                style: const TextStyle(fontWeight: FontWeight.black, fontSize: 18, color: Colors.indigo),
-                              ),
+                              _isCalculatingPrice
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.indigo),
+                                    )
+                                  : Text(
+                                      '$_estimatedPrice ج.م',
+                                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Colors.indigo),
+                                    ),
                             ],
                           ),
                         ),
