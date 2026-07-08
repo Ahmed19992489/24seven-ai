@@ -6567,17 +6567,25 @@ ${contextData}
                 alert(`🚀 تم بدء تشغيل الحملة بنجاح لعدد ${data.total_targets || 0} عميل في الخلفية!`);
                 loadMarketingStatus();
             } else {
-                alert('❌ فشل بدء الحملة: ' + data.message);
+                alert('❌ فشل بدء الحملة: ' + (data ? data.message : 'خطأ غير معروف'));
             }
         } catch (e) {
             alert('❌ خطأ في الاتصال بالخادم: ' + e.message);
         } finally {
             const sendBtn = document.getElementById('marketing-send-btn');
-            sendBtn.disabled = false;
-            sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> بدء إرسال الحملة';
+            if (sendBtn) {
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> بدء إرسال الحملة';
+            }
         }
     }
 
+    async function stopMarketingCampaign() {
+        const apiBase = getApiBaseUrl();
+        if (!apiBase) return;
+        
+        if (!confirm('هل أنت متأكد من رغبتك في إيقاف الحملة الحالية؟')) return;
+        
         try {
             const res = await fetch(`${apiBase}/api/marketing/stop`, {
                 method: 'POST',
@@ -6594,6 +6602,13 @@ ${contextData}
             alert('❌ خطأ: ' + e.message);
         }
     }
+            
+
+
+
+
+
+
 
     // ==========================================
     // 🎓 أكاديمية التدريب واختبار المبيعات (Sales Academy)
