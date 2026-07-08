@@ -6656,7 +6656,7 @@ ${contextData}
                 "أ. الرحلة بـ 1500 جنيه يا فندم تحب تحجز؟ (خطأ: رد مباشر بدون قيمة)",
                 "ب. أهلاً بك يا فندم، حابب أعرف وقت التحرك واليوم لترتيب أفضل سيارة مع تتبع GPS كامل لسلامتك، السعر شامل الكارتات هو 1500 جنيه. (صحيح)"
             ],
-            correct: 1
+            correct: 2
         },
         2: {
             title: "الفصل الثاني: التعامل الذكي مع اعتراضات السعر والبدائل 🛡️",
@@ -6672,7 +6672,7 @@ ${contextData}
                 "أ. المكتب التاني ده كداب وهيجيبلك عربية قديمة! (خطأ: هجوم غير احترافي)",
                 "ب. ندرك يا فندم وجود أسعار أقل، ولكن الـ 300 جنيه الإضافية تضمن لك سيارة حديثة معقمة مراقبة بالـ GPS مع سائق محترف ملتزم، وضمان بديل فوري للسيارة في أي لحظة لسلامة رحلتك. (صحيح)"
             ],
-            correct: 1
+            correct: 2
         },
         3: {
             title: "الفصل الثالث: تقنيات الإغلاق البيعي الناجح (Closing) 🏁",
@@ -6688,7 +6688,7 @@ ${contextData}
                 "أ. تمام يا فندم فكر وكلمنا لما تقرر. (خطأ: تضيع الصفقة)",
                 "ب. رائع يا فندم! هل تفضل تأكيد الحجز على سيارة سيدان أم سيارة فاخرة؟ لكي نسجل الحجز على السيستم ويرسل لك تفاصيل الكابتن فوراً. (صحيح)"
             ],
-            correct: 1
+            correct: 2
         }
     };
 
@@ -6718,6 +6718,11 @@ ${contextData}
         document.getElementById('academy-active-workspace').classList.remove('hidden');
         document.getElementById('academy-score-card').classList.add('hidden');
         document.getElementById('academy-evaluation-card').classList.add('hidden');
+        
+        // إعادة تهيئة واجهة الإدخال إلى الوضع الافتراضي (إدخال نصي)
+        document.getElementById('academy-input-container').classList.remove('hidden');
+        document.getElementById('academy-mcq-container').classList.add('hidden');
+        document.getElementById('academy-mcq-container').innerHTML = '';
         
         const chatBox = document.getElementById('academy-chat-box');
         chatBox.innerHTML = '';
