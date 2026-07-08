@@ -3374,24 +3374,25 @@
             try {
                 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
                 
+                // ✅ إصلاح: نستخدم google_res_id (العمود Q) و sql_server_id (العمود U) وليس trips.id
                 const sheetData = {
                     action: 'assignDriver',
-                    webId: realTripId, // ID رحلة السايت
+                    webId: String(tid).startsWith('gr_') ? numericId : realTripId,  // google_res_id أو trips.id
+                    sqlId: originalSqlId || String(realTripId),                      // SQL Server ID أو trips.id
+                    sheetRow: originalSheetRow || '',
                     driverName: driverInfo?.name || '',
                     driverPhone: driverInfo?.phone || ''
                 };
 
-                if (String(tid).startsWith('gr_')) {
-                    sheetData.sheetRow = originalSheetRow;
-                    sheetData.sqlId = String(realTripId);
-                }
-
+                console.log('📊 Admin Sheet Sync:', sheetData);
                 fetch(APPS_SCRIPT_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify(sheetData)
+                }).then(r => r.json()).then(res => {
+                    console.log('📊 Sheet response:', res);
                 }).catch(e => console.error("Sheet Sync Error:", e));
-            } catch (err) {}
+            } catch (err) { console.error("Sheet Sync Error:", err); }
 
             document.getElementById('assign-modal').style.display = 'none';
             alert(`✅ تم تعيين الكابتن ${driverInfo?.name || ''} وإرسال إشعار له`);

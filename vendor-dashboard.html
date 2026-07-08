@@ -1543,6 +1543,30 @@
                     message_type: 'system'
                 }]);
 
+                // 5. ✅ مزامنة بيانات السائق مع الشيت لإرسال رسائل الواتساب
+                try {
+                    const tripObj = (cachedTrips || []).find(t => String(t.id) === String(tripId));
+                    const googleResId = tripObj?.google_res_id || '';
+                    const sqlServerId = tripObj?.sql_server_id || tripObj?.admin_notes?.match(/sql[_-]?id[:\s]+(\d+)/i)?.[1] || '';
+                    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
+                    
+                    if (googleResId || sqlServerId) {
+                        fetch(APPS_SCRIPT_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({
+                                action: 'assignDriver',
+                                webId: googleResId || String(tripId),
+                                sqlId: sqlServerId,
+                                driverName: drvName,
+                                driverPhone: drvPhone
+                            })
+                        }).then(r => r.json()).then(res => {
+                            console.log('📊 Vendor Sheet Sync:', res);
+                        }).catch(e => console.error('Sheet Sync Error:', e));
+                    }
+                } catch(sheetErr) { console.error('Vendor Sheet Sync Error:', sheetErr); }
+
                 document.getElementById('assign-driver-modal').style.display = 'none';
                 alert("✅ تم إسناد الكابتن والسيارة بنجاح وتم تحويل حالة الرحلة للبدء!");
                 loadDashboardData();

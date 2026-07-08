@@ -3159,12 +3159,16 @@
                 // --- 4.3. Sync to Google Sheet ---
                 let sheetSyncOk = false;
                 try {
-                    console.log('📊 Syncing to sheet:', { sheetRow: trip.sheet_row, webId: realTripId, sqlId: finalSqlId, driverName, driverPhone });
+                    // ✅ إصلاح: نستخدم google_res_id (العمود Q في الشيت) و sql_server_id (العمود U) بدلاً من trips.id
+                    const googleResId = trip.google_res_id || currentAssignTripId.toString().replace('gr_', '');
+                    const sqlServerId = trip.sql_server_id || '';
+                    
+                    console.log('📊 Syncing to sheet:', { sheetRow: trip.sheet_row, webId: googleResId, sqlId: sqlServerId, driverName, driverPhone });
                     const sheetRes = await sendToGoogleSheet({
                         action: 'assignDriver',
                         sheetRow: trip.sheet_row,
-                        webId: realTripId,                // Supabase ID (Column Q)
-                        sqlId: finalSqlId,                // REAL SQL ID (Column U)
+                        webId: isGoogleRes ? googleResId : realTripId,
+                        sqlId: isGoogleRes ? (sqlServerId || String(realTripId)) : String(realTripId),
                         driverName: driverName,
                         driverPhone: driverPhone
                     });
