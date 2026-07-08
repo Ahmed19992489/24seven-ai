@@ -3159,16 +3159,33 @@
                 // --- 4.3. Sync to Google Sheet ---
                 let sheetSyncOk = false;
                 try {
-                    // ✅ إصلاح: نستخدم google_res_id (العمود Q في الشيت) و sql_server_id (العمود U) بدلاً من trips.id
-                    const googleResId = trip.google_res_id || currentAssignTripId.toString().replace('gr_', '');
-                    const sqlServerId = trip.sql_server_id || '';
-                    
-                    console.log('📊 Syncing to sheet:', { sheetRow: trip.sheet_row, webId: googleResId, sqlId: sqlServerId, driverName, driverPhone });
+                    let finalSheetRow = trip.sheet_row;
+                    let finalWebId = trip.google_res_id || (isGoogleRes ? currentAssignTripId.toString().replace('gr_', '') : '');
+                    let finalSqlServerId = trip.sql_server_id || '';
+
+                    // جلب مباشر من قاعدة البيانات للتأكد من وجود البيانات الحقيقية للشيت
+                    if (!isGoogleRes) {
+                        let queryRes = null;
+                        if (trip.google_res_id) {
+                            const { data } = await sbClient.from('google_reservations').select('sheet_row, sql_server_id, id').eq('id', trip.google_res_id).maybeSingle();
+                            queryRes = data;
+                        } else {
+                            const { data } = await sbClient.from('google_reservations').select('sheet_row, sql_server_id, id').eq('sql_server_id', String(realTripId)).maybeSingle();
+                            queryRes = data;
+                        }
+                        if (queryRes) {
+                            finalSheetRow = queryRes.sheet_row;
+                            finalWebId = queryRes.id;
+                            finalSqlServerId = queryRes.sql_server_id;
+                        }
+                    }
+
+                    console.log('📊 Syncing to sheet:', { sheetRow: finalSheetRow, webId: finalWebId, sqlId: finalSqlServerId || String(realTripId), driverName, driverPhone });
                     const sheetRes = await sendToGoogleSheet({
                         action: 'assignDriver',
-                        sheetRow: trip.sheet_row,
-                        webId: isGoogleRes ? googleResId : realTripId,
-                        sqlId: isGoogleRes ? (sqlServerId || String(realTripId)) : String(realTripId),
+                        sheetRow: finalSheetRow || '',
+                        webId: finalWebId || String(realTripId),
+                        sqlId: finalSqlServerId || String(realTripId),
                         driverName: driverName,
                         driverPhone: driverPhone
                     });

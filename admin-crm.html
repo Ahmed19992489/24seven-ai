@@ -3213,9 +3213,10 @@
             let finalTripObj = null;
             let originalSheetRow = null;
             let originalSqlId = null;
+            let numericId = null;
 
             if (String(tid).startsWith('gr_')) {
-                const numericId = Number(tid.replace('gr_', ''));
+                numericId = Number(tid.replace('gr_', ''));
                 const { data: res } = await sbClient.from('google_reservations').select('*').eq('id', numericId).single();
                 if (!res) {
                     alert('تعذر العثور على الحجز الأصلي');
@@ -3289,8 +3290,24 @@
                 const { data: tData } = await sbClient.from('trips').select('admin_notes, pickup_location, dropoff_location, estimated_price').eq('id', realTripId).single();
                 finalTripObj = tData;
             } else {
-                const { data: tData } = await sbClient.from('trips').select('admin_notes, pickup_location, dropoff_location, estimated_price').eq('id', tid).single();
+                const { data: tData } = await sbClient.from('trips').select('admin_notes, pickup_location, dropoff_location, estimated_price, google_res_id').eq('id', tid).single();
                 finalTripObj = tData;
+
+                // جلب مباشر من قاعدة البيانات لبيانات الشيت المطابقة
+                let queryRes = null;
+                if (tData?.google_res_id) {
+                    const { data } = await sbClient.from('google_reservations').select('sheet_row, sql_server_id, id').eq('id', tData.google_res_id).maybeSingle();
+                    queryRes = data;
+                } else {
+                    const { data } = await sbClient.from('google_reservations').select('sheet_row, sql_server_id, id').eq('sql_server_id', String(tid)).maybeSingle();
+                    queryRes = data;
+                }
+
+                if (queryRes) {
+                    originalSheetRow = queryRes.sheet_row;
+                    originalSqlId = queryRes.sql_server_id;
+                    numericId = queryRes.id;
+                }
             }
 
             const existingNotes = finalTripObj?.admin_notes || '';
@@ -3374,11 +3391,11 @@
             try {
                 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
                 
-                // ✅ إصلاح: نستخدم google_res_id (العمود Q) و sql_server_id (العمود U) وليس trips.id
+                // ✅ إصلاح: نستخدم google_res_id (العمود Q) و sql_server_id (العمود U) لضمان مطابقة الصف بالشيت
                 const sheetData = {
                     action: 'assignDriver',
-                    webId: String(tid).startsWith('gr_') ? numericId : realTripId,  // google_res_id أو trips.id
-                    sqlId: originalSqlId || String(realTripId),                      // SQL Server ID أو trips.id
+                    webId: numericId || realTripId,              // google_res_id أو trips.id
+                    sqlId: originalSqlId || String(realTripId),  // SQL Server ID أو trips.id
                     sheetRow: originalSheetRow || '',
                     driverName: driverInfo?.name || '',
                     driverPhone: driverInfo?.phone || ''

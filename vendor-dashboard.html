@@ -1546,25 +1546,42 @@
                 // 5. ✅ مزامنة بيانات السائق مع الشيت لإرسال رسائل الواتساب
                 try {
                     const tripObj = (cachedTrips || []).find(t => String(t.id) === String(tripId));
-                    const googleResId = tripObj?.google_res_id || '';
-                    const sqlServerId = tripObj?.sql_server_id || tripObj?.admin_notes?.match(/sql[_-]?id[:\s]+(\d+)/i)?.[1] || '';
+                    let finalSheetRow = tripObj?.sheet_row || '';
+                    let finalWebId = tripObj?.google_res_id || '';
+                    let finalSqlServerId = tripObj?.sql_server_id || tripObj?.admin_notes?.match(/sql[_-]?id[:\s]+(\d+)/i)?.[1] || '';
+
+                    // جلب مباشر من قاعدة البيانات للتأكد من وجود البيانات الحقيقية للشيت
+                    let queryRes = null;
+                    if (tripObj?.google_res_id) {
+                        const { data } = await sb.from('google_reservations').select('sheet_row, sql_server_id, id').eq('id', tripObj.google_res_id).maybeSingle();
+                        queryRes = data;
+                    } else {
+                        const { data } = await sb.from('google_reservations').select('sheet_row, sql_server_id, id').eq('sql_server_id', String(tripId)).maybeSingle();
+                        queryRes = data;
+                    }
+                    if (queryRes) {
+                        finalSheetRow = queryRes.sheet_row;
+                        finalWebId = queryRes.id;
+                        finalSqlServerId = queryRes.sql_server_id;
+                    }
+
                     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
                     
-                    if (googleResId || sqlServerId) {
-                        fetch(APPS_SCRIPT_URL, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'text/plain' },
-                            body: JSON.stringify({
-                                action: 'assignDriver',
-                                webId: googleResId || String(tripId),
-                                sqlId: sqlServerId,
-                                driverName: drvName,
-                                driverPhone: drvPhone
-                            })
-                        }).then(r => r.json()).then(res => {
-                            console.log('📊 Vendor Sheet Sync:', res);
-                        }).catch(e => console.error('Sheet Sync Error:', e));
-                    }
+                    console.log('📊 Vendor Sheet Syncing:', { sheetRow: finalSheetRow, webId: finalWebId, sqlId: finalSqlServerId || String(tripId) });
+                    fetch(APPS_SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({
+                            action: 'assignDriver',
+                            sheetRow: finalSheetRow || '',
+                            webId: finalWebId || String(tripId),
+                            sqlId: finalSqlServerId || String(tripId),
+                            driverName: drvName,
+                            driverPhone: drvPhone
+                        })
+                    }).then(r => r.json()).then(res => {
+                        console.log('📊 Vendor Sheet Sync Result:', res);
+                    }).catch(e => console.error('Sheet Sync Error:', e));
                 } catch(sheetErr) { console.error('Vendor Sheet Sync Error:', sheetErr); }
 
                 document.getElementById('assign-driver-modal').style.display = 'none';
