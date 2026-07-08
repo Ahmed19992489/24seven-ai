@@ -1238,6 +1238,10 @@
                 return saved.trim().replace(/\/$/, '').replace(/\/moderator$/, '').replace(/\/dashboard$/, '');
             }
             
+            if (loc.protocol === 'file:') {
+                return 'http://localhost:3000';
+            }
+            
             // 2. إذا لم يكن هناك رابط محفوظ، استخدم origin الحالي
             if (loc.hostname.includes('24seven-ai.com') || loc.hostname.includes('onrender.com')) {
                 return `${loc.protocol}//${loc.hostname}`;
