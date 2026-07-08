@@ -200,6 +200,10 @@
                 class="sidebar-item p-3 rounded-lg flex items-center gap-3">
                 <i class="fas fa-bullhorn w-5 text-center text-amber-500"></i> الحملات التسويقية
             </div>
+            <div onclick="showPage('training-reports')" id="nav-training-reports"
+                class="sidebar-item p-3 rounded-lg flex items-center gap-3">
+                <i class="fas fa-graduation-cap w-5 text-center text-indigo-600"></i> تقارير التدريب
+            </div>
 
             <p class="text-[10px] font-bold text-slate-400 mt-4 mb-1 px-3">الإعدادات</p>
             <div onclick="showPage('pricing')" id="nav-pricing"
@@ -608,6 +612,66 @@
                             <div class="text-slate-500 text-center py-10">بانتظار بدء الحملة...</div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- صفحة تقارير تدريب الموظفين -->
+        <div id="page-training-reports" class="page-section hidden">
+            <h2 class="text-2xl font-bold mb-6"><i class="fas fa-graduation-cap text-indigo-600 ml-2"></i>أكاديمية التدريب ومتابعة المبيعات</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="glass-panel p-5 border-b-4 border-indigo-500 bg-white">
+                    <p class="text-slate-400 text-xs font-bold">إجمالي جلسات التقييم</p>
+                    <h3 class="text-3xl font-black mt-1 text-slate-800" id="training-stat-sessions">0</h3>
+                    <p class="text-indigo-500 text-xs mt-1">امتحانات + محاكاة + كورسات</p>
+                </div>
+                <div class="glass-panel p-5 border-b-4 border-emerald-500 bg-white">
+                    <p class="text-slate-400 text-xs font-bold">متوسط الدرجات العام</p>
+                    <h3 class="text-3xl font-black mt-1 text-emerald-600" id="training-stat-avg">0%</h3>
+                    <p class="text-emerald-500 text-xs mt-1">كفاءة أسلوب الموظفين</p>
+                </div>
+                <div class="glass-panel p-5 border-b-4 border-purple-500 bg-white">
+                    <p class="text-slate-400 text-xs font-bold">أفضل أداء (تارجت)</p>
+                    <h3 class="text-3xl font-black mt-1 text-purple-700" id="training-stat-best">--</h3>
+                    <p class="text-purple-500 text-xs mt-1">الموظف الأعلى تقييماً</p>
+                </div>
+            </div>
+
+            <!-- جدول عرض التقارير -->
+            <div class="glass-panel p-6 bg-white">
+                <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+                    <h3 class="font-bold text-lg text-slate-800">كل تقارير تقييم الموظفين</h3>
+                    <div class="flex gap-2">
+                        <select id="training-filter-type" onchange="loadTrainingReports()" class="border rounded-xl px-3 py-2 text-xs outline-none bg-slate-50">
+                            <option value="all">كل أنواع الجلسات</option>
+                            <option value="roleplay">🎭 محاكاة العميل الصعب</option>
+                            <option value="course">📖 كورس التدريب التفاعلي</option>
+                            <option value="exam">📝 الاختبار النهائي</option>
+                        </select>
+                        <button onclick="loadTrainingReports()" class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-indigo-700 transition">
+                            <i class="fas fa-sync-alt"></i> تحديث
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="w-full text-right border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-100 text-slate-500 text-xs font-bold">
+                                <th class="p-3">الموظف</th>
+                                <th class="p-3">نوع الجلسة</th>
+                                <th class="p-3">النتيجة</th>
+                                <th class="p-3">التاريخ</th>
+                                <th class="p-3">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="training-reports-table-body" class="text-xs divide-y divide-slate-100">
+                            <tr>
+                                <td colspan="5" class="text-center py-10 text-slate-400">لا توجد تقارير مسجلة حالياً.</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -1660,6 +1724,7 @@
             if (pageId === 'coupons') loadCouponsPage();
             if (pageId === 'staff') loadStaff();
             if (pageId === 'marketing') loadMarketingStatus();
+            if (pageId === 'training-reports') loadTrainingReports();
             if (pageId === 'whatsapp-settings') { loadWhatsAppSettings(); resetWhatsappDetailsPanel(); }
             if (pageId === 'ai-assistant') {
                  // No specific load needed, but good to scroll to bottom
@@ -8362,6 +8427,191 @@ async function loadWhatsAppSettings() {
         } catch (e) {
             alert('❌ خطأ: ' + e.message);
         }
+
+
+    // ==========================================
+    // 🎓 لوحة متابعة تقارير تدريب الموظفين (Sales Reports)
+    // ==========================================
+    let cachedTrainingReports = [];
+
+    async function loadTrainingReports() {
+        const apiBase = getStaffApiBaseUrl();
+        if (!apiBase) return;
+
+        const tableBody = document.getElementById('training-reports-table-body');
+        tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-slate-400"><i class="fas fa-spinner fa-spin ml-2"></i>جاري تحميل تقارير التدريب...</td></tr>';
+
+        try {
+            const res = await fetch(`${apiBase}/api/training/reports`, {
+                headers: { 'ngrok-skip-browser-warning': 'true' }
+            });
+            if (res.ok) {
+                cachedTrainingReports = await res.json();
+                renderTrainingReports();
+            } else {
+                tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-rose-500">❌ فشل تحميل البيانات من السيرفر.</td></tr>';
+            }
+        } catch (e) {
+            console.error(e);
+            tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-rose-500">❌ خطأ في الاتصال بالخادم.</td></tr>';
+        }
+    }
+
+    function renderTrainingReports() {
+        const tableBody = document.getElementById('training-reports-table-body');
+        const filter = document.getElementById('training-filter-type').value;
+
+        // تصفية البيانات
+        const filtered = cachedTrainingReports.filter(r => {
+            if (filter === 'all') return true;
+            return r.session_type === filter;
+        });
+
+        // تحديث العدادات الذكية والـ KPIs
+        document.getElementById('training-stat-sessions').textContent = cachedTrainingReports.length;
+        
+        // حساب متوسط الدرجات (للامتحانات والمحاكاة فقط لاستبعاد الـ 100% التلقائية للكورسات لمصداقية النسبة)
+        const activeScores = cachedTrainingReports.filter(r => r.session_type !== 'course');
+        if (activeScores.length > 0) {
+            const avg = Math.round(activeScores.reduce((s, r) => s + (r.score || 0), 0) / activeScores.length);
+            document.getElementById('training-stat-avg').textContent = `${avg}%`;
+        } else {
+            document.getElementById('training-stat-avg').textContent = `--`;
+        }
+
+        // حساب الموظف الأعلى تقييماً
+        const bestEmpMap = {};
+        cachedTrainingReports.forEach(r => {
+            if (!bestEmpMap[r.employee_name] || bestEmpMap[r.employee_name] < r.score) {
+                bestEmpMap[r.employee_name] = r.score;
+            }
+        });
+        let bestScore = -1;
+        let bestName = "--";
+        for (let name in bestEmpMap) {
+            if (bestEmpMap[name] > bestScore) {
+                bestScore = bestEmpMap[name];
+                bestName = `${name} (${bestScore}%)`;
+            }
+        }
+        document.getElementById('training-stat-best').textContent = bestName;
+
+        if (filtered.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-slate-400">لا توجد تقارير مطابقة للفحص الحالي.</td></tr>';
+            return;
+        }
+
+        tableBody.innerHTML = filtered.map(r => {
+            const dateStr = new Date(r.created_at).toLocaleString('ar-EG');
+            
+            // بادج نوع الجلسة
+            const typeBadge = {
+                roleplay: '<span class="px-2 py-1 rounded-full bg-amber-50 text-amber-700 font-bold border border-amber-200">🎭 محاكاة عميل</span>',
+                course: '<span class="px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">📖 كورس تعليمي</span>',
+                exam: '<span class="px-2 py-1 rounded-full bg-teal-50 text-teal-700 font-bold border border-teal-200">📝 اختبار نهائي</span>'
+            }[r.session_type] || r.session_type;
+
+            // بادج النتيجة
+            let scoreClass = "bg-rose-50 text-rose-700 border-rose-200";
+            if (r.score >= 90) scoreClass = "bg-emerald-50 text-emerald-700 border-emerald-200";
+            else if (r.score >= 70) scoreClass = "bg-amber-50 text-amber-700 border-amber-200";
+
+            const scoreBadge = `<span class="px-2 py-1 rounded-full font-bold border ${scoreClass}">${r.score} / 100</span>`;
+
+            return `
+                <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                    <td class="p-3 font-bold text-slate-800">${r.employee_name}</td>
+                    <td class="p-3">${typeBadge}</td>
+                    <td class="p-3">${scoreBadge}</td>
+                    <td class="p-3 text-slate-400 font-mono">${dateStr}</td>
+                    <td class="p-3">
+                        <button onclick="viewTrainingDetail('${r.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1 px-3 rounded-lg text-[10px] transition flex items-center gap-1">
+                            <i class="fas fa-eye"></i> عرض المحادثة والتقرير
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function viewTrainingDetail(reportId) {
+        const report = cachedTrainingReports.find(r => r.id === reportId);
+        if (!report) return;
+
+        // تنظيف المحادثات السابقة لو وُجدت
+        const oldModal = document.getElementById('training-detail-modal');
+        if (oldModal) oldModal.remove();
+
+        // ترجمة نوع الجلسة
+        const typeArabic = {
+            roleplay: "محاكاة العميل الصعب 🎭",
+            course: "كورس التدريب التفاعلي 📖",
+            exam: "الاختبار النهائي للمبيعات 📝"
+        }[report.session_type] || report.session_type;
+
+        // بناء سجل المحادثة الفقاعي
+        let chatHtml = '<p class="text-center text-slate-400 text-xs py-10">لا توجد محادثة مسجلة لهذه الجلسة.</p>';
+        if (report.chat_history && report.chat_history.length > 0) {
+            chatHtml = report.chat_history.map(msg => {
+                const isClient = msg.role === 'assistant' || msg.objection !== undefined;
+                const senderName = isClient ? "العميل / السؤال" : "إجابة الموظف";
+                const msgText = msg.content || `<b>السؤال:</b> ${msg.objection}<br><b>الرد:</b> ${msg.answer}`;
+                
+                return `
+                    <div class="flex flex-col ${isClient ? 'items-start' : 'items-end'} mb-4">
+                        <span class="text-[9px] text-slate-400 font-bold mb-1 px-1">${senderName}</span>
+                        <div class="p-3 rounded-2xl max-w-[80%] text-[11px] leading-relaxed shadow-sm ${
+                            isClient ? 'bg-slate-100 text-slate-800' : 'bg-indigo-600 text-white'
+                        }">
+                            ${msgText}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        const modal = document.createElement('div');
+        modal.id = 'training-detail-modal';
+        modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4';
+        modal.innerHTML = `
+            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
+                <!-- الهيدر -->
+                <div class="flex justify-between items-center p-5 border-b border-slate-100 bg-slate-50">
+                    <div>
+                        <h3 class="text-base font-black text-slate-800 flex items-center gap-2">
+                            <i class="fas fa-graduation-cap text-indigo-500"></i> تقرير المبيعات للموظف: ${report.employee_name}
+                        </h3>
+                        <p class="text-[10px] text-slate-400 mt-1 font-bold">نوع التقييم: ${typeArabic} | النتيجة: ${report.score}/100</p>
+                    </div>
+                    <button onclick="document.getElementById('training-detail-modal').remove()" class="text-slate-400 hover:text-rose-500 transition"><i class="fas fa-times text-lg"></i></button>
+                </div>
+                
+                <!-- المحتوى المزدوج -->
+                <div class="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2">
+                    <!-- القسم الأيسر: تقرير التقييم والتعليق -->
+                    <div class="p-5 border-l border-slate-100 overflow-y-auto flex flex-col h-full bg-emerald-50/10">
+                        <h4 class="font-bold text-xs text-emerald-800 mb-3 flex items-center gap-1">
+                            <i class="fas fa-comment-dots"></i> تقييم المدرب الذكي ونقاط الضعف:
+                        </h4>
+                        <div class="flex-1 bg-white border border-slate-100 rounded-2xl p-4 text-[11px] leading-relaxed text-slate-600 overflow-y-auto shadow-sm whitespace-pre-line">
+                            ${report.evaluation_report || 'لا يوجد تعليق.'}
+                        </div>
+                    </div>
+
+                    <!-- القسم الأيمن: المحادثة الكاملة -->
+                    <div class="p-5 overflow-y-auto flex flex-col h-full bg-slate-50/50">
+                        <h4 class="font-bold text-xs text-slate-700 mb-3 flex items-center gap-1">
+                            <i class="fas fa-comments text-indigo-500"></i> تفاصيل حوار المحاكاة:
+                        </h4>
+                        <div class="flex-1 overflow-y-auto p-3 bg-white rounded-2xl border border-slate-100 shadow-sm scrollbar-thin">
+                            ${chatHtml}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
     }
     </script>
 </body>

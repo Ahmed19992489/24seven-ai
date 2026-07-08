@@ -84,6 +84,10 @@
                 <i class="fas fa-bullhorn w-6 text-amber-500"></i>
                 <span class="font-bold">الحملات التسويقية</span>
             </div>
+            <div onclick="showTab('training')" id="btn-training" class="sidebar-item">
+                <i class="fas fa-graduation-cap w-6 text-indigo-500"></i>
+                <span class="font-bold">أكاديمية التدريب 🎓</span>
+            </div>
             <div onclick="showTab('settings')" id="btn-settings" class="sidebar-item">
                 <i class="fas fa-cog w-6"></i>
                 <span class="font-bold">إعدادات السيرفر</span>
@@ -853,6 +857,138 @@
             </div>
         </section>
 
+        <!-- Tab: Training (Sales Academy) -->
+        <section id="tab-training" class="tab-content hidden space-y-6">
+            <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-black text-slate-800"><i class="fas fa-graduation-cap text-indigo-500 ml-2"></i>أكاديمية التدريب واختبار المبيعات 🎓</h2>
+                <div class="bg-indigo-50 border border-indigo-100 text-indigo-800 text-xs px-3 py-1.5 rounded-2xl font-bold flex items-center gap-1">
+                    <i class="fas fa-user-tie"></i> حول مهاراتك من الرد التلقائي لمسؤول إقناع مبيعات
+                </div>
+            </div>
+
+            <!-- الاختيار الرئيسي للمود -->
+            <div id="academy-mode-selector" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- كارت محاكاة العميل الصعب -->
+                <div class="glass-panel p-6 bg-white hover:shadow-2xl hover:border-amber-400 transition-all duration-300 border-t-4 border-amber-500 flex flex-col justify-between">
+                    <div>
+                        <div class="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 text-xl mb-4 shadow-sm">
+                            <i class="fas fa-mask"></i>
+                        </div>
+                        <h3 class="font-black text-lg text-slate-800 mb-2">🎭 محاكاة العميل الصعب</h3>
+                        <p class="text-slate-500 text-xs leading-relaxed mb-4">
+                            ادخل في محادثة مباشرة مع عميل وهمي يمثله الذكاء الاصطناعي، يطرح عليك اعتراضات حقيقية وصعبة (مثل السعر المرتفع والمقارنة بالآخرين) لتقييم سرعة بديهتك وقدرتك على الإقناع.
+                        </p>
+                    </div>
+                    <button onclick="startTrainingMode('roleplay')" class="w-full bg-amber-500 text-white py-3 rounded-xl font-bold text-sm hover:bg-amber-600 transition flex items-center justify-center gap-2">
+                        <i class="fas fa-play"></i> بدء المحاكاة الآن
+                    </button>
+                </div>
+
+                <!-- كارت الكورس التفاعلي -->
+                <div class="glass-panel p-6 bg-white hover:shadow-2xl hover:border-indigo-400 transition-all duration-300 border-t-4 border-indigo-500 flex flex-col justify-between">
+                    <div>
+                        <div class="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-500 text-xl mb-4 shadow-sm">
+                            <i class="fas fa-book-open"></i>
+                        </div>
+                        <h3 class="font-black text-lg text-slate-800 mb-2">📖 كورس المبيعات التفاعلي</h3>
+                        <p class="text-slate-500 text-xs leading-relaxed mb-4">
+                            تعلم أسرار البيع بالإقناع واللعب على العقل اللاواعي للعميل. الكورس مقسم لفصول تعليمية تفاعلية، وفي نهاية كل فقرة سيسألك المدرب الذكي سؤالاً ليتحقق من فهمك وتطورك.
+                        </p>
+                    </div>
+                    <button onclick="startTrainingMode('course')" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-indigo-700 transition flex items-center justify-center gap-2">
+                        <i class="fas fa-graduation-cap"></i> بدء الكورس التعليمي
+                    </button>
+                </div>
+
+                <!-- كارت الاختبار النهائي -->
+                <div class="glass-panel p-6 bg-white hover:shadow-2xl hover:border-teal-400 transition-all duration-300 border-t-4 border-teal-500 flex flex-col justify-between">
+                    <div>
+                        <div class="w-12 h-12 bg-teal-50 rounded-2xl flex items-center justify-center text-teal-500 text-xl mb-4 shadow-sm">
+                            <i class="fas fa-file-signature"></i>
+                        </div>
+                        <h3 class="font-black text-lg text-slate-800 mb-2">📝 الاختبار النهائي للمبيعات</h3>
+                        <p class="text-slate-500 text-xs leading-relaxed mb-4">
+                            اختبر معلوماتك وقدرتك العملية في المبيعات عبر مجموعة من الأسئلة الصعبة والسهلة الموجهة خصيصاً لتحديد مستواك. يتم إرسال النتيجة وتقييمك للأدمن والمدير فوراً.
+                        </p>
+                    </div>
+                    <button onclick="startTrainingMode('exam')" class="w-full bg-teal-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-teal-700 transition flex items-center justify-center gap-2">
+                        <i class="fas fa-clipboard-check"></i> بدء الاختبار النهائي
+                    </button>
+                </div>
+            </div>
+
+            <!-- مساحة العمل للتدريب (مخفية افتراضياً وتظهر عند البدء) -->
+            <div id="academy-active-workspace" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- واجهة الشات أو السؤال الرئيسي -->
+                <div class="lg:col-span-2 flex flex-col glass-panel bg-white h-[600px]">
+                    <!-- هيدر الحالة -->
+                    <div class="p-4 border-b flex justify-between items-center bg-slate-50 rounded-t-2xl">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-green-500 animate-ping"></span>
+                            <h3 class="font-bold text-slate-800 text-sm" id="academy-workspace-title">المحاكاة نشطة 🎭</h3>
+                        </div>
+                        <button onclick="exitAcademyWorkspace()" class="text-xs text-rose-500 font-bold hover:underline flex items-center gap-1">
+                            <i class="fas fa-arrow-left"></i> إنهاء والخروج
+                        </button>
+                    </div>
+
+                    <!-- صندوق الرسائل / المحتوى -->
+                    <div id="academy-chat-box" class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50 scrollbar-thin">
+                        <!-- الرسائل ستضاف هنا برمجياً -->
+                    </div>
+
+                    <!-- صندوق الإدخال -->
+                    <div class="p-4 border-t bg-white rounded-b-2xl">
+                        <div class="flex gap-2" id="academy-input-container">
+                            <input type="text" id="academy-text-input" placeholder="اكتب ردك ومحاولتك لإقناع العميل هنا..." 
+                                class="flex-1 p-3 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition text-sm">
+                            <button onclick="sendAcademyMessage()" class="bg-indigo-600 text-white px-5 py-3 rounded-xl font-bold text-sm hover:bg-indigo-700 transition flex items-center justify-center">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                        <!-- خاص للكورس (أزرار الاختيار من متعدد MCQ) -->
+                        <div id="academy-mcq-container" class="hidden grid grid-cols-1 gap-2 pt-2">
+                            <!-- خيارات MCQ ستظهر هنا برمجياً -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- اللوحة الجانبية: التوجيه والدرجة والتعليمات الحية -->
+                <div class="space-y-6">
+                    <!-- تعليمات السيناريو / المهمة -->
+                    <div class="glass-panel p-5 border-r-4 border-indigo-500 bg-white">
+                        <h4 class="font-bold text-sm text-slate-800 mb-3 flex items-center gap-2">
+                            <i class="fas fa-info-circle text-indigo-500"></i> المهمة والسيناريو الحالي:
+                        </h4>
+                        <p id="academy-scenario-desc" class="text-xs text-slate-600 leading-relaxed">
+                            --
+                        </p>
+                    </div>
+
+                    <!-- لوحة إنهاء الجلسة والتقييم للمحاكاة/الامتحان -->
+                    <div class="glass-panel p-5 border-r-4 border-amber-500 bg-white" id="academy-evaluation-card">
+                        <h4 class="font-bold text-sm text-slate-800 mb-2">🏁 هل انتهيت من الإقناع؟</h4>
+                        <p class="text-[10px] text-slate-400 mb-4 leading-relaxed">
+                            بمجرد الضغط على زر التقييم، سيقوم المدرب الذكي بتحليل الحوار وحساب درجتك وإرسال النتيجة للأدمن فوراً.
+                        </p>
+                        <button onclick="triggerAcademyEvaluation()" id="academy-eval-btn" class="w-full bg-amber-500 text-white py-3 rounded-xl font-bold text-sm hover:bg-amber-600 transition flex items-center justify-center gap-2 shadow-lg shadow-amber-100">
+                            <i class="fas fa-calculator"></i> إنهاء وطلب التقييم الذكي
+                        </button>
+                    </div>
+
+                    <!-- لوحة التقييم النهائي بعد الضغط على إنهاء -->
+                    <div id="academy-score-card" class="hidden glass-panel p-5 text-center bg-emerald-50/20 border-t-4 border-emerald-500">
+                        <p class="text-xs text-slate-500 font-bold uppercase">النتيجة النهائية للمبيعات</p>
+                        <h3 class="text-4xl font-black text-emerald-600 mt-2" id="academy-final-score">0 / 100</h3>
+                        <p class="text-xs text-slate-600 font-bold mt-4 mb-2 text-right">📝 تعليق المدرب الذكي:</p>
+                        <div id="academy-final-report" class="text-[11px] text-slate-500 text-right leading-relaxed max-h-[180px] overflow-y-auto bg-white p-3 rounded-xl border border-slate-100">
+                            --
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- Tab: Settings (API Config) -->
         <section id="tab-settings" class="tab-content hidden space-y-6">
             <header class="mb-4">
@@ -1198,6 +1334,7 @@
             }
             if(tabId === 'dashboard') loadSummary();
             if(tabId === 'marketing') loadMarketingStatus();
+            if(tabId === 'training') loadTrainingAcademy();
             if(tabId === 'chat') {
                 loadUnifiedChats();
                 // Ensure list is visible on mobile when opening tab
@@ -6441,12 +6578,6 @@ ${contextData}
         }
     }
 
-    async function stopMarketingCampaign() {
-        const apiBase = getApiBaseUrl();
-        if (!apiBase) return;
-        
-        if (!confirm('هل أنت متأكد من رغبتك في إيقاف الحملة الحالية؟')) return;
-        
         try {
             const res = await fetch(`${apiBase}/api/marketing/stop`, {
                 method: 'POST',
@@ -6461,6 +6592,444 @@ ${contextData}
             }
         } catch (e) {
             alert('❌ خطأ: ' + e.message);
+        }
+    }
+
+    // ==========================================
+    // 🎓 أكاديمية التدريب واختبار المبيعات (Sales Academy)
+    // ==========================================
+    let academyMode = ''; // 'roleplay' | 'course' | 'exam'
+    let academyMessages = [];
+    let academyScenario = {};
+    let courseChapter = 1;
+    let examStep = 1;
+    let examAnswers = [];
+
+    const predefinedScenarios = [
+        {
+            title: "اعتراض السعر للغردقة 🏖️",
+            desc: "عميل يريد السفر من القاهرة إلى الغردقة، السعر المعروض عليه هو 3500 جنيه. ولكنه يجادل ويقول: (في مكتب تاني قالي 3000 جنيه فقط، ليه أنت أغلى؟). مهمتك إقناعه بالقيمة والأمان والسيستم دون خفض السعر.",
+            system: "العميل أحمد يريد الذهاب للغردقة، ومتمسك بأن السعر 3000 جنيه في المكاتب الأخرى، ويسأل بحدة: (ليه أحجز معاكم بـ 3500؟)."
+        },
+        {
+            title: "عميل ورجال أعمال للمطار ✈️",
+            desc: "عميل مهم يريد سيارة حديثة جداً وسائق محترف من الإسكندرية إلى مطار القاهرة. هو خائف من التأخير والخدمة الرديئة. يقول: (أنا سمعت أن المكاتب بتتأخر، إيه الضمانات عندكم؟). مهمتك إبراز مميزات السيستم والـ GPS والتزام الشركة.",
+            system: "العميل مهاب مسافر للمطار وخائف جداً من التأخير، ويسأل بتشكك: (إيه اللي يضمنلي إن السواق ما يتأخرش ويفوتني الطيارة؟)."
+        },
+        {
+            title: "عائلة وطلب سيارة أكبر 🚘",
+            desc: "عائلة مسافرة للساحل الشمالي وتطلب سيارة سيدان، لكن معهم حقائب كثيرة ويريدون ترقية لسيارة SUV بنفس السعر! يقولون: (السيدان مش هتكفي الشنط، بس السعر غالي، اعملولنا ترقية مجانية). مهمتك إقناعهم بدفع فرق السعر لحجم السيارة الأنسب.",
+            system: "العميلة أميرة تسافر مع عائلتها وحقائب كثيرة للساحل، وتطلب ترقية سيارة SUV مجانية لأن السيدان لن تكفي الشنط، وترفض دفع أي زيادة."
+        }
+    ];
+
+    const courseChapters = {
+        1: {
+            title: "الفصل الأول: لغة الإقناع والبيع بالقيمة بدلاً من السعر 💵",
+            content: `<b>مفهوم أساسي:</b> العميل لا يشتري السعر، بل يشتري الأمان وراحة البال. عندما يسألك العميل عن السعر مباشرة، لا تجبه بالرقم وتصمت!
+            <br><br>
+            <b>الاستراتيجية الصحيحة:</b>
+            <br>
+            1. اسأله عن تفاصيل رحلته أولاً لتبني علاقة (Rapport).
+            <br>
+            2. أبرز ميزات الخدمة (سيارات حديثة معقمة، سائقون ملتزمون بالسرعات القانونية، تتبع كامل للرحلة بالـ GPS لحمايته).
+            <br>
+            3. اذكر السعر مرفقاً بعبارة توضح القيمة (مثال: "رحلتك شاملة الكارتات، مع تتبع GPS كامل لسلامتك").
+            <br><br>
+            <b>سؤال الفهم:</b> كيف ترد إذا قال لك العميل مباشرة: (بكام رحلة إسكندرية؟)`,
+            options: [
+                "أ. الرحلة بـ 1500 جنيه يا فندم تحب تحجز؟ (خطأ: رد مباشر بدون قيمة)",
+                "ب. أهلاً بك يا فندم، حابب أعرف وقت التحرك واليوم لترتيب أفضل سيارة مع تتبع GPS كامل لسلامتك، السعر شامل الكارتات هو 1500 جنيه. (صحيح)"
+            ],
+            correct: 1
+        },
+        2: {
+            title: "الفصل الثاني: التعامل الذكي مع اعتراضات السعر والبدائل 🛡️",
+            content: `<b>مفهوم أساسي:</b> عندما يقول العميل "سعرك غالي"، فهذا يعني أنه لم يفهم بعد لماذا يدفع هذا الرقم، أو يقارنك بمكاتب عشوائية.
+            <br><br>
+            <b>الاستراتيجية الصحيحة:</b>
+            <br>
+            * لا تهاجم المنافسين، بل ارفع من شأن خدمتك.
+            * اشرح له الفارق: "نحن لسنا مجرد سيارة وسواق، نحن شركة رسمية نضمن لك سيارة بديلة فوراً في حال حدوث عطل، مع كباتن مدربين ومراقبين عبر لوحة التحكم لسلامة أسرتك".
+            <br><br>
+            <b>سؤال الفهم:</b> العميل يقول: (مكتب تاني قالي السعر 1000 وأنتو 1300)، ما هو أفضل رد؟`,
+            options: [
+                "أ. المكتب التاني ده كداب وهيجيبلك عربية قديمة! (خطأ: هجوم غير احترافي)",
+                "ب. ندرك يا فندم وجود أسعار أقل، ولكن الـ 300 جنيه الإضافية تضمن لك سيارة حديثة معقمة مراقبة بالـ GPS مع سائق محترف ملتزم، وضمان بديل فوري للسيارة في أي لحظة لسلامة رحلتك. (صحيح)"
+            ],
+            correct: 1
+        },
+        3: {
+            title: "الفصل الثالث: تقنيات الإغلاق البيعي الناجح (Closing) 🏁",
+            content: `<b>مفهوم أساسي:</b> الموديتور الفاشل ينهي كلامه بترك العميل يفكر. المبيعات المحترف يقود العميل لاتخاذ القرار فوراً.
+            <br><br>
+            <b>الاستراتيجية الصحيحة:</b>
+            <br>
+            * استخدم أسلوب الاختيار الثنائي (Alternative Close) بدلاً من السؤال المفتوح.
+            * مثال: "هل تفضل سيارة سيدان أم عائلية؟" أو "هل تحب نؤكد التحرك الساعة 3 أم 4 عصراً؟"
+            <br><br>
+            <b>سؤال الفهم:</b> ما هي الجملة الأنسب لإنهاء المحادثة بعد اقتناع العميل؟`,
+            options: [
+                "أ. تمام يا فندم فكر وكلمنا لما تقرر. (خطأ: تضيع الصفقة)",
+                "ب. رائع يا فندم! هل تفضل تأكيد الحجز على سيارة سيدان أم سيارة فاخرة؟ لكي نسجل الحجز على السيستم ويرسل لك تفاصيل الكابتن فوراً. (صحيح)"
+            ],
+            correct: 1
+        }
+    };
+
+    const examObjections = {
+        1: "العميل يقول: (أنا لقيت سعر أرخص منكم بـ 200 جنيه في مكتب تاني، ليه أحجز معاكم؟)",
+        2: "العميل يقول: (أنا خايف العربية تتأخر عليا وأنا رايح المطار والطيارة تفوتني، إيه الضمان؟)",
+        3: "العميل يقول: (ليه لازم أحجز من السيستم وأبعت اللوكيشن، المكاتب التانية بتاخد البيانات في التليفون علطول؟)"
+    };
+
+    function loadTrainingAcademy() {
+        document.getElementById('academy-mode-selector').classList.remove('hidden');
+        document.getElementById('academy-active-workspace').classList.add('hidden');
+        document.getElementById('academy-score-card').classList.add('hidden');
+        stopMarketingPolling(); // إيقاف أي بولينج آخر
+    }
+
+    async function startTrainingMode(mode) {
+        const apiBase = getApiBaseUrl();
+        if (!apiBase) {
+            alert('⚠️ يرجى ضبط وحفظ رابط ngrok في إعدادات السيرفر أولاً.');
+            showTab('settings');
+            return;
+        }
+
+        academyMode = mode;
+        document.getElementById('academy-mode-selector').classList.add('hidden');
+        document.getElementById('academy-active-workspace').classList.remove('hidden');
+        document.getElementById('academy-score-card').classList.add('hidden');
+        document.getElementById('academy-evaluation-card').classList.add('hidden');
+        
+        const chatBox = document.getElementById('academy-chat-box');
+        chatBox.innerHTML = '';
+        academyMessages = [];
+
+        if (mode === 'roleplay') {
+            document.getElementById('academy-workspace-title').textContent = "محاكاة العميل الصعب نشطة 🎭";
+            document.getElementById('academy-evaluation-card').classList.remove('hidden');
+            
+            // اختيار سيناريو عشوائي
+            academyScenario = predefinedScenarios[Math.floor(Math.random() * predefinedScenarios.length)];
+            document.getElementById('academy-scenario-desc').innerHTML = `<b>${academyScenario.title}</b><br><br>${academyScenario.desc}`;
+            
+            // تهيئة حوار العميل
+            appendAcademyMessage("assistant", "جاري تشغيل محاكاة العميل... يرجى الانتظار لحين بدء الحوار.");
+            
+            // استدعاء الذكاء الاصطناعي لبدء الحوار بناءً على السيناريو
+            await getAIClientResponse("ابدأ المحادثة واكتب ردك الأول كعميل بناءً على السيناريو الخاص بك بالعامية المصرية الصريحة والقصيرة.");
+        } 
+        else if (mode === 'course') {
+            document.getElementById('academy-workspace-title').textContent = "كورس المبيعات التفاعلي نشط 📖";
+            courseChapter = 1;
+            loadCourseChapter();
+        } 
+        else if (mode === 'exam') {
+            document.getElementById('academy-workspace-title').textContent = "الاختبار النهائي للمبيعات نشط 📝";
+            examStep = 1;
+            examAnswers = [];
+            document.getElementById('academy-scenario-desc').innerHTML = `<b>الاختبار النهائي</b><br><br>يتكون هذا الاختبار من 3 مواقف عملية مع عملاء حقيقيين. اكتب أفضل رد إقناعي ومحترف لكل موقف.`;
+            loadExamQuestion();
+        }
+    }
+
+    function exitAcademyWorkspace() {
+        if (confirm("هل أنت متأكد من الخروج؟ سيتم فقدان تقدمك الحالي.")) {
+            loadTrainingAcademy();
+        }
+    }
+
+    function appendAcademyMessage(sender, text) {
+        const chatBox = document.getElementById('academy-chat-box');
+        const isBot = sender === 'assistant';
+        const senderName = isBot ? "العميل/المدرب" : "أنت (مسؤول المبيعات)";
+        
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `flex flex-col ${isBot ? 'items-start' : 'items-end'}`;
+        
+        msgDiv.innerHTML = `
+            <span class="text-[10px] text-slate-400 mb-1 px-2 font-bold">${senderName}</span>
+            <div class="${isBot ? 'bg-indigo-50 text-slate-800' : 'bg-indigo-600 text-white'} p-3 rounded-2xl max-w-[85%] text-xs shadow-sm leading-relaxed">
+                ${text}
+            </div>
+        `;
+        chatBox.appendChild(msgDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+        
+        // حفظ الرسائل في الحوار
+        academyMessages.push({ role: sender, content: text });
+    }
+
+    async function sendAcademyMessage() {
+        const input = document.getElementById('academy-text-input');
+        const text = input.value.trim();
+        if (!text) return;
+        
+        input.value = '';
+        appendAcademyMessage("user", text);
+
+        if (academyMode === 'roleplay') {
+            // محاكاة العميل الصعب يرد على كلام الموظف
+            await getAIClientResponse(text);
+        } 
+        else if (academyMode === 'exam') {
+            // حفظ إجابة الامتحان
+            examAnswers.push({ objection: examObjections[examStep], answer: text });
+            examStep++;
+            if (examObjections[examStep]) {
+                loadExamQuestion();
+            } else {
+                // انتهاء أسئلة الامتحان، تشغيل التقييم التلقائي
+                triggerExamEvaluation();
+            }
+        }
+    }
+
+    // --- محاكاة العميل عبر Claude / Groq ---
+    async function getAIClientResponse(userMessage) {
+        const apiBase = getApiBaseUrl();
+        const systemPrompt = `أنت تلعب الآن دور عميل حقيقي متشكك يبحث عن رحلة ليموزين مع شركة 24Seven.
+        معلومات وتفاصيل سيناريو رحلتك الحالية: [ ${academyScenario.system} ].
+        الآن أنت تحاور موظف المبيعات. ردودك يجب أن تكون عامية مصرية، قصيرة، واقعية جداً، ومقاومة للحجز إلا لو أقنعك الموظف بجودة الخدمة والأمان والضمانات. لا تذكر أسعاراً غير السعر المحدد في سيناريو رحلتك.`;
+
+        // إبقاء الرسائل الأخيرة فقط لتجنب طول الحوار
+        const messagesToSend = academyMessages.filter(m => m.content !== "جاري تشغيل محاكاة العميل... يرجى الانتظار لحين بدء الحوار.");
+
+        try {
+            const res = await fetch(`${apiBase}/api/ai_chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    system: systemPrompt,
+                    messages: messagesToSend
+                })
+            });
+            const data = await res.json();
+            if (res.ok && data.answer) {
+                appendAcademyMessage("assistant", data.answer);
+            } else {
+                appendAcademyMessage("assistant", "⚠️ حدث خطأ في محاذاة العميل الذكي، يرجى المحاولة لاحقاً.");
+            }
+        } catch (e) {
+            console.error(e);
+            appendAcademyMessage("assistant", "⚠️ خطأ في الاتصال بالسيرفر.");
+        }
+    }
+
+    // --- منطق الكورس التدريبي تفاعلي ---
+    function loadCourseChapter() {
+        const ch = courseChapters[courseChapter];
+        const chatBox = document.getElementById('academy-chat-box');
+        chatBox.innerHTML = '';
+        academyMessages = [];
+
+        document.getElementById('academy-scenario-desc').innerHTML = `<b>شرح الكورس</b><br><br>${ch.title}<br>يرجى قراءة الشرح بالكامل واختيار الإجابة الصحيحة بالأسفل لتخطي الفصل.`;
+        
+        appendAcademyMessage("assistant", `<b>📖 ${ch.title}</b><br><br>${ch.content}`);
+        
+        // عرض الخيارات كأزرار وإخفاء حقل النص
+        document.getElementById('academy-input-container').classList.add('hidden');
+        const mcqContainer = document.getElementById('academy-mcq-container');
+        mcqContainer.classList.remove('hidden');
+        mcqContainer.innerHTML = '';
+        
+        ch.options.forEach((opt, idx) => {
+            const btn = document.createElement('button');
+            btn.className = "w-full text-right p-3 border border-slate-200 hover:bg-indigo-50 hover:border-indigo-400 rounded-xl text-xs transition font-semibold text-slate-700 bg-white";
+            btn.innerHTML = opt;
+            btn.onclick = () => submitCourseAnswer(idx + 1);
+            mcqContainer.appendChild(btn);
+        });
+    }
+
+    async function submitCourseAnswer(selectedIdx) {
+        const ch = courseChapters[courseChapter];
+        const mcqContainer = document.getElementById('academy-mcq-container');
+        
+        if (selectedIdx === ch.correct) {
+            alert("✅ إجابة صحيحة وممتازة! أحسنت.");
+            courseChapter++;
+            if (courseChapters[courseChapter]) {
+                loadCourseChapter();
+            } else {
+                // الكورس اكتمل بنجاح!
+                mcqContainer.innerHTML = '';
+                document.getElementById('academy-input-container').classList.remove('hidden');
+                mcqContainer.classList.add('hidden');
+                
+                appendAcademyMessage("assistant", "🎉 تهانينا! لقد أكملت كورس المبيعات التفاعلي بالكامل بنجاح. رصيدك الآن 100/100 في هذا الكورس!");
+                
+                // حفظ التقييم في السيرفر وقاعدة البيانات
+                const modName = localStorage.getItem('modName') || 'موظف مبيعات';
+                const apiBase = getApiBaseUrl();
+                await fetch(`${apiBase}/api/training/evaluate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        employee_name: modName,
+                        session_type: "course",
+                        score: 100,
+                        chat_history: [],
+                        evaluation_report: "أكمل كورس المبيعات التفاعلي بالكامل وحصل على إجابات صحيحة في كافة فصول الفهم."
+                    })
+                });
+                
+                // إظهار النتيجة النهائية
+                document.getElementById('academy-score-card').classList.remove('hidden');
+                document.getElementById('academy-final-score').textContent = "100 / 100";
+                document.getElementById('academy-final-report').innerHTML = "لقد أتممت الكورس التفاعلي بنجاح! ننصحك بالذهاب الآن إلى (محاكاة العميل الصعب) لتطبيق ما تعلمته عملياً.";
+            }
+        } else {
+            alert("❌ إجابة خاطئة! يرجى إعادة قراءة الفقرة ومحاولة فهم الاستراتيجية الصحيحة مجدداً.");
+        }
+    }
+
+    // --- منطق الاختبار النهائي ---
+    function loadExamQuestion() {
+        const chatBox = document.getElementById('academy-chat-box');
+        chatBox.innerHTML = '';
+        
+        document.getElementById('academy-scenario-desc').innerHTML = `<b>السؤال ${examStep} من 3</b><br><br>المطلوب: اكتب ردك لإقناع العميل وحل اعتراضه بشكل احترافي.`;
+        
+        appendAcademyMessage("assistant", `<b>الموقف ${examStep}:</b><br><br>${examObjections[examStep]}`);
+    }
+
+    // --- تقييم المحاكاة ---
+    async function triggerAcademyEvaluation() {
+        if (academyMessages.length < 3) {
+            alert("⚠️ يرجى محاورة العميل لـ 3 ردود على الأقل قبل طلب التقييم.");
+            return;
+        }
+
+        const evalBtn = document.getElementById('academy-eval-btn');
+        evalBtn.disabled = true;
+        evalBtn.textContent = "⏳ جاري تحليل الحوار وحساب درجتك...";
+
+        const apiBase = getApiBaseUrl();
+        const systemPrompt = `أنت مقيم مبيعات ليموزين محترف وخبير. قم بتحليل المحادثة التالية بين موظف المبيعات والعميل.
+        قم بتقييم الموظف من 100 بناءً على إبرازه للقيمة والأمان والسيستم وإقناع العميل، واكتب له نصائح واضحة للتحسن باللغة العربية.
+        يجب أن تكون إجابتك بتنسيق JSON نظيف وصحيح فقط كالتالي (بدون أي نصوص إضافية خارج الـ JSON):
+        {
+          "score": 85,
+          "report": "تعليقك وتقييمك التفصيلي هنا"
+        }`;
+
+        try {
+            const res = await fetch(`${apiBase}/api/ai_chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    system: systemPrompt,
+                    messages: academyMessages
+                })
+            });
+            
+            const data = await res.json();
+            if (res.ok && data.answer) {
+                try {
+                    // تنظيف النص للحصول على JSON فقط في حال كتابة الذكاء الاصطناعي نصوصاً زائدة
+                    const jsonStr = data.answer.substring(data.answer.indexOf('{'), data.answer.lastIndexOf('}') + 1);
+                    const result = JSON.parse(jsonStr);
+                    
+                    const score = result.score || 0;
+                    const report = result.report || "تم التقييم بنجاح.";
+                    
+                    // إظهار النتائج للموظف
+                    document.getElementById('academy-score-card').classList.remove('hidden');
+                    document.getElementById('academy-final-score').textContent = `${score} / 100`;
+                    document.getElementById('academy-final-report').innerHTML = report;
+                    
+                    // إرسال النتيجة للسيرفر لحفظها وإعلام الأدمن
+                    const modName = localStorage.getItem('modName') || 'موظف مبيعات';
+                    await fetch(`${apiBase}/api/training/evaluate`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            employee_name: modName,
+                            session_type: "roleplay",
+                            score: score,
+                            chat_history: academyMessages,
+                            evaluation_report: report
+                        })
+                    });
+                    
+                    alert("🎉 تم التقييم بنجاح وإرسال التقرير والدرجة لواتساب المدير والأدمن!");
+                } catch (pe) {
+                    console.error("JSON parse error:", pe, data.answer);
+                    alert("❌ فشل معالجة تقرير التقييم، يرجى المحاولة لاحقاً.");
+                }
+            }
+        } catch (err) {
+            console.error(err);
+            alert("❌ حدث خطأ في الاتصال بالخادم.");
+        } finally {
+            evalBtn.disabled = false;
+            evalBtn.innerHTML = '<i class="fas fa-calculator"></i> إنهاء وطلب التقييم الذكي';
+        }
+    }
+
+    // --- تقييم الاختبار النهائي ---
+    async function triggerExamEvaluation() {
+        const chatBox = document.getElementById('academy-chat-box');
+        chatBox.innerHTML = '';
+        appendAcademyMessage("assistant", "⏳ جاري إرسال إجاباتك للاختبار للمصحح الذكي لحساب النتيجة النهائية... يرجى الانتظار لحظات.");
+
+        const apiBase = getApiBaseUrl();
+        const systemPrompt = `أنت مصحح اختبار مبيعات ليموزين رسمي. قم بمراجعة الإجابات الثلاثة التالية التي قدمها الموظف على اعتراضات العملاء وحساب درجته النهائية من 100 مع تقديم التقرير.
+        يجب أن تكون إجابتك بتنسيق JSON نظيف كالتالي:
+        {
+          "score": 90,
+          "report": "تقرير التصحيح والتقييم النهائي لكل إجابة باللغة العربية"
+        }`;
+
+        const messages = [
+            { role: "user", content: JSON.stringify(examAnswers) }
+        ];
+
+        try {
+            const res = await fetch(`${apiBase}/api/ai_chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    system: systemPrompt,
+                    messages: messages
+                })
+            });
+            const data = await res.json();
+            if (res.ok && data.answer) {
+                const jsonStr = data.answer.substring(data.answer.indexOf('{'), data.answer.lastIndexOf('}') + 1);
+                const result = JSON.parse(jsonStr);
+                
+                const score = result.score || 0;
+                const report = result.report || "تم تصحيح الامتحان.";
+                
+                document.getElementById('academy-score-card').classList.remove('hidden');
+                document.getElementById('academy-final-score').textContent = `${score} / 100`;
+                document.getElementById('academy-final-report').innerHTML = report;
+                
+                // حفظ وإرسال للواتساب
+                const modName = localStorage.getItem('modName') || 'موظف مبيعات';
+                await fetch(`${apiBase}/api/training/evaluate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        employee_name: modName,
+                        session_type: "exam",
+                        score: score,
+                        chat_history: examAnswers,
+                        evaluation_report: report
+                    })
+                });
+                
+                alert("🎉 تم تصحيح الامتحان بنجاح وإرسال التقرير لواتساب المدير والأدمن!");
+                appendAcademyMessage("assistant", `✨ اكتمل تصحيح الاختبار. درجتك النهائية: ${score}/100.`);
+            }
+        } catch (e) {
+            console.error(e);
+            alert("❌ خطأ في الاتصال بالخادم أثناء تصحيح الامتحان.");
         }
     }
     </script>
