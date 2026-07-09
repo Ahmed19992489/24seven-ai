@@ -6827,6 +6827,12 @@ ${contextData}
             content: m.content.replace(/<[^>]*>/g, '').substring(0, 200)
         }));
 
+        if (messagesToSend.length === 0) {
+            messagesToSend.push({
+                role: 'user',
+                content: 'ابدأ المحادثة كعميل واكتب ردك الأول فقط باختصار شديد بالعامية المصرية.'
+            });
+        }
         // محاولة الطلب مع إعادة المحاولة عند 429
         const MAX_RETRIES = 2;
         for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
