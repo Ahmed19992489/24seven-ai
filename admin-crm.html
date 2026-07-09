@@ -6694,10 +6694,28 @@
         };
 
         function getStaffApiBaseUrl() {
-            const customUrl = localStorage.getItem('staff_api_url');
-            if (customUrl && customUrl.trim() !== '') {
-                return customUrl.trim().replace(/\/$/, ''); 
+            let customUrl = localStorage.getItem('staff_api_url');
+            if (!customUrl || customUrl.trim() === '') {
+                customUrl = localStorage.getItem('mod_api_url');
             }
+            if (customUrl && customUrl.trim() !== '') {
+                return customUrl.trim().replace(/\/$/, '');
+            }
+
+            const loc = window.location;
+            if (loc.hostname.includes('24seven-ai.com') || loc.hostname.includes('github.io') || loc.hostname.includes('vercel.app')) {
+                return null;
+            }
+
+            if (loc.port === '3000' || loc.pathname.includes('admin-crm.html') || loc.pathname.includes('moderator') || loc.pathname.includes('dashboard')) {
+                return loc.origin;
+            }
+            if (loc.hostname === 'localhost' || loc.hostname === '127.0.0.1') {
+                return `http://localhost:3000`;
+            } else {
+                return loc.origin;
+            }
+        }
             
             // Auto-detection: if we are on port 3000 or using the catch-all flask routes
             const loc = window.location;
