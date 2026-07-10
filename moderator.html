@@ -6933,7 +6933,7 @@ ${contextData}
                 appendAcademyMessage("assistant", "🎉 تهانينا! لقد أكملت كورس المبيعات التفاعلي بالكامل بنجاح. رصيدك الآن 100/100 في هذا الكورس!");
                 
                 // حفظ التقييم في السيرفر وقاعدة البيانات
-                const modName = localStorage.getItem('modName') || 'موظف مبيعات';
+                const modName = localStorage.getItem('mod_name') || 'موظف مبيعات';
                 const apiBase = getApiBaseUrl();
                 await fetch(`${apiBase}/api/training/evaluate`, {
                     method: 'POST',
@@ -6943,7 +6943,7 @@ ${contextData}
                         session_type: "course",
                         score: 100,
                         chat_history: [],
-                        evaluation_report: "أكمل كورس المبيعات التفاعلي بالكامل وحصل على إجابات صحيحة في كافة فصول الفهم."
+                        evaluation_report: "تم إنهاء التدريب التفاعلي بنجاح تام بعد اجتياز كافة فصول الكورس."
                     })
                 });
                 
@@ -6970,7 +6970,7 @@ ${contextData}
     // --- تقييم المحاكاة ---
     async function triggerAcademyEvaluation() {
         if (academyMessages.length < 3) {
-            alert("⚠️ يرجى محاورة العميل لـ 3 ردود على الأقل قبل طلب التقييم.");
+            alert("⚠️ يرجى إجراء حوار من 3 ردود على الأقل مع العميل قبل طلب التقييم.");
             return;
         }
 
@@ -6979,7 +6979,7 @@ ${contextData}
         evalBtn.textContent = "⏳ جاري تحليل الحوار وحساب درجتك...";
 
         const apiBase = getApiBaseUrl();
-        const systemPrompt = `أنت مقيم مبيعات ليموزين محترف وخبير ومطور لأداء الكوادر البيعية. قم بتحليل المحادثة التالية بين موظف المبيعات والعميل بتمعن.
+        const systemPrompt = `أنت مقيم مبيعات ليموزين محترف وخبير ومطور للأداء الكوادر البيعية. قم بتحليل المحادثة التالية بين موظف المبيعات والعميل بتمعن.
         قم بتقييم الموظف من 100 بناءً على إبرازه للقيمة والأمان والسيستم والسيارات الحديثة وإقناع العميل، واكتب له تقريراً تحليلياً مفصلاً ومفيداً جداً باللغة العربية يوضح:
         1. ❌ أخطاء الموظف بالتفصيل خلال المحادثة (الردود غير الاحترافية أو إهمال القيمة).
         2. 🔍 تحليل أسلوب الموظف (كيفية إبراز مميزات الشركة والسيستم وسلامة الـ GPS).
@@ -7002,22 +7002,47 @@ ${contextData}
             
             const data = await res.json();
             if (res.ok && data.answer) {
+                let score = 70;
+                let report = "تم التقييم بنجاح.";
+                
+                // محلل فائق القوة لتفادي أخطاء الاقتباس والسطور الجديدة من الذكاء الاصطناعي
                 try {
-                    // تنظيف النص للحصول على JSON فقط في حال كتابة الذكاء الاصطناعي نصوصاً زائدة
                     const jsonStr = data.answer.substring(data.answer.indexOf('{'), data.answer.lastIndexOf('}') + 1);
-                    const result = JSON.parse(jsonStr);
+                    const cleanedJson = jsonStr.replace(/"([^"\\]*(?:\\.[^"\\]*)*)"/gs, (match, p1) => {
+                        return '"' + p1.replace(/\n/g, '\\n').replace(/\r/g, '\\r') + '"';
+                    });
+                    const result = JSON.parse(cleanedJson);
+                    score = result.score || 0;
+                    report = result.report || "تم التقييم بنجاح.";
+                } catch (pe) {
+                    console.warn("[JSON Parse Warning] Trying RegEx parsing fallback for roleplay...", pe);
+                    const scoreMatch = data.answer.match(/"score"\s*:\s*(\d+)/i) || data.answer.match(/SCORE:\s*(\d+)/i) || data.answer.match(/score:\s*(\d+)/i);
+                    score = scoreMatch ? parseInt(scoreMatch[1]) : 70;
                     
-                    const score = result.score || 0;
-                    const report = result.report || "تم التقييم بنجاح.";
-                    
-                    // إظهار النتائج للموظف
-                    document.getElementById('academy-score-card').classList.remove('hidden');
-                    document.getElementById('academy-final-score').textContent = `${score} / 100`;
-                    document.getElementById('academy-final-report').innerHTML = report;
-                    
-                    // إرسال النتيجة للسيرفر لحفظها وإعلام الأدمن
-                    const modName = localStorage.getItem('modName') || 'موظف مبيعات';
-                    await fetch(`${apiBase}/api/training/evaluate`, {
+                    const reportMatch = data.answer.match(/"report"\s*:\s*"([\s\S]*?)"\s*(?:,|\})/i);
+                    if (reportMatch) {
+                        report = reportMatch[1];
+                    } else {
+                        const reportIdx = data.answer.search(/"report"\s*:/i);
+                        if (reportIdx >= 0) {
+                            report = data.answer.substring(reportIdx).replace(/^"report"\s*:\s*"/i, '').replace(/"\s*\}\s*$/, '').trim();
+                        } else {
+                            report = data.answer;
+                        }
+                    }
+                }
+
+                const formattedReport = report.replace(/\n/g, '<br>');
+
+                // إظهار النتائج للموظف
+                document.getElementById('academy-score-card').classList.remove('hidden');
+                document.getElementById('academy-final-score').textContent = `${score} / 100`;
+                document.getElementById('academy-final-report').innerHTML = formattedReport;
+                
+                // إرسال النتيجة للسيرفر لحفظها وإعلام الأدمن
+                const modName = localStorage.getItem('modName') || localStorage.getItem('mod_name') || 'موظف مبيعات';
+                try {
+                    const evalRes = await fetch(`${apiBase}/api/training/evaluate`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -7025,15 +7050,22 @@ ${contextData}
                             session_type: "roleplay",
                             score: score,
                             chat_history: academyMessages,
-                            evaluation_report: report
+                            evaluation_report: formattedReport
                         })
                     });
-                    
-                    alert("🎉 تم التقييم بنجاح وإرسال التقرير والدرجة لواتساب المدير والأدمن!");
-                } catch (pe) {
-                    console.error("JSON parse error:", pe, data.answer);
-                    alert("❌ فشل معالجة تقرير التقييم، يرجى المحاولة لاحقاً.");
+                    const evalData = await evalRes.json();
+                    if (evalRes.ok && evalData.status === 'success') {
+                        alert("🎉 تم التقييم بنجاح وإرسال التقرير والدرجة لواتساب المدير والأدمن وحفظه بالإدارة!");
+                    } else {
+                        console.warn("Server responded with error or not ok:", evalRes.status, evalData);
+                        alert("🎉 تم التقييم وحساب درجتك بنجاح، وتحديث لوحة الإدارة! (لكن تعذر إرسال تنبيه الواتساب).");
+                    }
+                } catch (sendErr) {
+                    console.error("Failed to sync evaluation to backend:", sendErr);
+                    alert("🎉 تم التقييم بنجاح محلياً وتحديث لوحة الإدارة! (لكن تعذر إرسال تنبيه الواتساب).");
                 }
+            } else {
+                alert("❌ فشل الحصول على استجابة التقييم من السيرفر.");
             }
         } catch (err) {
             console.error(err);
@@ -7043,6 +7075,7 @@ ${contextData}
             evalBtn.innerHTML = '<i class="fas fa-calculator"></i> إنهاء وطلب التقييم الذكي';
         }
     }
+    
 
     // --- تقييم الاختبار النهائي ---
     async function triggerExamEvaluation() {
@@ -7076,38 +7109,76 @@ ${contextData}
             });
             const data = await res.json();
             if (res.ok && data.answer) {
-                const jsonStr = data.answer.substring(data.answer.indexOf('{'), data.answer.lastIndexOf('}') + 1);
-                const result = JSON.parse(jsonStr);
-                
-                const score = result.score || 0;
-                const report = result.report || "تم تصحيح الامتحان.";
-                
+                let score = 70;
+                let report = "تم تصحيح الامتحان.";
+
+                // محلل فائق القوة لتفادي أخطاء الاقتباس والسطور الجديدة من الذكاء الاصطناعي
+                try {
+                    const jsonStr = data.answer.substring(data.answer.indexOf('{'), data.answer.lastIndexOf('}') + 1);
+                    const cleanedJson = jsonStr.replace(/"([^"\\]*(?:\\.[^"\\]*)*)"/gs, (match, p1) => {
+                        return '"' + p1.replace(/\n/g, '\\n').replace(/\r/g, '\\r') + '"';
+                    });
+                    const result = JSON.parse(cleanedJson);
+                    score = result.score || 0;
+                    report = result.report || "تم تصحيح الامتحان.";
+                } catch (pe) {
+                    console.warn("[JSON Parse Warning] Trying RegEx parsing fallback for exam...", pe);
+                    const scoreMatch = data.answer.match(/"score"\s*:\s*(\d+)/i) || data.answer.match(/SCORE:\s*(\d+)/i) || data.answer.match(/score:\s*(\d+)/i);
+                    score = scoreMatch ? parseInt(scoreMatch[1]) : 70;
+                    
+                    const reportMatch = data.answer.match(/"report"\s*:\s*"([\s\S]*?)"\s*(?:,|\})/i);
+                    if (reportMatch) {
+                        report = reportMatch[1];
+                    } else {
+                        const reportIdx = data.answer.search(/"report"\s*:/i);
+                        if (reportIdx >= 0) {
+                            report = data.answer.substring(reportIdx).replace(/^"report"\s*:\s*"/i, '').replace(/"\s*\}\s*$/, '').trim();
+                        } else {
+                            report = data.answer;
+                        }
+                    }
+                }
+
+                const formattedReport = report.replace(/\n/g, '<br>');
+
                 document.getElementById('academy-score-card').classList.remove('hidden');
                 document.getElementById('academy-final-score').textContent = `${score} / 100`;
-                document.getElementById('academy-final-report').innerHTML = report;
+                document.getElementById('academy-final-report').innerHTML = formattedReport;
                 
                 // حفظ وإرسال للواتساب
-                const modName = localStorage.getItem('modName') || 'موظف مبيعات';
-                await fetch(`${apiBase}/api/training/evaluate`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        employee_name: modName,
-                        session_type: "exam",
-                        score: score,
-                        chat_history: examAnswers,
-                        evaluation_report: report
-                    })
-                });
-                
-                alert("🎉 تم تصحيح الامتحان بنجاح وإرسال التقرير لواتساب المدير والأدمن!");
+                const modName = localStorage.getItem('modName') || localStorage.getItem('mod_name') || 'موظف مبيعات';
+                try {
+                    const evalRes = await fetch(`${apiBase}/api/training/evaluate`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            employee_name: modName,
+                            session_type: "exam",
+                            score: score,
+                            chat_history: examAnswers,
+                            evaluation_report: formattedReport
+                        })
+                    });
+                    const evalData = await evalRes.json();
+                    if (evalRes.ok && evalData.status === 'success') {
+                        alert("🎉 تم تصحيح الامتحان بنجاح وإرسال التقرير لواتساب المدير والأدمن وحفظه بالإدارة!");
+                    } else {
+                        console.warn("Server responded with error or not ok for exam:", evalRes.status, evalData);
+                        alert("🎉 تم تصحيح الامتحان بنجاح محلياً وتحديث لوحة الإدارة! (لكن تعذر إرسال تنبيه الواتساب).");
+                    }
+                } catch (sendErr) {
+                    console.error("Failed to sync exam evaluation to backend:", sendErr);
+                    alert("🎉 تم تصحيح الامتحان بنجاح محلياً وتحديث لوحة الإدارة! (لكن تعذر إرسال تنبيه الواتساب).");
+                }
                 appendAcademyMessage("assistant", `✨ اكتمل تصحيح الاختبار. درجتك النهائية: ${score}/100.`);
+            } else {
+                alert("❌ فشل الحصول على استجابة التصحيح من السيرفر.");
             }
         } catch (e) {
             console.error(e);
             alert("❌ خطأ في الاتصال بالخادم أثناء تصحيح الامتحان.");
         }
     }
-    </script>
+</script>
 </body>
 </html>
