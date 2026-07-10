@@ -6740,11 +6740,19 @@ ${contextData}
             academyScenario = predefinedScenarios[Math.floor(Math.random() * predefinedScenarios.length)];
             document.getElementById('academy-scenario-desc').innerHTML = `<b>${academyScenario.title}</b><br><br>${academyScenario.desc}`;
             
-            // تهيئة حوار العميل
+            // تهيئة حوار العميل وتعطيل المدخلات مؤقتاً
+            const input = document.getElementById('academy-text-input');
+            input.disabled = true;
+            input.placeholder = "⏳ جاري بدء محاكاة العميل... يرجى الانتظار...";
             appendAcademyMessage("assistant", "جاري تشغيل محاكاة العميل... يرجى الانتظار لحين بدء الحوار.");
             
             // استدعاء الذكاء الاصطناعي لبدء الحوار بناءً على السيناريو
             await getAIClientResponse("ابدأ المحادثة واكتب ردك الأول كعميل بناءً على السيناريو الخاص بك بالعامية المصرية الصريحة والقصيرة.");
+            
+            // تفعيل المدخلات بعد بدء الحوار بنجاح
+            input.disabled = false;
+            input.placeholder = "اكتب ردك ومحاولتك لإقناع العميل هنا...";
+            input.focus();
         } 
         else if (mode === 'course') {
             document.getElementById('academy-workspace-title').textContent = "كورس المبيعات التفاعلي نشط 📖";
@@ -6790,24 +6798,38 @@ ${contextData}
     async function sendAcademyMessage() {
         const input = document.getElementById('academy-text-input');
         const text = input.value.trim();
-        if (!text) return;
+        if (!text || input.disabled) return;
         
         input.value = '';
+        input.disabled = true;
+        input.placeholder = "⏳ جاري تفكير العميل وكتابة رده...";
+        
         appendAcademyMessage("user", text);
 
         if (academyMode === 'roleplay') {
-            // محاكاة العميل الصعب يرد على كلام الموظف
-            await getAIClientResponse(text);
+            try {
+                await getAIClientResponse(text);
+            } finally {
+                input.disabled = false;
+                input.placeholder = "اكتب ردك ومحاولتك لإقناع العميل هنا...";
+                input.focus();
+            }
         } 
         else if (academyMode === 'exam') {
-            // حفظ إجابة الامتحان
-            examAnswers.push({ objection: examObjections[examStep], answer: text });
-            examStep++;
-            if (examObjections[examStep]) {
-                loadExamQuestion();
-            } else {
-                // انتهاء أسئلة الامتحان، تشغيل التقييم التلقائي
-                triggerExamEvaluation();
+            try {
+                // حفظ إجابة الامتحان
+                examAnswers.push({ objection: examObjections[examStep], answer: text });
+                examStep++;
+                if (examObjections[examStep]) {
+                    loadExamQuestion();
+                } else {
+                    // انتهاء أسئلة الامتحان، تشغيل التقييم التلقائي
+                    triggerExamEvaluation();
+                }
+            } finally {
+                input.disabled = false;
+                input.placeholder = "اكتب ردك ومحاولتك لإقناع العميل هنا...";
+                input.focus();
             }
         }
     }
@@ -6815,9 +6837,12 @@ ${contextData}
     // --- محاكاة العميل عبر Claude / Groq ---
     async function getAIClientResponse(userMessage) {
         const apiBase = getApiBaseUrl();
-        // سيستم برومبت مختصر لتجنب خطأ 413 (حجم الطلب كبير)
         const scenarioInfo = (academyScenario.system || '').substring(0, 180);
-        const systemPrompt = `عميل ليموزين مصري متشكك. ${scenarioInfo}. ردود قصيرة بالعامية. مقاوم للحجز.`;
+        // سيستم برومبت شديد الصرامة لتحديد دور العميل ومنع تقمص دور الموظف
+        const systemPrompt = `أنت تلعب دور عميل ليموزين مصري حقيقي متشكك وصعب. السيناريو: [ ${scenarioInfo} ].
+مهم: الطرف الآخر (المستخدم) هو موظف المبيعات بالشركة.
+- لا تقمص دور موظف المبيعات بأي شكل. أنت العميل المعترض.
+- ردودك بالعامية المصرية الصريحة والقصيرة جداً (سطر واحد فقط) ومقاومة للحجز.`;
 
         // آخر 6 رسائل فقط مع تقليص المحتوى لتجنب 413
         const skipMsg = "جاري تشغيل محاكاة العميل... يرجى الانتظار لحين بدء الحوار.";
@@ -6833,7 +6858,7 @@ ${contextData}
                 content: 'ابدأ المحادثة كعميل واكتب ردك الأول فقط باختصار شديد بالعامية المصرية.'
             });
         }
-        // محاولة الطلب مع إعادة المحاولة عند 429
+        
         const MAX_RETRIES = 2;
         for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
             try {
@@ -6855,7 +6880,6 @@ ${contextData}
                         const waitSec = (attempt + 1) * 4;
                         appendAcademyMessage("assistant", `⏳ الذكاء الاصطناعي مشغول قليلاً، جاري إعادة المحاولة خلال ${waitSec} ثواني...`);
                         await new Promise(r => setTimeout(r, waitSec * 1000));
-                        // احذف رسالة الانتظار من الـ chatbox
                         const chatBox = document.getElementById('academy-chat-box');
                         if (chatBox && chatBox.lastElementChild) chatBox.removeChild(chatBox.lastElementChild);
                         continue;
@@ -6878,7 +6902,7 @@ ${contextData}
                 } else {
                     appendAcademyMessage("assistant", "⚠️ حدث خطأ في استجابة الذكاء الاصطناعي.");
                 }
-                return; // نجاح — الخروج من الحلقة
+                return;
 
             } catch (e) {
                 if (attempt === MAX_RETRIES) {

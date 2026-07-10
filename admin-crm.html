@@ -618,6 +618,20 @@
 
         <!-- صفحة تقارير تدريب الموظفين -->
         <div id="page-training-reports" class="page-section hidden">
+            <!-- صندوق ضبط السيرفر الخاص بصفحة التقارير لو غير مفعّل -->
+            <div id="training-server-warning-box" class="glass-panel p-4 mb-6 border-b-4 border-amber-500 bg-amber-50 hidden">
+                <p class="text-amber-700 text-xs font-black uppercase mb-2">⚠️ إعدادات السيرفر مطلوبة لعرض التقارير</p>
+                <div class="flex gap-2">
+                    <input type="text" id="training-staff-api-url" placeholder="ضع رابط ngrok هنا (مثال: https://xxxx.ngrok-free.app)" 
+                           class="flex-1 text-xs p-2.5 rounded-lg border border-amber-300 focus:border-amber-500 outline-none bg-white">
+                    <button onclick="saveTrainingApiUrl()" class="bg-amber-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-amber-700 transition shadow-lg shadow-amber-100">
+                        <i class="fas fa-save"></i> حفظ الرابط
+                    </button>
+                </div>
+                <p class="text-[10px] text-amber-600 mt-2 font-bold">
+                    <i class="fas fa-info-circle mr-1"></i> يرجى إدخال رابط ngrok المحدث الخاص بالسيرفر لكي نتمكن من جلب درجات وتقارير تدريب الموظفين.
+                </p>
+            </div>
             <h2 class="text-2xl font-bold mb-6"><i class="fas fa-graduation-cap text-indigo-600 ml-2"></i>أكاديمية التدريب ومتابعة المبيعات</h2>
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -8454,9 +8468,24 @@ async function loadWhatsAppSettings() {
 
     async function loadTrainingReports() {
         const apiBase = getStaffApiBaseUrl();
-        if (!apiBase) return;
-
         const tableBody = document.getElementById('training-reports-table-body');
+        const warningBox = document.getElementById('training-server-warning-box');
+        
+        if (!apiBase) {
+            // إظهار صندوق التحذير والطلب من المستخدم ضبط رابط ngrok
+            if (warningBox) {
+                warningBox.classList.remove('hidden');
+                document.getElementById('training-staff-api-url').value = localStorage.getItem('mod_api_url') || localStorage.getItem('staff_api_url') || '';
+            }
+            tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-amber-600 font-bold"><i class="fas fa-exclamation-triangle ml-2"></i>يرجى كتابة وحفظ رابط السيرفر (ngrok) من الأعلى أولاً للتمكن من عرض تقارير التدريب والدرجات.</td></tr>';
+            return;
+        }
+
+        // إخفاء صندوق التحذير إذا وجد الرابط
+        if (warningBox) {
+            warningBox.classList.add('hidden');
+        }
+
         tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-slate-400"><i class="fas fa-spinner fa-spin ml-2"></i>جاري تحميل تقارير التدريب...</td></tr>';
 
         try {
@@ -8467,12 +8496,33 @@ async function loadWhatsAppSettings() {
                 cachedTrainingReports = await res.json();
                 renderTrainingReports();
             } else {
-                tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-rose-500">❌ فشل تحميل البيانات من السيرفر.</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-rose-500">❌ فشل تحميل البيانات من السيرفر. (الرقم الحالي غير صالح أو السيرفر مغلق)</td></tr>';
             }
         } catch (e) {
             console.error(e);
-            tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-rose-500">❌ خطأ في الاتصال بالخادم.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-rose-500">❌ خطأ في الاتصال بالخادم. تأكد من تشغيل السيرفر ورابط ngrok المكتوب.</td></tr>';
         }
+    }
+
+    function saveTrainingApiUrl() {
+        const urlInput = document.getElementById('training-staff-api-url');
+        if (!urlInput) return;
+        const url = urlInput.value.trim();
+        if (url === '') {
+            alert('يرجى إدخال رابط ngrok صالح.');
+            return;
+        }
+        
+        // حفظ في كلي المفتاحين لضمان مزامنة الإدارة والموديتور
+        localStorage.setItem('staff_api_url', url);
+        localStorage.setItem('mod_api_url', url);
+        
+        // تحديث حقل الإدخال الثاني أيضاً للتزامن البصري
+        const otherInput = document.getElementById('staff-api-url');
+        if (otherInput) otherInput.value = url;
+        
+        alert('✅ تم حفظ رابط السيرفر بنجاح وجاري تحميل تقارير التدريب...');
+        loadTrainingReports();
     }
 
     function renderTrainingReports() {
