@@ -1771,7 +1771,7 @@
             loadStaffStats();
         }
 
-        async function loadStaffStats() {
+        async async function loadStaffStats() {
             try {
                 const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
                 const { data: res } = await sbClient.from('google_reservations')
@@ -1789,18 +1789,22 @@
 
                     const list = document.getElementById('staff-performance-list');
                     const card = document.getElementById('staff-performance-card');
-                    list.innerHTML = Object.entries(stats)
-                        .sort((a,b) => b[1].total - a[1].total)
-                        .map(([name, s]) => `
-                            <div class="flex justify-between items-center border-b border-indigo-100 pb-1">
-                                <span class="font-bold text-slate-700">${name}</span>
-                                <div class="flex gap-2">
-                                    <span class="bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded font-bold">${s.total} حجز</span>
-                                    <span class="bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded font-bold">${s.vip} VIP</span>
+                    if (list) {
+                        list.innerHTML = Object.entries(stats)
+                            .sort((a,b) => b[1].total - a[1].total)
+                            .map(([name, s]) => `
+                                <div class="flex justify-between items-center border-b border-indigo-100 pb-1">
+                                    <span class="font-bold text-slate-700">${name}</span>
+                                    <div class="flex gap-2">
+                                        <span class="bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded font-bold">${s.total} حجز</span>
+                                        <span class="bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded font-bold">${s.vip} VIP</span>
+                                    </div>
                                 </div>
-                            </div>
-                        `).join('');
-                    card.classList.remove('hidden');
+                            `).join('');
+                    }
+                    if (card) {
+                        card.classList.remove('hidden');
+                    }
                 }
             } catch (e) {
                 console.error('Staff Stats Error:', e);
@@ -8446,6 +8450,8 @@ async function loadWhatsAppSettings() {
         } catch (e) {
             alert('❌ خطأ: ' + e.message);
         }
+    }
+
 
 
     // ==========================================
