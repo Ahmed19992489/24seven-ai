@@ -7010,14 +7010,11 @@ ${contextData}
         const apiBase = getApiBaseUrl();
         const systemPrompt = `أنت مقيم مبيعات ليموزين محترف وخبير ومطور للأداء الكوادر البيعية. قم بتحليل المحادثة التالية بين موظف المبيعات والعميل بتمعن.
         قم بتقييم الموظف من 100 بناءً على إبرازه للقيمة والأمان والسيستم والسيارات الحديثة وإقناع العميل، واكتب له تقريراً تحليلياً مفصلاً ومفيداً جداً باللغة العربية يوضح:
-        1. ❌ أخطاء الموظف بالتفصيل خلال المحادثة (الردود غير الاحترافية أو إهمال القيمة).
-        2. 🔍 تحليل أسلوب الموظف (كيفية إبراز مميزات الشركة والسيستم وسلامة الـ GPS).
-        3. 💡 ما الذي يجب على الموظف العمل عليه بالتفصيل لتطوير مهاراته وتفادي الأخطاء مستقبلاً.
-        يجب أن تكون إجابتك بتنسيق JSON نظيف وصحيح فقط كالتالي (بدون أي نصوص إضافية خارج الـ JSON):
-        {
-          "score": 85,
-          "report": "<b>❌ أخطاء الموظف في الحوار:</b><br>- ...<br><br><b>🔍 تحليل الأداء والأسلوب:</b><br>- ...<br><br><b>💡 خطة التطوير والنقاط المطلوبة للتحسن بالتفصيل:</b><br>- ..."
-        }`;
+        1. اخطاء الموظف بالتفصيل خلال المحادثة (الردود غير الاحترافية أو إهمال القيمة).
+        2. تحليل أسلوب الموظف (كيفية إبراز مميزات الشركة والسيستم وسلامة الـ GPS).
+        3. ما الذي يجب على الموظف العمل عليه بالتفصيل لتطوير مهاراته وتفادي الأخطاء مستقبلاً.
+        يجب أن تكون إجابتك بتنسيق JSON صحيح فقط كالتالي بدون أي HTML tags او رموز خاصة داخل النصوص، استخدم فقط نص عادي مع سطر جديد \n بين الفقرات:
+        {"score": 85, "report": "== اخطاء الموظف في الحوار ==\n- خطأ 1\n- خطأ 2\n\n== تحليل الاداء والاسلوب ==\n- ...\n\n== خطة التطوير والنقاط المطلوبة ==\n- ..."}`;
 
         try {
             const res = await fetch(`${apiBase}/api/ai_chat`, {
@@ -7034,30 +7031,39 @@ ${contextData}
                 let score = 70;
                 let report = "تم التقييم بنجاح.";
                 
-                // محلل فائق القوة لتفادي أخطاء الاقتباس والسطور الجديدة من الذكاء الاصطناعي
+                // محلل قوي ومتعدد الطبقات لاستخراج الدرجة والتقرير من رد Gemini
+                const rawAnswer = data.answer || '';
+                
+                // الطبقة 1: محاولة استخراج الـ score مباشرة بـ regex من أي مكان في الرد
+                const scoreMatchDirect = rawAnswer.match(/"score"\s*:\s*(\d{1,3})/i)
+                                      || rawAnswer.match(/score[^\d]*(\d{1,3})/i);
+                if (scoreMatchDirect) {
+                    const parsedScore = parseInt(scoreMatchDirect[1]);
+                    if (parsedScore >= 0 && parsedScore <= 100) score = parsedScore;
+                }
+                
+                // الطبقة 2: محاولة تحليل JSON كامل بعد تنظيف HTML
                 try {
-                    const jsonStr = data.answer.substring(data.answer.indexOf('{'), data.answer.lastIndexOf('}') + 1);
-                    const cleanedJson = jsonStr.replace(/"([^"\\]*(?:\\.[^"\\]*)*)"/gs, (match, p1) => {
-                        return '"' + p1.replace(/\n/g, '\\n').replace(/\r/g, '\\r') + '"';
-                    });
-                    const result = JSON.parse(cleanedJson);
-                    score = result.score || 0;
-                    report = result.report || "تم التقييم بنجاح.";
+                    // إزالة HTML tags للحصول على JSON نظيف
+                    const cleanForParse = rawAnswer
+                        .replace(/<br\s*\/?>/gi, '\\n')
+                        .replace(/<\/?(b|i|u|strong|em|p|div|span)[^>]*>/gi, '')
+                        .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+                    const jsonStr = cleanForParse.substring(cleanForParse.indexOf('{'), cleanForParse.lastIndexOf('}') + 1);
+                    if (jsonStr.length > 5) {
+                        const result = JSON.parse(jsonStr);
+                        if (result.score !== undefined) score = parseInt(result.score) || score;
+                        if (result.report) report = result.report;
+                    }
                 } catch (pe) {
-                    console.warn("[JSON Parse Warning] Trying RegEx parsing fallback for roleplay...", pe);
-                    const scoreMatch = data.answer.match(/"score"\s*:\s*(\d+)/i) || data.answer.match(/SCORE:\s*(\d+)/i) || data.answer.match(/score:\s*(\d+)/i);
-                    score = scoreMatch ? parseInt(scoreMatch[1]) : 70;
-                    
-                    const reportMatch = data.answer.match(/"report"\s*:\s*"([\s\S]*?)"\s*(?:,|\})/i);
-                    if (reportMatch) {
-                        report = reportMatch[1];
+                    // الطبقة 3: استخراج التقرير من النص الخام
+                    console.warn("[Eval JSON Parse] Falling back to raw text extraction for roleplay", pe.message);
+                    const reportIdx = rawAnswer.search(/"report"\s*:/i);
+                    if (reportIdx >= 0) {
+                        report = rawAnswer.substring(reportIdx + 9)
+                            .replace(/^\s*"/, '').replace(/"\s*\}\s*$/, '').trim();
                     } else {
-                        const reportIdx = data.answer.search(/"report"\s*:/i);
-                        if (reportIdx >= 0) {
-                            report = data.answer.substring(reportIdx).replace(/^"report"\s*:\s*"/i, '').replace(/"\s*\}\s*$/, '').trim();
-                        } else {
-                            report = data.answer;
-                        }
+                        report = rawAnswer.replace(/\{[\s\S]*?"score"\s*:\s*\d+[\s\S]*?,\s*"report"\s*:/i, '').trim() || rawAnswer;
                     }
                 }
 
@@ -7114,14 +7120,11 @@ ${contextData}
 
         const apiBase = getApiBaseUrl();
         const systemPrompt = `أنت مقيم مبيعات ليموزين محترف وخبير ومطور كوادر. قم بتقييم إجابات الموظف لثلاث مواقف عملية بتمعن واكتب الدرجة الكلية من 100 مع تقرير تقييم تفصيلي باللغة العربية يوضح:
-        1. ❌ أخطاء الموظف بالتفصيل في الرد على كل موقف.
-        2. 🔍 تحليل أسلوب الرد والبيع بالقيمة بدلاً من السعر.
-        3. 💡 النقاط المحددة التي يجب على الموظف العمل عليها بالتفصيل للتحسن وتطوير أدائه.
-        يجب أن تكون إجابتك بتنسيق JSON نظيف وصحيح فقط كالتالي:
-        {
-          "score": 90,
-          "report": "<b>❌ أخطاء الموظف في الإجابات:</b><br>- ...<br><br><b>🔍 تحليل الأداء والأسلوب:</b><br>- ...<br><br><b>💡 خطة التطوير والنقاط المطلوبة للتحسن بالتفصيل:</b><br>- ..."
-        }`;
+        1. اخطاء الموظف بالتفصيل في الرد على كل موقف.
+        2. تحليل أسلوب الرد والبيع بالقيمة بدلاً من السعر.
+        3. النقاط المحددة التي يجب على الموظف العمل عليها بالتفصيل للتحسن وتطوير أدائه.
+        يجب أن تكون إجابتك بتنسيق JSON صحيح فقط كالتالي بدون أي HTML tags او رموز خاصة داخل النصوص، استخدم فقط نص عادي مع سطر جديد \n بين الفقرات:
+        {"score": 90, "report": "== اخطاء الموظف في الاجابات ==\n- خطأ 1\n\n== تحليل الاداء ==\n- ...\n\n== خطة التطوير ==\n- ..."}`;
 
         const messages = [
             { role: "user", content: JSON.stringify(examAnswers) }
@@ -7141,30 +7144,37 @@ ${contextData}
                 let score = 70;
                 let report = "تم تصحيح الامتحان.";
 
-                // محلل فائق القوة لتفادي أخطاء الاقتباس والسطور الجديدة من الذكاء الاصطناعي
+                // محلل قوي ومتعدد الطبقات لاستخراج الدرجة والتقرير من رد Gemini
+                const rawAnswer = data.answer || '';
+                
+                // الطبقة 1: استخراج الـ score مباشرة بـ regex
+                const scoreMatchDirect = rawAnswer.match(/"score"\s*:\s*(\d{1,3})/i)
+                                      || rawAnswer.match(/score[^\d]*(\d{1,3})/i);
+                if (scoreMatchDirect) {
+                    const parsedScore = parseInt(scoreMatchDirect[1]);
+                    if (parsedScore >= 0 && parsedScore <= 100) score = parsedScore;
+                }
+                
+                // الطبقة 2: محاولة تحليل JSON كامل بعد تنظيف HTML
                 try {
-                    const jsonStr = data.answer.substring(data.answer.indexOf('{'), data.answer.lastIndexOf('}') + 1);
-                    const cleanedJson = jsonStr.replace(/"([^"\\]*(?:\\.[^"\\]*)*)"/gs, (match, p1) => {
-                        return '"' + p1.replace(/\n/g, '\\n').replace(/\r/g, '\\r') + '"';
-                    });
-                    const result = JSON.parse(cleanedJson);
-                    score = result.score || 0;
-                    report = result.report || "تم تصحيح الامتحان.";
+                    const cleanForParse = rawAnswer
+                        .replace(/<br\s*\/?>/gi, '\\n')
+                        .replace(/<\/?(b|i|u|strong|em|p|div|span)[^>]*>/gi, '')
+                        .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+                    const jsonStr = cleanForParse.substring(cleanForParse.indexOf('{'), cleanForParse.lastIndexOf('}') + 1);
+                    if (jsonStr.length > 5) {
+                        const result = JSON.parse(jsonStr);
+                        if (result.score !== undefined) score = parseInt(result.score) || score;
+                        if (result.report) report = result.report;
+                    }
                 } catch (pe) {
-                    console.warn("[JSON Parse Warning] Trying RegEx parsing fallback for exam...", pe);
-                    const scoreMatch = data.answer.match(/"score"\s*:\s*(\d+)/i) || data.answer.match(/SCORE:\s*(\d+)/i) || data.answer.match(/score:\s*(\d+)/i);
-                    score = scoreMatch ? parseInt(scoreMatch[1]) : 70;
-                    
-                    const reportMatch = data.answer.match(/"report"\s*:\s*"([\s\S]*?)"\s*(?:,|\})/i);
-                    if (reportMatch) {
-                        report = reportMatch[1];
+                    console.warn("[Exam JSON Parse] Falling back to raw text extraction", pe.message);
+                    const reportIdx = rawAnswer.search(/"report"\s*:/i);
+                    if (reportIdx >= 0) {
+                        report = rawAnswer.substring(reportIdx + 9)
+                            .replace(/^\s*"/, '').replace(/"\s*\}\s*$/, '').trim();
                     } else {
-                        const reportIdx = data.answer.search(/"report"\s*:/i);
-                        if (reportIdx >= 0) {
-                            report = data.answer.substring(reportIdx).replace(/^"report"\s*:\s*"/i, '').replace(/"\s*\}\s*$/, '').trim();
-                        } else {
-                            report = data.answer;
-                        }
+                        report = rawAnswer;
                     }
                 }
 
