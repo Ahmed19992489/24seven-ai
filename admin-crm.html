@@ -6713,48 +6713,30 @@
         };
 
         function getStaffApiBaseUrl() {
-            let customUrl = localStorage.getItem('staff_api_url');
-            if (!customUrl || customUrl.trim() === '') {
-                customUrl = localStorage.getItem('mod_api_url');
-            }
-            if (customUrl && customUrl.trim() !== '') {
-                return customUrl.trim().replace(/\/$/, '');
-            }
-
-            const loc = window.location;
-            if (loc.hostname.includes('24seven-ai.com') || loc.hostname.includes('github.io') || loc.hostname.includes('vercel.app')) {
-                return null;
-            }
-
-            if (loc.port === '3000' || loc.pathname.includes('admin-crm.html') || loc.pathname.includes('moderator') || loc.pathname.includes('dashboard')) {
-                return loc.origin;
-            }
-            if (loc.hostname === 'localhost' || loc.hostname === '127.0.0.1') {
-                return `http://localhost:3000`;
-            } else {
-                return loc.origin;
-            }
+        let customUrl = localStorage.getItem('staff_api_url');
+        if (!customUrl || customUrl.trim() === '') {
+            customUrl = localStorage.getItem('mod_api_url');
         }
-            
-            // Auto-detection: if we are on port 3000 or using the catch-all flask routes
-            const loc = window.location;
-            
-            // [Fix] لا تعتمد على الدومين الأساسي لأنه لا يستضيف الـ API الذي يعمل محلياً بالبايثون
-            if (loc.hostname.includes('24seven-ai.com') || loc.hostname.includes('github.io') || loc.hostname.includes('vercel.app')) {
-                return null;
-            }
-
-            if (loc.port === '3000' || loc.pathname.includes('admin-crm.html') || loc.pathname.includes('moderator') || loc.pathname.includes('dashboard')) {
-                return loc.origin; 
-            }
-            if (loc.hostname === 'localhost' || loc.hostname === '127.0.0.1') {
-                return `http://localhost:3000`;
-            } else {
-                return loc.origin; // Default to current origin instead of forcing :3000
-            }
+        if (customUrl && customUrl.trim() !== '') {
+            return customUrl.trim().replace(/\/$/, '');
         }
 
-        function saveStaffApiUrl() {
+        const loc = window.location;
+        if (loc.hostname.includes('24seven-ai.com') || loc.hostname.includes('github.io') || loc.hostname.includes('vercel.app')) {
+            return null;
+        }
+
+        if (loc.port === '3000' || loc.pathname.includes('admin-crm.html') || loc.pathname.includes('moderator') || loc.pathname.includes('dashboard')) {
+            return loc.origin;
+        }
+        if (loc.hostname === 'localhost' || loc.hostname === '127.0.0.1') {
+            return `http://localhost:3000`;
+        } else {
+            return loc.origin;
+        }
+    }
+
+    function saveStaffApiUrl() {
             const url = document.getElementById('staff-api-url').value;
             localStorage.setItem('staff_api_url', url);
             alert('✅ تم حفظ إعدادات السيرفر بنجاح.');
