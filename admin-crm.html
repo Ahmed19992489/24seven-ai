@@ -1771,7 +1771,7 @@
             loadStaffStats();
         }
 
-        async async function loadStaffStats() {
+        async function loadStaffStats() {
             try {
                 const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
                 const { data: res } = await sbClient.from('google_reservations')
