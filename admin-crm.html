@@ -6,6 +6,19 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
+    <!-- كاسر كاش تلقائي لـ GitHub Pages CDN - يضيف طابع زمني يتغير كل 10 دقائق -->
+    <script>
+    (function() {
+        try {
+            var url = new URL(window.location.href);
+            var timeSlot = Math.floor(Date.now() / 600000);
+            if (url.searchParams.get('t') != timeSlot) {
+                url.searchParams.set('t', timeSlot);
+                window.location.replace(url.toString());
+            }
+        } catch(e) {}
+    })();
+    </script>
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
