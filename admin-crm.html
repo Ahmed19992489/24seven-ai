@@ -554,9 +554,40 @@
                     <div class="glass-panel p-6 border-r-4 border-amber-500">
                         <h3 class="font-bold text-lg mb-4 text-slate-800"><i class="fas fa-edit ml-1 text-slate-400"></i> صياغة الرسالة الإعلانية</h3>
                         <div class="space-y-4">
+                            <!-- اختيار بوابة الإرسال -->
+                            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
+                                <label class="block text-xs font-bold text-slate-600">طريقة وبوابة الإرسال</label>
+                                <div class="flex flex-wrap gap-6">
+                                    <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
+                                        <input type="radio" name="marketing_gateway_crm" id="marketing-gateway-local" checked onclick="toggleMarketingMetaFields(false)" class="text-amber-500 focus:ring-amber-400">
+                                        <span>واتساب ويب المحلي (مجاني - مخاطر حظر) 📲</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
+                                        <input type="radio" name="marketing_gateway_crm" id="marketing-gateway-meta" onclick="toggleMarketingMetaFields(true)" class="text-amber-500 focus:ring-amber-400">
+                                        <span>ميتا كلاود API الرسمي (آمن 100% - يتطلب قالب) 🛡️</span>
+                                    </label>
+                                </div>
+
+                                <!-- حقول ميتا الإضافية (مخفية افتراضياً) -->
+                                <div id="marketing-meta-fields" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-200 pt-4">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-500 mb-1">اسم قالب ميتا المعتمد (Template Name) *</label>
+                                        <input type="text" id="marketing-template-name" placeholder="مثال: custom_offer_template" class="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-amber-500 text-xs">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-500 mb-1">كود اللغة (Language Code)</label>
+                                        <input type="text" id="marketing-template-lang" value="ar" placeholder="ar" class="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-amber-500 text-xs">
+                                    </div>
+                                    <div class="md:col-span-2">
+                                        <label class="block text-xs font-bold text-slate-500 mb-1">متغيرات القالب (Parameters - مفصولة بفاصلة ,)</label>
+                                        <input type="text" id="marketing-template-params" placeholder="مثال: أستاذ أحمد, 24Seven, خصم 10% (اتركها فارغة إذا لم يحتوي القالب على متغيرات)" class="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-amber-500 text-xs">
+                                    </div>
+                                </div>
+                            </div>
+
                             <div>
-                                <label class="block text-xs font-bold text-slate-500 mb-2">محتوى الرسالة التسويقية</label>
-                                <textarea id="marketing-message-text" rows="8" 
+                                <label id="marketing-message-label" class="block text-xs font-bold text-slate-500 mb-2">محتوى الرسالة التسويقية</label>
+                                <textarea id="marketing-message-text" rows="6" 
                                     placeholder="اكتب رسالتك التحفيزية هنا... مثال:
 أهلاً بك عميلنا العزيز من 24Seven! 🌟
 يسرنا أن نقدم لك كود خصم (GO24) للحصول على خصم 10% على رحلتك القادمة.
@@ -8403,17 +8434,45 @@ async function loadWhatsAppSettings() {
         }
     }
 
+    function toggleMarketingMetaFields(show) {
+        const fields = document.getElementById('marketing-meta-fields');
+        if (fields) {
+            if (show) {
+                fields.classList.remove('hidden');
+                document.getElementById('marketing-message-label').textContent = 'نص بديل للتقرير (لوصف العرض بالأدمن والشيت) *';
+            } else {
+                fields.classList.add('hidden');
+                document.getElementById('marketing-message-label').textContent = 'محتوى الرسالة التسويقية';
+            }
+        }
+    }
+
     async function startMarketingCampaign() {
         const apiBase = getStaffApiBaseUrl();
         if (!apiBase) return;
         
         const message = document.getElementById('marketing-message-text').value.trim();
-        if (!message) {
+        const useMeta = document.getElementById('marketing-gateway-meta').checked;
+        const templateName = document.getElementById('marketing-template-name').value.trim();
+        const templateLang = document.getElementById('marketing-template-lang').value.trim() || 'ar';
+        const templateParamsRaw = document.getElementById('marketing-template-params').value.trim();
+        
+        if (!useMeta && !message) {
             alert('⚠️ يرجى كتابة صيغة الرسالة الإعلانية أولاً.');
             return;
         }
+        if (useMeta && !templateName) {
+            alert('⚠️ يرجى إدخال اسم قالب ميتا المعتمد.');
+            return;
+        }
         
-        if (!confirm('هل أنت متأكد من رغبتك في إطلاق هذه الحملة لجميع الأرقام المسجلة بالسيستم؟\nسيتم استخدام فترات تأخير عشوائية (8-15 ثانية) لحماية حسابك من الحظر.')) return;
+        const templateParams = templateParamsRaw ? templateParamsRaw.split(',').map(p => p.trim()) : [];
+        
+        const confirmMsg = useMeta 
+            ? `هل أنت متأكد من إطلاق هذه الحملة الرسمية عبر Meta API باستخدام القالب "${templateName}"؟\nسيتم الإرسال بأمان كامل وبسرعة فائقة (تأخير 1-2 ثانية).`
+            : `هل أنت متأكد من رغبتك في إطلاق هذه الحملة لجميع الأرقام المسجلة بالسيستم؟\nسيتم استخدام فترات تأخير عشوائية (8-15 ثانية) لحماية حسابك من الحظر.`;
+            
+        if (!confirm(confirmMsg)) return;
         
         try {
             const sendBtn = document.getElementById('marketing-send-btn');
@@ -8423,7 +8482,13 @@ async function loadWhatsAppSettings() {
             const res = await fetch(`${apiBase}/api/marketing/broadcast`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
-                body: JSON.stringify({ message: message })
+                body: JSON.stringify({ 
+                    message: message,
+                    use_meta: useMeta,
+                    template_name: templateName,
+                    template_lang: templateLang,
+                    template_params: templateParams
+                })
             });
             
             const data = await res.json();
@@ -8431,14 +8496,16 @@ async function loadWhatsAppSettings() {
                 alert(`🚀 تم بدء تشغيل الحملة بنجاح لعدد ${data.total_targets || 0} عميل في الخلفية!`);
                 loadMarketingStatus();
             } else {
-                alert('❌ فشل بدء الحملة: ' + data.message);
+                alert('❌ فشل بدء الحملة: ' + (data ? data.message : 'خطأ غير معروف'));
             }
         } catch (e) {
             alert('❌ خطأ في الاتصال بالخادم: ' + e.message);
         } finally {
             const sendBtn = document.getElementById('marketing-send-btn');
-            sendBtn.disabled = false;
-            sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> بدء إرسال الحملة';
+            if (sendBtn) {
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> بدء إرسال الحملة';
+            }
         }
     }
 
