@@ -320,8 +320,12 @@ function cleanupSession(id) {
     if (activeSessions[id]) {
         try {
             activeSessions[id].sock.ev.removeAllListeners();
-            activeSessions[id].sock.logout();
-        } catch (e) {}
+            activeSessions[id].sock.logout().catch(err => {
+                console.log(`[Gateway Debug] Logout promise ignored for ${id}: ${err.message}`);
+            });
+        } catch (e) {
+            console.log(`[Gateway Debug] Error in logout call for ${id}: ${e.message}`);
+        }
         delete activeSessions[id];
     }
     
