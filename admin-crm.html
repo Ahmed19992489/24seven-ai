@@ -193,6 +193,10 @@
                 class="sidebar-item p-3 rounded-lg flex items-center gap-3">
                 <i class="fab fa-whatsapp w-5 text-center text-emerald-600 font-bold"></i> ربط أرقام الواتساب
             </div>
+            <div onclick="showPage('sniper-bot')" id="nav-sniper-bot"
+                class="sidebar-item p-3 rounded-lg flex items-center gap-3">
+                <i class="fas fa-crosshairs w-5 text-center text-red-600 animate-pulse"></i> قناص التشغيلات
+            </div>
 
             <p class="text-[10px] font-bold text-slate-400 mt-4 mb-1 px-3">المالية والموارد</p>
             <div onclick="showPage('finance')" id="nav-finance"
@@ -956,6 +960,117 @@
             </div>
         </div>
         
+        <!-- ========== صفحة قناص التشغيلات (WhatsApp & Telegram Sniper Bot) ========== -->
+        <div id="page-sniper-bot" class="page-section hidden h-full overflow-y-auto p-6">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold flex items-center gap-3 text-slate-800">
+                        <i class="fas fa-crosshairs text-red-600 animate-pulse"></i>
+                        نظام قناص التشغيلات الذكي (Sniper Bot)
+                    </h2>
+                    <p class="text-slate-500 text-sm mt-1">تصفية والتقاط تشغيلات جروبات الواتساب وإرسال تنبيهات تليجرام فورية</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <!-- الجزء الأيمن: الفلاتر النشطة والإعدادات -->
+                <div class="xl:col-span-1 flex flex-col gap-6">
+                    
+                    <!-- لوحة التحكم بالفلاتر -->
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                        <h3 class="font-bold text-lg border-b pb-3 mb-4 text-slate-800 flex items-center gap-2">
+                            <i class="fas fa-filter text-amber-500"></i> فلاتر القنص النشطة
+                        </h3>
+                        
+                        <!-- نموذج إضافة فلتر جديد -->
+                        <form id="add-sniper-filter-form" onsubmit="addSniperFilter(event)" class="space-y-4 mb-6">
+                            <div>
+                                <label class="text-xs font-bold text-slate-600 block mb-1">مكان التحرك (Origin)</label>
+                                <input type="text" id="sniper-origin" placeholder="مثال: Cairo أو القاهرة" required class="input-std text-sm" />
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-slate-600 block mb-1">مكان الوصول (Destination)</label>
+                                <input type="text" id="sniper-destination" placeholder="مثال: Alexandria أو الاسكندرية" required class="input-std text-sm" />
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-slate-600 block mb-1">نوع السيارة</label>
+                                <select id="sniper-car-type" class="input-std text-sm">
+                                    <option value="any">أي نوع سيارة (All)</option>
+                                    <option value="sedan">سيدان (Corolla, Cerato, Elantra)</option>
+                                    <option value="minivan">ميني فان / SUV (Xpander, Rush, Tiggo 8)</option>
+                                    <option value="van">فان (HiAce)</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="w-full bg-slate-900 text-white font-bold py-2.5 rounded-xl text-sm hover:bg-slate-800 transition flex items-center justify-center gap-2 shadow-sm">
+                                <i class="fas fa-plus-circle"></i> إضافة فلتر قنص
+                            </button>
+                        </form>
+
+                        <!-- قائمة الفلاتر -->
+                        <div id="sniper-filters-list" class="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                            <div class="text-slate-400 text-center text-xs py-4">لا توجد فلاتر قنص نشطة حالياً</div>
+                        </div>
+                    </div>
+
+                    <!-- إعدادات تليجرام وبوت القناص -->
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                        <h3 class="font-bold text-lg border-b pb-3 mb-4 text-slate-800 flex items-center gap-2">
+                            <i class="fab fa-telegram text-blue-500"></i> إعدادات الربط والتلجرام
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-xs font-bold text-slate-600 block mb-1">توكن البوت (Telegram Bot Token)</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="sniper-tg-token" readonly class="input-std text-xs bg-slate-50 text-slate-500 cursor-not-allowed" />
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="text-xs font-bold text-slate-600 block mb-1">حساب الاستقبال (Chat ID / Channel)</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="sniper-tg-chatid" placeholder="سيتم تعيينه تلقائياً" readonly class="input-std text-sm bg-slate-50 text-slate-500" />
+                                </div>
+                                <p class="text-[10px] text-slate-400 mt-1">يتم التسجيل بمجرد فتح البوت في تلجرام وإرسال /start</p>
+                            </div>
+                            
+                            <div class="p-3 bg-blue-50 text-blue-800 rounded-xl text-xs space-y-1">
+                                <p class="font-bold">💡 طريقة تفعيل الإشعارات:</p>
+                                <ol class="list-decimal list-inside space-y-1 mt-1">
+                                    <li>ابحث في تلجرام عن اسم البوت الخاص بك.</li>
+                                    <li>اضغط على <b>Start</b> أو أرسل <b>/start</b>.</li>
+                                    <li>سيقوم النظام بتسجيل الـ Chat ID هنا تلقائياً وتفعيل البث الحي.</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- الجزء الأيسر: جدول البث المباشر للرحلات الملتقطة -->
+                <div class="xl:col-span-2 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col h-[calc(100vh-140px)]">
+                    <div class="flex justify-between items-center border-b pb-3 mb-4 shrink-0">
+                        <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2">
+                            <i class="fas fa-satellite text-emerald-500"></i> البث الحي للتشغيلات المرصودة
+                        </h3>
+                        <div class="flex gap-1 bg-slate-100 p-1 rounded-lg text-xs">
+                            <button onclick="filterSniperTrips('all')" id="trip-btn-all" class="px-3 py-1.5 rounded-md font-bold bg-white text-slate-800 shadow-sm">الكل</button>
+                            <button onclick="filterSniperTrips('matched')" id="trip-btn-matched" class="px-3 py-1.5 rounded-md font-bold text-slate-600">المطابقة فقط</button>
+                            <button onclick="filterSniperTrips('sale')" id="trip-btn-sale" class="px-3 py-1.5 rounded-md font-bold text-slate-600">بيع</button>
+                            <button onclick="filterSniperTrips('request')" id="trip-btn-request" class="px-3 py-1.5 rounded-md font-bold text-slate-600">طلب</button>
+                        </div>
+                    </div>
+
+                    <!-- حاوية الرسائل الملتقطة -->
+                    <div id="sniper-trips-container" class="flex-1 overflow-y-auto space-y-4 pr-1">
+                        <div class="text-slate-400 text-center py-10 flex flex-col items-center gap-2">
+                            <i class="fas fa-radar text-4xl text-slate-300 animate-pulse"></i>
+                            <span class="text-sm">في انتظار التقاط أول تشغيلة من جروبات الواتساب...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- ========== صفحة إعدادات أرقام الواتساب (WhatsApp Multi-Device Settings) ========== -->
         <div id="page-whatsapp-settings" class="page-section hidden h-full">
             <div class="flex justify-between items-center mb-6">
@@ -1806,6 +1921,7 @@
             if (pageId === 'marketing') loadMarketingStatus();
             if (pageId === 'training-reports') loadTrainingReports();
             if (pageId === 'whatsapp-settings') { loadWhatsAppSettings(); resetWhatsappDetailsPanel(); }
+            if (pageId === 'sniper-bot') loadSniperBotPage();
             if (pageId === 'ai-assistant') {
                  // No specific load needed, but good to scroll to bottom
                  setTimeout(() => {
@@ -8785,48 +8901,238 @@ async function loadWhatsAppSettings() {
             }).join('');
         }
 
-        const modal = document.createElement('div');
-        modal.id = 'training-detail-modal';
-        modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4';
-        modal.innerHTML = `
-            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
-                <!-- الهيدر -->
-                <div class="flex justify-between items-center p-5 border-b border-slate-100 bg-slate-50">
-                    <div>
-                        <h3 class="text-base font-black text-slate-800 flex items-center gap-2">
-                            <i class="fas fa-graduation-cap text-indigo-500"></i> تقرير المبيعات للموظف: ${report.employee_name}
-                        </h3>
-                        <p class="text-[10px] text-slate-400 mt-1 font-bold">نوع التقييم: ${typeArabic} | النتيجة: ${report.score}/100</p>
+        document.body.appendChild(modal);
+        modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    }
+
+    // ========================================================
+    // 🎯 Sniper Bot Section Javascript
+    // ========================================================
+    let currentSniperTab = 'all';
+    let allSniperTrips = [];
+
+    async function loadSniperBotPage() {
+        await Promise.all([
+            loadSniperFilters(),
+            loadSniperSettings(),
+            loadSniperTrips()
+        ]);
+        
+        // Auto-refresh loops for live logs
+        if (!window.sniperInterval) {
+            window.sniperInterval = setInterval(() => {
+                if (!document.getElementById('page-sniper-bot').classList.contains('hidden')) {
+                    loadSniperTrips();
+                }
+            }, 7000);
+        }
+    }
+
+    async function loadSniperFilters() {
+        try {
+            const res = await fetch('/api/sniper/filters');
+            if (!res.ok) throw new Error(await res.text());
+            const filters = await res.json();
+            
+            const listDiv = document.getElementById('sniper-filters-list');
+            if (!filters || filters.length === 0) {
+                listDiv.innerHTML = '<div class="text-slate-400 text-center text-xs py-4">لا توجد فلاتر قنص نشطة حالياً</div>';
+                return;
+            }
+            
+            let html = '';
+            const carTypeMap = {
+                'sedan': 'سيدان',
+                'minivan': 'ميني فان / SUV',
+                'van': 'فان (هاي إس)',
+                'coaster': 'كوستر'
+            };
+            
+            filters.forEach(f => {
+                const carText = f.car_type && f.car_type !== 'any' ? carTypeMap[f.car_type] || f.car_type : 'أي سيارة';
+                html += `
+                    <div class="flex justify-between items-center bg-slate-50 hover:bg-slate-100 p-3 rounded-xl border border-slate-100 transition text-right">
+                        <div class="text-xs">
+                            <div class="font-bold text-slate-800">${f.origin} <i class="fas fa-arrow-left text-[9px] text-slate-400 mx-1"></i> ${f.destination}</div>
+                            <div class="text-[10px] text-slate-500 mt-0.5"><i class="fas fa-car text-[9px] text-slate-400 mr-1"></i> ${carText}</div>
+                        </div>
+                        <button onclick="deleteSniperFilter(${f.id})" class="text-red-500 hover:text-red-700 w-8 h-8 rounded-full hover:bg-red-50 transition flex items-center justify-center">
+                            <i class="fas fa-trash-alt text-xs"></i>
+                        </button>
                     </div>
-                    <button onclick="document.getElementById('training-detail-modal').remove()" class="text-slate-400 hover:text-rose-500 transition"><i class="fas fa-times text-lg"></i></button>
+                `;
+            });
+            listDiv.innerHTML = html;
+        } catch (err) {
+            console.error('Failed to load sniper filters:', err);
+        }
+    }
+
+    async function loadSniperSettings() {
+        try {
+            const res = await fetch('/api/sniper/settings');
+            if (!res.ok) throw new Error(await res.text());
+            const settings = await res.json();
+            
+            const tokenSetting = settings.find(s => s.key === 'telegram_token');
+            const chatIdSetting = settings.find(s => s.key === 'telegram_chat_id');
+            
+            if (tokenSetting) document.getElementById('sniper-tg-token').value = tokenSetting.value || '';
+            if (chatIdSetting) document.getElementById('sniper-tg-chatid').value = chatIdSetting.value || '';
+        } catch (err) {
+            console.error('Failed to load sniper settings:', err);
+        }
+    }
+
+    async function loadSniperTrips() {
+        try {
+            const res = await fetch('/api/sniper/trips');
+            if (!res.ok) throw new Error(await res.text());
+            allSniperTrips = await res.json();
+            renderSniperTrips();
+        } catch (err) {
+            console.error('Failed to load sniper trips:', err);
+        }
+    }
+
+    function renderSniperTrips() {
+        const container = document.getElementById('sniper-trips-container');
+        
+        let trips = allSniperTrips;
+        if (currentSniperTab === 'matched') {
+            trips = allSniperTrips.filter(t => t.is_matched);
+        } else if (currentSniperTab !== 'all') {
+            trips = allSniperTrips.filter(t => t.operation_type === currentSniperTab);
+        }
+        
+        if (!trips || trips.length === 0) {
+            container.innerHTML = `
+                <div class="text-slate-400 text-center py-10 flex flex-col items-center gap-2">
+                    <i class="fas fa-search text-3xl text-slate-300"></i>
+                    <span class="text-sm">لم يتم العثور على أي تشغيلات مطابقة في هذا التصنيف</span>
                 </div>
+            `;
+            return;
+        }
+        
+        const opTypeMap = {
+            'sale': { label: 'بيع / عودة', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
+            'request': { label: 'طلب توصيل', color: 'bg-blue-50 text-blue-700 border-blue-100' },
+            'exchange': { label: 'تبديل', color: 'bg-amber-50 text-amber-700 border-amber-100' }
+        };
+        
+        const carTypeMap = {
+            'sedan': 'سيدان',
+            'minivan': 'ميني فان / SUV',
+            'van': 'فان (هاي إس)',
+            'coaster': 'كوستر'
+        };
+        
+        let html = '';
+        trips.forEach(t => {
+            const op = opTypeMap[t.operation_type] || { label: t.operation_type, color: 'bg-slate-50 text-slate-700 border-slate-100' };
+            const carText = t.car_type ? (carTypeMap[t.car_type] || t.car_type) : 'غير محدد';
+            const priceText = t.price ? `${t.price} جنيهاً` : 'غير محدد';
+            const office = t.office_name || 'غير مذكور';
+            const timeFormatted = formatTime(t.created_at);
+            
+            const matchBadge = t.is_matched 
+                ? '<span class="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full mr-auto flex items-center gap-1 shadow-sm"><i class="fas fa-bullseye text-[8px]"></i> مطابقة فلاتر القنص</span>' 
+                : '';
                 
-                <!-- المحتوى المزدوج -->
-                <div class="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2">
-                    <!-- القسم الأيسر: تقرير التقييم والتعليق -->
-                    <div class="p-5 border-l border-slate-100 overflow-y-auto flex flex-col h-full bg-emerald-50/10">
-                        <h4 class="font-bold text-xs text-emerald-800 mb-3 flex items-center gap-1">
-                            <i class="fas fa-comment-dots"></i> تقييم المدرب الذكي ونقاط الضعف:
-                        </h4>
-                        <div class="flex-1 bg-white border border-slate-100 rounded-2xl p-4 text-[11px] leading-relaxed text-slate-600 overflow-y-auto shadow-sm whitespace-pre-line">
-                            ${report.evaluation_report || 'لا يوجد تعليق.'}
+            html += `
+                <div class="bg-white p-4 rounded-xl border ${t.is_matched ? 'border-red-300 bg-red-50/5 shadow-md animate-pulse-subtle' : 'border-slate-100 hover:border-slate-200'} transition flex flex-col gap-3 text-right">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full border ${op.color}">${op.label}</span>
+                        <span class="text-slate-400 text-[10px]"><i class="far fa-clock mr-1"></i> ${timeFormatted}</span>
+                        ${matchBadge}
+                    </div>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs border-b pb-3 mb-1">
+                        <div>
+                            <span class="text-slate-400 block mb-0.5">خط السير</span>
+                            <span class="font-bold text-slate-800">${t.origin || 'غير محدد'} <i class="fas fa-long-arrow-alt-left text-[9px] text-slate-400 mx-1"></i> ${t.destination || 'غير محدد'}</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block mb-0.5">موعد الرحلة</span>
+                            <span class="font-bold text-slate-700">${t.date_time || 'غير محدد'}</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block mb-0.5">السيارة والسعر</span>
+                            <span class="font-bold text-slate-700">${carText} - <span class="text-emerald-600">${priceText}</span></span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block mb-0.5">المكتب والجروب</span>
+                            <span class="font-bold text-slate-600 truncate block">${office} (${t.group_name || 'واتساب'})</span>
                         </div>
                     </div>
 
-                    <!-- القسم الأيمن: المحادثة الكاملة -->
-                    <div class="p-5 overflow-y-auto flex flex-col h-full bg-slate-50/50">
-                        <h4 class="font-bold text-xs text-slate-700 mb-3 flex items-center gap-1">
-                            <i class="fas fa-comments text-indigo-500"></i> تفاصيل حوار المحاكاة:
-                        </h4>
-                        <div class="flex-1 overflow-y-auto p-3 bg-white rounded-2xl border border-slate-100 shadow-sm scrollbar-thin">
-                            ${chatHtml}
+                    <div class="flex justify-between items-center gap-3">
+                        <div class="text-[11px] text-slate-500">
+                            <i class="far fa-user text-slate-400 mr-1"></i> الناشر: <span class="font-semibold text-slate-700">${t.sender_name || 'مجهول'}</span> (${t.contact_phone})
                         </div>
+                        <a href="https://wa.me/${t.contact_phone}" target="_blank" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-700 transition flex items-center gap-1.5 shadow-sm">
+                            <i class="fab fa-whatsapp text-sm"></i> مراسلة فورية
+                        </a>
                     </div>
                 </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-        modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+            `;
+        });
+        container.innerHTML = html;
+    }
+
+    function filterSniperTrips(type) {
+        currentSniperTab = type;
+        const tabs = ['all', 'matched', 'sale', 'request'];
+        tabs.forEach(t => {
+            const btn = document.getElementById(`trip-btn-${t}`);
+            if (t === type) {
+                btn.className = 'px-3 py-1.5 rounded-md font-bold bg-white text-slate-800 shadow-sm';
+            } else {
+                btn.className = 'px-3 py-1.5 rounded-md font-bold text-slate-600 hover:text-slate-800';
+            }
+        });
+        renderSniperTrips();
+    }
+
+    async function addSniperFilter(e) {
+        e.preventDefault();
+        const origin = document.getElementById('sniper-origin').value.trim();
+        const destination = document.getElementById('sniper-destination').value.trim();
+        const carType = document.getElementById('sniper-car-type').value;
+        
+        try {
+            const res = await fetch('/api/sniper/filters', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ origin, destination, car_type: carType })
+            });
+            
+            if (!res.ok) throw new Error(await res.text());
+            
+            document.getElementById('add-sniper-filter-form').reset();
+            await loadSniperFilters();
+            alert('✅ تم إضافة الفلتر بنجاح');
+        } catch (err) {
+            console.error('Failed to add sniper filter:', err);
+            alert('❌ فشل إضافة الفلتر');
+        }
+    }
+
+    async function deleteSniperFilter(id) {
+        if (!confirm('هل أنت متأكد من رغبتك في حذف فلتر القنص هذا؟')) return;
+        try {
+            const res = await fetch(`/api/sniper/filters/${id}`, {
+                method: 'DELETE'
+            });
+            if (!res.ok) throw new Error(await res.text());
+            
+            await loadSniperFilters();
+            alert('🗑️ تم حذف الفلتر');
+        } catch (err) {
+            console.error('Failed to delete sniper filter:', err);
+            alert('❌ فشل حذف الفلتر');
+        }
     }
     </script>
 </body>

@@ -38,6 +38,7 @@ if (!fs.existsSync(UPLOADS_DIR)) {
 // In-memory store for active sessions
 // Structure: { [id]: { sock, status: 'init'|'connected'|'disconnected', qr: '', phone: '' } }
 const activeSessions = {};
+const groupNamesCache = {};
 
 // Helper to update Supabase status
 async function updateSupabaseInstance(id, payload) {
@@ -146,11 +147,31 @@ async function initSession(id) {
                 
                 if (msg.message) {
                     const senderJid = msg.key.remoteJid;
-                    if (senderJid && (senderJid.endsWith('@s.whatsapp.net') || senderJid.endsWith('@lid'))) {
+                    if (senderJid && (senderJid.endsWith('@s.whatsapp.net') || senderJid.endsWith('@lid') || senderJid.endsWith('@g.us'))) {
                         let resolvedJid = senderJid;
                         let senderPhone = senderJid.split('@')[0];
+                        let groupName = null;
+                        let isGroup = senderJid.endsWith('@g.us');
                         
-                        if (senderJid.endsWith('@lid')) {
+                        if (isGroup) {
+                            const participantJid = msg.key.participant || msg.participant;
+                            if (participantJid) {
+                                resolvedJid = participantJid;
+                                senderPhone = participantJid.split('@')[0].split(':')[0];
+                            }
+                            
+                            if (groupNamesCache[senderJid]) {
+                                groupName = groupNamesCache[senderJid];
+                            } else {
+                                try {
+                                    const metadata = await sock.groupMetadata(senderJid);
+                                    groupName = metadata.subject || 'مجموعة واتساب';
+                                    groupNamesCache[senderJid] = groupName;
+                                } catch (gErr) {
+                                    groupName = 'مجموعة واتساب';
+                                }
+                            }
+                        } else if (senderJid.endsWith('@lid')) {
                             // Try metadata extraction first
                             const possiblePn = msg.senderPn || (msg.key && (msg.key.participantAlt || msg.key.remoteJidAlt));
                             if (possiblePn) {
@@ -170,7 +191,7 @@ async function initSession(id) {
                                 }
                             }
                         }
-
+                        
                         const senderName = msg.pushName || senderPhone;
                         
                         // Extract message content, unwrapping ephemeral or view-once wrappers
@@ -189,7 +210,7 @@ async function initSession(id) {
                         let text = '';
                         let mediaType = null;
                         let fileExtension = '';
-
+                        
                         if (messageContent.imageMessage) {
                             mediaType = 'image';
                             const mime = messageContent.imageMessage.mimetype || 'image/jpeg';
@@ -200,7 +221,7 @@ async function initSession(id) {
                             const mime = messageContent.audioMessage.mimetype || 'audio/ogg';
                             fileExtension = mime.includes('ogg') ? 'ogg' : 'mp3';
                         }
-
+                        
                         if (mediaType) {
                             try {
                                 const buffer = await downloadMediaMessage(
@@ -215,7 +236,7 @@ async function initSession(id) {
                                 if (buffer) {
                                     const fileName = `${mediaType}_${Date.now()}_${Math.floor(Math.random() * 10000)}.${fileExtension}`;
                                     
-                                    // رفع الملف مباشرةً على Supabase Storage (عشان يكون متاح من أي مكان)
+                                    // رفع الملف مباشرةً على Supabase Storage
                                     const mimeType = mediaType === 'image' ? `image/${fileExtension}` : `audio/${fileExtension}`;
                                     let publicUrl = null;
                                     try {
@@ -252,12 +273,23 @@ async function initSession(id) {
                                             text = `MEDIA_AUDIO:${publicUrl}`;
                                         }
                                     }
+                                } else {
+                                    try {
+                                        const fs = require('fs');
+                                        const logPath = require('path').join(__dirname, '..', '..', 'scratch', 'gateway_errors.log');
+                                        fs.appendFileSync(logPath, `[${new Date().toISOString()}] downloadMediaMessage returned empty/null buffer. Msg key: ${JSON.stringify(msg.key)}\n`);
+                                    } catch (e) {}
                                 }
                             } catch (mediaErr) {
                                 console.error(`[Gateway Error] Failed to download/save media:`, mediaErr.message);
+                                try {
+                                    const fs = require('fs');
+                                    const logPath = require('path').join(__dirname, '..', '..', 'scratch', 'gateway_errors.log');
+                                    fs.appendFileSync(logPath, `[${new Date().toISOString()}] downloadMediaMessage threw error: ${mediaErr.message}\nStack: ${mediaErr.stack}\nMsg: ${JSON.stringify(msg, null, 2)}\n\n`);
+                                } catch (e) {}
                             }
                         }
-
+                        
                         if (!text) {
                             if (messageContent.conversation) {
                                 text = messageContent.conversation;
@@ -288,22 +320,35 @@ async function initSession(id) {
                                 text = '[رسالة وسائط]';
                             }
                         }
-
-                        if (!text) continue;
-
-                        console.log(`[Gateway] Incoming msg from ${senderPhone} (Session ${id}): ${text}`);
-
                         
-                        // Forward to Python backend
-                        try {
-                            await axios.post(`${PYTHON_BACKEND_URL}/api/whatsapp/webhook/local/${id}`, {
-                                sender_phone: senderPhone,
-                                sender_name: msg.key.fromMe ? 'Admin' : senderName,
-                                message_text: text,
-                                is_from_admin: msg.key.fromMe ? true : false
-                            });
-                        } catch (err) {
-                            console.error(`[Webhook Error] Failed to forward message to Python:`, err.message);
+                        if (!text) continue;
+                        
+                        if (isGroup) {
+                            console.log(`[Gateway] Group msg in "${groupName}" from ${senderPhone} (Session ${id}): ${text}`);
+                            try {
+                                await axios.post(`${PYTHON_BACKEND_URL}/api/whatsapp/webhook/group_message`, {
+                                    group_id: senderJid,
+                                    group_name: groupName,
+                                    sender_phone: senderPhone,
+                                    sender_name: senderName,
+                                    message_text: text,
+                                    instance_id: id
+                                });
+                            } catch (err) {
+                                console.error(`[Webhook Error] Failed to forward group message to Python:`, err.message);
+                            }
+                        } else {
+                            console.log(`[Gateway] Incoming msg from ${senderPhone} (Session ${id}): ${text}`);
+                            try {
+                                await axios.post(`${PYTHON_BACKEND_URL}/api/whatsapp/webhook/local/${id}`, {
+                                    sender_phone: senderPhone,
+                                    sender_name: msg.key.fromMe ? 'Admin' : senderName,
+                                    message_text: text,
+                                    is_from_admin: msg.key.fromMe ? true : false
+                                });
+                            } catch (err) {
+                                console.error(`[Webhook Error] Failed to forward message to Python:`, err.message);
+                            }
                         }
                     }
                 }
