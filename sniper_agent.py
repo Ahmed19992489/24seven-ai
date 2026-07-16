@@ -164,6 +164,14 @@ def check_match(trip_data):
         print(f"[Sniper Match Error]: {e}")
         return False
 
+    # ✅ لو مفيش فلاتر → ابعت كل رسائل البيع والبدل تلقائياً
+    if not filters:
+        op = trip_data.get("operation_type", "")
+        if op in ("sale", "exchange"):
+            print(f"[Sniper] No filters set → auto-match for op_type={op}")
+            return True
+        return False
+
     trip_origin = normalize_city_name(trip_data.get("origin"))
     trip_dest = normalize_city_name(trip_data.get("destination"))
     trip_car = trip_data.get("car_type") # sedan, minivan, van
@@ -177,6 +185,7 @@ def check_match(trip_data):
             if not f_car or f_car.lower().strip() == 'any' or f_car.lower().strip() == trip_car:
                 return True
     return False
+
 
 # ==========================================
 # 📣 إشعارات التلجرام والواتساب

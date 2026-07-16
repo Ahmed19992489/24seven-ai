@@ -66,7 +66,7 @@ async function initSession(id) {
     const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
     
     // Fetch latest WhatsApp version to avoid 405 error
-    let version = [2, 3000, 1017578701]; // Fallback WA version
+    let version = [2, 3000, 1023141551]; // Updated fallback WA version
     try {
         const { version: fetchedVersion, isLatest } = await fetchLatestBaileysVersion();
         version = fetchedVersion;
@@ -97,8 +97,19 @@ async function initSession(id) {
         if (qr) {
             console.log(`[Gateway] QR generated for session ${id}`);
             try {
-                const qrBase64 = await qrcode.toDataURL(qr);
+                // Higher quality QR code for better phone scanning
+                const qrBase64 = await qrcode.toDataURL(qr, {
+                    scale: 8,          // bigger = easier to scan
+                    margin: 2,         // small margin
+                    errorCorrectionLevel: 'H', // highest error correction
+                    color: {
+                        dark: '#000000',
+                        light: '#ffffff'
+                    }
+                });
                 activeSessions[id].qr = qrBase64;
+                activeSessions[id].qrRaw = qr; // store raw string too
+                activeSessions[id].qrTimestamp = Date.now(); // track when QR was generated
                 activeSessions[id].status = 'disconnected';
                 // Update Supabase to disconnected if we show QR
                 await updateSupabaseInstance(id, { status: 'disconnected' });
