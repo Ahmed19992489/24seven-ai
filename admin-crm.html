@@ -9035,7 +9035,7 @@ async function loadWhatsAppSettings() {
             const carText = t.car_type ? (carTypeMap[t.car_type] || t.car_type) : 'غير محدد';
             const priceText = t.price ? `${t.price} جنيهاً` : 'غير محدد';
             const office = t.office_name || 'غير مذكور';
-            const timeFormatted = formatTime(t.created_at);
+            const timeFormatted = t.created_at ? new Date(t.created_at).toLocaleString('ar-EG') : 'غير محدد';
             
             const matchBadge = t.is_matched 
                 ? '<span class="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full mr-auto flex items-center gap-1 shadow-sm"><i class="fas fa-bullseye text-[8px]"></i> مطابقة فلاتر القنص</span>' 
