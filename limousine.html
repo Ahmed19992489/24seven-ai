@@ -1223,6 +1223,15 @@
         </div>
     </div>
 
+    <script>
+        window.gm_authFailure = function() {
+            console.warn("Google Maps Auth Failure (Key restriction or billing error). Hiding map container.");
+            const mapDiv = document.getElementById('map');
+            if (mapDiv) mapDiv.style.display = 'none';
+            const infoBar = document.getElementById('map-info-bar');
+            if (infoBar) infoBar.style.display = 'none';
+        };
+    </script>
     <script
         src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCjpT2tmhQZfrwXeEd9ykkZICjuZWncSIE&libraries=places&language=ar"></script>
 
@@ -2966,11 +2975,11 @@
             }
         }
 
-        // مراقبة تغيير حالة الرحلة لعرض الفيدباك والإشعارات
+        let tripStatusChannel = null;
         function setupTripStatusListener() {
-            if (!user) return;
-            sb.channel('trip-status-' + user.id)
-                .on('postgres_changes', {
+            if (!user || tripStatusChannel) return;
+            tripStatusChannel = sb.channel('trip-status-' + user.id);
+            tripStatusChannel.on('postgres_changes', {
                     event: 'UPDATE',
                     schema: 'public',
                     table: 'trips',
@@ -3148,11 +3157,11 @@
             setTimeout(() => { if (banner.parentNode) banner.parentNode.removeChild(banner); }, 6000);
         }
 
-        // مراقبة رسائل الدردشة النظامية (وصول الكابتن وغيره)
+        let globalChatChannel = null;
         function setupGlobalChatListener() {
-            if (!user) return;
-            sb.channel('global-notif-' + user.id)
-                .on('postgres_changes', {
+            if (!user || globalChatChannel) return;
+            globalChatChannel = sb.channel('global-notif-' + user.id);
+            globalChatChannel.on('postgres_changes', {
                     event: 'INSERT',
                     schema: 'public',
                     table: 'chat_messages'
