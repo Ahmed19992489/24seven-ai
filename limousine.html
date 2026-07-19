@@ -1225,11 +1225,30 @@
 
     <script>
         window.gm_authFailure = function() {
-            console.warn("Google Maps Auth Failure (Key restriction or billing error). Hiding map container.");
+            console.warn("Google Maps Auth Failure (Key restriction or billing error). Hiding map container and cleaning up inputs.");
             const mapDiv = document.getElementById('map');
             if (mapDiv) mapDiv.style.display = 'none';
             const infoBar = document.getElementById('map-info-bar');
             if (infoBar) infoBar.style.display = 'none';
+
+            // تنظيف أي تراكبات خطأ خريطة تم حقنها من جوجل في خانات النصوص
+            setTimeout(() => {
+                document.querySelectorAll('.pac-container, .gm-err-container, .gm-err-content').forEach(el => el.remove());
+                ['pickup', 'dropoff', 'extra-point'].forEach(id => {
+                    const input = document.getElementById(id);
+                    if (input) {
+                        input.style.backgroundImage = 'none';
+                        input.style.backgroundColor = '';
+                        if (input.parentNode) {
+                            Array.from(input.parentNode.children).forEach(child => {
+                                if (child !== input && !child.classList.contains('fas') && !child.classList.contains('fa-circle-dot') && !child.classList.contains('fa-location-dot') && !child.classList.contains('fa-plus-circle')) {
+                                    child.remove();
+                                }
+                            });
+                        }
+                    }
+                });
+            }, 100);
         };
     </script>
     <script
