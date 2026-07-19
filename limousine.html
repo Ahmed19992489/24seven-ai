@@ -218,7 +218,7 @@
             width: 100%;
             height: 200px;
             border-radius: 12px;
-            display: none;
+            display: block;
             margin-bottom: 15px;
             border: 1px solid #334155;
         }
@@ -582,6 +582,10 @@
                     <div onclick="setTripType('round-diff')" class="trip-type-btn" id="btn-round-diff">أيام مختلفة</div>
                 </div>
                 <div id="map"></div>
+                <div id="map-info-bar" class="hidden justify-between items-center bg-slate-800/80 border border-slate-700/60 p-3 rounded-xl mb-4">
+                    <span class="text-xs text-slate-300">📍 المسافة: <strong id="realtime-dist" class="text-white font-num font-bold">0 كم</strong></span>
+                    <span class="text-xs text-slate-300">💰 السعر التقديري: <strong id="realtime-price" class="text-amber-500 font-num font-black">0 EGP</strong></span>
+                </div>
                 <div class="space-y-3 mb-4 relative">
                     <div
                         class="absolute right-[22px] top-10 bottom-10 w-0.5 bg-slate-700 border-r border-dashed border-slate-600">
@@ -1343,12 +1347,14 @@
             document.querySelectorAll('.trip-type-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('btn-' + t).classList.add('active');
             document.getElementById('return-date-container').classList.toggle('hidden', t !== 'round-diff');
+            try { autoUpdateRouteAndPrice(); } catch(e) {}
         }
 
         function selectCar(c) {
             tripData.car = c;
             document.querySelectorAll('.car-option').forEach(e => e.classList.remove('active'));
             document.getElementById('car-' + c).classList.add('active');
+            try { autoUpdateRouteAndPrice(); } catch(e) {}
         }
 
         function selectPayment(m) {
@@ -1438,91 +1444,130 @@
 
         function initMaps() {
             try {
-                new google.maps.places.Autocomplete(document.getElementById("pickup"));
-                new google.maps.places.Autocomplete(document.getElementById("dropoff"));
-                new google.maps.places.Autocomplete(document.getElementById("extra-point"));
+                const pickupInput = document.getElementById("pickup");
+                const dropoffInput = document.getElementById("dropoff");
+                const extraInput = document.getElementById("extra-point");
+
+                const pickupAuto = new google.maps.places.Autocomplete(pickupInput);
+                const dropoffAuto = new google.maps.places.Autocomplete(dropoffInput);
+                new google.maps.places.Autocomplete(extraInput);
 
                 map = new google.maps.Map(document.getElementById("map"), {
-                    center: { lat: 30.0444, lng: 31.2357 }, zoom: 10, disableDefaultUI: true,
+                    center: { lat: 30.0444, lng: 31.2357 }, zoom: 7, disableDefaultUI: true,
                     styles: [{ "elementType": "geometry", "stylers": [{ "color": "#242f3e" }] }, { "elementType": "labels.text.stroke", "stylers": [{ "color": "#242f3e" }] }, { "elementType": "labels.text.fill", "stylers": [{ "color": "#746855" }] }, { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#38414e" }] }]
                 });
                 directionsService = new google.maps.DirectionsService();
                 directionsRenderer = new google.maps.DirectionsRenderer();
                 directionsRenderer.setMap(map);
-            } catch (e) { console.log("Maps Error"); }
+
+                // المستمعات التلقائية لتحديث المسار فور اختيار العميل
+                pickupAuto.addListener('place_changed', () => { autoUpdateRouteAndPrice(); });
+                dropoffAuto.addListener('place_changed', () => { autoUpdateRouteAndPrice(); });
+                
+                pickupInput.addEventListener('change', () => { autoUpdateRouteAndPrice(); });
+                dropoffInput.addEventListener('change', () => { autoUpdateRouteAndPrice(); });
+                document.getElementById('opt-extra-point').addEventListener('change', () => { autoUpdateRouteAndPrice(); });
+                extraInput.addEventListener('change', () => { autoUpdateRouteAndPrice(); });
+            } catch (e) { console.log("Maps Error:", e); }
         }
 
-        function calculateRealDistanceAndPrice() {
-            const p = document.getElementById('pickup').value;
-            const d = document.getElementById('dropoff').value;
-            const date = document.getElementById('trip-date').value;
-            const time = document.getElementById('trip-time').value;
-
-            if (!p || !d || !date || !time) return alert("أكمل البيانات");
-
-            const btn = document.getElementById('calc-btn'); btn.innerText = "جاري الحساب...";
-
-            const mapDiv = document.getElementById('map');
-            mapDiv.style.display = 'block';
-            mapDiv.style.height = "200px";
+        // تحديث المسار والسعر التقديري في الخلفية وبشكل تلقائي
+        function autoUpdateRouteAndPrice(successCallback = null, errorCallback = null) {
+            const p = document.getElementById('pickup').value.trim();
+            const d = document.getElementById('dropoff').value.trim();
+            if (!p || !d) {
+                document.getElementById('map-info-bar').style.display = 'none';
+                return;
+            }
 
             const waypoints = [];
             if (document.getElementById('opt-extra-point').checked && document.getElementById('extra-point').value) {
                 waypoints.push({ location: document.getElementById('extra-point').value, stopover: true });
             }
 
-            const service = new google.maps.DistanceMatrixService();
-            service.getDistanceMatrix({ origins: [p], destinations: [d], travelMode: 'DRIVING' }, (res, status) => {
-                if (status !== 'OK') { btn.innerText = "حساب السعر والحجز"; return alert("خطأ من جوجل: " + status); }
-                const element = res.rows[0].elements[0];
-                if (element.status !== 'OK') { btn.innerText = "حساب السعر والحجز"; return alert("تعذر حساب المسافة: " + element.status); }
-
-                const distKm = Math.ceil(element.distance.value / 1000);
-                const carRules = pricingRules.filter(r => r.car_type === tripData.car).sort((a, b) => a.min_km - b.min_km || a.max_km - b.max_km);
-
-                let price = 0;
-                if (carRules.length > 0) {
-                    // سعر الفتح من أول شريحة
-                    price = Number(carRules[0].base_price) || 0;
-                    let remainingKm = distKm;
-                    for (const rule of carRules) {
-                        if (remainingKm <= 0) break;
-                        const tierSize = rule.max_km - rule.min_km;
-                        const kmInTier = Math.min(remainingKm, tierSize);
-                        price += kmInTier * Number(rule.price_per_km);
-                        remainingKm -= kmInTier;
+            directionsService.route({
+                origin: p,
+                destination: d,
+                waypoints: waypoints,
+                travelMode: 'DRIVING'
+            }, (response, status) => {
+                if (status === 'OK') {
+                    directionsRenderer.setDirections(response);
+                    
+                    // حساب إجمالي المسافة
+                    const route = response.routes[0];
+                    let totalDist = 0;
+                    for (let i = 0; i < route.legs.length; i++) {
+                        totalDist += route.legs[i].distance.value;
                     }
-                    // أي كيلومترات متبقية بعد آخر شريحة تستخدم سعر آخر شريحة
-                    if (remainingKm > 0) {
-                        price += remainingKm * Number(carRules[carRules.length - 1].price_per_km);
+                    const distKm = Math.ceil(totalDist / 1000);
+                    
+                    // حساب السعر بناءً على الشرائح
+                    const carRules = pricingRules.filter(r => r.car_type === tripData.car).sort((a, b) => a.min_km - b.min_km || a.max_km - b.max_km);
+                    let price = 0;
+                    if (carRules.length > 0) {
+                        price = Number(carRules[0].base_price) || 0;
+                        let remainingKm = distKm;
+                        for (const rule of carRules) {
+                            if (remainingKm <= 0) break;
+                            const tierSize = rule.max_km - rule.min_km;
+                            const kmInTier = Math.min(remainingKm, tierSize);
+                            price += kmInTier * Number(rule.price_per_km);
+                            remainingKm -= kmInTier;
+                        }
+                        if (remainingKm > 0) {
+                            price += remainingKm * Number(carRules[carRules.length - 1].price_per_km);
+                        }
+                    } else {
+                        price = 150 + (distKm * 10);
                     }
+                    
+                    if (document.getElementById('opt-extra-point').checked) price += 100;
+                    if (tripData.type === 'round-same') price *= 1.75;
+                    else if (tripData.type === 'round-diff') price *= 2;
+                    
+                    const finalPrice = Math.round(price);
+                    
+                    // حفظ القيم في بيانات الرحلة
+                    tripData.dist = distKm;
+                    tripData.price = finalPrice;
+                    
+                    // تحديث شريط المعلومات الفوري أسفل الخريطة
+                    document.getElementById('realtime-dist').innerText = distKm + " كم";
+                    document.getElementById('realtime-price').innerText = finalPrice + " EGP";
+                    document.getElementById('map-info-bar').style.display = 'flex';
+                    
+                    if (successCallback) successCallback();
                 } else {
-                    price = 150 + (distKm * 10); // fallback
+                    console.log('Directions request failed due to ' + status);
+                    const errorMsg = `تعذر رسم المسار: Google API returned status ${status}. برجاء التأكد من تفعيل Directions API في الكونسول الخاص بك ومطابقة المسار.`;
+                    if (errorCallback) errorCallback(errorMsg);
                 }
-                if (document.getElementById('opt-extra-point').checked) price += 100;
-                if (tripData.type === 'round-same') price *= 1.75;
-                else if (tripData.type === 'round-diff') price *= 2;
+            });
+        }
 
-                tripData.price = Math.round(price);
-                tripData.dist = distKm;
-                tripData.date = date; tripData.time = time;
-                tripData.returnDate = document.getElementById('return-date').value;
-                tripData.returnTime = document.getElementById('return-time').value;
+        function calculateRealDistanceAndPrice() {
+            const p = document.getElementById('pickup').value.trim();
+            const d = document.getElementById('dropoff').value.trim();
+            const date = document.getElementById('trip-date').value;
+            const time = document.getElementById('trip-time').value;
 
-                directionsService.route({ origin: p, destination: d, waypoints: waypoints, travelMode: 'DRIVING' }, (rs, st) => {
-                    if (st == 'OK') {
-                        directionsRenderer.setDirections(rs);
-                        google.maps.event.trigger(map, 'resize');
-                    }
-                });
+            if (!p || !d || !date || !time) return alert("أكمل البيانات (تاريخ الرحلة ووقت التحرك)");
 
+            const btn = document.getElementById('calc-btn'); btn.innerText = "جاري الحساب...";
+            
+            // استدعاء دالة الرسم والحساب مع تمرير الكولباك لفتح المودال عند النجاح
+            autoUpdateRouteAndPrice(() => {
                 const typeLabels = { 'one-way': 'ذهاب فقط', 'round-same': 'ذهاب وعودة (نفس اليوم)', 'round-diff': 'ذهاب وعودة (أيام مختلفة)' };
                 const carLabels = { 'sedan': 'سيدان', 'suv': 'SUV عائلية', 'van': 'فان' };
                 document.getElementById('summ-type').innerText = (typeLabels[tripData.type] || '--') + ' | ' + (carLabels[tripData.car] || tripData.car);
-                document.getElementById('summ-dist').innerText = distKm + " km";
+                document.getElementById('summ-dist').innerText = tripData.dist + " km";
                 document.getElementById('summ-price').innerText = tripData.price + " EGP";
                 document.getElementById('details-modal').style.display = 'flex';
                 btn.innerText = "حساب السعر والحجز";
+            }, (errorMsg) => {
+                btn.innerText = "حساب السعر والحجز";
+                alert(errorMsg);
             });
         }
 

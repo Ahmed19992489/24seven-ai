@@ -1348,6 +1348,15 @@
                 </div>
 
                 <div class="relative mt-2 flex flex-col gap-2">
+                    <!-- أزرار أسئلة سريعة -->
+                    <div class="flex flex-wrap gap-2 mb-2">
+                        <button onclick="askAi('كم دخلنا الشهر ده إجمالي؟')" class="text-[11px] bg-indigo-50 border border-indigo-200 text-indigo-700 px-3 py-1.5 rounded-full hover:bg-indigo-100 transition font-bold">💰 دخل الشهر</button>
+                        <button onclick="askAi('مين أكتر كابتن اشتغل؟')" class="text-[11px] bg-emerald-50 border border-emerald-200 text-emerald-700 px-3 py-1.5 rounded-full hover:bg-emerald-100 transition font-bold">👤 أداء الكباتن</button>
+                        <button onclick="askAi('كم رحلة عندنا اليوم؟')" class="text-[11px] bg-amber-50 border border-amber-200 text-amber-700 px-3 py-1.5 rounded-full hover:bg-amber-100 transition font-bold">📅 رحلات اليوم</button>
+                        <button onclick="askAi('إيه حالة الكباتن دلوقتي؟ مين شغال ومين متاح؟')" class="text-[11px] bg-blue-50 border border-blue-200 text-blue-700 px-3 py-1.5 rounded-full hover:bg-blue-100 transition font-bold">🚗 حالة الكباتن</button>
+                        <button onclick="askAi('إيه أكتر مسار محجوز الشهر ده؟')" class="text-[11px] bg-purple-50 border border-purple-200 text-purple-700 px-3 py-1.5 rounded-full hover:bg-purple-100 transition font-bold">📍 أكتر مسار</button>
+                        <button onclick="askAi('كم إجمالي المصاريف مقارنة بالتحصيل في آخر 30 يوم؟')" class="text-[11px] bg-rose-50 border border-rose-200 text-rose-700 px-3 py-1.5 rounded-full hover:bg-rose-100 transition font-bold">📊 مصاريف vs تحصيل</button>
+                    </div>
                     <div class="relative w-full">
                         <input type="text" id="ai-chat-input" 
                             onkeypress="if(event.key === 'Enter') askAiFromInput()"
@@ -7572,14 +7581,29 @@ async function confirmResAssign() {
             appendAiMessage('<i class="fas fa-circle-notch fa-spin"></i> جاري قراءة بيانات الشركة والرد...', 'bot', loadingId);
 
             try {
-                // استخراج التاريخ من السؤال إن وجد (مثلاً 18/3/2026)
+                // تحديد التاريخ المستهدف (targetDate)
+                const today = new Date();
+                const todaySolo = today.toISOString().split('T')[0]; // "2026-07-18"
                 let targetDate = null;
+                
                 const dateMatch = question.match(/(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
                 if (dateMatch) {
                     const day = dateMatch[1].padStart(2, '0');
                     const month = dateMatch[2].padStart(2, '0');
                     const year = dateMatch[3];
                     targetDate = `${year}-${month}-${day}`;
+                } else if (question.includes('النهارده') || question.includes('النهار ده') || question.includes('اليوم') || question.includes('النهاردة') || question.includes('النهارده كام')) {
+                    targetDate = todaySolo;
+                } else if (question.includes('بكره') || question.includes('بكرة') || question.includes('غدا') || question.includes('غداً')) {
+                    const tomorrow = new Date(today);
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    targetDate = tomorrow.toISOString().split('T')[0];
+                } else if (question.includes('امس') || question.includes('أمس') || question.includes('امبارح')) {
+                    const yesterday = new Date(today);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    targetDate = yesterday.toISOString().split('T')[0];
+                } else {
+                    targetDate = todaySolo; // الافتراضي هو اليوم
                 }
 
                 const contextData = await gatherAiContext(targetDate);
@@ -7649,8 +7673,8 @@ ${contextData}
             const todayIso = startOfToday.toISOString();
             const todaySolo = now.toISOString().split('T')[0];
             
-            // تحديث الكاش كل 5 دقائق
-            const shouldRefresh = !allReservationsCache || (now - lastCacheTime > 300000);
+            // تحديث الكاش كل دقيقة
+            const shouldRefresh = !allReservationsCache || (now - lastCacheTime > 60000);
             
             let report = `### تقرير البيانات الشامل (${now.toLocaleDateString('ar-EG')})\n\n`;
             
@@ -7665,7 +7689,7 @@ ${contextData}
                     sbClient.from('drivers').select('id, name, phone'),
                     sbClient.from('google_reservations').select('customer_phone, client_status, booking_employee').gte('created_at', monthStart),
                     sbClient.from('trips').select('id, driver_id, pickup_location, dropoff_location, stage_status, status, car_id, created_at, cars(brand, model, plate_number)').eq('status', 'driver_assigned'),
-                    sbClient.from('google_reservations').select('id, modified_driver_name, pickup_address, dropoff_address, location_link, status, car_type, trip_time, trip_date').neq('status', 'completed').not('modified_driver_name', 'is', null).limit(10),
+                    sbClient.from('google_reservations').select('id, modified_driver_name, pickup_address, dropoff_address, location_link, status, car_type, trip_time, trip_date').neq('status', 'completed').not('modified_driver_name', 'is', null).neq('modified_driver_name', '').order('trip_date', { ascending: false }).limit(30),
                     sbClient.from('trip_ratings').select('driver_rating, car_rating, service_rating').limit(50),
                     sbClient.from('cars').select('brand, model, plate_number'),
                     sbClient.from('trips').select('estimated_price').eq('payment_status', 'unpaid'),
@@ -7896,6 +7920,7 @@ ${contextData}
                         const stats = {
                             total: allData.length,
                             byDate: {},
+                            byCreationDate: {},
                             raw: allData.filter(r => {
                                 const n = (r.customer_name || '').toLowerCase();
                                 return !n.includes('learnify');
@@ -7905,6 +7930,12 @@ ${contextData}
                         stats.raw.forEach(r => {
                             const d = r.trip_date || 'غير محدد';
                             stats.byDate[d] = (stats.byDate[d] || 0) + 1;
+                            
+                            // حساب تاريخ الإدخال/الإنشاء الفعلي (yyyy-mm-dd)
+                            if (r.created_at) {
+                                const cDate = r.created_at.split('T')[0];
+                                stats.byCreationDate[cDate] = (stats.byCreationDate[cDate] || 0) + 1;
+                            }
                         });
                         
                         allReservationsCache = stats;
@@ -7912,12 +7943,23 @@ ${contextData}
                     }
                 }
 
-                report += `💰 إحصائيات الإضافات الجديدة اليوم (${todaySolo}):\n`;
-                report += `- حجوزات تم إدخالها اليوم: ${ordersRes.data ? ordersRes.data.length : 0}\n\n`;
+                // حساب عدد رحلات اليوم الفعلي من الأرشيف (بناءً على تاريخ الرحلة trip_date)
+                let todayTripsCount = 0;
+                if (allReservationsCache) {
+                    todayTripsCount = allReservationsCache.raw.filter(r => r.trip_date === todaySolo).length;
+                }
+
+                report += `💰 إحصائيات الحجوزات والرحلات اليوم (${todaySolo}):\n`;
+                report += `- حجوزات تم إدخالها اليوم في السيستم: ${ordersRes.data ? ordersRes.data.length : 0}\n`;
+                report += `- رحلات مجدولة للتحرك اليوم (بحسب تاريخ الرحلة): ${todayTripsCount}\n\n`;
 
                 if (allReservationsCache) {
-                    report += `📊 ملخص الأرشيف (بناءً على تاريخ الرحلة):\n`;
-                    const dates = Object.keys(allReservationsCache.byDate).sort((a,b) => b.localeCompare(a)).slice(0, 30);
+                    report += `📊 ملخص الحجوزات الجديدة المُدخلة يومياً (حسب تاريخ الإدخال):\n`;
+                    const cDates = Object.keys(allReservationsCache.byCreationDate).sort((a,b) => b.localeCompare(a)).slice(0, 15);
+                    cDates.forEach(d => report += `- يوم إدخال الحجز ${d}: تم إدخال ${allReservationsCache.byCreationDate[d]} حجز جديد\n`);
+
+                    report += `\n📊 ملخص الأرشيف (بناءً على تاريخ الرحلة):\n`;
+                    const dates = Object.keys(allReservationsCache.byDate).sort((a,b) => b.localeCompare(a)).slice(0, 15);
                     dates.forEach(d => report += `- ${d}: ${allReservationsCache.byDate[d]} حجز\n`);
                     
                     // إحصائيات الشهر الحالي (مطابقة تماماً للموديتور)
@@ -7932,13 +7974,26 @@ ${contextData}
                     report += `- إجمالي الرحلات: ${monthTotal}\n`;
                     report += `- العملاء الجدد: ${monthNew}\n`;
 
-                    if (targetDate && allReservationsCache.byDate[targetDate]) {
-                        report += `\n📍 تفاصيل الحجوزات المجدولة ليوم (${targetDate}):\n`;
-                        const dayRecords = allReservationsCache.raw.filter(r => r.trip_date === targetDate);
-                        dayRecords.forEach((r, idx) => {
-                            const cleanRoute = (r.pickup_address || '').split(',')[0] + " ➝ " + (r.dropoff_address || '').split(',')[0];
-                            report += `${idx + 1}. ${r.customer_name}: ${cleanRoute} [${r.cost} ج.م] (${r.status || 'Pending'})\n`;
-                        });
+                    if (targetDate) {
+                        // 1. تفاصيل الرحلات المجدولة لهذا التاريخ
+                        if (allReservationsCache.byDate[targetDate]) {
+                            report += `\n📍 تفاصيل الحجوزات المجدولة ليوم (${targetDate}):\n`;
+                            const dayRecords = allReservationsCache.raw.filter(r => r.trip_date === targetDate);
+                            dayRecords.forEach((r, idx) => {
+                                const cleanRoute = (r.pickup_address || '').split(',')[0] + " ➝ " + (r.dropoff_address || '').split(',')[0];
+                                report += `${idx + 1}. ${r.customer_name}: ${cleanRoute} [${r.cost} ج.م] (${r.status || 'Pending'})\n`;
+                            });
+                        }
+                        
+                        // 2. تفاصيل الحجوزات التي تم إدخالها في هذا التاريخ
+                        const createdRecords = allReservationsCache.raw.filter(r => r.created_at && r.created_at.split('T')[0] === targetDate);
+                        if (createdRecords.length > 0) {
+                            report += `\n📥 تفاصيل الحجوزات الجديدة التي تم إدخالها للنظام يوم (${targetDate}):\n`;
+                            createdRecords.forEach((r, idx) => {
+                                const cleanRoute = (r.pickup_address || '').split(',')[0] + " ➝ " + (r.dropoff_address || '').split(',')[0];
+                                report += `${idx + 1}. ${r.customer_name}: خط السير (${cleanRoute}) | تاريخ الرحلة: ${r.trip_date} [السعر: ${r.cost} ج.م] (${r.status || 'Pending'})\n`;
+                            });
+                        }
                     }
                 }
 
@@ -7962,6 +8017,19 @@ ${contextData}
                 if (vaultsRes.data) {
                     report += `\n💰 حالة الخزائن:\n`;
                     vaultsRes.data.forEach(v => report += `- ${v.name}: ${v.balance} EGP\n`);
+                }
+
+                // ✅ جلب ملخص تقفيلات السواقين من الشيت عبر API
+                try {
+                    const closingsRes = await fetch('/api/driver_closings_summary?days=30');
+                    if (closingsRes.ok) {
+                        const closingsData = await closingsRes.json();
+                        if (closingsData.summary && !closingsData.summary.includes('خطأ')) {
+                            report += `\n${closingsData.summary}`;
+                        }
+                    }
+                } catch (closErr) {
+                    console.warn('Could not fetch driver closings:', closErr);
                 }
 
             } catch(e) { 
