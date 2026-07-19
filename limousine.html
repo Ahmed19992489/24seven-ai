@@ -1633,6 +1633,55 @@
                         document.getElementById('realtime-price').innerText = finalPrice + " EGP";
                         document.getElementById('map-info-bar').style.display = 'flex';
                         
+                        // رسم الخط والماركرات بين نقطتي الانطلاق والوصول عبر Geocoder
+                        if (map && window.google && google.maps) {
+                            const geocoder = new google.maps.Geocoder();
+                            let pickupLatLng = null, dropoffLatLng = null;
+                            // تنظيف الخطوط والماركرات القديمة
+                            if (window._fallbackPolyline) { window._fallbackPolyline.setMap(null); window._fallbackPolyline = null; }
+                            if (window._fallbackMarkers) { window._fallbackMarkers.forEach(m => m.setMap(null)); window._fallbackMarkers = []; }
+
+                            geocoder.geocode({ address: p + ', Egypt', language: 'ar' }, (res1, st1) => {
+                                if (st1 === 'OK' && res1[0]) {
+                                    pickupLatLng = res1[0].geometry.location;
+                                    geocoder.geocode({ address: d + ', Egypt', language: 'ar' }, (res2, st2) => {
+                                        if (st2 === 'OK' && res2[0]) {
+                                            dropoffLatLng = res2[0].geometry.location;
+                                            
+                                            // ماركر الانطلاق (أخضر)
+                                            const markerA = new google.maps.Marker({
+                                                position: pickupLatLng, map: map,
+                                                icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#22c55e', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
+                                                title: 'نقطة الانطلاق'
+                                            });
+                                            // ماركر الوصول (أصفر)
+                                            const markerB = new google.maps.Marker({
+                                                position: dropoffLatLng, map: map,
+                                                icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#f59e0b', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
+                                                title: 'الوجهة'
+                                            });
+                                            window._fallbackMarkers = [markerA, markerB];
+
+                                            // خط منقط بين النقطتين
+                                            window._fallbackPolyline = new google.maps.Polyline({
+                                                path: [pickupLatLng, dropoffLatLng],
+                                                geodesic: true,
+                                                strokeColor: '#f59e0b',
+                                                strokeOpacity: 0,
+                                                icons: [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 4, strokeColor: '#f59e0b' }, offset: '0', repeat: '20px' }],
+                                                map: map
+                                            });
+                                            // توسيط الخريطة بين النقطتين
+                                            const bounds = new google.maps.LatLngBounds();
+                                            bounds.extend(pickupLatLng);
+                                            bounds.extend(dropoffLatLng);
+                                            map.fitBounds(bounds, { padding: 60 });
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                        
                         if (successCallback) successCallback();
                     }
                 });
