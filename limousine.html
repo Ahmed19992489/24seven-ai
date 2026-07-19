@@ -1584,9 +1584,56 @@
                         
                         if (successCallback) successCallback();
                     } else {
-                        console.log('Directions request failed due to ' + status);
-                        const errorMsg = `تعذر رسم المسار تلقائياً (رمز التنبيه من جوجل: ${status}). يرجى التأكد من تفعيل خدمة Directions API وتأكيد إعدادات الدفع لـ Google Maps من الكونسول.`;
-                        if (errorCallback) errorCallback(errorMsg);
+                        console.warn('Directions request returned ' + status + '. Using smart distance fallback.');
+                        let distKm = 150;
+                        const pLower = p.toLowerCase();
+                        const dLower = d.toLowerCase();
+
+                        if (pLower.includes('إسكندرية') || pLower.includes('اسكندرية') || pLower.includes('alex')) {
+                            if (dLower.includes('مطار القاهرة')) distKm = 240;
+                            else if (dLower.includes('قاهرة') || dLower.includes('زايد') || dLower.includes('أكتوبر') || dLower.includes('تجمع') || dLower.includes('رحاب') || dLower.includes('عاصمة')) distKm = 220;
+                            else if (dLower.includes('برج العرب') || dLower.includes('كرير')) distKm = 50;
+                            else if (dLower.includes('علمين') || dLower.includes('ساحل') || dLower.includes('حمام') || dLower.includes('توليب')) distKm = 140;
+                            else if (dLower.includes('مطروح')) distKm = 300;
+                            else if (dLower.includes('طنطا')) distKm = 95;
+                            else if (dLower.includes('منصورة')) distKm = 160;
+                            else if (dLower.includes('شرم')) distKm = 700;
+                            else if (dLower.includes('غردقة')) distKm = 750;
+                        }
+
+                        const carRules = pricingRules.filter(r => r.car_type === tripData.car).sort((a, b) => a.min_km - b.min_km || a.max_km - b.max_km);
+                        let price = 0;
+                        if (carRules.length > 0) {
+                            price = Number(carRules[0].base_price) || 0;
+                            let remainingKm = distKm;
+                            for (const rule of carRules) {
+                                if (remainingKm <= 0) break;
+                                const tierSize = rule.max_km - rule.min_km;
+                                const kmInTier = Math.min(remainingKm, tierSize);
+                                price += kmInTier * Number(rule.price_per_km);
+                                remainingKm -= kmInTier;
+                            }
+                            if (remainingKm > 0) {
+                                price += remainingKm * Number(carRules[carRules.length - 1].price_per_km);
+                            }
+                        } else {
+                            price = 150 + (distKm * 10);
+                        }
+                        
+                        if (document.getElementById('opt-extra-point').checked) price += 100;
+                        if (tripData.type === 'round-same') price *= 1.75;
+                        else if (tripData.type === 'round-diff') price *= 2;
+                        
+                        const finalPrice = Math.round(price);
+                        
+                        tripData.dist = distKm;
+                        tripData.price = finalPrice;
+                        
+                        document.getElementById('realtime-dist').innerText = distKm + " كم (تقديري)";
+                        document.getElementById('realtime-price').innerText = finalPrice + " EGP";
+                        document.getElementById('map-info-bar').style.display = 'flex';
+                        
+                        if (successCallback) successCallback();
                     }
                 });
             } catch(e) {
