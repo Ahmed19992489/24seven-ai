@@ -1633,53 +1633,86 @@
                         document.getElementById('realtime-price').innerText = finalPrice + " EGP";
                         document.getElementById('map-info-bar').style.display = 'flex';
                         
-                        // رسم الخط والماركرات بين نقطتي الانطلاق والوصول عبر Geocoder
+                        // رسم الخط والماركرات باستخدام إحداثيات المدن المصرية المضمنة (بدون أي API خارجي)
                         if (map && window.google && google.maps) {
-                            const geocoder = new google.maps.Geocoder();
-                            let pickupLatLng = null, dropoffLatLng = null;
-                            // تنظيف الخطوط والماركرات القديمة
+                            const EGYPT_COORDS = {
+                                'إسكندرية': {lat:31.2001,lng:29.9187}, 'اسكندرية': {lat:31.2001,lng:29.9187},
+                                'alex': {lat:31.2001,lng:29.9187},
+                                'القاهرة': {lat:30.0444,lng:31.2357}, 'قاهرة': {lat:30.0444,lng:31.2357}, 'cairo': {lat:30.0444,lng:31.2357},
+                                'مطار القاهرة': {lat:30.1219,lng:31.4057}, 'مطار': {lat:30.1219,lng:31.4057},
+                                'الرحاب': {lat:30.0667,lng:31.4833}, 'رحاب': {lat:30.0667,lng:31.4833},
+                                'التجمع': {lat:30.0176,lng:31.4912}, 'تجمع': {lat:30.0176,lng:31.4912},
+                                'الشيخ زايد': {lat:30.0731,lng:30.9462}, 'زايد': {lat:30.0731,lng:30.9462},
+                                '6 أكتوبر': {lat:29.9285,lng:30.9188}, 'أكتوبر': {lat:29.9285,lng:30.9188},
+                                'العاصمة الإدارية': {lat:30.0059,lng:31.7350}, 'عاصمة': {lat:30.0059,lng:31.7350},
+                                'برج العرب': {lat:30.8927,lng:29.5616}, 'برج': {lat:30.8927,lng:29.5616},
+                                'العلمين': {lat:30.8369,lng:28.9552}, 'علمين': {lat:30.8369,lng:28.9552},
+                                'مرسى مطروح': {lat:31.3543,lng:27.2374}, 'مطروح': {lat:31.3543,lng:27.2374},
+                                'طنطا': {lat:30.7865,lng:31.0004},
+                                'المنصورة': {lat:31.0364,lng:31.3807}, 'منصورة': {lat:31.0364,lng:31.3807},
+                                'شرم الشيخ': {lat:27.9158,lng:34.3300}, 'شرم': {lat:27.9158,lng:34.3300},
+                                'الغردقة': {lat:27.2579,lng:33.8116}, 'غردقة': {lat:27.2579,lng:33.8116},
+                                'الساحل الشمالي': {lat:30.9167,lng:28.5833}, 'ساحل': {lat:30.9167,lng:28.5833},
+                                'أسوان': {lat:24.0889,lng:32.8998}, 'الأقصر': {lat:25.6872,lng:32.6396},
+                                'سيدي عبد الرحمن': {lat:30.9500,lng:28.5167}, 'هاسيندا': {lat:30.9167,lng:28.5333},
+                                'الإسماعيلية': {lat:30.5965,lng:32.2715}, 'إسماعيلية': {lat:30.5965,lng:32.2715},
+                                'بورسعيد': {lat:31.2565,lng:32.2841}, 'السويس': {lat:29.9668,lng:32.5498},
+                                'مدينة نصر': {lat:30.0626,lng:31.3219}, 'نصر': {lat:30.0626,lng:31.3219},
+                                'المعادي': {lat:29.9602,lng:31.2569}, 'معادي': {lat:29.9602,lng:31.2569},
+                                'الزمالك': {lat:30.0626,lng:31.2196}, 'مصر الجديدة': {lat:30.0886,lng:31.3219},
+                                'المهندسين': {lat:30.0583,lng:31.2008}, 'الدقي': {lat:30.0478,lng:31.2079},
+                                'الجيزة': {lat:30.0131,lng:31.2089}, 'جيزة': {lat:30.0131,lng:31.2089},
+                                'حلوان': {lat:29.8491,lng:31.3348}, 'الهرم': {lat:29.9783,lng:31.1320},
+                                'كرير': {lat:30.9283,lng:29.5742}, 'كفر الشيخ': {lat:31.1107,lng:30.9388},
+                                'دمياط': {lat:31.4165,lng:31.8133}, 'الفيوم': {lat:29.3084,lng:30.8428},
+                                'بنها': {lat:30.4667,lng:31.1833}, 'شبرا الخيمة': {lat:30.1285,lng:31.2444},
+                                'العبور': {lat:30.2167,lng:31.6333}, 'عبور': {lat:30.2167,lng:31.6333},
+                                'بدر': {lat:30.1319,lng:31.7222}, 'مدينة بدر': {lat:30.1319,lng:31.7222},
+                                'القاهرة الجديدة': {lat:30.0176,lng:31.4912},
+                                'الساحل': {lat:30.9167,lng:28.5833},
+                            };
+
+                            const findCoords = (text) => {
+                                const t = text.toLowerCase();
+                                for (const [name, coords] of Object.entries(EGYPT_COORDS)) {
+                                    if (t.includes(name.toLowerCase())) return new google.maps.LatLng(coords.lat, coords.lng);
+                                }
+                                return null;
+                            };
+
+                            const pickupLatLng = findCoords(p);
+                            const dropoffLatLng = findCoords(d);
+
                             if (window._fallbackPolyline) { window._fallbackPolyline.setMap(null); window._fallbackPolyline = null; }
                             if (window._fallbackMarkers) { window._fallbackMarkers.forEach(m => m.setMap(null)); window._fallbackMarkers = []; }
 
-                            geocoder.geocode({ address: p + ', Egypt', language: 'ar' }, (res1, st1) => {
-                                if (st1 === 'OK' && res1[0]) {
-                                    pickupLatLng = res1[0].geometry.location;
-                                    geocoder.geocode({ address: d + ', Egypt', language: 'ar' }, (res2, st2) => {
-                                        if (st2 === 'OK' && res2[0]) {
-                                            dropoffLatLng = res2[0].geometry.location;
-                                            
-                                            // ماركر الانطلاق (أخضر)
-                                            const markerA = new google.maps.Marker({
-                                                position: pickupLatLng, map: map,
-                                                icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#22c55e', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
-                                                title: 'نقطة الانطلاق'
-                                            });
-                                            // ماركر الوصول (أصفر)
-                                            const markerB = new google.maps.Marker({
-                                                position: dropoffLatLng, map: map,
-                                                icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#f59e0b', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
-                                                title: 'الوجهة'
-                                            });
-                                            window._fallbackMarkers = [markerA, markerB];
+                            if (pickupLatLng && dropoffLatLng) {
+                                const markerA = new google.maps.Marker({
+                                    position: pickupLatLng, map: map,
+                                    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 11, fillColor: '#22c55e', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2.5 },
+                                    title: 'نقطة الانطلاق'
+                                });
+                                const markerB = new google.maps.Marker({
+                                    position: dropoffLatLng, map: map,
+                                    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 11, fillColor: '#f59e0b', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2.5 },
+                                    title: 'الوجهة'
+                                });
+                                window._fallbackMarkers = [markerA, markerB];
 
-                                            // خط منقط بين النقطتين
-                                            window._fallbackPolyline = new google.maps.Polyline({
-                                                path: [pickupLatLng, dropoffLatLng],
-                                                geodesic: true,
-                                                strokeColor: '#f59e0b',
-                                                strokeOpacity: 0,
-                                                icons: [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 4, strokeColor: '#f59e0b' }, offset: '0', repeat: '20px' }],
-                                                map: map
-                                            });
-                                            // توسيط الخريطة بين النقطتين
-                                            const bounds = new google.maps.LatLngBounds();
-                                            bounds.extend(pickupLatLng);
-                                            bounds.extend(dropoffLatLng);
-                                            map.fitBounds(bounds, { padding: 60 });
-                                        }
-                                    });
-                                }
-                            });
+                                window._fallbackPolyline = new google.maps.Polyline({
+                                    path: [pickupLatLng, dropoffLatLng],
+                                    geodesic: true,
+                                    strokeColor: '#f59e0b',
+                                    strokeOpacity: 0,
+                                    icons: [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 4, strokeColor: '#f59e0b' }, offset: '0', repeat: '18px' }],
+                                    map: map
+                                });
+
+                                const bounds = new google.maps.LatLngBounds();
+                                bounds.extend(pickupLatLng);
+                                bounds.extend(dropoffLatLng);
+                                map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
+                            }
                         }
                         
                         if (successCallback) successCallback();
