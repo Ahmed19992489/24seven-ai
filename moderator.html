@@ -4996,28 +4996,58 @@
             const panel = document.getElementById('ai-suggest-panel');
             const textEl = document.getElementById('ai-suggest-text');
             panel.classList.remove('hidden');
-            textEl.innerHTML = '<i class="fas fa-circle-notch fa-spin text-indigo-400"></i> جاري توليد الرد...';
+            textEl.innerHTML = '<i class="fas fa-circle-notch fa-spin text-indigo-400"></i> جاري قراءة سياق المحادثة وتوليد الرد...';
 
             const chat = groupedChats[activeChatId];
-            const lastMessages = (chat?.messages || []).slice(-6).map(m =>
-                `${m.is_from_admin ? 'موديتور' : 'عميل'}: ${m.message_text}`
-            ).join('\n');
+            if (!chat || !chat.messages) {
+                textEl.innerHTML = '<span class="text-amber-600">⚠️ لا توجد رسائل سابقة للتحليل.</span>';
+                return;
+            }
 
-            const systemPrompt = `أنت مساعد لـ موديتور في شركة ليموزين فاخرة اسمها 24Seven في مصر.
-مهمتك: اقتراح رد احترافي ومتعاطف على رسالة العميل بالعربية.
-القواعد:
-- الرد قصير وعملي (3-4 جمل بالحد الأقصى)
-- لهجة مصرية محترمة وودية
-- لا تضيف أي شرح أو مقدمة، فقط نص الرد المباشر
-- استخدم 1-2 إيموجي مناسبة
-- أنت تمثل الشركة وليس نفسك`;
+            // 1. Build context from the last 15 messages
+            const lastMessages = (chat.messages || []).slice(-15).map(m => {
+                const text = (m.message_text || m.message || '').trim();
+                if (text.startsWith('MEDIA_IMAGE:')) return `${m.is_from_admin ? 'الموظف' : 'العميل'}: [أرسل صورة]`;
+                if (text.startsWith('MEDIA_AUDIO:')) return `${m.is_from_admin ? 'الموظف' : 'العميل'}: [أرسل تسجيل صوتي]`;
+                return `${m.is_from_admin ? 'الموظف (الإدارة)' : 'العميل'}: ${text}`;
+            }).filter(line => line.length > 0).join('\n');
+
+            // 2. Extract client details from the UI profile sidebar
+            const clientName = document.getElementById('profile-name')?.textContent || chat.name || activeChatId;
+            const clientPhone = document.getElementById('profile-phone')?.textContent || '';
+            const tripsCount = document.getElementById('profile-trips-count')?.textContent || '';
+
+            let lastTripSummary = '';
+            const firstTripCard = document.querySelector('#profile-trips-list > div');
+            if (firstTripCard) {
+                lastTripSummary = firstTripCard.innerText.replace(/\s+/g, ' ');
+            }
+
+            // 3. Craft strict system prompt for Egyptian context understanding
+            const systemPrompt = `أنت مساعد ذكي لخدمة العملاء وموظفي غرف العمليات في شركة "24Seven" لخدمات الليموزين والرحلات الفاخرة في مصر.
+مهمتك: قراءة سياق المحادثة كاملاً وفهمه بدقة، ثم اقتراح رد مناسب ومباشر يستطيع الموظف إرساله للعميل فوراً.
+
+بيانات العميل المتاحة:
+- الاسم: ${clientName}
+- الهاتف: ${clientPhone}
+- السجل: ${tripsCount} ${lastTripSummary ? `(آخر حجز: ${lastTripSummary})` : ''}
+
+قواعد التوليد الإلزامية:
+1. الرد يجب أن يكون بـ (لهجة مصرية محترمة، ودية، واحترافية 100%). يمنع منعاً باتاً استخدام أي كلمات أجنبية أو غير عربية.
+2. اقرأ سياق المحادثة وآخر رسائل بين الموظف والعميل جيداً وافهم موقف العميل:
+   - إذا كان العميل قال "تمام" أو وافق بعد إرسال رقم الكابتن أو الفاتورة أو تفاصيل الرحلة -> اقترح رداً مهذباً يؤكد الجاهزية ويتمنى له رحلة سعيدة وآمنة مع 24Seven.
+   - إذا كان العميل يسأل عن أسعار رحلة -> اطلب منه تحديد مكان التحرك والوصول وتاريخ وساعة الرحلة ليتم تسعيرها.
+   - إذا كان العميل يطلب التواصل مع الكابتن -> أكد له المتابعة والتواصل فوراً.
+3. الرد يكون موجزاً ومباشراً (1-3 جمل على الأكثر).
+4. استخدم 1-2 إيموجي لطيفة ومناسبة (مثل 😊 🚕 ✨).
+5. لا تكتب أي مقدمات أو شروحات إضافية مثل "إليك الرد المقترح:", أخرج فقط نص الرد المباشر القابل للإرسال فوراً.`;
 
             try {
-                const suggestion = await callClaude(systemPrompt, `السياق:\n${lastMessages}\n\nاقترح الرد المناسب:`);
-                lastAiSuggestion = suggestion;
-                textEl.textContent = suggestion;
+                const suggestion = await callClaude(systemPrompt, `سياق المحادثة الأخيرة بين الموظف والعميل:\n${lastMessages}\n\nبناءً على هذا السياق، اقترح الرد المناسب للموظف:`);
+                lastAiSuggestion = suggestion.trim();
+                textEl.textContent = lastAiSuggestion;
             } catch (e) {
-                textEl.innerHTML = `<span class="text-red-500">❌ خطأ: ${e.message}</span>`;
+                textEl.innerHTML = `<span class="text-red-500">❌ خطأ في توليد الرد: ${e.message}</span>`;
             }
         }
 
@@ -5025,6 +5055,21 @@
             if (!lastAiSuggestion) return;
             document.getElementById('chat-input').value = lastAiSuggestion;
             document.getElementById('chat-input').focus();
+            hideAiSuggest();
+        }
+
+        function acceptAiSuggestion() {
+            const text = document.getElementById('ai-suggestion-text')?.textContent || lastAiSuggestion;
+            if (text) {
+                document.getElementById('chat-input').value = text;
+                document.getElementById('chat-input').focus();
+            }
+            dismissAiSuggestion();
+        }
+
+        function dismissAiSuggestion() {
+            const bar = document.getElementById('ai-suggestion-bar');
+            if (bar) bar.classList.add('hidden');
             hideAiSuggest();
         }
 
