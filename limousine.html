@@ -1499,13 +1499,18 @@
                     directionsRenderer.setMap(map);
                 }
 
-                // المستمعات التلقائية لتحديث المسار فور اختيار أو كتابة العميل
-                pickupInput.addEventListener('change', () => { autoUpdateRouteAndPrice(); });
-                dropoffInput.addEventListener('change', () => { autoUpdateRouteAndPrice(); });
-                pickupInput.addEventListener('blur', () => { autoUpdateRouteAndPrice(); });
-                dropoffInput.addEventListener('blur', () => { autoUpdateRouteAndPrice(); });
+                // المستمعات التلقائية لتحديث المسار فور اختيار أو كتابة العميل (مع تأخير 800ms)
+                let _routeDebounce = null;
+                const debouncedUpdate = () => {
+                    clearTimeout(_routeDebounce);
+                    _routeDebounce = setTimeout(() => autoUpdateRouteAndPrice(), 800);
+                };
+                pickupInput.addEventListener('change', debouncedUpdate);
+                dropoffInput.addEventListener('change', debouncedUpdate);
+                pickupInput.addEventListener('blur', debouncedUpdate);
+                dropoffInput.addEventListener('blur', debouncedUpdate);
                 document.getElementById('opt-extra-point').addEventListener('change', () => { autoUpdateRouteAndPrice(); });
-                extraInput.addEventListener('change', () => { autoUpdateRouteAndPrice(); });
+                extraInput.addEventListener('change', debouncedUpdate);
             } catch (e) { console.log("Maps Error:", e); }
         }
 
