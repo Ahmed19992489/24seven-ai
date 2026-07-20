@@ -2470,7 +2470,24 @@
                 clientPhone = senderId;
                 document.getElementById('profile-phone').textContent = '+2' + (senderId.startsWith('0') ? senderId : '0' + senderId);
             } else {
-                document.getElementById('profile-phone').textContent = senderId;
+                // Try to extract phone number from chat messages text (e.g., 01558282201)
+                if (chat && chat.messages) {
+                    for (const m of chat.messages) {
+                        const content = m.content || m.message_body || m.text || '';
+                        const match = content.match(/(?:01|201|\+201)\d{8,9}/);
+                        if (match) {
+                            let extracted = match[0].replace(/\D/g, '');
+                            if (extracted.startsWith('20')) extracted = extracted.substring(2);
+                            if (extracted.length === 10 && !extracted.startsWith('0')) extracted = '0' + extracted;
+                            clientPhone = extracted;
+                            document.getElementById('profile-phone').textContent = clientPhone;
+                            break;
+                        }
+                    }
+                }
+                if (!clientPhone) {
+                    document.getElementById('profile-phone').textContent = senderId;
+                }
             }
 
             // Set name from chat
@@ -2479,28 +2496,71 @@
                 document.getElementById('profile-avatar').textContent = clientName.charAt(0).toUpperCase();
             }
 
-            // Fetch trips from google_reservations by phone (for WhatsApp)
+            // Fetch trips from google_reservations across all channels (by phone or by customer_name)
             let trips = [];
-            if (channel === 'whatsapp' && clientPhone) {
-                // Use last 8 digits for fuzzy match
+
+            // A) First attempt: By phone if available
+            if (clientPhone) {
                 const last8 = String(clientPhone).replace(/\D/g,'').slice(-8);
+                if (last8.length >= 8) {
+                    try {
+                        const { data } = await sbClient
+                            .from('google_reservations')
+                            .select('customer_name, customer_phone, trip_date, trip_time, pickup_address, dropoff_address, cost, status, trip_type')
+                            .ilike('customer_phone', `%${last8}%`)
+                            .order('created_at', { ascending: false })
+                            .limit(20);
+                        if (data && data.length > 0) {
+                            trips = data;
+                        }
+                    } catch(e) { console.error('Profile trips fetch by phone error:', e); }
+                }
+            }
+
+            // B) Second attempt: If no trips found by phone, search by clientName (e.g. Facebook name or reservation name)
+            if (trips.length === 0 && clientName && clientName !== senderId) {
                 try {
-                    const { data } = await sbClient
-                        .from('google_reservations')
-                        .select('customer_name, trip_date, trip_time, pickup_address, dropoff_address, cost, status, trip_type')
-                        .ilike('customer_phone', `%${last8}%`)
-                        .order('created_at', { ascending: false })
-                        .limit(20);
-                    if (data && data.length > 0) {
-                        trips = data;
-                        // Use real name from reservation if we didn't have one
-                        if (trips[0].customer_name && (!clientName || clientName === senderId)) {
-                            clientName = trips[0].customer_name;
-                            document.getElementById('profile-name').textContent = clientName;
-                            document.getElementById('profile-avatar').textContent = clientName.charAt(0).toUpperCase();
+                    const cleanName = clientName.trim();
+                    const firstName = cleanName.split(' ')[0];
+
+                    // Search full name first
+                    if (cleanName.length >= 3) {
+                        const { data } = await sbClient
+                            .from('google_reservations')
+                            .select('customer_name, customer_phone, trip_date, trip_time, pickup_address, dropoff_address, cost, status, trip_type')
+                            .ilike('customer_name', `%${cleanName}%`)
+                            .order('created_at', { ascending: false })
+                            .limit(20);
+                        if (data && data.length > 0) {
+                            trips = data;
                         }
                     }
-                } catch(e) { console.error('Profile trips fetch error:', e); }
+
+                    // Fallback to first name search if full name search yielded nothing
+                    if (trips.length === 0 && firstName && firstName.length >= 3) {
+                        const { data: dataFirst } = await sbClient
+                            .from('google_reservations')
+                            .select('customer_name, customer_phone, trip_date, trip_time, pickup_address, dropoff_address, cost, status, trip_type')
+                            .ilike('customer_name', `%${firstName}%`)
+                            .order('created_at', { ascending: false })
+                            .limit(20);
+                        if (dataFirst && dataFirst.length > 0) {
+                            trips = dataFirst;
+                        }
+                    }
+                } catch(e) { console.error('Profile trips fetch by name error:', e); }
+            }
+
+            // If trips were found, update profile info with real name & phone from reservations
+            if (trips.length > 0) {
+                if (trips[0].customer_name && (!clientName || clientName === senderId)) {
+                    clientName = trips[0].customer_name;
+                    document.getElementById('profile-name').textContent = clientName;
+                    document.getElementById('profile-avatar').textContent = clientName.charAt(0).toUpperCase();
+                }
+                if (trips[0].customer_phone && channel !== 'whatsapp') {
+                    document.getElementById('profile-phone').textContent = trips[0].customer_phone;
+                }
             }
 
             // Update count
