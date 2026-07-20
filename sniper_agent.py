@@ -168,7 +168,6 @@ def check_match(trip_data):
     if not filters:
         op = trip_data.get("operation_type", "")
         if op in ("sale", "exchange"):
-            print(f"[Sniper] No filters set → auto-match for op_type={op}")
             return True
         return False
 

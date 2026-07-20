@@ -205,16 +205,28 @@ async function initSession(id) {
                         
                         const senderName = msg.pushName || senderPhone;
                         
-                        // Extract message content, unwrapping ephemeral or view-once wrappers
+                        // Extract message content, unwrapping ephemeral, view-once, or edited wrappers recursively
                         let messageContent = msg.message;
-                        if (messageContent.ephemeralMessage) {
-                            messageContent = messageContent.ephemeralMessage.message;
+                        while (messageContent) {
+                            if (messageContent.ephemeralMessage) messageContent = messageContent.ephemeralMessage.message;
+                            else if (messageContent.viewOnceMessage) messageContent = messageContent.viewOnceMessage.message;
+                            else if (messageContent.viewOnceMessageV2) messageContent = messageContent.viewOnceMessageV2.message;
+                            else if (messageContent.viewOnceMessageV2Extension) messageContent = messageContent.viewOnceMessageV2Extension.message;
+                            else if (messageContent.documentWithCaptionMessage) messageContent = messageContent.documentWithCaptionMessage.message;
+                            else if (messageContent.editedMessage) messageContent = messageContent.editedMessage.message?.protocolMessage?.editedMessage || messageContent.editedMessage.message;
+                            else break;
                         }
-                        if (messageContent.viewOnceMessage) {
-                            messageContent = messageContent.viewOnceMessage.message;
-                        }
-                        if (messageContent.viewOnceMessageV2) {
-                            messageContent = messageContent.viewOnceMessageV2.message;
+
+                        if (!messageContent) continue;
+
+                        // Skip internal WhatsApp system / protocol / reaction messages
+                        if (messageContent.protocolMessage || 
+                            messageContent.senderKeyDistributionMessage || 
+                            messageContent.reactionMessage || 
+                            messageContent.keepInChatMessage || 
+                            messageContent.keyExpiration ||
+                            messageContent.pinInChatMessage) {
+                            continue;
                         }
                         
                         // Extract text content
@@ -318,8 +330,14 @@ async function initSession(id) {
                                 text = messageContent.imageMessage.caption || '[صورة / Image]';
                             } else if (messageContent.videoMessage) {
                                 text = messageContent.videoMessage.caption || '[فيديو / Video]';
+                            } else if (messageContent.audioMessage) {
+                                text = '[رسالة صوتية / Voice Note]';
                             } else if (messageContent.documentMessage) {
-                                text = messageContent.documentMessage.caption || '[ملف / Document]';
+                                text = messageContent.documentMessage.caption || messageContent.documentMessage.fileName || '[ملف / Document]';
+                            } else if (messageContent.stickerMessage) {
+                                text = '[ملصق / Sticker]';
+                            } else if (messageContent.contactMessage || messageContent.contactsArrayMessage) {
+                                text = '[جهة اتصال / Contact]';
                             } else if (messageContent.buttonsResponseMessage) {
                                 text = messageContent.buttonsResponseMessage.selectedButtonId;
                             } else if (messageContent.templateButtonReplyMessage) {
@@ -327,8 +345,7 @@ async function initSession(id) {
                             } else if (messageContent.listResponseMessage) {
                                 text = messageContent.listResponseMessage.title;
                             } else {
-                                console.log(`[Gateway Debug] Unhandled message types:`, Object.keys(messageContent));
-                                text = '[رسالة وسائط]';
+                                continue;
                             }
                         }
                         
