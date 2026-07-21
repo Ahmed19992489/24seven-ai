@@ -6610,14 +6610,12 @@ ${contextData}
 
     async function loadMarketingStatus() {
         const apiBase = getApiBaseUrl();
-        if (!apiBase) {
-            alert('⚠️ إعدادات السيرفر غير متوفرة. يرجى كتابة وحفظ رابط ngrok في تبويب إعدادات السيرفر أولاً.');
-            showTab('settings');
-            return;
-        }
+        if (!apiBase) return;
         
         try {
-            const res = await fetch(`${apiBase}/api/marketing/status`);
+            const res = await fetch(`${apiBase}/api/marketing/status`, {
+                headers: { 'ngrok-skip-browser-warning': 'true' }
+            });
             if (res.ok) {
                 const data = await res.json();
                 updateMarketingUI(data);
@@ -6696,7 +6694,9 @@ ${contextData}
                 const apiBase = getApiBaseUrl();
                 if (!apiBase) return;
                 try {
-                    const res = await fetch(`${apiBase}/api/marketing/status`);
+                    const res = await fetch(`${apiBase}/api/marketing/status`, {
+                        headers: { 'ngrok-skip-browser-warning': 'true' }
+                    });
                     if (res.ok) {
                         const data = await res.json();
                         updateMarketingUI(data);
