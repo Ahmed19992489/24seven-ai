@@ -150,11 +150,11 @@ async function initSession(id) {
 
     // Handle incoming messages
     sock.ev.on('messages.upsert', async (m) => {
-        console.log(`[Gateway Debug] messages.upsert: type=${m.type}, count=${m.messages?.length}`);
+        // console.log(`[Gateway Debug] messages.upsert: type=${m.type}, count=${m.messages?.length}`);
         
         if (m.type === 'notify' || m.type === 'append') {
             for (const msg of m.messages) {
-                console.log(`[Gateway Debug] Processing message: fromMe=${msg.key?.fromMe}, remoteJid=${msg.key?.remoteJid}, hasMessage=${!!msg.message}`);
+                // console.log(`[Gateway Debug] Processing message: fromMe=${msg.key?.fromMe}, remoteJid=${msg.key?.remoteJid}, hasMessage=${!!msg.message}`);
                 
                 if (msg.message) {
                     const senderJid = msg.key.remoteJid;
@@ -352,7 +352,7 @@ async function initSession(id) {
                         if (!text) continue;
                         
                         if (isGroup) {
-                            console.log(`[Gateway] Group msg in "${groupName}" from ${senderPhone} (Session ${id}): ${text}`);
+                            // console.log(`[Gateway] Group msg in "${groupName}" from ${senderPhone} (Session ${id}): ${text}`);
                             try {
                                 await axios.post(`${PYTHON_BACKEND_URL}/api/whatsapp/webhook/group_message`, {
                                     group_id: senderJid,
