@@ -242,12 +242,14 @@ def start_telegram_polling():
     def poll():
         print("[Telegram Bot] Starting long polling thread...")
         last_update_id = 0
+        token = None
         
         while True:
-            token = get_setting("telegram_token")
             if not token:
-                time.sleep(10)
-                continue
+                token = get_setting("telegram_token")
+                if not token:
+                    time.sleep(10)
+                    continue
                 
             url = f"https://api.telegram.org/bot{token}/getUpdates"
             try:
