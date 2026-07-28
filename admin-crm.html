@@ -8861,6 +8861,11 @@ async function loadWhatsAppSettings() {
             } else {
                 alert('❌ فشل الإيقاف: ' + data.message);
             }
+        } catch (e) {
+            alert('❌ خطأ: ' + e.message);
+        }
+    }
+
     // ==========================================
     // 💙 نظام حملات ماسنجر (Facebook Messenger Broadcast)
     // ==========================================
