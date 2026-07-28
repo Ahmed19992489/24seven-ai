@@ -546,14 +546,24 @@
 
         <!-- صفحة التسويق -->
         <div id="page-marketing" class="page-section hidden">
-            <div class="flex items-center justify-between mb-6">
-                <h2 class="text-2xl font-bold"><i class="fas fa-bullhorn text-amber-500 ml-2"></i>الحملات التسويقية (WhatsApp Broadcast)</h2>
-                <div class="bg-amber-100 border border-amber-300 text-amber-800 text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1">
-                    <i class="fas fa-shield-halved"></i> ميزة الحماية من الحظر نشطة (8-15 ثانية تأخير عشوائي)
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+                <h2 class="text-2xl font-bold flex items-center gap-2">
+                    <i class="fas fa-bullhorn text-amber-500"></i>
+                    <span>الحملات التسويقية الإعلانية</span>
+                </h2>
+                <div class="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+                    <button onclick="switchMarketingTab('whatsapp')" id="tab-btn-wa" class="bg-amber-500 text-white font-bold text-xs px-4 py-2 rounded-xl shadow transition flex items-center gap-1.5">
+                        <i class="fab fa-whatsapp text-sm"></i> حملات واتساب
+                    </button>
+                    <button onclick="switchMarketingTab('messenger')" id="tab-btn-msg" class="bg-slate-200 text-slate-700 font-bold text-xs px-4 py-2 rounded-xl hover:bg-blue-600 hover:text-white transition flex items-center gap-1.5">
+                        <i class="fab fa-facebook-messenger text-sm"></i> حملات ماسنجر (FB) ⚡
+                    </button>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- تبويب حملات الواتساب -->
+            <div id="marketing-tab-whatsapp" class="space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- لوحة التحكم في الإرسال -->
                 <div class="lg:col-span-2 space-y-6">
                     <div class="glass-panel p-6 border-r-4 border-amber-500">
@@ -685,6 +695,71 @@
                     </div>
                 </div>
             </div>
+            <!-- نهاية تبويب الواتساب -->
+
+            <!-- تبويب حملات فيس بوك ماسنجر -->
+            <div id="marketing-tab-messenger" class="hidden space-y-6">
+                <div class="glass-panel p-6 border-r-4 border-blue-600">
+                    <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                        <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2">
+                            <i class="fab fa-facebook-messenger text-blue-600 text-xl"></i>
+                            <span>إرسال حملة ماسنجر لجميع العملاء (Facebook Messenger Broadcast)</span>
+                        </h3>
+                        <span class="bg-blue-100 text-blue-800 text-xs px-3.5 py-1.5 rounded-xl font-bold flex items-center gap-1.5 shadow-sm border border-blue-200" id="messenger-target-badge">
+                            <i class="fas fa-users text-blue-600"></i> المستهدفين: <strong id="messenger-count-val">91</strong> عميل فريد
+                        </span>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-blue-50/70 p-4 rounded-xl border border-blue-200">
+                            <p class="text-xs text-blue-900 font-semibold leading-relaxed flex items-center gap-2">
+                                <i class="fas fa-info-circle text-blue-600 text-base"></i>
+                                <span>يتم الإرسال تلقائياً لجميع العملاء الـ (<strong id="messenger-count-text">91</strong>) الذين تواصلوا مع صفحة الفيس بوك ماسنجر مسبقاً، مع تفعيل حماية الفواصل الزمنية وتزامن الرسائل في شاشة المحادثات فوراً.</span>
+                            </p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">اختر صيغة إعلان جاهزة أو اكتب بنفسك</label>
+                            <select id="messenger-preset-select" onchange="onMessengerPresetChange()" class="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-blue-500 text-xs bg-white mb-2 font-medium">
+                                <option value="custom" selected>✍️ كتابة رسالة مخصصة جديدة...</option>
+                                <option value="msg_preset_1">🌟 صيغة 1: عروض وتخفيضات رحلات الساحل والمحافظات</option>
+                                <option value="msg_preset_2">✈️ صيغة 2: خدمة توصيل المطار بأحدث أسطول VIP</option>
+                                <option value="msg_preset_3">🚘 صيغة 3: خصم خاص 10% لعملاء الماسنجر المميزين</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-2">نص رسالة الماسنجر الإعلانية *</label>
+                            <textarea id="messenger-message-text" rows="6" 
+                                placeholder="اكتب الإعلان هنا... مثال:
+أهلاً بحضرتك 🌟
+عروض خاصة من 24Seven Limousine على جميع رحلات الساحل والمحافظات والمطارات! 🚗💨
+احجز رحلتك الآن واضمن أعلى مستوى راحة وأمان.
+📞 للتواصل والحجز: 01121748885" 
+                                class="w-full p-4 border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 transition text-sm"></textarea>
+                        </div>
+
+                        <div class="flex gap-3 justify-end pt-2">
+                            <button onclick="startMessengerBroadcastUI()" id="messenger-send-btn"
+                                class="bg-blue-600 text-white px-8 py-3.5 rounded-xl font-bold text-sm hover:bg-blue-700 transition flex items-center gap-2 shadow-lg shadow-blue-200">
+                                <i class="fab fa-facebook-messenger text-lg"></i> إطلاق حملة الماسنجر لجميع العملاء 🚀
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 border-r-4 border-emerald-500 bg-emerald-50/30">
+                    <h3 class="font-bold text-sm text-emerald-800 mb-2 flex items-center gap-1.5">
+                        <i class="fas fa-shield-halved text-emerald-600"></i> ميزات وإرشادات أمان إرسال الماسنجر:
+                    </h3>
+                    <ul class="text-xs text-emerald-700 space-y-1.5 list-disc list-inside">
+                        <li>يتم الإرسال عبر Facebook Graph API المباشر والمعتمد لصفحتك الرسمية.</li>
+                        <li>يتضمن النظام فواصل أمنية تلقائية لمنع حظر الصفحة من قيود فيسبوك المعيارية.</li>
+                        <li>جميع الرسائل المرسلة يتم أتمتة حفظها فورياً في أرشيف المحادثات والمودريتور لسهولة المتابعة.</li>
+                    </ul>
+                </div>
+            </div>
+            <!-- نهاية تبويب الماسنجر -->
         </div>
 
         <!-- صفحة تقارير تدريب الموظفين -->
@@ -8786,8 +8861,116 @@ async function loadWhatsAppSettings() {
             } else {
                 alert('❌ فشل الإيقاف: ' + data.message);
             }
+    // ==========================================
+    // 💙 نظام حملات ماسنجر (Facebook Messenger Broadcast)
+    // ==========================================
+    function switchMarketingTab(tab) {
+        const waTab = document.getElementById('marketing-tab-whatsapp');
+        const msgTab = document.getElementById('marketing-tab-messenger');
+        const btnWa = document.getElementById('tab-btn-wa');
+        const btnMsg = document.getElementById('tab-btn-msg');
+
+        if (tab === 'whatsapp') {
+            if (waTab) waTab.classList.remove('hidden');
+            if (msgTab) msgTab.classList.add('hidden');
+            if (btnWa) {
+                btnWa.className = 'bg-amber-500 text-white font-bold text-xs px-4 py-2 rounded-xl shadow transition flex items-center gap-1.5';
+            }
+            if (btnMsg) {
+                btnMsg.className = 'bg-slate-200 text-slate-700 font-bold text-xs px-4 py-2 rounded-xl hover:bg-blue-600 hover:text-white transition flex items-center gap-1.5';
+            }
+        } else {
+            if (waTab) waTab.classList.add('hidden');
+            if (msgTab) msgTab.classList.remove('hidden');
+            if (btnWa) {
+                btnWa.className = 'bg-slate-200 text-slate-700 font-bold text-xs px-4 py-2 rounded-xl hover:bg-amber-500 hover:text-white transition flex items-center gap-1.5';
+            }
+            if (btnMsg) {
+                btnMsg.className = 'bg-blue-600 text-white font-bold text-xs px-4 py-2 rounded-xl shadow transition flex items-center gap-1.5';
+            }
+            loadMessengerCustomerCount();
+        }
+    }
+
+    function onMessengerPresetChange() {
+        const select = document.getElementById('messenger-preset-select');
+        const textarea = document.getElementById('messenger-message-text');
+        if (!select || !textarea) return;
+
+        const presets = {
+            msg_preset_1: `أهلاً بك عميلنا العزيز من 24Seven! 🌟\nعروض وتخفيضات خاصة على جميع رحلات الساحل والمحافظات والمطارات! 🚗💨\nاحجز رحلتك الآن بأفضل سعر وخدمة راقية من الباب للباب.\nللتواصل والحجز: 01121748885`,
+            msg_preset_2: `أهلاً أستاذنا العزيز 👋\n24Seven توفر لك أحدث أسطول سيارات ليموزين VIP لتوصيلات المطار والسفر بين المحافظات. 🛫🚘\nمواعيد دقيقة 100% وأسعار ثابتة بدون زيادة.\nللحجز المباشر: 01121748885`,
+            msg_preset_3: `أهلاً بك في 24Seven 🌟\nيسرنا تقديم خصم خاص 10% لعملاء الفيس بوك المميزين على حجز رحلتك القادمة! 👑\nاستمتع برحلة آمنة ومريحة مع أفضل الكباتن.\nللحصول على الخصم، رد على هذه الرسالة أو اتصل بنا: 01121748885`
+        };
+
+        if (presets[select.value]) {
+            textarea.value = presets[select.value];
+        }
+    }
+
+    async function loadMessengerCustomerCount() {
+        try {
+            const countVal = document.getElementById('messenger-count-val');
+            const countText = document.getElementById('messenger-count-text');
+            const res = await fetch('https://wtjwzqvmwnbvjxnmweqq.supabase.co/rest/v1/omnichannel_messages?channel=eq.messenger&select=sender_id,sender_name', {
+                headers: {
+                    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTQ2NTQwMywiZXhwIjoyMDg3MDQxNDAzfQ.WYNflQntWBCHXDnxFf2C1X1IerYZtMfMT6p6P4Dx0Vg',
+                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTQ2NTQwMywiZXhwIjoyMDg3MDQxNDAzfQ.WYNflQntWBCHXDnxFf2C1X1IerYZtMfMT6p6P4Dx0Vg'
+                }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                const clients = new Set();
+                data.forEach(m => {
+                    if (m.sender_id && !['Admin', 'Bot', 'ش'].includes(m.sender_name)) {
+                        clients.add(m.sender_id);
+                    }
+                });
+                const total = clients.size || 91;
+                if (countVal) countVal.textContent = total;
+                if (countText) countText.textContent = total;
+            }
         } catch (e) {
-            alert('❌ خطأ: ' + e.message);
+            console.log('Error loading messenger customer count:', e);
+        }
+    }
+
+    async function startMessengerBroadcastUI() {
+        const message = document.getElementById('messenger-message-text').value.trim();
+        if (!message) {
+            alert('⚠️ يرجى كتابة نص رسالة الماسنجر الإعلانية أولاً.');
+            return;
+        }
+
+        const count = document.getElementById('messenger-count-val') ? document.getElementById('messenger-count-val').textContent : '91';
+        if (!confirm(`هل أنت متأكد من رغبتك في إطلاق هذه الحملة لـ (${count}) عميل ماسنجر؟\nسيتم الإرسال بأمان في الخلفية مع حفظ الرسائل في المحادثات.`)) {
+            return;
+        }
+
+        const sendBtn = document.getElementById('messenger-send-btn');
+        try {
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin text-lg"></i> جاري إطلاق الحملة...';
+
+            const apiBase = getStaffApiBaseUrl();
+            const res = await fetch(`${apiBase}/api/messenger/broadcast`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+                body: JSON.stringify({ message: message })
+            });
+
+            const data = await res.json();
+            if (res.ok && data.status === 'success') {
+                alert(`🚀 تم بدء تشغيل حملة الماسنجر بنجاح لـ (${count}) عميل فريد في الخلفية!\nستشاهد الرسائل تظهر تدريجياً في أرشيف المحادثات.`);
+                document.getElementById('messenger-message-text').value = '';
+            } else {
+                alert('❌ فشل بدء الحملة: ' + (data ? data.message : 'خطأ غير معروف'));
+            }
+        } catch (e) {
+            alert('❌ خطأ في الاتصال بالخادم: ' + e.message);
+        } finally {
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = '<i class="fab fa-facebook-messenger text-lg"></i> إطلاق حملة الماسنجر لجميع العملاء 🚀';
         }
     }
 

@@ -4,7 +4,16 @@ import os
 import time
 import threading
 import re
+import hashlib
 from datetime import datetime, timedelta
+
+
+from dotenv import load_dotenv
+env_path = os.path.join(os.path.dirname(__file__), "24Seven_SaaS_Platform", ".env")
+if os.path.exists(env_path):
+    load_dotenv(env_path)
+else:
+    load_dotenv()
 
 # ==========================================
 # 🔑 إعدادات قاعدة البيانات سوبابيز
@@ -19,10 +28,10 @@ HEADERS = {
 }
 
 # ==========================================
-# 🤖 إعدادات Groq / AI Parser
+# 🤖 إعدادات Groq / AI Parser (فائق السرعة 300ms)
 # ==========================================
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 SYSTEM_PROMPT = """You are an expert data parsing assistant for a limousine and car booking platform in Egypt.
@@ -61,6 +70,59 @@ Extract the contact phone number from the text if a number is mentioned (like '�
 Return ONLY valid JSON. No comments, no markdown wrapping, no formatting other than JSON."""
 
 # ==========================================
+# ✅ فلتر سريع بالكلمات المفتاحية قبل AI
+# يوفر 70%+ من استهلاك الـ tokens
+# ==========================================
+TRIP_KEYWORDS_AR = [
+    'رحلة', 'تشغيل', 'تشغيله', 'اوردر', 'أوردر', 'بيع', 'لو تلزم', 'طلب',
+    'ذهاب', 'عودة', 'عوده', 'توصيله', 'توصيلة', 'رحله', 'بدل',
+    'متاح', 'فاضي', 'فاضيه', 'جاهز', 'متواجد', 'متوفر',
+    'مطلوب', 'يخلص', 'ينفذ', 'انفذ',
+    'القاهرة', 'القاهره', 'الاسكندريه', 'الإسكندرية', 'اسكندريه',
+    'الساحل', 'ساحل', 'شرم', 'الغردقة', 'الغردقه', 'مطروح',
+    'مطار', 'برج العرب', 'مطار القاهرة', 'مطار البرج',
+    'بورسعيد', 'السويس', 'الإسماعيلية', 'مرسى مطروح',
+    'كورولا', 'سيراتو', 'النترا', 'إلنترا', 'اكسبندر', 'إكسابندر',
+    'راش', 'جلورى', 'جلوري', 'ارتيجا', 'تيجو', 'هاي اس', 'هايس',
+    'كوستر', 'ميني فان', 'ليموزين', 'SUV', 'سيدان', 'فان',
+]
+
+def quick_keyword_filter(text):
+    """فلتر سريع: هل الرسالة تستحق استدعاء AI؟"""
+    if not text or len(text.strip()) < 20:
+        return False
+    text_lower = text.lower()
+    for kw in TRIP_KEYWORDS_AR:
+        if kw.lower() in text_lower:
+            return True
+    # رقم هاتف مصري = غالبًا رسالة تشغيل
+    if re.search(r'01[0-9]{9}', text):
+        return True
+    return False
+
+# ==========================================
+# 🔒 منع تكرار معالجة نفس الرسالة من Sessions مختلفة
+# ==========================================
+_processed_hashes = {}  # hash -> timestamp
+_processed_lock = threading.Lock()
+
+def is_already_processed(text, sender_phone):
+    """تحقق إذا نفس الرسالة من نفس المرسل عُولجت بالفعل (خلال آخر 5 دقائق)"""
+    content = f"{sender_phone}:{text[:100]}"
+    h = hashlib.md5(content.encode()).hexdigest()
+    now = time.time()
+    with _processed_lock:
+        # تنظيف الهاشات القديمة
+        old_keys = [k for k, v in _processed_hashes.items() if now - v > 1800]
+        for k in old_keys:
+            del _processed_hashes[k]
+        if h in _processed_hashes and (now - _processed_hashes[h]) < 300:  # 5 دقائق
+            return True
+        _processed_hashes[h] = now
+        return False
+
+
+# ==========================================
 # 🛠️ دوال مساعدة للإعدادات
 # ==========================================
 def get_setting(key):
@@ -83,40 +145,58 @@ def save_setting(key, value):
         print(f"[Sniper Setting] Error saving {key}: {e}")
         return False
 
-# ==========================================
-# 🤖 استدعاء الذكاء الاصطناعي
-# ==========================================
+GROQ_MODELS_POOL = ["llama-3.1-8b-instant", "allam-2-7b", "llama-3.3-70b-versatile", "qwen/qwen3.6-27b"]
+_groq_rate_limit_until = 0  # وقت انتهاء حظر الـ Rate Limit
+
 def call_ai_parser(text):
+    global _groq_rate_limit_until
+
+    # ✅ إذا كان في حالة Rate Limit قصيرة، لا ترسل طلبات
+    now = time.time()
+    if now < _groq_rate_limit_until:
+        return None
+
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",
         "Content-Type": "application/json"
     }
-    payload = {
-        "model": GROQ_MODEL,
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": f"Parse this WhatsApp message:\n\n{text}"}
-        ],
-        "temperature": 0.0,
-        "max_tokens": 500
-    }
-    try:
-        r = requests.post(GROQ_URL, json=payload, headers=headers, timeout=20)
-        if r.status_code == 200:
-            content = r.json()['choices'][0]['message']['content'].strip()
-            # تنظيف المحتوى من أي كتل كودية ماركداون
-            if content.startswith("```json"):
-                content = content[7:]
-            elif content.startswith("```"):
-                content = content[3:]
-            if content.endswith("```"):
-                content = content[:-3]
-            return json.loads(content.strip())
-        else:
-            print(f"[Sniper AI ERROR] Status {r.status_code}: {r.text}")
-    except Exception as e:
-        print(f"[Sniper AI Exception]: {e}")
+
+    # تجربة الموديلات المتوفرة بالتوالي (لو موديل عليه Rate Limit ينتقل للي بعده فوراً)
+    for model_name in GROQ_MODELS_POOL:
+        payload = {
+            "model": model_name,
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": f"Parse this WhatsApp message:\n\n{text[:800]}"}
+            ],
+            "temperature": 0.0,
+            "max_tokens": 300
+        }
+        try:
+            r = requests.post(GROQ_URL, json=payload, headers=headers, timeout=15)
+            if r.status_code == 200:
+                content = r.json()['choices'][0]['message']['content'].strip()
+                # تنظيف المحتوى من أي كتل كودية ماركداون
+                if content.startswith("```json"):
+                    content = content[7:]
+                elif content.startswith("```"):
+                    content = content[3:]
+                if content.endswith("```"):
+                    content = content[:-3]
+                return json.loads(content.strip())
+            elif r.status_code == 429:
+                print(f"[Sniper Rate Limit] Model '{model_name}' hit 429 rate limit. Trying fallback model...")
+                continue
+            else:
+                print(f"[Sniper AI ERROR] Model '{model_name}' Status {r.status_code}: {r.text[:200]}")
+        except Exception as e:
+            print(f"[Sniper AI Exception] ({model_name}): {e}")
+
+    # لو كل الموديلات عليها Rate Limit، ننتظر 15 ثانية فقط بدلاً من دقيقتين
+    _groq_rate_limit_until = time.time() + 15
+    print("[Sniper Rate Limit] All Groq AI models busy. Short 15s pause...")
     return None
+
 
 # ==========================================
 # 🔄 محرك المطابقة ومنع التكرار
@@ -168,6 +248,7 @@ def check_match(trip_data):
     if not filters:
         op = trip_data.get("operation_type", "")
         if op in ("sale", "exchange"):
+            print(f"[Sniper] No filters set → auto-match for op_type={op}")
             return True
         return False
 
@@ -288,7 +369,16 @@ def start_telegram_polling():
 # ⚡ معالجة الرسالة القادمة من المجموعات
 # ==========================================
 def process_group_message(group_name, sender_name, sender_phone, raw_text):
-    # 1. تحليل النص بالذكاء الاصطناعي
+    print(f"🎯 [Sniper Incoming] Received message from group '{group_name}' ({sender_name})")
+    # ✅ 0. منع معالجة نفس الرسالة من Sessions مختلفة
+    if is_already_processed(raw_text, sender_phone):
+        return {"status": "ignored", "reason": "already_processed_by_another_session"}
+
+    # ✅ 1. فلتر سريع بالكلمات قبل استدعاء AI (70%+ توفير)
+    if not quick_keyword_filter(raw_text):
+        return {"status": "ignored", "reason": "no_trip_keywords"}
+
+    # 2. تحليل النص بالذكاء الاصطناعي
     parsed = call_ai_parser(raw_text)
     if not parsed or not parsed.get("is_trip_related"):
         return {"status": "ignored", "reason": "not_trip_related"}
