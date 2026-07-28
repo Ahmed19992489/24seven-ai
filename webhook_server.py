@@ -2088,47 +2088,158 @@ def send_omnichannel_reply():
         print(f"[ERROR] FAILED to send {channel} message to {sender_id}: {api_error}")
         return jsonify({"status": "error", "message": f"API Error: {api_error}"}), 502
 
+# =====================================================
+# 📁 إدارة ملف التخزين المؤقت لحملات الماسنجر لمنع التكرار
+# =====================================================
+MESSENGER_CACHE_FILE = os.path.join(os.path.dirname(__file__), "sent_messenger_cache.json")
+
+def load_messenger_sent_cache():
+    if os.path.exists(MESSENGER_CACHE_FILE):
+        try:
+            with open(MESSENGER_CACHE_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+def save_messenger_sent_cache(cache_data):
+    try:
+        with open(MESSENGER_CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump(cache_data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"[Messenger Cache Error]: {e}")
+
+@app.route('/api/messenger/reset_cache', methods=['POST', 'OPTIONS'])
+def reset_messenger_cache_api():
+    if request.method == 'OPTIONS':
+        return make_response("", 204)
+    save_messenger_sent_cache({})
+    return jsonify({"status": "success", "message": "تم إعادة ضبط سجل عملاء الماسنجر المرسل لهم بنجاح"})
+
 # = [MESSENGER BROADCAST] Messenger Campaign API نقطة إرسال حملات الماسنجر
 # =====================================================
 @app.route('/api/messenger/broadcast', methods=['POST', 'OPTIONS'])
 def messenger_broadcast_api():
     if request.method == 'OPTIONS':
         return make_response("", 204)
+    global broadcast_status
     try:
+        if broadcast_status.get("status") == "running":
+            return jsonify({"status": "error", "message": "هناك حملة تسويقية قيد التشغيل بالفعل حالياً"}), 400
+
         data = request.get_json() or {}
         message_text = data.get("message")
         if not message_text:
             return jsonify({"status": "error", "message": "Missing 'message' field"}), 400
 
+        # جلب كافة عملاء الماسنجر الفريدين
+        url = f"{SUPABASE_URL}/rest/v1/omnichannel_messages?channel=eq.messenger&select=sender_id,sender_name&order=created_at.desc&limit=2000"
+        r = requests.get(url, headers=SUPABASE_SERVICE_HEADERS)
+        clients = {}
+        if r.status_code == 200:
+            msgs = r.json()
+            for m in msgs:
+                sid = m.get("sender_id")
+                sname = m.get("sender_name") or "Messenger User"
+                if sid and sid not in clients and sname not in ["Admin", "Bot", "ش"]:
+                    clients[sid] = sname
+
+        if not clients:
+            return jsonify({"status": "error", "message": "لم يتم العثور على أي عملاء ماسنجر للإرسال إليهم"}), 400
+
+        total_targets = len(clients)
+        sent_cache = load_messenger_sent_cache()
+
+        # تهيئة حالة الحملة المباشرة للشاشة
+        broadcast_status["status"] = "running"
+        broadcast_status["total"] = total_targets
+        broadcast_status["sent"] = 0
+        broadcast_status["failed"] = 0
+        broadcast_status["pct"] = 0
+        broadcast_status["logs"] = [
+            f"🚀 [Messenger] بدء إطلاق حملة الماسنجر لعدد ({total_targets}) عميل فريد...",
+            f"ℹ️ كود السجل المحفوظ مسبقاً يحتوي على ({len(sent_cache)}) عميل مُرسل لهم."
+        ]
+
         def run_campaign():
             import time
-            url = f"{SUPABASE_URL}/rest/v1/omnichannel_messages?channel=eq.messenger&select=sender_id,sender_name&order=created_at.desc&limit=2000"
-            r = requests.get(url, headers=SUPABASE_SERVICE_HEADERS)
-            if r.status_code == 200:
-                msgs = r.json()
-                clients = {}
-                for m in msgs:
-                    sid = m.get("sender_id")
-                    sname = m.get("sender_name") or "Messenger User"
-                    if sid and sid not in clients and sname not in ["Admin", "Bot", "ش"]:
-                        clients[sid] = sname
+            processed_count = 0
+            sent_count = 0
+            failed_count = 0
 
-                print(f"[Messenger Broadcast] Starting background campaign for {len(clients)} customers...")
-                for sid, sname in clients.items():
-                    send_url = f"https://graph.facebook.com/v18.0/me/messages?access_token={FB_PAGE_TOKEN}"
-                    payload = {"recipient": {"id": str(sid)}, "message": {"text": message_text}}
-                    try:
-                        res = requests.post(send_url, json=payload, timeout=15)
-                        if res.status_code == 200:
+            for sid, sname in clients.items():
+                if broadcast_status.get("status") == "stopped":
+                    broadcast_status["logs"].append("⚠️ تم إيقاف حملة الماسنجر بناءً على طلب المستخدم.")
+                    print("[Messenger Broadcast] Campaign stopped by user.")
+                    break
+
+                processed_count += 1
+
+                # 1. التحقق من السجل المحلي لمنع تكرار الإرسال
+                if str(sid) in sent_cache:
+                    broadcast_status["logs"].append(f"⏩ [تخطي] العميل ({sname}) تلقى رسالة سابقة، تم تخطيه لمنع التكرار.")
+                    broadcast_status["pct"] = int((processed_count / total_targets) * 100)
+                    continue
+
+                # 2. تجهيز طلب الإرسال مع Meta Message Tag للحسابات القديمة
+                send_url = f"https://graph.facebook.com/v18.0/me/messages?access_token={FB_PAGE_TOKEN}"
+                payload = {
+                    "recipient": {"id": str(sid)},
+                    "message": {"text": message_text},
+                    "messaging_type": "MESSAGE_TAG",
+                    "tag": "CONFIRMED_EVENT_UPDATE"
+                }
+
+                try:
+                    res = requests.post(send_url, json=payload, timeout=15)
+                    res_json = {}
+                    try: res_json = res.json()
+                    except: pass
+
+                    if res.status_code == 200 and not res_json.get("error"):
+                        sent_count += 1
+                        broadcast_status["sent"] = sent_count
+                        sent_cache[str(sid)] = {"sent_at": time.strftime("%Y-%m-%d %H:%M:%S"), "name": sname}
+                        save_messenger_sent_cache(sent_cache)
+                        
+                        insert_message_to_supabase(channel="messenger", sender_id=sid, sender_name=sname, message_text=message_text, is_from_admin=True)
+                        broadcast_status["logs"].append(f"✅ [{processed_count}/{total_targets}] تم الإرسال بنجاح إلى: {sname}")
+                    else:
+                        # تجربة طريقة بديلة بدون Tag لو فشل الـ Tag
+                        payload_std = {
+                            "recipient": {"id": str(sid)},
+                            "message": {"text": message_text}
+                        }
+                        res_std = requests.post(send_url, json=payload_std, timeout=15)
+                        if res_std.status_code == 200 and not res_std.json().get("error"):
+                            sent_count += 1
+                            broadcast_status["sent"] = sent_count
+                            sent_cache[str(sid)] = {"sent_at": time.strftime("%Y-%m-%d %H:%M:%S"), "name": sname}
+                            save_messenger_sent_cache(sent_cache)
+                            
                             insert_message_to_supabase(channel="messenger", sender_id=sid, sender_name=sname, message_text=message_text, is_from_admin=True)
-                    except Exception as e:
-                        print(f"[Messenger Broadcast Error for {sid}]: {e}")
-                    time.sleep(1.5)
-                print(f"[Messenger Broadcast] Completed background campaign!")
+                            broadcast_status["logs"].append(f"✅ [{processed_count}/{total_targets}] تم الإرسال بنجاح إلى: {sname}")
+                        else:
+                            failed_count += 1
+                            broadcast_status["failed"] = failed_count
+                            err_msg = res_json.get("error", {}).get("message", res.text[:80])
+                            broadcast_status["logs"].append(f"❌ [{processed_count}/{total_targets}] فشل الإرسال إلى {sname}: {err_msg}")
+
+                except Exception as e:
+                    failed_count += 1
+                    broadcast_status["failed"] = failed_count
+                    broadcast_status["logs"].append(f"❌ [{processed_count}/{total_targets}] خطأ اتصال مع {sname}: {str(e)[:80]}")
+
+                broadcast_status["pct"] = int((processed_count / total_targets) * 100)
+                time.sleep(1.5)
+
+            if broadcast_status.get("status") == "running":
+                broadcast_status["status"] = "completed"
+                broadcast_status["logs"].append("🎉 اكتملت حملة الماسنجر بنجاح!")
 
         import threading
         threading.Thread(target=run_campaign, daemon=True).start()
-        return jsonify({"status": "success", "message": "تم بدء حملة الماسنجر في الخلفية بنجاح"})
+        return jsonify({"status": "success", "message": "تم بدء حملة الماسنجر في الخلفية بنجاح", "total_targets": total_targets})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 

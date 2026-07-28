@@ -8966,8 +8966,9 @@ async function loadWhatsAppSettings() {
 
             const data = await res.json();
             if (res.ok && data.status === 'success') {
-                alert(`🚀 تم بدء تشغيل حملة الماسنجر بنجاح لـ (${count}) عميل فريد في الخلفية!\nستشاهد الرسائل تظهر تدريجياً في أرشيف المحادثات.`);
+                alert(`🚀 تم بدء تشغيل حملة الماسنجر بنجاح لـ (${data.total_targets || count}) عميل فريد في الخلفية!\nستشاهد التقدم المباشر والسجل فوراً على الشاشة.`);
                 document.getElementById('messenger-message-text').value = '';
+                loadMarketingStatus();
             } else {
                 alert('❌ فشل بدء الحملة: ' + (data ? data.message : 'خطأ غير معروف'));
             }
