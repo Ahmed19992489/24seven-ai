@@ -1737,17 +1737,27 @@ def send_omnichannel_reply():
     if request.method == 'OPTIONS':
         return make_response("", 204)
 
-    data = request.json
+    data = request.json or {}
     channel = data.get('channel', '').lower()
-    sender_id = data.get('sender_id')
+    raw_sender_id = data.get('sender_id')
     message = data.get('message', '')
     media_url = data.get('media_url')
     media_type = data.get('media_type', 'image')
     mod_name = data.get('mod_name', 'Admin') # Get moderator name
     whatsapp_instance_id = data.get('whatsapp_instance_id')
 
-    if not channel or not sender_id or (not message and not media_url):
+    if not channel or not raw_sender_id or (not message and not media_url):
         return jsonify({"status": "error", "message": "Missing parameters"}), 400
+
+    # 🧼 تنظيف وتنسيق معرف العميل أو رقم الهاتف بدقة
+    clean_sender_id = str(raw_sender_id).replace("+", "").replace(" ", "").strip()
+    if channel == 'whatsapp':
+        if clean_sender_id.startswith("01") and len(clean_sender_id) == 11:
+            clean_sender_id = "20" + clean_sender_id[1:]
+        clean_sender_id = ''.join(c for c in clean_sender_id if c.isdigit())
+        sender_id = clean_sender_id if clean_sender_id else str(raw_sender_id).replace("+", "").strip()
+    else:
+        sender_id = clean_sender_id
 
     # 🛑 فحص الأوامر الإدارية أولاً (مثل إيقاف وتشغيل البوت)
     if message:
@@ -1770,11 +1780,10 @@ def send_omnichannel_reply():
         # Resolve custom WhatsApp instance if not specified
         if not whatsapp_instance_id:
             try:
-                clean_phone = sender_id.replace("+", "").replace("0020", "20")
-                local = clean_phone[2:] if clean_phone.startswith("20") else clean_phone
+                local = sender_id[2:] if sender_id.startswith("20") else sender_id
                 r_inst = requests.get(
                     f"{SUPABASE_URL}/rest/v1/omnichannel_messages",
-                    headers=SUPABASE_SERVICE_HEADERS, # Bypassing RLS
+                    headers=SUPABASE_SERVICE_HEADERS,
                     params={
                         "channel": "eq.whatsapp",
                         "sender_id": f"ilike.%{local}%",
@@ -1783,42 +1792,30 @@ def send_omnichannel_reply():
                         "limit": "1",
                         "order": "created_at.desc"
                     },
-                    timeout=5
+                    timeout=1.5
                 )
                 if r_inst.status_code == 200 and r_inst.json():
                     whatsapp_instance_id = r_inst.json()[0].get("whatsapp_instance_id")
             except Exception as ex:
                 print(f"Error resolving whatsapp_instance_id: {ex}")
 
-        # [FALLBACK] If still not resolved, find the first connected local instance, or any connected instance
+        # [FALLBACK] If still not resolved, find the first connected local instance
         if not whatsapp_instance_id:
             try:
-                # 1. Try local connected instances first
                 r_active = requests.get(
-                    f"{SUPABASE_URL}/rest/v1/whatsapp_instances?provider=eq.local&status=eq.connected&limit=1",
+                    f"{SUPABASE_URL}/rest/v1/whatsapp_instances?status=eq.connected&limit=1",
                     headers=SUPABASE_SERVICE_HEADERS,
-                    timeout=5
+                    timeout=1.5
                 )
                 if r_active.status_code == 200 and r_active.json():
                     whatsapp_instance_id = r_active.json()[0].get("id")
-                else:
-                    # 2. Try any other connected instance
-                    r_active = requests.get(
-                        f"{SUPABASE_URL}/rest/v1/whatsapp_instances?status=eq.connected&limit=1",
-                        headers=SUPABASE_SERVICE_HEADERS,
-                        timeout=5
-                    )
-                    if r_active.status_code == 200 and r_active.json():
-                        whatsapp_instance_id = r_active.json()[0].get("id")
-                
-                if whatsapp_instance_id:
                     print(f"[WA] Auto-resolved active WhatsApp instance ID: {whatsapp_instance_id}")
             except Exception as ex:
                 print(f"Error auto-resolving default active instance: {ex}")
 
         routed_via_custom = False
         if whatsapp_instance_id:
-            r_creds = requests.get(f"{SUPABASE_URL}/rest/v1/whatsapp_instances?id=eq.{whatsapp_instance_id}", headers=SUPABASE_SERVICE_HEADERS, timeout=5)
+            r_creds = requests.get(f"{SUPABASE_URL}/rest/v1/whatsapp_instances?id=eq.{whatsapp_instance_id}", headers=SUPABASE_SERVICE_HEADERS, timeout=2)
             if r_creds.status_code == 200 and r_creds.json():
                 inst = r_creds.json()[0]
                 provider = inst["provider"]
@@ -1836,7 +1833,7 @@ def send_omnichannel_reply():
                     else:
                         payload.update({"body": message})
                     try:
-                        res = requests.post(send_url, data=payload, timeout=10)
+                        res = requests.post(send_url, data=payload, timeout=8)
                         if res.status_code == 200 and ("success" in res.text.lower() or "\"sent\":\"true\"" in res.text.lower()):
                             send_success = True
                         else:
@@ -1849,23 +1846,21 @@ def send_omnichannel_reply():
                     base = api_url.strip().rstrip('/') if api_url else "https://api.greenapi.com"
                     if media_url:
                         send_url = f"{base}/waInstance{inst_id}/sendFileByUrl/{token}"
-                        clean_num = sender_id.replace("+", "").replace("0020", "20")
                         filename = media_url.split('/')[-1]
                         payload = {
-                            "chatId": f"{clean_num}@c.us",
+                            "chatId": f"{sender_id}@c.us",
                             "urlFile": media_url,
                             "fileName": filename,
                             "caption": message
                         }
                     else:
                         send_url = f"{base}/waInstance{inst_id}/sendMessage/{token}"
-                        clean_num = sender_id.replace("+", "").replace("0020", "20")
                         payload = {
-                            "chatId": f"{clean_num}@c.us",
+                            "chatId": f"{sender_id}@c.us",
                             "message": message
                         }
                     try:
-                        res = requests.post(send_url, json=payload, timeout=10)
+                        res = requests.post(send_url, json=payload, timeout=8)
                         if res.status_code == 200:
                             send_success = True
                         else:
@@ -1884,7 +1879,7 @@ def send_omnichannel_reply():
                         "media_type": media_type
                     }
                     try:
-                        res = requests.post(send_url, json=payload, timeout=10)
+                        res = requests.post(send_url, json=payload, timeout=8)
                         if res.status_code == 200 and res.json().get("status") == "success":
                             send_success = True
                         else:
@@ -1916,7 +1911,7 @@ def send_omnichannel_reply():
                         "text": {"body": message}
                     }
                 try:
-                    r = requests.post(url, headers=headers, json=payload, timeout=15)
+                    r = requests.post(url, headers=headers, json=payload, timeout=8)
                     print(f"[WA-API] Status: {r.status_code} | Response: {r.text}")
                     if r.status_code in [200, 201]:
                         send_success = True
@@ -1953,11 +1948,10 @@ def send_omnichannel_reply():
             else:
                 payload = {"recipient": {"id": sender_id}, "message": {"text": message}}
             try:
-                r = requests.post(url, headers=headers, json=payload, timeout=15)
+                r = requests.post(url, headers=headers, json=payload, timeout=10)
                 print(f"[FB-API] Status: {r.status_code} | Response: {r.text}")
                 if r.status_code == 200:
                     send_success = True
-                    # [FIX] Track the message_id so Echo handler knows to skip it
                     try:
                         fb_msg_id = r.json().get('message_id', '')
                         if fb_msg_id:
@@ -1977,20 +1971,16 @@ def send_omnichannel_reply():
             api_error = "INSTAGRAM_TOKEN is empty"
             print("[ERROR] INSTAGRAM_TOKEN is empty.")
         else:
-            # Step 1: Try to take thread control (Handover Protocol)
             try:
                 take_url = f"https://graph.facebook.com/v18.0/me/take_thread_control"
                 take_payload = {"recipient": {"id": sender_id}}
                 tc_res = requests.post(take_url, headers={"Content-Type": "application/json"},
-                                      params={"access_token": FB_PAGE_TOKEN}, json=take_payload, timeout=5)
+                                      params={"access_token": FB_PAGE_TOKEN}, json=take_payload, timeout=3)
                 if tc_res.status_code == 200:
                     print(f"[IG-Handover] Successfully took thread control for {sender_id}")
-                else:
-                    print(f"[IG-Handover] take_thread_control: {tc_res.status_code} {tc_res.text}")
             except Exception as tc_err:
                 print(f"[IG-Handover] Exception: {tc_err}")
 
-            # Step 2: Send the message using the permanent FB Page Token
             url = f"https://graph.facebook.com/v18.0/me/messages?access_token={FB_PAGE_TOKEN}"
             headers = {"Content-Type": "application/json"}
             if media_url:
@@ -2009,7 +1999,7 @@ def send_omnichannel_reply():
             else:
                 payload = {"recipient": {"id": sender_id}, "message": {"text": message}}
             try:
-                r = requests.post(url, headers=headers, json=payload, timeout=15)
+                r = requests.post(url, headers=headers, json=payload, timeout=10)
                 print(f"[IG-API] Status: {r.status_code} | Response: {r.text}")
                 if r.status_code == 200:
                     send_success = True
@@ -2027,66 +2017,58 @@ def send_omnichannel_reply():
                     err_code = err_json.get('error', {}).get('error_subcode', 0)
                     if err_code == 2534037:
                         api_error = "instagram_handover_error"
-                        print("[IG-HANDOVER] App has no thread control.")
                     elif err_code == 2534022:
                         api_error = "instagram_window_expired"
-                        print(f"[IG-WINDOW] 24-hour messaging window expired for {sender_id}")
                     elif err_code == 2534048:
                         api_error = "instagram_dev_mode"
-                        print("[IG-DEV-MODE] App in Dev Mode - recipient has no role on app.")
                     else:
                         api_error = r.text
-                        print(f"[ERROR] Instagram API rejected message ({r.status_code}): {r.text}")
             except Exception as e:
                 api_error = str(e)
                 print(f"[ERROR] Instagram Send Exception: {e}")
     else:
         return jsonify({"status": "error", "message": "Invalid channel type"}), 400
 
-    # --- [INFO] حفظ نسخة يدوياً (مع MEDIA prefix للعرض في الموديتور) ---
-    if media_url and media_type == "image":
-        sb_message_text = f"MEDIA_IMAGE:{media_url}{('|CAPTION:' + message) if message else ''}"
-    elif media_url and media_type == "audio":
-        sb_message_text = f"MEDIA_AUDIO:{media_url}"
-    else:
-        sb_message_text = message
-
-    insert_message_to_supabase(
-        channel=channel,
-        sender_id=sender_id,
-        sender_name=mod_name, # Use custom name
-        message_text=sb_message_text,
-        is_from_admin=True,
-        whatsapp_instance_id=whatsapp_instance_id
-    )
-    
+    # 🛑 حفظ في قاعدة البيانات وحفظ الـ State فقط وفقط في حالة نجاح الإرسال الفعلي!
     if send_success:
+        if media_url and media_type == "image":
+            sb_message_text = f"MEDIA_IMAGE:{media_url}{('|CAPTION:' + message) if message else ''}"
+        elif media_url and media_type == "audio":
+            sb_message_text = f"MEDIA_AUDIO:{media_url}"
+        else:
+            sb_message_text = message
+
+        insert_message_to_supabase(
+            channel=channel,
+            sender_id=sender_id,
+            sender_name=mod_name,
+            message_text=sb_message_text,
+            is_from_admin=True,
+            whatsapp_instance_id=whatsapp_instance_id
+        )
         print(f"[INFO] Successfully sent {channel} message to {sender_id}")
         if channel in ['messenger', 'instagram']:
             messenger_states[sender_id] = "HUMAN"
-            print(f"[AUTO-PAUSE] Bot automatically paused (HUMAN mode) for {channel} user {sender_id} because Admin manually replied via CRM.")
+            print(f"[AUTO-PAUSE] Bot automatically paused (HUMAN mode) for {channel} user {sender_id}")
         return jsonify({"status": "success"})
     elif api_error == "instagram_handover_error":
-        print(f"[WARNING] Instagram Handover Error: message saved to DB for {sender_id} but NOT delivered to Instagram.")
         return jsonify({
             "status": "warning",
-            "message": "تم حفظ الرسالة، لكن لم تُرسل للعميل. يرجى الذهاب لإعدادات صفحة فيسبوك -> Advanced Messaging وتعيين تطبيقك كـ Primary Receiver للإنستجرام."
+            "message": "تم حفظ الرسالة، لكن لم تُرسل للعميل. يرجى تعيين تطبيقك كـ Primary Receiver للإنستجرام."
         }), 200
     elif api_error == "instagram_window_expired":
-        print(f"[WARNING] Instagram 24h Window Expired: message saved to DB for {sender_id} but NOT delivered to Instagram.")
         return jsonify({
             "status": "warning",
-            "message": "⚠️ انتهت مهلة الـ 24 ساعة! لا يمكن الرد على هذا العميل لأنه لم يرسل رسالة خلال آخر 24 ساعة. يرجى الرد عليه من تطبيق Instagram مباشرة أو انتظار رسالة جديدة منه."
+            "message": "⚠️ انتهت مهلة الـ 24 ساعة! لا يمكن الرد على هذا العميل لأنه لم يرسل رسالة خلال آخر 24 ساعة."
         }), 200
     elif api_error == "instagram_dev_mode":
-        print(f"[WARNING] Instagram Dev Mode: message saved to DB for {sender_id} but NOT delivered to Instagram.")
         return jsonify({
             "status": "warning",
-            "message": "تم حفظ الرسالة، لكن لم يتم إرسالها على إنستجرام. التطبيق في وضع التطوير ويحتاج Advanced Access من Meta. الرسالة ظهرت في المحادثة فقط."
+            "message": "التطبيق في وضع التطوير ويحتاج Advanced Access من Meta."
         }), 200
     else:
         print(f"[ERROR] FAILED to send {channel} message to {sender_id}: {api_error}")
-        return jsonify({"status": "error", "message": f"API Error: {api_error}"}), 502
+        return jsonify({"status": "error", "message": f"❌ فشل إرسال الرسالة للعميل عبر الواتساب: {api_error[:100]}"}), 400
 
 # =====================================================
 # 📁 إدارة ملف التخزين المؤقت لحملات الماسنجر لمنع التكرار

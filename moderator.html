@@ -2989,14 +2989,24 @@
                         })
                     });
                     if (res.ok) {
-                        backendOk = true;
-                        let resJson = {};
-                        try { resJson = await res.json(); } catch(e) {}
-                        if (resJson.status === 'warning') {
-                            showToast(resJson.message || '⚠️ تم حفظ الرسالة لكن لم تُرسل للعميل.', 'warning');
+                        const resJson = await res.json().catch(() => ({}));
+                        if (resJson.status === 'success' || resJson.status === 'warning') {
+                            backendOk = true;
+                            if (resJson.status === 'warning') {
+                                showToast(resJson.message || '⚠️ تم حفظ الرسالة لكن لم تُرسل للعميل.', 'warning');
+                            }
+                        } else {
+                            showToast(resJson.message || '❌ فشل إرسال الرسالة للعميل عبر الواتساب.', 'error');
+                            return false;
                         }
+                    } else {
+                        const errJson = await res.json().catch(() => ({}));
+                        showToast(errJson.message || '❌ فشل إرسال الرسالة للعميل عبر الواتساب.', 'error');
+                        return false;
                     }
-                } catch(e) { /* الباكيند مش متوفر */ }
+                } catch(e) {
+                    console.log('[Moderator] Backend error:', e);
+                }
             }
 
             // === محاولة 2: إرسال مباشر من المتصفح (Fallback) ===
@@ -3062,33 +3072,34 @@
                     } catch(e) { apiError = e.message; }
                 }
 
-                // --- حفظ الرسالة في Supabase ---
-                let sbMessageText = text;
-                const sbPayload = {
-                    channel: channel,
-                    sender_id: apiSenderId,
-                    sender_name: currentModName || 'Admin',
-                    message_text: sbMessageText,
-                    is_from_admin: true,
-                    read_by_admin: true
-                };
-                if (channel === 'whatsapp' && whatsappInstanceId) {
-                    sbPayload.whatsapp_instance_id = whatsappInstanceId;
-                }
-                try {
-                    await fetch(`${SUPABASE_URL}/rest/v1/omnichannel_messages`, {
-                        method: 'POST',
-                        headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-                        body: JSON.stringify(sbPayload)
-                    });
-                } catch(e) { console.error('Supabase save error:', e); }
-
-                if (!sendSuccess && apiError) {
-                    showToast('⚠️ تم حفظ الرسالة لكن فشل الإرسال للعميل: ' + apiError.substring(0, 100), 'warning');
+                // 🛑 حفظ فقط عند نجاح الإرسال الفعلي
+                if (sendSuccess) {
+                    let sbMessageText = text;
+                    const sbPayload = {
+                        channel: channel,
+                        sender_id: apiSenderId,
+                        sender_name: currentModName || 'Admin',
+                        message_text: sbMessageText,
+                        is_from_admin: true,
+                        read_by_admin: true
+                    };
+                    if (channel === 'whatsapp' && whatsappInstanceId) {
+                        sbPayload.whatsapp_instance_id = whatsappInstanceId;
+                    }
+                    try {
+                        await fetch(`${SUPABASE_URL}/rest/v1/omnichannel_messages`, {
+                            method: 'POST',
+                            headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+                            body: JSON.stringify(sbPayload)
+                        });
+                    } catch(e) { console.error('Supabase save error:', e); }
+                } else {
+                    showToast('❌ فشل إرسال الرسالة للعميل عبر الواتساب: ' + (apiError ? apiError.substring(0, 100) : 'تأكد من الاتصال أو سلامة الرقم'), 'error');
+                    return false;
                 }
             }
 
-            // --- تحديث الواجهة ---
+            // --- تحديث الواجهة عند النجاح المؤكد ---
             const newMsg = {
                 id: 'temp_' + Date.now(),
                 sender_id: apiSenderId,
