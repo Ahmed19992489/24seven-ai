@@ -12,6 +12,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// 🛡️ حماية حراس السيرفر من الانهيار عند حدوث قطع في الاتصال الشبكي (ECONNRESET / FetchAborted)
+process.on('uncaughtException', (err) => {
+    console.error('[Gateway Safety] Catching uncaught exception (crash prevented):', err ? (err.message || err) : 'Unknown error');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('[Gateway Safety] Catching unhandled rejection (crash prevented):', reason);
+});
+
 const PORT = 3001;
 const PYTHON_BACKEND_URL = 'http://localhost:3000';
 const SUPABASE_URL = 'https://wtjwzqvmwnbvjxnmweqq.supabase.co';

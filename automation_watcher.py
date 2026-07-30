@@ -203,7 +203,11 @@ def send_linked_whatsapp(to, message_text, instance=None):
         print(f"❌ Error sending to {to}: {r.text}")
         return False
     except Exception as e:
-        print(f"❌ Exception in sending: {e}")
+        err_str = str(e)
+        if "10061" in err_str or "ConnectionRefused" in err_str:
+            print("⚠️ [تنبيه] بوابة الواتساب المحلية مغلقة أو تعيد الاتصال حالياً...")
+        else:
+            print(f"❌ خطأ أثناء إرسال الواتساب: {err_str[:120]}")
         return False
 
 # =====================================================
