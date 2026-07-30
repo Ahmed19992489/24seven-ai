@@ -539,9 +539,13 @@ while True:
 
     except Exception as e:
         err_msg = str(e)
-        if "SSL" in err_msg or "ConnectionPool" in err_msg or "Max retries" in err_msg or "EOF" in err_msg:
+        if "429" in err_msg or "Quota exceeded" in err_msg:
+            print("⏳ [حد أقتباس Google Sheets] تم الوصول للحد الأقصى لطلبات جوجل شيت (429). جاري التوقف المؤقت لمدة 45 ثانية لتصفير الحصة...")
+            time.sleep(45)
+        elif "SSL" in err_msg or "ConnectionPool" in err_msg or "Max retries" in err_msg or "EOF" in err_msg:
             print("⚠️ انقطاع مؤقت في الاتصال بجوجل شيت، جاري إعادة المحاولة تلقائياً خلال 10 ثوانٍ...")
+            time.sleep(10)
         else:
             print(f"⚠️ خطأ في الدورة: {e}")
             traceback.print_exc()
-        time.sleep(10)
+            time.sleep(10)
