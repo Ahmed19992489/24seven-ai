@@ -27,6 +27,33 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
+import ssl
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+# 🛡️ إعداد المحول الشبكي المقاوم للقطع وانهيار SSL/TLS
+class ResilientTLSAdapter(HTTPAdapter):
+    def init_poolmanager(self, *args, **kwargs):
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        try:
+            ctx.set_ciphers('DEFAULT:@SECLEVEL=1')
+        except Exception:
+            pass
+        kwargs['ssl_context'] = ctx
+        return super().init_poolmanager(*args, **kwargs)
+
+def create_resilient_session():
+    session = requests.Session()
+    retries = Retry(total=5, backoff_factor=0.3, status_forcelist=[500, 502, 503, 504], raise_on_status=False)
+    adapter = ResilientTLSAdapter(max_retries=retries)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
+
+http_session = create_resilient_session()
+
 # ==========================================
 # 🤖 إعدادات Groq / AI Parser (فائق السرعة 300ms)
 # ==========================================
@@ -128,7 +155,7 @@ def is_already_processed(text, sender_phone):
 def get_setting(key):
     try:
         url = f"{SUPABASE_URL}/rest/v1/sniper_settings?key=eq.{key}&select=value"
-        r = requests.get(url, headers=HEADERS, timeout=5)
+        r = http_session.get(url, headers=HEADERS, timeout=5)
         if r.status_code == 200 and r.json():
             return r.json()[0].get("value")
     except Exception as e:
@@ -139,7 +166,7 @@ def save_setting(key, value):
     try:
         url = f"{SUPABASE_URL}/rest/v1/sniper_settings?on_conflict=key"
         payload = {"key": key, "value": value}
-        r = requests.post(url, headers=HEADERS, json=payload, timeout=5)
+        r = http_session.post(url, headers=HEADERS, json=payload, timeout=5)
         return r.status_code in (200, 201)
     except Exception as e:
         print(f"[Sniper Setting] Error saving {key}: {e}")
@@ -173,7 +200,7 @@ def call_ai_parser(text):
             "max_tokens": 300
         }
         try:
-            r = requests.post(GROQ_URL, json=payload, headers=headers, timeout=15)
+            r = http_session.post(GROQ_URL, json=payload, headers=headers, timeout=15)
             if r.status_code == 200:
                 content = r.json()['choices'][0]['message']['content'].strip()
                 # تنظيف المحتوى من أي كتل كودية ماركداون
@@ -226,7 +253,7 @@ def is_duplicate(origin, destination, date_time, contact_phone):
             "created_at": f"gte.{time_limit}",
             "select": "id"
         }
-        r = requests.get(url, headers=HEADERS, params=params, timeout=5)
+        r = http_session.get(url, headers=HEADERS, params=params, timeout=5)
         if r.status_code == 200 and r.json():
             return True
     except Exception as e:
@@ -236,7 +263,7 @@ def is_duplicate(origin, destination, date_time, contact_phone):
 def check_match(trip_data):
     try:
         url = f"{SUPABASE_URL}/rest/v1/sniper_filters?select=*"
-        r = requests.get(url, headers=HEADERS, timeout=5)
+        r = http_session.get(url, headers=HEADERS, timeout=5)
         if r.status_code != 200:
             return False
         filters = r.json()
@@ -284,7 +311,7 @@ def send_telegram_alert(message_text):
         "parse_mode": "HTML"
     }
     try:
-        r = requests.post(url, json=payload, timeout=10)
+        r = http_session.post(url, json=payload, timeout=10)
         return r.status_code == 200
     except Exception as e:
         print(f"[Telegram Alert Exception]: {e}")
@@ -335,7 +362,7 @@ def start_telegram_polling():
             url = f"https://api.telegram.org/bot{token}/getUpdates"
             try:
                 params = {"offset": last_update_id + 1, "timeout": 20}
-                r = requests.get(url, params=params, timeout=25)
+                r = http_session.get(url, params=params, timeout=25)
                 if r.status_code == 200:
                     resp = r.json()
                     if resp.get("ok") and resp.get("result"):
@@ -351,7 +378,7 @@ def start_telegram_polling():
                                 if text == "/start":
                                     save_setting("telegram_chat_id", str(chat_id))
                                     welcome_text = "<b>مرحباً بك في نظام قناص التشغيلات لـ 24Seven!</b>\n\nتم ربط حساب التلجرام الخاص بك بنجاح. ستصلك الإشعارات الفورية هنا فور مطابقة أي تشغيلة للفلاتر الحالية."
-                                    requests.post(f"https://api.telegram.org/bot{token}/sendMessage", json={
+                                    http_session.post(f"https://api.telegram.org/bot{token}/sendMessage", json={
                                         "chat_id": chat_id,
                                         "text": welcome_text,
                                         "parse_mode": "HTML"

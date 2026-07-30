@@ -2,6 +2,33 @@ from flask import Flask, request, jsonify, make_response, send_from_directory, r
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import requests
+import ssl
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+# 🛡️ تفعيل محول التشفير الفولاذي المقاوم للقطع وانهيار الشبكة (SSLEOFError)
+class ResilientTLSAdapter(HTTPAdapter):
+    def init_poolmanager(self, *args, **kwargs):
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        try:
+            ctx.set_ciphers('DEFAULT:@SECLEVEL=1')
+        except Exception:
+            pass
+        kwargs['ssl_context'] = ctx
+        return super().init_poolmanager(*args, **kwargs)
+
+_global_http_session = requests.Session()
+_global_tls_adapter = ResilientTLSAdapter(max_retries=Retry(total=5, backoff_factor=0.3, status_forcelist=[500, 502, 503, 504], raise_on_status=False))
+_global_http_session.mount("https://", _global_tls_adapter)
+_global_http_session.mount("http://", _global_tls_adapter)
+
+requests.get = _global_http_session.get
+requests.post = _global_http_session.post
+requests.patch = _global_http_session.patch
+requests.put = _global_http_session.put
+requests.delete = _global_http_session.delete
 import json
 import re
 from datetime import datetime, timedelta

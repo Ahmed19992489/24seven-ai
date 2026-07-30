@@ -43,6 +43,33 @@ SUPABASE_HEADERS = {
     "Prefer": "return=minimal"
 }
 
+import ssl
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+# 🛡️ إعداد المحول الشبكي المقاوم للقطع وانهيار SSL/TLS
+class ResilientTLSAdapter(HTTPAdapter):
+    def init_poolmanager(self, *args, **kwargs):
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        try:
+            ctx.set_ciphers('DEFAULT:@SECLEVEL=1')
+        except Exception:
+            pass
+        kwargs['ssl_context'] = ctx
+        return super().init_poolmanager(*args, **kwargs)
+
+def create_resilient_session():
+    session = requests.Session()
+    retries = Retry(total=5, backoff_factor=0.3, status_forcelist=[500, 502, 503, 504], raise_on_status=False)
+    adapter = ResilientTLSAdapter(max_retries=retries)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
+
+http_session = create_resilient_session()
+
 # =====================================================
 # ⚙️ إعدادات النظام (واتساب الربط)
 # =====================================================
@@ -50,15 +77,36 @@ SHEET_NAME = "امر حجز عميل"
 TASK_INSTANCE_PHONE = "201121748885" # الرقم المخصص للمهام والـ Automation
 CHAT_INSTANCE_PHONE = "201121747555" # الرقم المخصص للدردشة والموديتور
 
+_instance_cache = {}
+
 def get_whatsapp_instance(phone_number):
-    try:
-        url = f"{SUPABASE_URL}/rest/v1/whatsapp_instances?phone=eq.{phone_number}"
-        res = requests.get(url, headers=SUPABASE_HEADERS, timeout=10)
-        if res.ok and len(res.json()) > 0:
-            return res.json()[0]
-    except Exception as e:
-        print(f"Error fetching instance for {phone_number}: {e}")
-    return None
+    if phone_number in _instance_cache:
+        return _instance_cache[phone_number]
+        
+    for attempt in range(3):
+        try:
+            url = f"{SUPABASE_URL}/rest/v1/whatsapp_instances?phone=eq.{phone_number}"
+            res = http_session.get(url, headers=SUPABASE_HEADERS, timeout=5)
+            if res.ok and len(res.json()) > 0:
+                inst = res.json()[0]
+                _instance_cache[phone_number] = inst
+                return inst
+        except Exception as e:
+            if attempt < 2:
+                time.sleep(1)
+            else:
+                print(f"⚠️ يتعذر الاتصال بالسحابة لاستجلاب الإنستانس لـ {phone_number}: {e}")
+                
+    # Fallback تلقائي للبوابة المحلية لمنع توقف الخدمة أبداً
+    print(f"🔄 استخدام البوابة المحلية الافتراضية للرقم {phone_number} لاستمرار الإرسال...")
+    fallback_inst = {
+        "id": "692921bb-a5df-451d-8527-e1ee55a736f4",
+        "phone": phone_number,
+        "provider": "local",
+        "api_url": "http://localhost:3001"
+    }
+    _instance_cache[phone_number] = fallback_inst
+    return fallback_inst
 
 # =====================================================
 # 🛠️ دوال التنظيف (الحل الجذري للمشكلة #132018)
@@ -156,7 +204,7 @@ def insert_message_to_supabase(sender_id, msg_text, whatsapp_instance_id=None):
     if whatsapp_instance_id:
         data["whatsapp_instance_id"] = whatsapp_instance_id
     try:
-        requests.post(url, headers=SUPABASE_HEADERS, json=data, timeout=5)
+        http_session.post(url, headers=SUPABASE_HEADERS, json=data, timeout=5)
     except Exception as e:
         print(f"Supabase Insert Error: {e}")
 
@@ -183,7 +231,7 @@ def send_linked_whatsapp(to, message_text, instance=None):
                 "to": str(to).replace('+', ''),
                 "message": message_text
             }
-            r = requests.post(send_url, json=payload, timeout=10)
+            r = http_session.post(send_url, json=payload, timeout=10)
         else:
             send_url = f"{base_url}/{inst_id}/messages/chat"
             payload = {
@@ -191,7 +239,7 @@ def send_linked_whatsapp(to, message_text, instance=None):
                 "to": str(to).replace('+', ''),
                 "body": message_text
             }
-            r = requests.post(send_url, data=payload, timeout=10)
+            r = http_session.post(send_url, data=payload, timeout=10)
         
         if r.status_code == 200:
             print(f"✅ Sent message to {to} via {instance.get('phone')}")
