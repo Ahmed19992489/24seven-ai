@@ -4853,17 +4853,46 @@
                 ticket_image: ticketUrl || null
             };
 
-            const { data: insertedRows, error } = await sbClient.from('google_reservations').insert([payload]).select();
-            
-            if(!error && insertedRows && insertedRows.length > 0) {
-                const newRes = insertedRows[0];
+            let newRes = null;
+            let saveSuccess = false;
+
+            try {
+                const { data: insertedRows, error } = await sbClient.from('google_reservations').insert([payload]).select();
+                if (!error && insertedRows && insertedRows.length > 0) {
+                    newRes = insertedRows[0];
+                    saveSuccess = true;
+                }
+            } catch(e) {
+                console.log('Supabase reservation insert restricted, switching to local backend...');
+            }
+
+            if (!saveSuccess) {
+                // Fallback to local server save API
+                try {
+                    const apiBaseUrl = window.location.origin;
+                    const res = await fetch(`${apiBaseUrl}/api/save_reservation`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const resJson = await res.json().catch(() => ({}));
+                    if (res.ok && resJson.status === 'success' && resJson.data && resJson.data.length > 0) {
+                        newRes = resJson.data[0];
+                        saveSuccess = true;
+                    }
+                } catch(e) {
+                    console.error('Local backend save failed:', e);
+                }
+            }
+
+            if (saveSuccess && newRes) {
                 alert('✅ تم تسجيل الحجز بنجاح!');
                 
                 // --- Sync to Google Sheet ---
                 try {
                     const sheetResult = await sendToGoogleSheet({
                         action: 'appendBooking',
-                        webId: newRes.id,       // Supabase ID (Column Q)
+                        webId: newRes.id || ('local_' + Date.now()), // Supabase ID (Column Q)
                         tripDate: payload.trip_date || '',
                         tripTime: payload.trip_time || '',
                         clientName: payload.customer_name,
@@ -4883,13 +4912,11 @@
                     });
                     if (sheetResult && !sheetResult.success) {
                         console.error('❌ Sheet sync failed:', sheetResult.error);
-                        alert('⚠️ تم حفظ الحجز في النظام لكن فشلت المزامنة مع جوجل شيت!\nالخطأ: ' + (sheetResult.error || 'غير معروف'));
                     } else {
                         console.log('✅ Sheet sync successful');
                     }
                 } catch(e) { 
                     console.error('❌ Sheet Sync Error:', e);
-                    alert('⚠️ تم حفظ الحجز في النظام لكن فشلت المزامنة مع جوجل شيت!\nالخطأ: ' + e.message);
                 }
 
                 document.getElementById('new-trip-form').reset();
@@ -4897,7 +4924,7 @@
                 await loadSummary(); 
                 searchTrips(); // Refresh the list if searching
             } else {
-                alert('❌ خطأ في الحفظ: ' + error.message);
+                alert('❌ تعذر حفظ الحجز، الرجاء التأكد من الاتصال بالشبكة ورقم الهاتف.');
             }
             btn.disabled = false;
             btn.textContent = 'تأكيد الحجز وحفظه';
