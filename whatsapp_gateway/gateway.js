@@ -574,22 +574,51 @@ app.post('/instance/:id/logout', async (req, res) => {
     return res.json({ status: 'success' });
 });
 
-// Startup hook: load all local instances from Supabase
+// Startup hook: load all local instances from Supabase, or fallback to disk sessions if Supabase fails (e.g. 402 Egress limit)
 async function loadLocalInstances() {
-    console.log('[Gateway] Loading local instances from Supabase...');
+    console.log('[Gateway] Loading local instances...');
+    let loadedFromCloud = false;
     try {
         const res = await axios.get(`${SUPABASE_URL}/rest/v1/whatsapp_instances?provider=eq.local`, {
-            headers: SUPABASE_HEADERS
+            headers: SUPABASE_HEADERS,
+            timeout: 5000
         });
         
-        if (res.status === 200 && Array.isArray(res.data)) {
-            console.log(`[Gateway] Found ${res.data.length} local instances to initialize.`);
+        if (res.status === 200 && Array.isArray(res.data) && res.data.length > 0) {
+            console.log(`[Gateway] Found ${res.data.length} local instances in Supabase.`);
             for (const inst of res.data) {
                 initSession(inst.id);
             }
+            loadedFromCloud = true;
         }
     } catch (err) {
-        console.error('[Gateway Error] Failed to load local instances from Supabase:', err.message);
+        console.warn(`[Gateway Notice] Supabase cloud lookup unavailable (${err.message}). Switching to local session storage fallback...`);
+    }
+
+    // Fallback: Scan disk sessions folder for offline resilience
+    if (!loadedFromCloud || Object.keys(activeSessions).length === 0) {
+        try {
+            if (fs.existsSync(SESSIONS_DIR)) {
+                const files = fs.readdirSync(SESSIONS_DIR);
+                const sessionIds = files
+                    .filter(f => f.startsWith('session_'))
+                    .map(f => f.replace('session_', ''));
+                
+                console.log(`[Gateway Disk Fallback] Found ${sessionIds.length} sessions on local disk. Initializing...`);
+                for (const sid of sessionIds) {
+                    initSession(sid);
+                }
+            }
+        } catch (diskErr) {
+            console.error('[Gateway Disk Error] Failed to load local disk sessions:', diskErr.message);
+        }
+
+        // Always ensure default automation session is initialized
+        const defaultTaskId = "692921bb-a5df-451d-8527-e1ee55a736f4";
+        if (!activeSessions[defaultTaskId]) {
+            console.log(`[Gateway Fallback] Initializing default task automation instance: ${defaultTaskId}`);
+            initSession(defaultTaskId);
+        }
     }
 }
 
