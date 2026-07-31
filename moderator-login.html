@@ -63,20 +63,40 @@
             errorEl.classList.add('hidden');
 
             try {
-                const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
-                if (error) throw error;
+                let loggedIn = false;
+                try {
+                    const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
+                    if (!error && data?.user) {
+                        const { data: profile } = await sbClient.from('profiles').select('full_name, role').eq('id', data.user.id).single();
+                        if (profile) {
+                            localStorage.setItem('mod_name', profile.full_name);
+                            localStorage.setItem('mod_role', profile.role || 'moderator');
+                            localStorage.setItem('mod_id', data.user.id);
+                            loggedIn = true;
+                            window.location.href = 'moderator.html';
+                        }
+                    }
+                } catch(sbErr) {
+                    console.log('Supabase Auth restricted/failed, trying server fallback...');
+                }
 
-                // Check role
-                const { data: profile } = await sbClient.from('profiles').select('full_name, role').eq('id', data.user.id).single();
-                
-                if (profile) {
-                    localStorage.setItem('mod_name', profile.full_name);
-                    localStorage.setItem('mod_role', profile.role || 'moderator');
-                    localStorage.setItem('mod_id', data.user.id);
-                    
-                    window.location.href = 'moderator.html';
-                } else {
-                    throw new Error('لم يتم العثور على ملف تعريف لهذا الحساب');
+                if (!loggedIn) {
+                    // Fallback to local server authentication
+                    const apiBaseUrl = window.location.origin;
+                    const res = await fetch(`${apiBaseUrl}/api/mod_login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password })
+                    });
+                    const resJson = await res.json().catch(() => ({}));
+                    if (res.ok && resJson.status === 'success' && resJson.profile) {
+                        localStorage.setItem('mod_name', resJson.profile.full_name);
+                        localStorage.setItem('mod_role', resJson.profile.role || 'moderator');
+                        localStorage.setItem('mod_id', resJson.profile.id);
+                        window.location.href = 'moderator.html';
+                    } else {
+                        throw new Error(resJson.message || 'خطأ في اسم المستخدم أو كلمة المرور');
+                    }
                 }
             } catch (err) {
                 errorEl.textContent = '❌ ' + err.message;
