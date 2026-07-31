@@ -57,7 +57,9 @@ async function updateSupabaseInstance(id, payload) {
         });
         console.log(`[Supabase] Updated instance ${id} status:`, payload);
     } catch (err) {
-        console.error(`[Supabase Error] Failed to update instance ${id}:`, err.message);
+        if (err.response?.status !== 402 && !err.message?.includes('402')) {
+            console.error(`[Supabase Error] Failed to update instance ${id}:`, err.message);
+        }
     }
 }
 
@@ -606,7 +608,9 @@ async function loadLocalInstances() {
                 
                 console.log(`[Gateway Disk Fallback] Found ${sessionIds.length} sessions on local disk. Initializing...`);
                 for (const sid of sessionIds) {
-                    initSession(sid);
+                    if (!activeSessions[sid]) {
+                        initSession(sid);
+                    }
                 }
             }
         } catch (diskErr) {
