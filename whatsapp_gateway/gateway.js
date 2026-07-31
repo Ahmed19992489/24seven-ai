@@ -291,12 +291,14 @@ async function initSession(id) {
                                             console.log(`[Gateway] Uploaded media to Supabase Storage: ${publicUrl}`);
                                         }
                                     } catch (uploadErr) {
-                                        console.error(`[Gateway] Supabase Storage upload failed:`, uploadErr.message);
+                                        if (uploadErr.response?.status !== 402 && !uploadErr.message?.includes('402')) {
+                                            console.error(`[Gateway] Supabase Storage upload error:`, uploadErr.message);
+                                        }
                                         // fallback: save locally
                                         const filePath = require('path').join(UPLOADS_DIR, fileName);
                                         require('fs').writeFileSync(filePath, buffer);
                                         publicUrl = `/static/uploads/${fileName}`;
-                                        console.log(`[Gateway] Fallback: saved media locally at ${filePath}`);
+                                        console.log(`[Gateway Local Storage] Saved incoming media locally: /static/uploads/${fileName}`);
                                     }
                                     
                                     if (publicUrl) {
