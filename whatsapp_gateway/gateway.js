@@ -64,8 +64,8 @@ async function updateSupabaseInstance(id, payload) {
 }
 
 // Initialize a session
-async function initSession(id) {
-    if (activeSessions[id] && activeSessions[id].status === 'connected') {
+async function initSession(id, forceReconnect = false) {
+    if (!forceReconnect && activeSessions[id] && activeSessions[id].status === 'connected') {
         console.log(`[Gateway] Session ${id} already connected.`);
         return activeSessions[id];
     }
@@ -565,6 +565,30 @@ app.post('/instance/:id/send', async (req, res) => {
         return res.json({ status: 'success', message_id: msgId });
     } catch (err) {
         console.error(`[Gateway Error] Failed to send message via ${id}:`, err.message);
+        
+        // 🔄 محاولة التجديد التلقائي للاتصال وإعادة المحاولة في حال انقطاع السوكيت (Connection Closed)
+        if (err.message && (err.message.includes('Closed') || err.message.includes('closed') || err.message.includes('not open'))) {
+            console.log(`[Gateway Auto-heal] Connection closed for session ${id}. Reconnecting socket...`);
+            try {
+                await initSession(id, true);
+                await new Promise(r => setTimeout(r, 2500));
+                const retrySession = activeSessions[id];
+                if (retrySession && retrySession.sock) {
+                    let retrySentMsg;
+                    if (media_url && media_type === 'image') {
+                        retrySentMsg = await retrySession.sock.sendMessage(jid, { image: { url: media_url }, caption: message || '' });
+                    } else if (media_url && media_type === 'audio') {
+                        retrySentMsg = await retrySession.sock.sendMessage(jid, { audio: { url: media_url }, mimetype: 'audio/ogg; codecs=opus', ptt: true });
+                    } else {
+                        retrySentMsg = await retrySession.sock.sendMessage(jid, { text: message || '' });
+                    }
+                    console.log(`[Gateway Auto-heal SUCCESS] Sent message after reconnect to JID: ${jid}`);
+                    return res.json({ status: 'success', message_id: retrySentMsg?.key?.id });
+                }
+            } catch (retryErr) {
+                console.error(`[Gateway Auto-heal Failed]:`, retryErr.message);
+            }
+        }
         return res.status(500).json({ status: 'error', message: err.message });
     }
 });

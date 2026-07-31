@@ -135,6 +135,10 @@ def upsert_to_supabase(records):
                 r = requests.post(url_row, headers=SUPABASE_HEADERS, json=batch, timeout=15)
                 if r.status_code in [200, 201]:
                     success += len(batch)
+                elif r.status_code == 402 or 'exceed_egress_quota' in r.text:
+                    if i == 0:
+                        print_log("⏳ [Supabase Restricted 402] السحابة محظورة بسبب الباندويث. تم توقيف المزامنة السحابية مؤقتاً والاعتماد على لجوجل شيت.")
+                    errors += len(batch)
                 else:
                     print_log(f"   ⚠️ خطأ في الدفعة (sheet_row) {i//batch_size + 1}: {r.status_code} - {r.text[:200]}")
                     errors += len(batch)
