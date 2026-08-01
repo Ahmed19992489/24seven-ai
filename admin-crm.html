@@ -4986,9 +4986,12 @@
 
         async function loadSupportChatsSilent() {
             // تحديث خفي للقائمة بدون إظهار لودينج
+            const scDaysAgo1 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
             const { data: msgs } = await sbClient.from('support_chats')
                 .select('user_id, message, created_at, sender_role')
-                .order('created_at', { ascending: false });
+                .gte('created_at', scDaysAgo1)
+                .order('created_at', { ascending: false })
+                .limit(300);
             if (!msgs || msgs.length === 0) return;
             
             const byUser = {};
@@ -5049,9 +5052,12 @@
             const list = document.getElementById('admin-support-list');
             list.innerHTML = '<p class="text-center text-gray-400 text-xs p-6">جاري التحميل...</p>';
 
+            const scDaysAgo2 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
             const { data: msgs } = await sbClient.from('support_chats')
                 .select('user_id, message, created_at, sender_role')
-                .order('created_at', { ascending: false });
+                .gte('created_at', scDaysAgo2)
+                .order('created_at', { ascending: false })
+                .limit(300);
 
             if (!msgs || msgs.length === 0) {
                 list.innerHTML = '<p class="text-center text-gray-400 text-xs p-6">لا توجد رسائل دعم</p>';
@@ -5866,22 +5872,27 @@
 
         async function loadAdminUnifiedChats() {
             try {
-                // 1. Omnichannel Messages
+                // 1. Omnichannel Messages - آخر 7 أيام فقط لتقليل Egress
+                const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
                 const { data: omniData } = await sbClient
                     .from('omnichannel_messages')
-                    .select('*')
+                    .select('id, sender_id, sender_name, channel, message_text, message_type, media_url, is_from_admin, created_at, whatsapp_instance_id')
+                    .gte('created_at', sevenDaysAgo)
                     .order('created_at', { ascending: false })
-                    .limit(1000);
+                    .limit(300);
 
                 if (omniData) {
                     adminAllMessages = omniData.reverse();
                     regroupAdminChatsOnly();
                 }
 
-                // 2. Support Chats
+                // 2. Support Chats - آخر 30 يوم فقط
+                const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
                 const { data: supportMsgs } = await sbClient.from('support_chats')
                     .select('user_id, message, created_at, sender_role')
-                    .order('created_at', { ascending: false });
+                    .gte('created_at', thirtyDaysAgo)
+                    .order('created_at', { ascending: false })
+                    .limit(300);
 
                 let supportChatsMapped = [];
                 if (supportMsgs && supportMsgs.length > 0) {
