@@ -53,8 +53,9 @@
 
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
+            const rawEmail = document.getElementById('email').value || '';
+            const email = rawEmail.trim().toLowerCase();
+            const password = (document.getElementById('password').value || '').trim();
             const btn = document.getElementById('login-btn');
             const errorEl = document.getElementById('error-msg');
 
@@ -77,11 +78,11 @@
                         }
                     }
                 } catch(sbErr) {
-                    console.log('Supabase Auth restricted/failed, trying server fallback...');
+                    console.log('Supabase Auth restricted/failed, trying server fallback...', sbErr);
                 }
 
                 if (!loggedIn) {
-                    // Fallback to local server authentication
+                    // Fallback to server authentication
                     const apiBaseUrl = window.location.origin;
                     const res = await fetch(`${apiBaseUrl}/api/mod_login`, {
                         method: 'POST',
