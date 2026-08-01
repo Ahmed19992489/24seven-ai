@@ -51,6 +51,33 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY';
         const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        // =====================================================
+        // قاموس الموظفين المحليين - Offline Fallback
+        // يُستخدم فقط عندما يكون Supabase متوقفاً أو مقيّداً
+        // لإضافة موظف جديد: أضف سطراً بصيغة 'email': { name, role, password }
+        // =====================================================
+        const LOCAL_STAFF = {
+            'noha@24seven.com':   { name: 'نهى',          role: 'moderator', password: '123456789' },
+            'rania@24seven.com':  { name: 'رانيا',        role: 'moderator', password: '123456789' },
+            'admin@24seven.com':  { name: 'أدمن النظام',  role: 'admin',     password: '123456789' },
+            'ahmed@24seven.com':  { name: 'أحمد',         role: 'admin',     password: '123456789' },
+        };
+
+        // =====================================================
+        // التحقق المحلي (بدون إنترنت أو عند توقف Supabase)
+        // =====================================================
+        function localLogin(email, password) {
+            const staff = LOCAL_STAFF[email];
+            if (staff && staff.password === password) {
+                return {
+                    full_name: staff.name,
+                    role: staff.role,
+                    id: 'mod_' + email.replace('@', '_').replace(/\./g, '_')
+                };
+            }
+            return null;
+        }
+
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const rawEmail = document.getElementById('email').value || '';
@@ -65,40 +92,71 @@
 
             try {
                 let loggedIn = false;
+
+                // ── المحاولة الأولى: Supabase Auth ──
                 try {
                     const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
                     if (!error && data?.user) {
-                        const { data: profile } = await sbClient.from('profiles').select('full_name, role').eq('id', data.user.id).single();
+                        const { data: profile } = await sbClient.from('profiles')
+                            .select('full_name, role')
+                            .eq('id', data.user.id)
+                            .single();
                         if (profile) {
                             localStorage.setItem('mod_name', profile.full_name);
                             localStorage.setItem('mod_role', profile.role || 'moderator');
                             localStorage.setItem('mod_id', data.user.id);
                             loggedIn = true;
                             window.location.href = 'moderator.html';
+                            return;
                         }
                     }
                 } catch(sbErr) {
-                    console.log('Supabase Auth restricted/failed, trying server fallback...', sbErr);
+                    console.warn('[Login] Supabase Auth failed:', sbErr?.message);
                 }
 
+                if (loggedIn) return;
+
+                // ── المحاولة الثانية: API السيرفر ──
                 if (!loggedIn) {
-                    // Fallback to server authentication
-                    const apiBaseUrl = window.location.origin;
-                    const res = await fetch(`${apiBaseUrl}/api/mod_login`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email, password })
-                    });
-                    const resJson = await res.json().catch(() => ({}));
-                    if (res.ok && resJson.status === 'success' && resJson.profile) {
-                        localStorage.setItem('mod_name', resJson.profile.full_name);
-                        localStorage.setItem('mod_role', resJson.profile.role || 'moderator');
-                        localStorage.setItem('mod_id', resJson.profile.id);
-                        window.location.href = 'moderator.html';
-                    } else {
-                        throw new Error(resJson.message || 'خطأ في اسم المستخدم أو كلمة المرور');
+                    try {
+                        const apiBaseUrl = window.location.origin;
+                        const res = await fetch(`${apiBaseUrl}/api/mod_login`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email, password })
+                        });
+                        if (res.ok) {
+                            const resJson = await res.json().catch(() => ({}));
+                            if (resJson.status === 'success' && resJson.profile) {
+                                localStorage.setItem('mod_name', resJson.profile.full_name);
+                                localStorage.setItem('mod_role', resJson.profile.role || 'moderator');
+                                localStorage.setItem('mod_id', resJson.profile.id);
+                                loggedIn = true;
+                                window.location.href = 'moderator.html';
+                                return;
+                            }
+                        }
+                    } catch(apiErr) {
+                        console.warn('[Login] Server API failed:', apiErr?.message);
                     }
                 }
+
+                // ── المحاولة الثالثة: التحقق المحلي (Offline Mode) ──
+                if (!loggedIn) {
+                    const localProfile = localLogin(email, password);
+                    if (localProfile) {
+                        localStorage.setItem('mod_name', localProfile.full_name);
+                        localStorage.setItem('mod_role', localProfile.role);
+                        localStorage.setItem('mod_id', localProfile.id);
+                        loggedIn = true;
+                        window.location.href = 'moderator.html';
+                        return;
+                    }
+                }
+
+                // ── فشل كل المحاولات ──
+                throw new Error('خطأ في اسم المستخدم أو كلمة المرور');
+
             } catch (err) {
                 errorEl.textContent = '❌ ' + err.message;
                 errorEl.classList.remove('hidden');
