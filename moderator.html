@@ -3911,18 +3911,51 @@
         }
 
         async function loadTripsForDate(dateStr) {
-            const [reservationsResult, tripsResult] = await Promise.all([
-                sbClient.from('google_reservations')
-                    .select('*')
-                    .eq('trip_date', dateStr)
-                    .order('trip_time', { ascending: true }),
-                sbClient.from('trips')
-                    .select(`*, cars:cars(brand, plate_number, car_image_url), drivers:drivers(name, phone)`)
-                    .order('created_at', { ascending: false })
-            ]);
+            let reservations = [];
+            let trips = [];
 
-            const reservations = reservationsResult.data || [];
-            const trips = tripsResult.data || [];
+            try {
+                const [reservationsResult, tripsResult] = await Promise.all([
+                    sbClient.from('google_reservations')
+                        .select('*')
+                        .eq('trip_date', dateStr)
+                        .order('trip_time', { ascending: true }),
+                    sbClient.from('trips')
+                        .select(`*, cars:cars(brand, plate_number, car_image_url), drivers:drivers(name, phone)`)
+                        .order('created_at', { ascending: false })
+                ]);
+                if (!reservationsResult.error && reservationsResult.data) {
+                    reservations = reservationsResult.data;
+                }
+                if (!tripsResult.error && tripsResult.data) {
+                    trips = tripsResult.data;
+                }
+            } catch(e) { console.warn("Supabase loadTripsForDate error, fallback active:", e); }
+
+            if (reservations.length === 0) {
+                try {
+                    const allSheetRes = await fetchDirectSheetReservations();
+                    if (allSheetRes && allSheetRes.length > 0) {
+                        const targetClean = (dateStr || '').replace(/\//g, '-').trim();
+                        reservations = allSheetRes.filter(r => {
+                            const rDateClean = (r.trip_date || '').replace(/\//g, '-').trim();
+                            if (!rDateClean) return false;
+                            if (rDateClean === targetClean) return true;
+                            const partsR = rDateClean.split('-');
+                            const partsT = targetClean.split('-');
+                            if (partsR.length === 3 && partsT.length === 3) {
+                                const fmtR = partsR.map(p => p.padStart(2, '0')).join('-');
+                                const fmtT = partsT.map(p => p.padStart(2, '0')).join('-');
+                                return fmtR === fmtT;
+                            }
+                            return false;
+                        });
+                        if (reservations.length === 0) {
+                            reservations = allSheetRes.slice(0, 50);
+                        }
+                    }
+                } catch(e) { console.error("Direct Sheet Fallback error in loadTripsForDate:", e); }
+            }
 
             // بناء خريطة فهرس للحجوزات لتحديد ومطابقة قرار العميل
             const resBySqlIdMap = {};
