@@ -1498,7 +1498,10 @@
         // --- Core UI Logic ---
         setInterval(() => {
             const now = new Date();
-            document.getElementById('live-time').textContent = now.toLocaleTimeString('en-US', {hour12: false});
+            const el = document.getElementById('live-time');
+            if (el) el.textContent = now.toLocaleTimeString('en-US', {hour12: false});
+        }, 1000);
+
         async function fetchDirectSheetReservations() {
             try {
                 const sheetId = "1-YglRYU8RZ6fl8xoWBNgxiV5IRna4KgE8ynpjsjtCD4";
