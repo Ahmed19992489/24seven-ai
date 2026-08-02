@@ -2183,9 +2183,26 @@
             }
 
             // نقوم بترتيبها وتحديد الحد الأقصى بـ 300 سجل لتفادي إثقال المتصفح
-            const { data: activeReservations } = await activeQuery
-                .order('created_at', { ascending: false })
-                .limit(300);
+            let activeReservations = null;
+            try {
+                const res = await activeQuery
+                    .order('created_at', { ascending: false })
+                    .limit(300);
+                if (!res.error && res.data && res.data.length > 0) {
+                    activeReservations = res.data;
+                }
+            } catch(e) { console.warn("Supabase activeReservations error, fallback active:", e); }
+
+            if (!activeReservations || activeReservations.length === 0) {
+                try {
+                    const baseUrl = (typeof getApiBaseUrl === 'function') ? getApiBaseUrl() : '';
+                    const fbResp = await fetch(`${baseUrl}/api/reservations/fallback`);
+                    const fbJson = await fbResp.json();
+                    if (fbJson && fbJson.data && fbJson.data.length > 0) {
+                        activeReservations = fbJson.data;
+                    }
+                } catch(e) { console.error("Fallback activeReservations error:", e); }
+            }
 
             // ج. دمج القائمتين وحذف التكرار
             const reservationsMap = new Map();

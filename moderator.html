@@ -1514,19 +1514,37 @@
                 const day = String(now.getDate()).padStart(2, '0');
                 const localTodayStr = `${year}-${month}-${day}`;
 
-                // 1. Fetch ALL reservations for today + all recent (for chat name resolution)
-                const { data: allRes } = await sbClient.from('google_reservations')
-                    .select('*')
-                    .order('created_at', { ascending: false })
-                    .limit(1000);
+                // 1. Fetch ALL reservations for today + all recent (with fallback protection)
+                let allRes = null;
+                try {
+                    const res = await sbClient.from('google_reservations')
+                        .select('id, trip_date, trip_time, customer_name, customer_phone, pickup_address, dropoff_address, cost, booking_employee, trip_type, status, admin_notes, payment_status')
+                        .order('created_at', { ascending: false })
+                        .limit(300);
+                    if (!res.error && res.data && res.data.length > 0) {
+                        allRes = res.data;
+                    }
+                } catch(e) { console.warn("Supabase fetch error, fallback active:", e); }
+
+                if (!allRes || allRes.length === 0) {
+                    try {
+                        const fbResp = await fetch(`${getApiBaseUrl()}/api/reservations/fallback`);
+                        const fbJson = await fbResp.json();
+                        if (fbJson && fbJson.data && fbJson.data.length > 0) {
+                            allRes = fbJson.data;
+                        }
+                    } catch(e) { console.error("Fallback reservations error:", e); }
+                }
+
+                allRes = allRes || [];
 
                 // 2. Also fetch from trips table for today
                 const { data: tripsToday } = await sbClient.from('trips')
-                    .select('*')
+                    .select('id, created_at, status, estimated_price, final_price')
                     .order('created_at', { ascending: false })
                     .limit(200);
 
-                if (allRes) {
+                if (allRes.length > 0) {
                     allTrips = allRes; // for chat name resolution
 
                     // --- Stats: filter by mod name if we have matching records, else show ALL today ---
@@ -1865,13 +1883,29 @@
         async function loadUnifiedChats() {
             if(allTrips.length === 0) await loadSummary();
 
-            const { data: omniData } = await sbClient
-                .from('omnichannel_messages')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .limit(1000);
+            let omniData = null;
+            try {
+                const res = await sbClient
+                    .from('omnichannel_messages')
+                    .select('id, sender_id, sender_name, channel, message_text, message_type, is_from_admin, created_at')
+                    .order('created_at', { ascending: false })
+                    .limit(300);
+                if (!res.error && res.data && res.data.length > 0) {
+                    omniData = res.data;
+                }
+            } catch(e) { console.warn("Supabase omni fetch error, fallback active:", e); }
 
-            if (omniData) {
+            if (!omniData || omniData.length === 0) {
+                try {
+                    const fbResp = await fetch(`${getApiBaseUrl()}/api/omnichannel/fallback`);
+                    const fbJson = await fbResp.json();
+                    if (fbJson && fbJson.data && fbJson.data.length > 0) {
+                        omniData = fbJson.data;
+                    }
+                } catch(e) { console.error("Fallback omnichannel error:", e); }
+            }
+
+            if (omniData && omniData.length > 0) {
                 allMessages = omniData.reverse();
                 regroupChatsOnly();
             }

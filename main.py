@@ -1230,6 +1230,150 @@ def create_founder_account(db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Created", "user": new_user.email}
 
+# =========================================================
+#  🛡️ Google Sheets / Local DB Fallback APIs for UI Dashboard
+# =========================================================
+import time, json, urllib.request, urllib.parse
+
+_fallback_reservations_cache = {"time": 0, "data": []}
+_fallback_chats_cache = {"time": 0, "data": []}
+
+def _get_google_auth_token():
+    try:
+        from google.oauth2.service_account import Credentials
+        from google.auth.transport.requests import Request
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        root_dir = os.path.dirname(current_dir)
+        creds_path = os.path.join(root_dir, 'credentials.json')
+        if not os.path.exists(creds_path):
+            creds_path = os.path.join(current_dir, 'credentials.json')
+        if os.path.exists(creds_path):
+            scopes = ['https://www.googleapis.com/auth/spreadsheets.readonly']
+            creds = Credentials.from_service_account_file(creds_path, scopes=scopes)
+            creds.refresh(Request())
+            return creds.token
+    except Exception as e:
+        print("Google auth token error:", e)
+    return None
+
+@app.get("/api/reservations/fallback")
+async def get_reservations_fallback():
+    """
+    Fallback endpoint to serve reservations directly from Google Sheet
+    when Supabase is restricted or quota is exceeded.
+    """
+    now = time.time()
+    if _fallback_reservations_cache["data"] and (now - _fallback_reservations_cache["time"] < 30):
+        return {"status": "ok", "source": "cache", "data": _fallback_reservations_cache["data"]}
+    
+    try:
+        token = _get_google_auth_token()
+        if token:
+            sheet_id = "1-YglRYU8RZ6fl8xoWBNgxiV5IRna4KgE8ynpjsjtCD4"
+            encoded_range = urllib.parse.quote("'قاعدة بيانات الحجوزات'!A1:Q300")
+            url = f"https://sheets.googleapis.com/v4/spreadsheets/{sheet_id}/values/{encoded_range}"
+            req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+            
+            with urllib.request.urlopen(req) as resp:
+                result = json.loads(resp.read().decode('utf-8'))
+                all_vals = result.get('values', [])
+                if all_vals and len(all_vals) > 1:
+                    headers = all_vals[0]
+                    mapped_list = []
+                    recent_rows = all_vals[1:][-300:]
+                    for idx, r in enumerate(reversed(recent_rows)):
+                        if not any(r): continue
+                        row_dict = {}
+                        for h_idx, h_name in enumerate(headers):
+                            if h_idx < len(r):
+                                row_dict[h_name] = r[h_idx]
+                        
+                        mapped_list.append({
+                            "id": row_dict.get('SQL_ID') or f"gs_{idx}",
+                            "google_res_id": row_dict.get('SQL_ID') or f"gs_{idx}",
+                            "trip_date": row_dict.get('التاريخ') or '',
+                            "trip_time": row_dict.get('الوقت') or '',
+                            "customer_name": row_dict.get('العميل') or '',
+                            "manual_client_name": row_dict.get('العميل') or '',
+                            "customer_phone": row_dict.get('هاتف العميل') or '',
+                            "pickup_address": row_dict.get('من') or '',
+                            "dropoff_address": row_dict.get('إلى') or '',
+                            "cost": row_dict.get('السعر') or 0,
+                            "estimated_price": row_dict.get('السعر') or 0,
+                            "booking_employee": row_dict.get('الموظف') or '',
+                            "trip_type": row_dict.get('النوع') or 'سيارة',
+                            "car_type": row_dict.get('النوع') or 'سيارة',
+                            "status": "approved",
+                            "admin_notes": row_dict.get('ملاحظات') or '',
+                            "payment_status": row_dict.get('الدفع') or ''
+                        })
+                    
+                    _fallback_reservations_cache["data"] = mapped_list
+                    _fallback_reservations_cache["time"] = now
+                    return {"status": "ok", "source": "sheet", "data": mapped_list}
+    except Exception as e:
+        print("Fallback reservations error:", e)
+    
+    return {"status": "ok", "source": "cache_fallback", "data": _fallback_reservations_cache["data"]}
+
+
+@app.get("/api/omnichannel/fallback")
+async def get_omnichannel_fallback():
+    """
+    Fallback endpoint to serve omnichannel messages/chats directly from Google Sheet
+    when Supabase is restricted.
+    """
+    now = time.time()
+    if _fallback_chats_cache["data"] and (now - _fallback_chats_cache["time"] < 30):
+        return {"status": "ok", "source": "cache", "data": _fallback_chats_cache["data"]}
+    
+    try:
+        token = _get_google_auth_token()
+        if token:
+            sheet_id = "1-YglRYU8RZ6fl8xoWBNgxiV5IRna4KgE8ynpjsjtCD4"
+            encoded_range = urllib.parse.quote("Chat_Logs!A1:D300")
+            url = f"https://sheets.googleapis.com/v4/spreadsheets/{sheet_id}/values/{encoded_range}"
+            req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+            
+            with urllib.request.urlopen(req) as resp:
+                result = json.loads(resp.read().decode('utf-8'))
+                all_vals = result.get('values', [])
+                if all_vals and len(all_vals) > 1:
+                    headers = all_vals[0]
+                    mapped_list = []
+                    recent_rows = all_vals[1:][-200:]
+                    for idx, r in enumerate(reversed(recent_rows)):
+                        if not any(r): continue
+                        row_dict = {}
+                        for h_idx, h_name in enumerate(headers):
+                            if h_idx < len(r):
+                                row_dict[h_name] = r[h_idx]
+                        
+                        sender_id = row_dict.get('رقم الهاتف') or row_dict.get('Sender_ID') or f"user_{idx}"
+                        sender_name = row_dict.get('المرسل') or row_dict.get('Sender_Name') or sender_id
+                        msg_text = row_dict.get('الرسالة') or row_dict.get('Message') or ''
+                        created_at = row_dict.get('التوقيت') or row_dict.get('Timestamp') or ''
+                        is_admin = str(sender_name).lower() in ['admin', 'bot', 'الموظف', 'الإدارة', 'إدارة']
+                        
+                        mapped_list.append({
+                            "id": f"gs_msg_{idx}",
+                            "sender_id": sender_id,
+                            "sender_name": sender_name,
+                            "channel": "whatsapp",
+                            "message_text": msg_text,
+                            "message_type": "text",
+                            "is_from_admin": is_admin,
+                            "created_at": created_at
+                        })
+                    
+                    _fallback_chats_cache["data"] = mapped_list
+                    _fallback_chats_cache["time"] = now
+                    return {"status": "ok", "source": "sheet", "data": mapped_list}
+    except Exception as e:
+        print("Fallback chats error:", e)
+        
+    return {"status": "ok", "source": "cache_fallback", "data": _fallback_chats_cache["data"]}
+
 if __name__ == "__main__":
     import uvicorn
     # إعدادات التشغيل لـ Render
