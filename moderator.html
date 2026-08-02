@@ -1499,7 +1499,102 @@
         setInterval(() => {
             const now = new Date();
             document.getElementById('live-time').textContent = now.toLocaleTimeString('en-US', {hour12: false});
-        }, 1000);
+        async function fetchDirectSheetReservations() {
+            try {
+                const sheetId = "1-YglRYU8RZ6fl8xoWBNgxiV5IRna4KgE8ynpjsjtCD4";
+                const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent('قاعدة بيانات الحجوزات')}`;
+                const resp = await fetch(url);
+                const text = await resp.text();
+                const jsonStr = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
+                const data = JSON.parse(jsonStr);
+                const rows = data.table?.rows || [];
+                const mapped = [];
+                for (let i = rows.length - 1; i >= 0; i--) {
+                    const c = rows[i].c;
+                    if (!c) continue;
+                    const getVal = (idx) => (c[idx] && c[idx].v !== null && c[idx].v !== undefined) ? String(c[idx].v).trim() : '';
+                    const tripDate = getVal(0);
+                    const tripTime = getVal(1);
+                    const customerName = getVal(2);
+                    const customerPhone = getVal(3);
+                    const pickup = getVal(4);
+                    const dropoff = getVal(5);
+                    const passengers = getVal(6);
+                    const bags = getVal(7);
+                    const car = getVal(8);
+                    const carType = getVal(9);
+                    const cost = getVal(10);
+                    const notes = getVal(11);
+                    const payment = getVal(12);
+                    const employee = getVal(13);
+                    const sqlId = getVal(14) || `gs_${i}`;
+                    if (!customerName && !customerPhone && !pickup) continue;
+                    mapped.push({
+                        id: sqlId,
+                        google_res_id: sqlId,
+                        trip_date: tripDate,
+                        trip_time: tripTime,
+                        customer_name: customerName,
+                        manual_client_name: customerName,
+                        customer_phone: customerPhone,
+                        pickup_address: pickup,
+                        dropoff_address: dropoff,
+                        passengers: passengers,
+                        bags: bags,
+                        car_type: carType,
+                        trip_type: carType,
+                        cost: cost,
+                        estimated_price: cost,
+                        booking_employee: employee,
+                        status: 'approved',
+                        admin_notes: notes,
+                        payment_status: payment
+                    });
+                }
+                return mapped;
+            } catch (e) {
+                console.error("Direct Sheet Reservations Fetch Error:", e);
+                return [];
+            }
+        }
+
+        async function fetchDirectSheetChats() {
+            try {
+                const sheetId = "1-YglRYU8RZ6fl8xoWBNgxiV5IRna4KgE8ynpjsjtCD4";
+                const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent('Chat_Logs')}`;
+                const resp = await fetch(url);
+                const text = await resp.text();
+                const jsonStr = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
+                const data = JSON.parse(jsonStr);
+                const rows = data.table?.rows || [];
+                const mapped = [];
+                const limit = Math.min(rows.length, 300);
+                for (let i = rows.length - 1; i >= rows.length - limit; i--) {
+                    const c = rows[i].c;
+                    if (!c) continue;
+                    const time = c[0] ? String(c[0].v || '') : '';
+                    const phone = c[1] ? String(c[1].v || '') : '';
+                    const sender = c[2] ? String(c[2].v || '') : '';
+                    const msg = c[3] ? String(c[3].v || '') : '';
+                    if (!phone && !msg) continue;
+                    const isAdmin = ['admin', 'bot', 'الموظف', 'الإدارة', 'إدارة'].includes(sender.toLowerCase());
+                    mapped.push({
+                        id: `gs_chat_${i}`,
+                        sender_id: phone,
+                        sender_name: sender,
+                        channel: 'whatsapp',
+                        message_text: msg,
+                        message_type: 'text',
+                        is_from_admin: isAdmin,
+                        created_at: time
+                    });
+                }
+                return mapped;
+            } catch (e) {
+                console.error("Direct Sheet Chats Fetch Error:", e);
+                return [];
+            }
+        }
 
         async function loadSummary() {
             document.getElementById('hello-name').textContent = currentModName;
@@ -1534,6 +1629,11 @@
                             allRes = fbJson.data;
                         }
                     } catch(e) { console.error("Fallback reservations error:", e); }
+                }
+
+                if (!allRes || allRes.length === 0) {
+                    console.log("⚡ Fetching direct Google Sheet reservations fallback...");
+                    allRes = await fetchDirectSheetReservations();
                 }
 
                 allRes = allRes || [];
@@ -1903,6 +2003,11 @@
                         omniData = fbJson.data;
                     }
                 } catch(e) { console.error("Fallback omnichannel error:", e); }
+            }
+
+            if (!omniData || omniData.length === 0) {
+                console.log("⚡ Fetching direct Google Sheet chats fallback...");
+                omniData = await fetchDirectSheetChats();
             }
 
             if (omniData && omniData.length > 0) {
