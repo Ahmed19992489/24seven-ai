@@ -1,6 +1,11 @@
 import os
 import sys
 import time
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
 import sniper_agent
 
 print("=" * 60)

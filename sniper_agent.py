@@ -18,8 +18,9 @@ else:
 # ==========================================
 # 🔑 إعدادات قاعدة البيانات سوبابيز
 # ==========================================
-SUPABASE_URL = 'https://wtjwzqvmwnbvjxnmweqq.supabase.co'
+SUPABASE_URL = os.getenv("SUPABASE_URL", 'https://wtjwzqvmwnbvjxnmweqq.supabase.co')
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTQ2NTQwMywiZXhwIjoyMDg3MDQxNDAzfQ.WYNflQntWBCHXDnxFf2C1X1IerYZtMfMT6p6P4Dx0Vg")
+
 
 HEADERS = {
     "apikey": SUPABASE_KEY,
@@ -152,15 +153,24 @@ def is_already_processed(text, sender_phone):
 # ==========================================
 # 🛠️ دوال مساعدة للإعدادات
 # ==========================================
+_settings_cache = {}
+
 def get_setting(key):
+    env_val = os.getenv(key.upper()) or os.getenv(key)
+    if env_val:
+        return env_val
+    if key in _settings_cache and _settings_cache[key] is not None:
+        return _settings_cache[key]
     try:
         url = f"{SUPABASE_URL}/rest/v1/sniper_settings?key=eq.{key}&select=value"
         r = http_session.get(url, headers=HEADERS, timeout=5)
         if r.status_code == 200 and r.json():
-            return r.json()[0].get("value")
+            val = r.json()[0].get("value")
+            _settings_cache[key] = val
+            return val
     except Exception as e:
-        print(f"[Sniper Setting] Error getting {key}: {e}")
-    return None
+        pass
+    return _settings_cache.get(key)
 
 def save_setting(key, value):
     try:

@@ -1905,16 +1905,24 @@ def send_omnichannel_reply():
                         "media_url": media_url,
                         "media_type": media_type
                     }
-                    try:
-                        res = requests.post(send_url, json=payload, timeout=8)
-                        if res.status_code == 200 and res.json().get("status") == "success":
-                            send_success = True
-                        else:
-                            api_error = res.text
-                            print(f"❌ Local WA send failed: {res.text}")
-                    except Exception as e:
-                        api_error = str(e)
-                        print(f"❌ Local WA exception: {e}")
+                    for attempt in range(3):
+                        try:
+                            res = requests.post(send_url, json=payload, timeout=8)
+                            if res.status_code == 200 and res.json().get("status") == "success":
+                                send_success = True
+                                break
+                            else:
+                                api_error = res.text
+                                print(f"❌ Local WA send failed (attempt {attempt+1}): {res.text}")
+                                if "Connection Closed" in res.text or "closed" in res.text.lower() or res.status_code == 500:
+                                    time.sleep(1.5)
+                                else:
+                                    break
+                        except Exception as e:
+                            api_error = str(e)
+                            print(f"❌ Local WA exception (attempt {attempt+1}): {e}")
+                            time.sleep(1.5)
+
             else:
                 print(f"⚠️ Could not fetch credentials for whatsapp_instance_id {whatsapp_instance_id}, falling back to Meta API")
 

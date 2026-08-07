@@ -13,3 +13,6 @@ static/uploads/
 node_modules/
 whatsapp_gateway/node_modules/
 whatsapp_gateway/sessions/
+
+.vercel
+.env*
