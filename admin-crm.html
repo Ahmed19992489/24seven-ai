@@ -8294,8 +8294,13 @@ async function loadWhatsAppSettings() {
             
             try {
                 const res = await apiFetch(`${apiBase}/api/whatsapp/instances`);
-                if (!res.ok) throw new Error('فشل جلب الحسابات من السيرفر');
+                const statusCode = res.status;
                 const data = await res.json();
+                
+                // DEBUG ALERT - سيُزال بعد التشخيص
+                alert('DEBUG:\nStatus: ' + statusCode + '\nData count: ' + (Array.isArray(data) ? data.length : 'NOT ARRAY') + '\nFirst item: ' + (data[0] ? JSON.stringify(data[0]).substring(0, 100) : 'empty'));
+                
+                if (!res.ok) throw new Error('Server returned ' + statusCode);
                 
                 if (!data || data.length === 0) {
                     listContainer.innerHTML = '<p class="text-center text-slate-400 text-xs py-12">لا توجد حسابات واتساب مضافة حالياً.</p>';
