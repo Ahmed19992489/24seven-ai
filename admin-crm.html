@@ -8265,9 +8265,18 @@ ${contextData}
 
 async function loadWhatsAppSettings() {
             const listContainer = document.getElementById('whatsapp-instances-list');
+            if (!listContainer) { console.error('whatsapp-instances-list not found!'); return; }
+
             listContainer.innerHTML = '<p class="text-center text-slate-400 text-xs py-6"><i class="fas fa-spinner fa-spin mr-1"></i> جاري التحميل...</p>';
             
             const apiBase = getStaffApiBaseUrl();
+            
+            // DEBUG: Show URL being used
+            listContainer.innerHTML = `<p class="text-xs text-blue-600 p-2 bg-blue-50 rounded-lg mb-2 text-right">
+                🔗 السيرفر: <span dir="ltr" class="font-mono">${apiBase || 'غير محدد!'}</span><br>
+                <span class="text-slate-400">جاري الاتصال...</span>
+            </p>`;
+            
             if (!apiBase) {
                 listContainer.innerHTML = '<p class="text-center text-red-500 text-xs py-6">خطأ: لم يتم تحديد عنوان السيرفر.</p>';
                 return;
@@ -8322,8 +8331,13 @@ async function loadWhatsAppSettings() {
                     }
                 }
             } catch (error) {
-                listContainer.innerHTML = `<p class="text-center text-red-500 text-xs py-6">خطأ في تحميل البيانات: ${error.message}</p>`;
+                listContainer.innerHTML = `<div class="text-xs p-3 bg-red-50 border border-red-200 rounded-xl text-right">
+                    <p class="font-bold text-red-600 mb-1">❌ خطأ في الاتصال بالسيرفر</p>
+                    <p class="text-red-500 font-mono">${error.message}</p>
+                    <p class="text-slate-400 mt-1">السيرفر: <span dir="ltr">${apiBase}</span></p>
+                </div>`;
             }
+
         }
 
         function resetWhatsappDetailsPanel() {
