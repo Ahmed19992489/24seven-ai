@@ -7032,6 +7032,16 @@
             return loc.origin;
         }
 
+        // ✅ wrapper للـ fetch يضيف ngrok-skip-browser-warning تلقائياً عند الاتصال بـ ngrok
+        function apiFetch(url, options) {
+            options = options || {};
+            var apiBase = getStaffApiBaseUrl() || '';
+            var isNgrok = apiBase.indexOf('ngrok') !== -1;
+            var extraHeaders = isNgrok ? { 'ngrok-skip-browser-warning': '1' } : {};
+            var mergedHeaders = Object.assign({}, extraHeaders, options.headers || {});
+            return fetch(url, Object.assign({}, options, { headers: mergedHeaders }));
+        }
+
 
 
     function saveStaffApiUrl() {
