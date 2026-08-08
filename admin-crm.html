@@ -7007,20 +7007,31 @@
         };
 
         function getStaffApiBaseUrl() {
-        let customUrl = localStorage.getItem('staff_api_url') || localStorage.getItem('mod_api_url') || localStorage.getItem('ngrok_url');
-        if (customUrl && customUrl.trim() !== '') {
-            return customUrl.trim().replace(/\/$/, '');
-        }
+            // ✅ رابط السيرفر الثابت - يُستخدم عند فتح الموقع من الدومين الحي
+            const FIXED_NGROK_URL = 'https://tommye-unlionized-pat.ngrok-free.dev';
 
-        const loc = window.location;
-        if (loc.port === '3000' || loc.pathname.includes('admin-crm.html') || loc.pathname.includes('moderator') || loc.pathname.includes('dashboard')) {
+            // أولاً: تحقق من إعداد مخصص محفوظ في المتصفح
+            let customUrl = localStorage.getItem('staff_api_url') || localStorage.getItem('mod_api_url') || localStorage.getItem('ngrok_url');
+            if (customUrl && customUrl.trim() !== '') {
+                return customUrl.trim().replace(/\/$/, '');
+            }
+
+            const loc = window.location;
+
+            // إذا كان على localhost يستخدم المنفذ المحلي
+            if (loc.hostname === 'localhost' || loc.hostname === '127.0.0.1') {
+                return loc.port ? `${loc.protocol}//${loc.hostname}:${loc.port}` : `http://localhost:3000`;
+            }
+
+            // إذا كان على الدومين الحي (24seven-ai.com) يستخدم الرابط الثابت للـ ngrok
+            if (loc.hostname.includes('24seven-ai.com') || loc.hostname.includes('github.io') || loc.hostname.includes('vercel.app') || loc.hostname.includes('netlify.app')) {
+                return FIXED_NGROK_URL;
+            }
+
+            // fallback: استخدم الـ origin الحالي (للبيئات الأخرى)
             return loc.origin;
         }
-        if (loc.hostname === 'localhost' || loc.hostname === '127.0.0.1') {
-            return `http://localhost:3000`;
-        }
-        return loc.origin;
-    }
+
 
 
     function saveStaffApiUrl() {
