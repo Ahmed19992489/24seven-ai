@@ -7007,28 +7007,21 @@
         };
 
         function getStaffApiBaseUrl() {
-        let customUrl = localStorage.getItem('staff_api_url');
-        if (!customUrl || customUrl.trim() === '') {
-            customUrl = localStorage.getItem('mod_api_url');
-        }
+        let customUrl = localStorage.getItem('staff_api_url') || localStorage.getItem('mod_api_url') || localStorage.getItem('ngrok_url');
         if (customUrl && customUrl.trim() !== '') {
             return customUrl.trim().replace(/\/$/, '');
         }
 
         const loc = window.location;
-        if (loc.hostname.includes('24seven-ai.com') || loc.hostname.includes('github.io') || loc.hostname.includes('vercel.app')) {
-            return null;
-        }
-
         if (loc.port === '3000' || loc.pathname.includes('admin-crm.html') || loc.pathname.includes('moderator') || loc.pathname.includes('dashboard')) {
             return loc.origin;
         }
         if (loc.hostname === 'localhost' || loc.hostname === '127.0.0.1') {
             return `http://localhost:3000`;
-        } else {
-            return loc.origin;
         }
+        return loc.origin;
     }
+
 
     function saveStaffApiUrl() {
             const url = document.getElementById('staff-api-url').value;
@@ -9216,7 +9209,8 @@ async function loadWhatsAppSettings() {
 
     async function loadSniperFilters() {
         try {
-            const res = await fetch('/api/sniper/filters');
+            const apiBase = getStaffApiBaseUrl() || '';
+            const res = await fetch(`${apiBase}/api/sniper/filters`);
             if (!res.ok) throw new Error(await res.text());
             const filters = await res.json();
             
@@ -9256,15 +9250,16 @@ async function loadWhatsAppSettings() {
 
     async function loadSniperSettings() {
         try {
-            const res = await fetch('/api/sniper/settings');
+            const apiBase = getStaffApiBaseUrl() || '';
+            const res = await fetch(`${apiBase}/api/sniper/settings`);
             if (!res.ok) throw new Error(await res.text());
             const settings = await res.json();
             
             const tokenSetting = settings.find(s => s.key === 'telegram_token');
             const chatIdSetting = settings.find(s => s.key === 'telegram_chat_id');
             
-            if (tokenSetting) document.getElementById('sniper-tg-token').value = tokenSetting.value || '';
-            if (chatIdSetting) document.getElementById('sniper-tg-chatid').value = chatIdSetting.value || '';
+            if (tokenSetting && document.getElementById('sniper-tg-token')) document.getElementById('sniper-tg-token').value = tokenSetting.value || '';
+            if (chatIdSetting && document.getElementById('sniper-tg-chatid')) document.getElementById('sniper-tg-chatid').value = chatIdSetting.value || '';
         } catch (err) {
             console.error('Failed to load sniper settings:', err);
         }
@@ -9272,7 +9267,8 @@ async function loadWhatsAppSettings() {
 
     async function loadSniperTrips() {
         try {
-            const res = await fetch('/api/sniper/trips');
+            const apiBase = getStaffApiBaseUrl() || '';
+            const res = await fetch(`${apiBase}/api/sniper/trips`);
             if (!res.ok) throw new Error(await res.text());
             allSniperTrips = await res.json();
             renderSniperTrips();
@@ -9283,6 +9279,7 @@ async function loadWhatsAppSettings() {
 
     function renderSniperTrips() {
         const container = document.getElementById('sniper-trips-container');
+        if (!container) return;
         
         let trips = allSniperTrips;
         if (currentSniperTab === 'matched') {
@@ -9372,6 +9369,7 @@ async function loadWhatsAppSettings() {
         const tabs = ['all', 'matched', 'sale', 'request'];
         tabs.forEach(t => {
             const btn = document.getElementById(`trip-btn-${t}`);
+            if (!btn) return;
             if (t === type) {
                 btn.className = 'px-3 py-1.5 rounded-md font-bold bg-white text-slate-800 shadow-sm';
             } else {
@@ -9388,7 +9386,8 @@ async function loadWhatsAppSettings() {
         const carType = document.getElementById('sniper-car-type').value;
         
         try {
-            const res = await fetch('/api/sniper/filters', {
+            const apiBase = getStaffApiBaseUrl() || '';
+            const res = await fetch(`${apiBase}/api/sniper/filters`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ origin, destination, car_type: carType })
@@ -9408,7 +9407,8 @@ async function loadWhatsAppSettings() {
     async function deleteSniperFilter(id) {
         if (!confirm('هل أنت متأكد من رغبتك في حذف فلتر القنص هذا؟')) return;
         try {
-            const res = await fetch(`/api/sniper/filters/${id}`, {
+            const apiBase = getStaffApiBaseUrl() || '';
+            const res = await fetch(`${apiBase}/api/sniper/filters/${id}`, {
                 method: 'DELETE'
             });
             if (!res.ok) throw new Error(await res.text());
