@@ -2004,8 +2004,6 @@
         const sbService = supabase.createClient(supabaseUrl, supabaseServiceKey);
         let activeVendors = [];
 
-        showPage('dashboard');
-
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');
@@ -2015,40 +2013,84 @@
                 sidebar.classList.add('active'); overlay.classList.add('active');
             }
         }
+        window.toggleSidebar = toggleSidebar;
 
-        function showPage(pageId) {
-            document.querySelectorAll('.page-section').forEach(e => e.classList.add('hidden'));
-            document.getElementById('page-' + pageId).classList.remove('hidden');
-            document.querySelectorAll('.sidebar-item').forEach(e => e.classList.remove('active'));
-            document.getElementById('nav-' + pageId).classList.add('active');
-            if (window.innerWidth <= 768) {
-                document.getElementById('sidebar').classList.remove('active');
-                document.getElementById('sidebar-overlay').classList.remove('active');
+        // ✅ Safe showPage - uses typeof checks, never throws ReferenceError
+        window.showPage = function(pageId) {
+            try {
+                document.querySelectorAll('.page-section').forEach(function(e) { e.classList.add('hidden'); });
+                var target = document.getElementById('page-' + pageId);
+                if (target) target.classList.remove('hidden');
+                document.querySelectorAll('.sidebar-item').forEach(function(e) { e.classList.remove('active'); });
+                var nav = document.getElementById('nav-' + pageId);
+                if (nav) nav.classList.add('active');
+                if (window.innerWidth <= 768) {
+                    var sb = document.getElementById('sidebar');
+                    var ov = document.getElementById('sidebar-overlay');
+                    if (sb) sb.classList.remove('active');
+                    if (ov) ov.classList.remove('active');
+                }
+                if (pageId === 'dashboard' && typeof window.loadDashboard === 'function') window.loadDashboard();
+                if (pageId === 'operations' && typeof window.loadOperations === 'function') { window.loadOperations(); if (typeof window.setupOpsRealtime === 'function') window.setupOpsRealtime(); }
+                if (pageId === 'crm' && typeof window.loadCRM === 'function') window.loadCRM();
+                if (pageId === 'finance' && typeof window.loadFinance === 'function') window.loadFinance();
+                if (pageId === 'fleet' && typeof window.loadFleetList === 'function') window.loadFleetList();
+                if (pageId === 'partners' && typeof window.loadPartners === 'function') window.loadPartners();
+                if (pageId === 'pricing' && typeof window.loadPricing === 'function') window.loadPricing();
+                if (pageId === 'chat' && typeof window.loadAdminChats === 'function') window.loadAdminChats();
+                if (pageId === 'ratings' && typeof window.loadRatings === 'function') window.loadRatings();
+                if (pageId === 'coupons' && typeof window.loadCouponsPage === 'function') window.loadCouponsPage();
+                if (pageId === 'staff' && typeof window.loadStaff === 'function') window.loadStaff();
+                if (pageId === 'reservations' && typeof window.loadReservationsPage === 'function') window.loadReservationsPage();
+                if (pageId === 'marketing' && typeof window.loadMarketingStatus === 'function') window.loadMarketingStatus();
+                if (pageId === 'training-reports' && typeof window.loadTrainingReports === 'function') window.loadTrainingReports();
+                if (pageId === 'whatsapp-settings') {
+                    if (typeof window.loadWhatsAppSettings === 'function') window.loadWhatsAppSettings();
+                    if (typeof window.resetWhatsappDetailsPanel === 'function') window.resetWhatsappDetailsPanel();
+                }
+                if (pageId === 'sniper-bot' && typeof window.loadSniperBotPage === 'function') window.loadSniperBotPage();
+                if (pageId === 'ai-assistant') {
+                    setTimeout(function() {
+                        var box = document.getElementById('ai-chat-messages');
+                        if (box) box.scrollTop = box.scrollHeight;
+                    }, 100);
+                }
+            } catch(err) {
+                console.error('[showPage] Error for page "' + pageId + '":', err.message);
             }
-            if (pageId === 'dashboard') loadDashboard();
-            if (pageId === 'operations') { loadOperations(); setupOpsRealtime(); }
-            if (pageId === 'crm') loadCRM();
-            if (pageId === 'finance') loadFinance();
-            if (pageId === 'fleet') loadFleetList();
-            if (pageId === 'partners') loadPartners();
-            if (pageId === 'pricing') loadPricing();
-            if (pageId === 'chat') loadAdminChats();
-            if (pageId === 'ratings') loadRatings();
-            if (pageId === 'coupons') loadCouponsPage();
-            if (pageId === 'staff') loadStaff();
-            if (pageId === 'marketing') loadMarketingStatus();
-            if (pageId === 'training-reports') loadTrainingReports();
-            if (pageId === 'whatsapp-settings') { loadWhatsAppSettings(); resetWhatsappDetailsPanel(); }
-            if (pageId === 'sniper-bot') loadSniperBotPage();
-            if (pageId === 'ai-assistant') {
-                setTimeout(() => {
-                    const box = document.getElementById('ai-chat-messages');
-                    if (box) box.scrollTop = box.scrollHeight;
-                }, 100);
-            }
-        }
-        // Ensure showPage is accessible globally from inline onclick handlers
-        window.showPage = showPage;
+        };
+
+        // Register this script block's loaders on window immediately
+        document.addEventListener('DOMContentLoaded', function() {
+            window.loadDashboard = loadDashboard;
+            window.loadOperations = loadOperations;
+            window.setupOpsRealtime = setupOpsRealtime;
+            window.loadCRM = loadCRM;
+            window.loadFinance = loadFinance;
+            window.loadFleetList = loadFleetList;
+            window.loadPartners = loadPartners;
+            window.loadPricing = loadPricing;
+            window.loadAdminChats = loadAdminChats;
+            window.loadRatings = loadRatings;
+            window.loadCouponsPage = loadCouponsPage;
+            window.loadStaffStats = loadStaffStats;
+            // Show dashboard on load
+            window.showPage('dashboard');
+        });
+
+        // Also register immediately (in case DOMContentLoaded already fired)
+        window.loadDashboard = loadDashboard;
+        window.loadOperations = loadOperations;
+        window.setupOpsRealtime = setupOpsRealtime;
+        window.loadCRM = loadCRM;
+        window.loadFinance = loadFinance;
+        window.loadFleetList = loadFleetList;
+        window.loadPartners = loadPartners;
+        window.loadPricing = loadPricing;
+        window.loadAdminChats = loadAdminChats;
+        window.loadRatings = loadRatings;
+        window.loadCouponsPage = loadCouponsPage;
+        window.loadStaffStats = loadStaffStats;
 
 
         async function loadDashboard() {
@@ -7359,20 +7401,23 @@
         }
 
         async function deleteStaff(id, name) {
-            if (!confirm(`⚠️ هل أنت متأكد من حذف حساب (${name})؟\nهذا الإجراء سيمنعه من الدخول للنظام فوراً.`)) return;
+            if (!confirm(`?? ?????? ??? ?? ??? ????  (${name})??\n???? ?????? ??????? ?? ????? ????.`)) return;
             
             try {
-                // ملاحظة: الحذف المباشر من profiles ممكن، ولكن حذف اليوزر من Auth يتطلب Admin API
-                // حالياً سنقوم بحذف سجل الـ profile فقط كمرحلة أولى، أو يمكننا مستقبلاً إضافة API للحذف
                 const { error } = await sbClient.from('profiles').delete().eq('id', id);
                 if (error) throw error;
                 
-                alert('✅ تم حذف الموظف من القائمة بنجاح.');
+                alert('?? ?? ??? ??????? ?? ??????? ??????.');
                 loadStaff();
             } catch (err) {
-                alert('❌ خطأ في الحذف: ' + err.message);
+                alert('?? ??? ?? ?????: ' + err.message);
             }
         }
+
+        // Register staff loaders on window object
+        window.loadStaff = loadStaff;
+        window.deleteStaff = deleteStaff;
+        window.loadReservationsPage = loadReservationsPage;
     </script>
 
 <!-- مودال تعيين كابتن للحجوزات -->
@@ -9518,6 +9563,9 @@ async function loadWhatsAppSettings() {
     window.filterSniperTrips = filterSniperTrips;
     window.addSniperFilter = addSniperFilter;
     window.deleteSniperFilter = deleteSniperFilter;
+    // Global window bindings for Marketing & Training
+    window.loadMarketingStatus = loadMarketingStatus;
+    window.loadTrainingReports = loadTrainingReports;
     </script>
 </body>
 </html>
