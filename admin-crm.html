@@ -6,18 +6,48 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <!-- كاسر كاش تلقائي لـ GitHub Pages CDN - يضيف طابع زمني يتغير كل 10 دقائق -->
     <script>
-    (function() {
+    // ✅ Global showPage handler available immediately
+    window.showPage = function(pageId) {
         try {
-            var url = new URL(window.location.href);
-            var timeSlot = Math.floor(Date.now() / 600000);
-            if (url.searchParams.get('t') != timeSlot) {
-                url.searchParams.set('t', timeSlot);
-                window.location.replace(url.toString());
+            document.querySelectorAll('.page-section').forEach(function(e) { e.classList.add('hidden'); });
+            var target = document.getElementById('page-' + pageId);
+            if (target) target.classList.remove('hidden');
+            
+            document.querySelectorAll('.sidebar-item').forEach(function(e) { e.classList.remove('active'); });
+            var nav = document.getElementById('nav-' + pageId);
+            if (nav) nav.classList.add('active');
+            
+            if (window.innerWidth <= 768) {
+                var sb = document.getElementById('sidebar');
+                var ov = document.getElementById('sidebar-overlay');
+                if (sb) sb.classList.remove('active');
+                if (ov) ov.classList.remove('active');
             }
-        } catch(e) {}
-    })();
+            
+            // Delegate to section loaders if already defined
+            if (pageId === 'dashboard' && typeof window.loadDashboard === 'function') window.loadDashboard();
+            if (pageId === 'operations' && typeof window.loadOperations === 'function') { window.loadOperations(); if (typeof window.setupOpsRealtime === 'function') window.setupOpsRealtime(); }
+            if (pageId === 'crm' && typeof window.loadCRM === 'function') window.loadCRM();
+            if (pageId === 'finance' && typeof window.loadFinance === 'function') window.loadFinance();
+            if (pageId === 'fleet' && typeof window.loadFleetList === 'function') window.loadFleetList();
+            if (pageId === 'partners' && typeof window.loadPartners === 'function') window.loadPartners();
+            if (pageId === 'pricing' && typeof window.loadPricing === 'function') window.loadPricing();
+            if (pageId === 'chat' && typeof window.loadAdminChats === 'function') window.loadAdminChats();
+            if (pageId === 'ratings' && typeof window.loadRatings === 'function') window.loadRatings();
+            if (pageId === 'coupons' && typeof window.loadCouponsPage === 'function') window.loadCouponsPage();
+            if (pageId === 'staff' && typeof window.loadStaff === 'function') window.loadStaff();
+            if (pageId === 'marketing' && typeof window.loadMarketingStatus === 'function') window.loadMarketingStatus();
+            if (pageId === 'training-reports' && typeof window.loadTrainingReports === 'function') window.loadTrainingReports();
+            if (pageId === 'whatsapp-settings') {
+                if (typeof window.loadWhatsAppSettings === 'function') window.loadWhatsAppSettings();
+                if (typeof window.resetWhatsappDetailsPanel === 'function') window.resetWhatsappDetailsPanel();
+            }
+            if (pageId === 'sniper-bot' && typeof window.loadSniperBotPage === 'function') window.loadSniperBotPage();
+        } catch(err) {
+            console.error('showPage error for ' + pageId + ':', err);
+        }
+    };
     </script>
     
     <meta charset="UTF-8">
