@@ -2042,6 +2042,7 @@
                 if (pageId === 'coupons' && typeof window.loadCouponsPage === 'function') window.loadCouponsPage();
                 if (pageId === 'staff' && typeof window.loadStaff === 'function') window.loadStaff();
                 if (pageId === 'reservations' && typeof window.loadReservationsPage === 'function') window.loadReservationsPage();
+                if (pageId === 'omnichannel' && typeof window.loadAdminUnifiedChats === 'function') window.loadAdminUnifiedChats();
                 if (pageId === 'marketing' && typeof window.loadMarketingStatus === 'function') window.loadMarketingStatus();
                 if (pageId === 'training-reports' && typeof window.loadTrainingReports === 'function') window.loadTrainingReports();
                 if (pageId === 'whatsapp-settings') {
@@ -7418,6 +7419,7 @@
         window.loadStaff = loadStaff;
         window.deleteStaff = deleteStaff;
         window.loadReservationsPage = loadReservationsPage;
+        window.loadAdminUnifiedChats = loadAdminUnifiedChats;
     </script>
 
 <!-- مودال تعيين كابتن للحجوزات -->
