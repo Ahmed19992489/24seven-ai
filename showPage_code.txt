@@ -1,0 +1,28 @@
+function showPage(pageId) {
+            document.querySelectorAll('.page-section').forEach(e => e.classList.add('hidden'));
+            document.getElementById(`page-${pageId}`).classList.remove('hidden');
+            document.querySelectorAll('.sidebar-item').forEach(e => e.classList.remove('active'));
+            document.getElementById(`nav-${pageId}`).classList.add('active');
+            if (window.innerWidth <= 768) { document.getElementById('sidebar').classList.remove('active'); document.getElementById('sidebar-overlay').classList.remove('active'); }
+            if (pageId === 'dashboard') loadDashboard();
+            if (pageId === 'operations') { loadOperations(); setupOpsRealtime(); }
+            if (pageId === 'crm') loadCRM();
+            if (pageId === 'finance') loadFinance();
+            if (pageId === 'fleet') loadFleetList();
+            if (pageId === 'partners') loadPartners();
+            if (pageId === 'pricing') loadPricing();
+            if (pageId === 'chat') loadAdminChats();
+            if (pageId === 'ratings') loadRatings();
+            if (pageId === 'coupons') loadCouponsPage();
+            if (pageId === 'staff') loadStaff();
+            if (pageId === 'marketing') loadMarketingStatus();
+            if (pageId === 'training-reports') loadTrainingReports();
+            if (pageId === 'whatsapp-settings') { loadWhatsAppSettings(); resetWhatsappDetailsPanel(); }
+            if (pageId === 'ai-assistant') {
+                 // No specific load needed, but good to scroll to bottom
+                 setTimeout(() => {
+                    const box = document.getElementById('ai-chat-messages');
+                    if(box) box.scrollTop = box.scrollHeight;
+                 }, 100);
+            }
+        }

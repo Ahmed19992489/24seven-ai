@@ -108,8 +108,8 @@ def index():
 
 # = [SUPABASE] Supabase إعدادات قاعدة البيانات
 # =====================================================
-SUPABASE_URL = 'https://wtjwzqvmwnbvjxnmweqq.supabase.co'
-SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY'
+SUPABASE_URL = 'https://khskudtxbypohvnreloi.supabase.co'
+SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtoc2t1ZHR4Ynlwb2h2bnJlbG9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTIwMjksImV4cCI6MjEwMTg4ODAyOX0.jrK8y5zpDncgFkmdD4hkFRd5-kW1gWdVSRIb0jh7o2I'
 SUPABASE_HEADERS = {
     'apikey': SUPABASE_KEY,
     'Authorization': f'Bearer {SUPABASE_KEY}',
@@ -117,7 +117,7 @@ SUPABASE_HEADERS = {
 }
 
 # [WARNING] مفتاح الـ Service Role لإنشاء الموظفين
-SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTQ2NTQwMywiZXhwIjoyMDg3MDQxNDAzfQ.WYNflQntWBCHXDnxFf2C1X1IerYZtMfMT6p6P4Dx0Vg'
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtoc2t1ZHR4Ynlwb2h2bnJlbG9pIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NjMxMjAyOSwiZXhwIjoyMTAxODg4MDI5fQ.uyCTVGkoeoz4xB3r2muV_fLiI62QIw-65g2nVeIb62w'
 
 SUPABASE_SERVICE_HEADERS = {
     'apikey': SUPABASE_SERVICE_ROLE_KEY,
@@ -1240,8 +1240,10 @@ def create_whatsapp_instance():
         return jsonify({"status": "success"})
     return jsonify({"status": "error", "message": f"Supabase Error: {r.text}"}), 500
 
-@app.route('/api/whatsapp/instances', methods=['GET'])
+@app.route('/api/whatsapp/instances', methods=['GET', 'OPTIONS'])
 def list_whatsapp_instances():
+    if request.method == 'OPTIONS':
+        return make_response("", 204)
     r = requests.get(f"{SUPABASE_URL}/rest/v1/whatsapp_instances?order=created_at.desc", headers=SUPABASE_SERVICE_HEADERS, timeout=10)
     if r.status_code == 200:
         return jsonify(r.json())
@@ -1256,8 +1258,10 @@ def delete_whatsapp_instance(id):
         return jsonify({"status": "success"})
     return jsonify({"status": "error", "message": f"Supabase Error: {r.text}"}), 500
 
-@app.route('/api/whatsapp/instance/<id>/status', methods=['GET'])
+@app.route('/api/whatsapp/instance/<id>/status', methods=['GET', 'OPTIONS'])
 def check_whatsapp_instance_status(id):
+    if request.method == 'OPTIONS':
+        return make_response("", 204)
     r = requests.get(f"{SUPABASE_URL}/rest/v1/whatsapp_instances?id=eq.{id}", headers=SUPABASE_SERVICE_HEADERS, timeout=10)
     if r.status_code != 200 or not r.json():
         return jsonify({"status": "error", "message": "Instance not found"}), 404
@@ -1349,8 +1353,10 @@ def check_whatsapp_instance_status(id):
     requests.patch(f"{SUPABASE_URL}/rest/v1/whatsapp_instances?id=eq.{id}", headers=SUPABASE_SERVICE_HEADERS, json=update_payload, timeout=10)
     return jsonify({"status": conn_status, "phone": phone})
 
-@app.route('/api/whatsapp/instance/<id>/qr', methods=['GET'])
+@app.route('/api/whatsapp/instance/<id>/qr', methods=['GET', 'OPTIONS'])
 def get_whatsapp_instance_qr(id):
+    if request.method == 'OPTIONS':
+        return make_response("", 204)
     r = requests.get(f"{SUPABASE_URL}/rest/v1/whatsapp_instances?id=eq.{id}", headers=SUPABASE_SERVICE_HEADERS, timeout=10)
     if r.status_code != 200 or not r.json():
         return jsonify({"status": "error", "message": "Instance not found"}), 404

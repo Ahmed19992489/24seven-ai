@@ -1,0 +1,75 @@
+async function getAIClientResponse(userMessage) {
+        const apiBase = getApiBaseUrl();
+        // سيستم برومبت مختصر لتجنب خطأ 413 (حجم الطلب كبير)
+        const scenarioInfo = (academyScenario.system || '').substring(0, 180);
+        const systemPrompt = `عميل ليموزين مصري متشكك. ${scenarioInfo}. ردود قصيرة بالعامية. مقاوم للحجز.`;
+
+        // آخر 6 رسائل فقط مع تقليص المحتوى لتجنب 413
+        const skipMsg = "جاري تشغيل محاكاة العميل... يرجى الانتظار لحين بدء الحوار.";
+        const allMsgs = academyMessages.filter(m => m.content && m.content !== skipMsg);
+        const messagesToSend = allMsgs.slice(-6).map(m => ({
+            role: m.role === 'user' ? 'user' : 'assistant',
+            content: m.content.replace(/<[^>]*>/g, '').substring(0, 200)
+        }));
+
+        if (messagesToSend.length === 0) {
+            messagesToSend.push({
+                role: 'user',
+                content: 'ابدأ المحادثة كعميل واكتب ردك الأول فقط باختصار شديد بالعامية المصرية.'
+            });
+        }
+        // محاولة الطلب مع إعادة المحاولة عند 429
+        const MAX_RETRIES = 2;
+        for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+            try {
+                const res = await fetch(`${apiBase}/api/ai_chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify({
+                        system: systemPrompt,
+                        messages: messagesToSend,
+                        max_tokens: 180
+                    })
+                });
+
+                if (res.status === 429) {
+                    if (attempt < MAX_RETRIES) {
+                        const waitSec = (attempt + 1) * 4;
+                        appendAcademyMessage("assistant", `⏳ الذكاء الاصطناعي مشغول قليلاً، جاري إعادة المحاولة خلال ${waitSec} ثواني...`);
+                        await new Promise(r => setTimeout(r, waitSec * 1000));
+                        // احذف رسالة الانتظار من الـ chatbox
+                        const chatBox = document.getElementById('academy-chat-box');
+                        if (chatBox && chatBox.lastElementChild) chatBox.removeChild(chatBox.lastElementChild);
+                        continue;
+                    } else {
+                        appendAcademyMessage("assistant", "⚠️ الذكاء الاصطناعي وصل لحد الاستخدام المجاني. يرجى الانتظار دقيقة ثم المحاولة مجدداً.");
+                        return;
+                    }
+                }
+
+                if (!res.ok) {
+                    const errText = await res.text().catch(() => String(res.status));
+                    console.error('[AI Chat] Error:', res.status, errText);
+                    appendAcademyMessage("assistant", `⚠️ خطأ ${res.status}. تأكد من تشغيل السيرفر ورابط ngrok في إعدادات السيرفر.`);
+                    return;
+                }
+
+                const data = await res.json();
+                if (data.answer) {
+                    appendAcademyMessage("assistant", data.answer);
+                } else {
+                    appendAcademyMessage("assistant", "⚠️ حدث خطأ في استجابة الذكاء الاصطناعي.");
+                }
+                return; // نجاح — الخروج من الحلقة
+
+            } catch (e) {
+                if (attempt === MAX_RETRIES) {
+                    console.error('[AI Chat] Exception:', e);
+                    appendAcademyMessage("assistant", "⚠️ خطأ في الاتصال: " + e.message);
+                }
+            }
+        }
+    }

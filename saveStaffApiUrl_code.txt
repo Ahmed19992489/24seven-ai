@@ -1,0 +1,6 @@
+function saveStaffApiUrl() {
+            const url = document.getElementById('staff-api-url').value;
+            localStorage.setItem('staff_api_url', url);
+            alert('✅ تم حفظ إعدادات السيرفر بنجاح.');
+            loadStaff();
+        }

@@ -188,7 +188,7 @@ def create_staff_account(data: dict):
     full_name = data.get("full_name")
     role = data.get("role", "moderator")
 
-    url = os.getenv("SUPABASE_URL", "https://wtjwzqvmwnbvjxnmweqq.supabase.co")
+    url = os.getenv("SUPABASE_URL", "https://khskudtxbypohvnreloi.supabase.co")
     service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
     if not service_key:
