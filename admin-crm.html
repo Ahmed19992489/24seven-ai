@@ -6,10 +6,11 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <script>
-    // ✅ Global showPage handler available immediately
+        <script>
+    // ✅ Universal showPage Router with Hash support
     window.showPage = function(pageId) {
         try {
+            if (!pageId) pageId = 'dashboard';
             document.querySelectorAll('.page-section').forEach(function(e) { e.classList.add('hidden'); });
             var target = document.getElementById('page-' + pageId);
             if (target) target.classList.remove('hidden');
@@ -25,7 +26,7 @@
                 if (ov) ov.classList.remove('active');
             }
             
-            // Delegate to section loaders if already defined
+            // Delegate to loaders
             if (pageId === 'dashboard' && typeof window.loadDashboard === 'function') window.loadDashboard();
             if (pageId === 'operations' && typeof window.loadOperations === 'function') { window.loadOperations(); if (typeof window.setupOpsRealtime === 'function') window.setupOpsRealtime(); }
             if (pageId === 'crm' && typeof window.loadCRM === 'function') window.loadCRM();
@@ -37,6 +38,8 @@
             if (pageId === 'ratings' && typeof window.loadRatings === 'function') window.loadRatings();
             if (pageId === 'coupons' && typeof window.loadCouponsPage === 'function') window.loadCouponsPage();
             if (pageId === 'staff' && typeof window.loadStaff === 'function') window.loadStaff();
+            if (pageId === 'reservations' && typeof window.loadReservationsPage === 'function') window.loadReservationsPage();
+            if (pageId === 'omnichannel' && typeof window.loadAdminUnifiedChats === 'function') window.loadAdminUnifiedChats();
             if (pageId === 'marketing' && typeof window.loadMarketingStatus === 'function') window.loadMarketingStatus();
             if (pageId === 'training-reports' && typeof window.loadTrainingReports === 'function') window.loadTrainingReports();
             if (pageId === 'whatsapp-settings') {
@@ -44,12 +47,22 @@
                 if (typeof window.resetWhatsappDetailsPanel === 'function') window.resetWhatsappDetailsPanel();
             }
             if (pageId === 'sniper-bot' && typeof window.loadSniperBotPage === 'function') window.loadSniperBotPage();
+            if (pageId === 'ai-assistant') {
+                setTimeout(function() {
+                    var box = document.getElementById('ai-chat-messages');
+                    if (box) box.scrollTop = box.scrollHeight;
+                }, 100);
+            }
         } catch(err) {
             console.error('showPage error for ' + pageId + ':', err);
         }
     };
+
+    window.addEventListener('hashchange', function() {
+        var h = window.location.hash.replace('#', '');
+        if (h) window.showPage(h);
+    });
     </script>
-    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>24Seven | Admin ERP Pro</title>
@@ -2074,8 +2087,9 @@
             window.loadRatings = loadRatings;
             window.loadCouponsPage = loadCouponsPage;
             window.loadStaffStats = loadStaffStats;
-            // Show dashboard on load
-            window.showPage('dashboard');
+            // Show page from URL hash or default to dashboard
+            var initialPage = window.location.hash.replace('#', '') || 'dashboard';
+            window.showPage(initialPage);
         });
 
         // Also register immediately (in case DOMContentLoaded already fired)
