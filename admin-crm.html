@@ -2075,6 +2075,9 @@
 
         // Register this script block's loaders on window immediately
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('[AdminCRM] Version 2.5 (Clean Supabase Instance) Loaded successfully.');
+            
+            // Register all global loaders
             window.loadDashboard = loadDashboard;
             window.loadOperations = loadOperations;
             window.setupOpsRealtime = setupOpsRealtime;
@@ -2087,6 +2090,17 @@
             window.loadRatings = loadRatings;
             window.loadCouponsPage = loadCouponsPage;
             window.loadStaffStats = loadStaffStats;
+            window.loadStaff = loadStaff;
+            window.loadReservationsPage = loadReservationsPage;
+            window.loadAdminUnifiedChats = loadAdminUnifiedChats;
+            window.loadWhatsAppSettings = loadWhatsAppSettings;
+            
+            // Pre-fetch WhatsApp and Staff data in background
+            setTimeout(function() {
+                if (typeof window.loadWhatsAppSettings === 'function') window.loadWhatsAppSettings();
+                if (typeof window.loadStaff === 'function') window.loadStaff();
+            }, 500);
+
             // Show page from URL hash or default to dashboard
             var initialPage = window.location.hash.replace('#', '') || 'dashboard';
             window.showPage(initialPage);
