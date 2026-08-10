@@ -2042,7 +2042,6 @@
                 if (pageId === 'coupons' && typeof window.loadCouponsPage === 'function') window.loadCouponsPage();
                 if (pageId === 'staff' && typeof window.loadStaff === 'function') window.loadStaff();
                 if (pageId === 'reservations' && typeof window.loadReservationsPage === 'function') window.loadReservationsPage();
-                if (pageId === 'omnichannel' && typeof window.loadAdminUnifiedChats === 'function') window.loadAdminUnifiedChats();
                 if (pageId === 'marketing' && typeof window.loadMarketingStatus === 'function') window.loadMarketingStatus();
                 if (pageId === 'training-reports' && typeof window.loadTrainingReports === 'function') window.loadTrainingReports();
                 if (pageId === 'whatsapp-settings') {
@@ -7419,7 +7418,6 @@
         window.loadStaff = loadStaff;
         window.deleteStaff = deleteStaff;
         window.loadReservationsPage = loadReservationsPage;
-        window.loadAdminUnifiedChats = loadAdminUnifiedChats;
     </script>
 
 <!-- مودال تعيين كابتن للحجوزات -->
@@ -8251,45 +8249,38 @@ ${contextData}
         let selectedWaInstanceId = null;
 
         function openAddWhatsappModal() {
-            document.getElementById('add-whatsapp-modal').style.display = 'flex';
-            document.getElementById('wa-name').value = '';
-            document.getElementById('wa-instance-id').value = '';
-            document.getElementById('wa-token').value = '';
-            document.getElementById('wa-api-url').value = '';
-            document.getElementById('wa-provider').value = 'ultramsg';
+            document.getElementById('modal-add-whatsapp').classList.remove('hidden');
             toggleWaProviderFields();
         }
 
         function closeAddWhatsappModal() {
-            document.getElementById('add-whatsapp-modal').style.display = 'none';
+            document.getElementById('modal-add-whatsapp').classList.add('hidden');
+            document.getElementById('form-add-whatsapp').reset();
         }
 
         function toggleWaProviderFields() {
             const provider = document.getElementById('wa-provider').value;
+            const tokenContainer = document.getElementById('container-wa-token');
+            const instanceContainer = document.getElementById('container-wa-instance');
             const labelInstance = document.getElementById('label-wa-instance');
             const labelToken = document.getElementById('label-wa-token');
             const waInstanceInput = document.getElementById('wa-instance-id');
             const waTokenInput = document.getElementById('wa-token');
-            
-            const tokenContainer = document.getElementById('wa-token-container');
-            const instanceContainer = document.getElementById('wa-instance-container');
             const waApiUrlInput = document.getElementById('wa-api-url');
-            
+
             if (provider === 'greenapi') {
                 labelInstance.innerText = 'IdInstance';
                 labelToken.innerText = 'ApiTokenInstance';
-                waInstanceInput.placeholder = 'مثال: 1101923456';
-                waTokenInput.placeholder = 'أدخل ApiTokenInstance الخاص بالحساب';
+                waInstanceInput.placeholder = 'مثال: 1101823456';
+                waTokenInput.placeholder = 'مثال: 7f83b...';
                 if (tokenContainer) tokenContainer.style.display = 'block';
                 if (instanceContainer) instanceContainer.style.display = 'block';
                 waInstanceInput.required = true;
                 waTokenInput.required = true;
-                if (waApiUrlInput.value === 'http://localhost:3001') {
-                    waApiUrlInput.value = '';
-                }
+                if (waApiUrlInput.value === 'http://localhost:3001') waApiUrlInput.value = '';
             } else if (provider === 'local') {
-                labelInstance.innerText = 'معرف الحساب (اختياري)';
-                waInstanceInput.placeholder = 'سيتم إنشاؤه تلقائياً إذا تركته فارغاً';
+                labelInstance.innerText = 'معرف الجلسة (اختياري)';
+                waInstanceInput.placeholder = 'سيتم التوليد تلقائياً إذا تركته فارغاً';
                 if (tokenContainer) tokenContainer.style.display = 'none';
                 if (instanceContainer) instanceContainer.style.display = 'none';
                 waInstanceInput.required = false;
@@ -8299,14 +8290,12 @@ ${contextData}
                 labelInstance.innerText = 'Instance ID';
                 labelToken.innerText = 'Token';
                 waInstanceInput.placeholder = 'مثال: instance12345';
-                waTokenInput.placeholder = 'أدخل رمز التوكن الخاص بالحساب';
+                waTokenInput.placeholder = 'ضع رمز التوكن الخاص بالحساب';
                 if (tokenContainer) tokenContainer.style.display = 'block';
                 if (instanceContainer) instanceContainer.style.display = 'block';
                 waInstanceInput.required = true;
                 waTokenInput.required = true;
-                if (waApiUrlInput.value === 'http://localhost:3001') {
-                    waApiUrlInput.value = '';
-                }
+                if (waApiUrlInput.value === 'http://localhost:3001') waApiUrlInput.value = '';
             }
         }
 
@@ -8319,62 +8308,62 @@ ${contextData}
             const api_url = document.getElementById('wa-api-url').value.trim();
             
             if (provider === 'local') {
-                if (!instance_id) {
-                    instance_id = 'local_' + Math.random().toString(36).substring(2, 10);
-                }
-                if (!token) {
-                    token = 'local_token';
-                }
-            }
-            
-            const apiBase = getStaffApiBaseUrl();
-            if (!apiBase) {
-                alert('❌ خطأ: لم يتم العثور على رابط اتصال بالسيرفر المحلي (API).');
-                return;
+                if (!instance_id) instance_id = 'local_' + Math.random().toString(36).substring(2, 10);
+                if (!token) token = 'local_token';
             }
             
             try {
-                const res = await fetch(`${apiBase}/api/whatsapp/instances`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ instance_name, provider, instance_id, token, api_url })
-                });
-                const data = await res.json();
-                if (data.status === 'success') {
-                    alert('✅ تم إضافة الحساب بنجاح.');
-                    closeAddWhatsappModal();
-                    loadWhatsAppSettings();
-                } else {
-                    alert('❌ فشل إضافة الحساب: ' + data.message);
+                const payload = {
+                    instance_name,
+                    provider,
+                    instance_id,
+                    token,
+                    api_url: api_url || 'http://localhost:3001',
+                    status: 'disconnected'
+                };
+                const { error } = await sbClient.from('whatsapp_instances').insert([payload]);
+                if (error) throw error;
+                
+                const apiBase = getStaffApiBaseUrl();
+                if (apiBase) {
+                    try {
+                        await fetch(`${apiBase}/api/whatsapp/instances`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                    } catch(err) {}
                 }
+                
+                alert('✅ تم إضافة الحساب بنجاح.');
+                closeAddWhatsappModal();
+                loadWhatsAppSettings();
             } catch (error) {
-                alert('❌ خطأ في الاتصال بالسيرفر الخلفي: ' + error.message);
+                alert('❌ خطأ في إضافة الحساب: ' + error.message);
             }
         }
 
-async function loadWhatsAppSettings() {
+        async function loadWhatsAppSettings() {
             const listContainer = document.getElementById('whatsapp-instances-list');
-            if (!listContainer) { console.error('whatsapp-instances-list not found!'); return; }
+            if (!listContainer) return;
 
             listContainer.innerHTML = '<p class="text-center text-slate-400 text-xs py-6"><i class="fas fa-spinner fa-spin mr-1"></i> جاري التحميل...</p>';
             
-            const apiBase = getStaffApiBaseUrl();
-            
-            // DEBUG: Show URL being used
-            listContainer.innerHTML = `<p class="text-xs text-blue-600 p-2 bg-blue-50 rounded-lg mb-2 text-right">
-                🔗 السيرفر: <span dir="ltr" class="font-mono">${apiBase || 'غير محدد!'}</span><br>
-                <span class="text-slate-400">جاري الاتصال...</span>
-            </p>`;
-            
-            if (!apiBase) {
-                listContainer.innerHTML = '<p class="text-center text-red-500 text-xs py-6">خطأ: لم يتم تحديد عنوان السيرفر.</p>';
-                return;
-            }
-            
             try {
-                const res = await apiFetch(`${apiBase}/api/whatsapp/instances`);
-                if (!res.ok) throw new Error('Server returned: ' + res.status);
-                const data = await res.json();
+                // 1. Direct fetch from Supabase (fast, reliable, always works)
+                let data = null;
+                const { data: supaData, error } = await sbClient.from('whatsapp_instances').select('*').order('created_at', { ascending: false });
+                if (!error && supaData) {
+                    data = supaData;
+                } else {
+                    const apiBase = getStaffApiBaseUrl();
+                    if (apiBase) {
+                        try {
+                            const res = await apiFetch(`${apiBase}/api/whatsapp/instances`);
+                            if (res.ok) data = await res.json();
+                        } catch(e) {}
+                    }
+                }
                 
                 if (!data || data.length === 0) {
                     listContainer.innerHTML = '<p class="text-center text-slate-400 text-xs py-12">لا توجد حسابات واتساب مضافة حالياً.</p>';
@@ -8405,7 +8394,7 @@ async function loadWhatsAppSettings() {
                                 ${inst.phone ? `<p class="text-[10px] text-slate-500 font-bold mt-0.5" dir="ltr">+${inst.phone}</p>` : ''}
                             </div>
                             <button onclick="event.stopPropagation(); deleteWhatsappInstance('${inst.id}')" 
-                                    class="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition">
+                                     class="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -8421,59 +8410,52 @@ async function loadWhatsAppSettings() {
                 }
             } catch (error) {
                 listContainer.innerHTML = `<div class="text-xs p-3 bg-red-50 border border-red-200 rounded-xl text-right">
-                    <p class="font-bold text-red-600 mb-1">❌ خطأ في الاتصال بالسيرفر</p>
+                    <p class="font-bold text-red-600 mb-1">❌ خطأ في جلب الحسابات</p>
                     <p class="text-red-500 font-mono">${error.message}</p>
-                    <p class="text-slate-400 mt-1">السيرفر: <span dir="ltr">${apiBase}</span></p>
                 </div>`;
             }
-
         }
 
         function resetWhatsappDetailsPanel() {
-            document.getElementById('whatsapp-details-panel').innerHTML = `
-                <div class="text-center text-slate-400 py-12">
-                    <i class="fab fa-whatsapp text-6xl text-slate-300 mb-4 block"></i>
-                    <p class="font-bold text-lg text-slate-600">اختر حساباً من القائمة لإدارته أو ربطه</p>
-                    <p class="text-xs text-slate-400 mt-2">يمكنك ربط عدة أرقام واتساب لعرض رسائلها والرد عليها مباشرة.</p>
-                </div>
-            `;
+            const panel = document.getElementById('whatsapp-details-panel');
+            if (panel) {
+                panel.innerHTML = `
+                    <div class="text-center text-slate-400 py-12">
+                        <i class="fab fa-whatsapp text-6xl text-slate-300 mb-4 block"></i>
+                        <p class="font-bold text-lg text-slate-600">اختر حساباً من القائمة لإدارته أو ربطه</p>
+                        <p class="text-xs text-slate-400 mt-2">يمكنك ربط عدة أرقام واتساب لعرض رسائلها والرد عليها مباشرة.</p>
+                    </div>
+                `;
+            }
         }
 
         async function selectWhatsappInstance(id) {
             selectedWaInstanceId = id;
-            
-            // Highlight active in list locally
             loadWhatsAppSettings();
             
             const panel = document.getElementById('whatsapp-details-panel');
-            panel.innerHTML = '<p class="text-center text-slate-400 text-xs py-12"><i class="fas fa-spinner fa-spin mr-1"></i> جاري تحميل تفاصيل الحساب والحالة...</p>';
+            if (!panel) return;
+            panel.innerHTML = '<p class="text-center text-slate-400 text-xs py-12"><i class="fas fa-spinner fa-spin mr-1"></i> جاري تحميل تفاصيل الحساب...</p>';
             
             try {
-                const apiBase = getStaffApiBaseUrl();
-                if (!apiBase) {
-                    panel.innerHTML = '<p class="text-center text-red-500 text-xs py-12">خطأ: لم يتم تحديد عنوان السيرفر.</p>';
-                    return;
-                }
-                const instRes = await apiFetch(`${apiBase}/api/whatsapp/instances`);
-                if (!instRes.ok) throw new Error('فشل تحميل تفاصيل الحساب');
-                const instances = await instRes.json();
-                const inst = instances.find(item => item.id === id);
-                if (!inst) throw new Error('لم يتم العثور على بيانات الحساب');
+                const { data: inst, error } = await sbClient.from('whatsapp_instances').select('*').eq('id', id).single();
+                if (error || !inst) throw new Error('لم يتم العثور على بيانات الحساب');
                 
                 let freshStatus = inst.status;
                 let freshPhone = inst.phone;
                 
+                const apiBase = getStaffApiBaseUrl();
                 if (apiBase) {
                     try {
                         const statusRes = await apiFetch(`${apiBase}/api/whatsapp/instance/${id}/status`);
-                        const statusData = await statusRes.json();
-                        if (statusData.status) {
-                            freshStatus = statusData.status;
-                            freshPhone = statusData.phone;
+                        if (statusRes.ok) {
+                            const statusData = await statusRes.json();
+                            if (statusData.status) {
+                                freshStatus = statusData.status;
+                                freshPhone = statusData.phone;
+                            }
                         }
-                    } catch (e) {
-                        console.error('Error fetching fresh status:', e);
-                    }
+                    } catch(e) {}
                 }
                 
                 let detailsHtml = '';
@@ -8486,7 +8468,7 @@ async function loadWhatsAppSettings() {
                             
                             <div class="bg-white rounded-xl p-4 text-right space-y-2 border border-slate-100 text-sm">
                                 <p class="text-slate-500">اسم الحساب: <span class="font-bold text-slate-800">${inst.instance_name}</span></p>
-                                <p class="text-slate-500">رقم الهاتف: <span class="font-bold text-slate-800" dir="ltr">+${freshPhone || ''}</span></p>
+                                <p class="text-slate-500">رقم الهاتف: <span class="font-bold text-slate-800" dir="ltr">+${freshPhone || inst.phone || ''}</span></p>
                                 <p class="text-slate-500">مزود الخدمة: <span class="font-bold text-slate-800">${inst.provider === 'greenapi' ? 'Green API' : (inst.provider === 'local' ? 'بوابة محلية (Local)' : 'UltraMsg')}</span></p>
                                 <p class="text-slate-500">معرف الحساب: <span class="font-bold text-slate-800" dir="ltr">${inst.instance_id}</span></p>
                             </div>
@@ -8588,7 +8570,9 @@ async function loadWhatsAppSettings() {
                 });
                 const data = await res.json();
                 if (data.status === 'success') {
-                    alert(`✅ تم ربط الـ Webhook بنجاح!\nالرابط المثبت:\n${data.webhook_url}`);
+                    alert(`✅ تم ربط الـ Webhook بنجاح!
+الرابط المثبت:
+${data.webhook_url}`);
                 } else {
                     alert('❌ فشل ربط الـ Webhook: ' + data.message);
                 }
@@ -8600,29 +8584,25 @@ async function loadWhatsAppSettings() {
         async function deleteWhatsappInstance(id) {
             if (!confirm('هل أنت متأكد من رغبتك في حذف هذا الحساب المرتبط؟ سيؤدي ذلك لقطع الاتصال والتوقف عن استقبال وإرسال رسائله.')) return;
             
-            const apiBase = getStaffApiBaseUrl();
-            if (!apiBase) {
-                alert('❌ خطأ: رابط السيرفر (API) غير متوفر للحذف.');
-                return;
-            }
-            
             try {
-                const res = await apiFetch(`${apiBase}/api/whatsapp/instances/${id}`, {
-                    method: 'DELETE'
-                });
-                const data = await res.json();
-                if (data.status === 'success') {
-                    alert('✅ تم حذف الحساب بنجاح.');
-                    if (selectedWaInstanceId === id) {
-                        selectedWaInstanceId = null;
-                        resetWhatsappDetailsPanel();
-                    }
-                    loadWhatsAppSettings();
-                } else {
-                    alert('❌ فشل حذف الحساب: ' + data.message);
+                const { error } = await sbClient.from('whatsapp_instances').delete().eq('id', id);
+                if (error) throw error;
+                
+                const apiBase = getStaffApiBaseUrl();
+                if (apiBase) {
+                    try {
+                        await apiFetch(`${apiBase}/api/whatsapp/instances/${id}`, { method: 'DELETE' });
+                    } catch(err) {}
                 }
+                
+                alert('✅ تم حذف الحساب بنجاح.');
+                if (selectedWaInstanceId === id) {
+                    selectedWaInstanceId = null;
+                    resetWhatsappDetailsPanel();
+                }
+                loadWhatsAppSettings();
             } catch (error) {
-                alert('❌ خطأ في الاتصال بالسيرفر: ' + error.message);
+                alert('❌ خطأ في حذف الحساب: ' + error.message);
             }
         }
 
