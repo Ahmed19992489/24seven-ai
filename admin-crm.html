@@ -179,6 +179,22 @@
                 padding-bottom: 80px !important;
             }
         }
+
+        /* Page section visibility fixes */
+        .page-section {
+            display: block;
+            width: 100%;
+            min-height: 200px;
+        }
+        .page-section.hidden {
+            display: none !important;
+        }
+        /* Fix for h-full sections inside scrollable main */
+        #page-omnichannel,
+        #page-sniper-bot,
+        #page-ai-assistant {
+            min-height: calc(100vh - 100px);
+        }
     </style>
 </head>
 
@@ -1193,7 +1209,7 @@
         </div>
 
         <!-- ========== صفحة إعدادات أرقام الواتساب (WhatsApp Multi-Device Settings) ========== -->
-        <div id="page-whatsapp-settings" class="page-section hidden h-full">
+        <div id="page-whatsapp-settings" class="page-section hidden">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl font-bold">🟢 ربط أرقام الواتساب (Multi-Device)</h2>
                 <button onclick="openAddWhatsappModal()" class="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg hover:bg-emerald-700 transition flex items-center gap-2">
