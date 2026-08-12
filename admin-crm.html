@@ -40,26 +40,35 @@
             }
             
             // Execute page loader if available
-            if (pageId === 'dashboard' && typeof window.loadDashboard === 'function') window.loadDashboard();
-            if (pageId === 'operations' && typeof window.loadOperations === 'function') { window.loadOperations(); if (typeof window.setupOpsRealtime === 'function') window.setupOpsRealtime(); }
-            if (pageId === 'crm' && typeof window.loadCRM === 'function') window.loadCRM();
-            if (pageId === 'finance' && typeof window.loadFinance === 'function') window.loadFinance();
-            if (pageId === 'fleet' && typeof window.loadFleetList === 'function') window.loadFleetList();
-            if (pageId === 'partners' && typeof window.loadPartners === 'function') window.loadPartners();
-            if (pageId === 'pricing' && typeof window.loadPricing === 'function') window.loadPricing();
-            if (pageId === 'chat' && typeof window.loadAdminChats === 'function') window.loadAdminChats();
-            if (pageId === 'ratings' && typeof window.loadRatings === 'function') window.loadRatings();
-            if (pageId === 'coupons' && typeof window.loadCouponsPage === 'function') window.loadCouponsPage();
-            if (pageId === 'staff' && typeof window.loadStaff === 'function') window.loadStaff();
-            if (pageId === 'reservations' && typeof window.loadReservationsPage === 'function') window.loadReservationsPage();
-            if (pageId === 'omnichannel' && typeof window.loadAdminUnifiedChats === 'function') window.loadAdminUnifiedChats();
-            if (pageId === 'marketing' && typeof window.loadMarketingStatus === 'function') window.loadMarketingStatus();
-            if (pageId === 'training-reports' && typeof window.loadTrainingReports === 'function') window.loadTrainingReports();
-            if (pageId === 'whatsapp-settings') {
-                if (typeof window.loadWhatsAppSettings === 'function') window.loadWhatsAppSettings();
-                if (typeof window.resetWhatsappDetailsPanel === 'function') window.resetWhatsappDetailsPanel();
+            if (pageId === 'dashboard' && typeof window.loadDashboard === 'function') setTimeout(window.loadDashboard, 50);
+            if (pageId === 'operations' && typeof window.loadOperations === 'function') { setTimeout(() => { window.loadOperations(); if (typeof window.setupOpsRealtime === 'function') window.setupOpsRealtime(); }, 50); }
+            if (pageId === 'crm' && typeof window.loadCRM === 'function') setTimeout(window.loadCRM, 50);
+            if (pageId === 'finance' && typeof window.loadFinance === 'function') setTimeout(window.loadFinance, 50);
+            if (pageId === 'fleet' && typeof window.loadFleetList === 'function') setTimeout(window.loadFleetList, 50);
+            if (pageId === 'partners' && typeof window.loadPartners === 'function') setTimeout(window.loadPartners, 50);
+            if (pageId === 'pricing' && typeof window.loadPricing === 'function') setTimeout(window.loadPricing, 50);
+            if (pageId === 'chat' && typeof window.loadAdminChats === 'function') setTimeout(window.loadAdminChats, 50);
+            if (pageId === 'ratings' && typeof window.loadRatings === 'function') setTimeout(window.loadRatings, 50);
+            if (pageId === 'coupons' && typeof window.loadCouponsPage === 'function') setTimeout(window.loadCouponsPage, 50);
+            if (pageId === 'staff' && typeof window.loadStaff === 'function') {
+                setTimeout(function() {
+                    var savedUrl = localStorage.getItem('staff_api_url');
+                    var input = document.getElementById('staff-api-url');
+                    if (input && savedUrl) input.value = savedUrl;
+                    window.loadStaff();
+                }, 100);
             }
-            if (pageId === 'sniper-bot' && typeof window.loadSniperBotPage === 'function') window.loadSniperBotPage();
+            if (pageId === 'reservations' && typeof window.loadReservationsPage === 'function') setTimeout(window.loadReservationsPage, 50);
+            if (pageId === 'omnichannel' && typeof window.loadAdminUnifiedChats === 'function') setTimeout(window.loadAdminUnifiedChats, 50);
+            if (pageId === 'marketing' && typeof window.loadMarketingStatus === 'function') setTimeout(window.loadMarketingStatus, 50);
+            if (pageId === 'training-reports' && typeof window.loadTrainingReports === 'function') setTimeout(window.loadTrainingReports, 50);
+            if (pageId === 'whatsapp-settings') {
+                setTimeout(function() {
+                    if (typeof window.loadWhatsAppSettings === 'function') window.loadWhatsAppSettings();
+                    if (typeof window.resetWhatsappDetailsPanel === 'function') window.resetWhatsappDetailsPanel();
+                }, 100);
+            }
+            if (pageId === 'sniper-bot' && typeof window.loadSniperBotPage === 'function') setTimeout(window.loadSniperBotPage, 50);
         } catch(err) {
             console.error('[Router] Error showing page "' + pageId + '":', err);
         }
@@ -7061,31 +7070,8 @@
                  .replace(/'/g, "&#039;");
         }
 
-        // ربط showPage بصفحة الحجوزات - نضيف للدالة الأصلية
-        const _origShowPage2 = showPage;
-        showPage = function(page) {
-            _origShowPage2(page);
-            if (page === 'reservations') {
-                setTimeout(loadReservationsPage, 100);
-            }
-            if (page === 'omnichannel') {
-                setTimeout(loadAdminUnifiedChats, 100);
-            }
-            if (page === 'staff') {
-                setTimeout(() => {
-                    const savedUrl = localStorage.getItem('staff_api_url');
-                    const input = document.getElementById('staff-api-url');
-                    if (input && savedUrl) input.value = savedUrl;
-                    loadStaff();
-                }, 100);
-            }
-            if (page === 'whatsapp-settings') {
-                setTimeout(() => {
-                    loadWhatsAppSettings();
-                    resetWhatsappDetailsPanel();
-                }, 100);
-            }
-        };
+        // NOTE: All page loaders are handled centrally in window.showPage (head script).
+        // Do NOT wrap showPage here to avoid double execution.
 
         function getStaffApiBaseUrl() {
             // ✅ رابط السيرفر الثابت - يُستخدم عند فتح الموقع من الدومين الحي
