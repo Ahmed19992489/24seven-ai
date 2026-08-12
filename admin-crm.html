@@ -7252,17 +7252,26 @@
             list.innerHTML = '<tr><td colspan="5" class="text-center p-10 text-slate-400"><i class="fas fa-spinner fa-spin text-2xl mb-2"></i><br>جاري التحميل...</td></tr>';
             
             try {
-                // جلب الموظفين والمديرين من جدول profiles
-                const { data: staff, error, count } = await sbClient
+                // جلب الموظفين والمديرين الحقيقيين من جدول profiles (واستثناء حسابات العملاء)
+                const { data: rawStaff, error } = await sbClient
                     .from('profiles')
-                    .select('*', { count: 'exact' })
+                    .select('*')
                     .in('role', ['admin', 'moderator'])
                     .not('email', 'is', null)
                     .order('created_at', { ascending: false });
 
                 if (error) throw error;
 
-                document.getElementById('staff-total-count').innerText = count || 0;
+                // تصفية أي حساب عميل قديم يحتوي على 24seven-client.app أو اسم "عميل"
+                const staff = (rawStaff || []).filter(s => {
+                    const email = s.email || '';
+                    const name = s.full_name || '';
+                    if (email.includes('24seven-client.app')) return false;
+                    if (name.startsWith('عميل')) return false;
+                    return true;
+                });
+
+                document.getElementById('staff-total-count').innerText = staff.length || 0;
 
                 if (!staff || staff.length === 0) {
                     list.innerHTML = '<tr><td colspan="5" class="text-center p-10 text-slate-400">لا يوجد موظفين مسجلين حالياً</td></tr>';
