@@ -8233,19 +8233,30 @@ ${contextData}
         let selectedWaInstanceId = null;
 
         function openAddWhatsappModal() {
-            document.getElementById('modal-add-whatsapp').classList.remove('hidden');
+            const modal = document.getElementById('add-whatsapp-modal') || document.getElementById('modal-add-whatsapp');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.style.display = 'flex';
+            }
             toggleWaProviderFields();
         }
 
         function closeAddWhatsappModal() {
-            document.getElementById('modal-add-whatsapp').classList.add('hidden');
-            document.getElementById('form-add-whatsapp').reset();
+            const modal = document.getElementById('add-whatsapp-modal') || document.getElementById('modal-add-whatsapp');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.style.display = 'none';
+            }
+            const form = document.getElementById('add-whatsapp-form') || document.getElementById('form-add-whatsapp');
+            if (form) form.reset();
         }
 
         function toggleWaProviderFields() {
-            const provider = document.getElementById('wa-provider').value;
-            const tokenContainer = document.getElementById('container-wa-token');
-            const instanceContainer = document.getElementById('container-wa-instance');
+            const providerEl = document.getElementById('wa-provider');
+            if (!providerEl) return;
+            const provider = providerEl.value;
+            const tokenContainer = document.getElementById('wa-token-container') || document.getElementById('container-wa-token');
+            const instanceContainer = document.getElementById('wa-instance-container') || document.getElementById('container-wa-instance');
             const labelInstance = document.getElementById('label-wa-instance');
             const labelToken = document.getElementById('label-wa-token');
             const waInstanceInput = document.getElementById('wa-instance-id');
@@ -8253,33 +8264,28 @@ ${contextData}
             const waApiUrlInput = document.getElementById('wa-api-url');
 
             if (provider === 'greenapi') {
-                labelInstance.innerText = 'IdInstance';
-                labelToken.innerText = 'ApiTokenInstance';
-                waInstanceInput.placeholder = 'مثال: 1101823456';
-                waTokenInput.placeholder = 'مثال: 7f83b...';
+                if (labelInstance) labelInstance.innerText = 'IdInstance';
+                if (labelToken) labelToken.innerText = 'ApiTokenInstance';
+                if (waInstanceInput) { waInstanceInput.placeholder = 'مثال: 1101823456'; waInstanceInput.required = true; }
+                if (waTokenInput) { waTokenInput.placeholder = 'مثال: 7f83b...'; waTokenInput.required = true; }
                 if (tokenContainer) tokenContainer.style.display = 'block';
                 if (instanceContainer) instanceContainer.style.display = 'block';
-                waInstanceInput.required = true;
-                waTokenInput.required = true;
-                if (waApiUrlInput.value === 'http://localhost:3001') waApiUrlInput.value = '';
+                if (waApiUrlInput && waApiUrlInput.value === 'http://localhost:3001') waApiUrlInput.value = '';
             } else if (provider === 'local') {
-                labelInstance.innerText = 'معرف الجلسة (اختياري)';
-                waInstanceInput.placeholder = 'سيتم التوليد تلقائياً إذا تركته فارغاً';
+                if (labelInstance) labelInstance.innerText = 'معرف الجلسة (اختياري)';
+                if (waInstanceInput) { waInstanceInput.placeholder = 'سيتم التوليد تلقائياً إذا تركته فارغاً'; waInstanceInput.required = false; }
+                if (waTokenInput) waTokenInput.required = false;
                 if (tokenContainer) tokenContainer.style.display = 'none';
                 if (instanceContainer) instanceContainer.style.display = 'none';
-                waInstanceInput.required = false;
-                waTokenInput.required = false;
-                waApiUrlInput.value = 'http://localhost:3001';
+                if (waApiUrlInput) waApiUrlInput.value = 'http://localhost:3001';
             } else {
-                labelInstance.innerText = 'Instance ID';
-                labelToken.innerText = 'Token';
-                waInstanceInput.placeholder = 'مثال: instance12345';
-                waTokenInput.placeholder = 'ضع رمز التوكن الخاص بالحساب';
+                if (labelInstance) labelInstance.innerText = 'Instance ID';
+                if (labelToken) labelToken.innerText = 'Token';
+                if (waInstanceInput) { waInstanceInput.placeholder = 'مثال: instance12345'; waInstanceInput.required = true; }
+                if (waTokenInput) { waTokenInput.placeholder = 'ضع رمز التوكن الخاص بالحساب'; waTokenInput.required = true; }
                 if (tokenContainer) tokenContainer.style.display = 'block';
                 if (instanceContainer) instanceContainer.style.display = 'block';
-                waInstanceInput.required = true;
-                waTokenInput.required = true;
-                if (waApiUrlInput.value === 'http://localhost:3001') waApiUrlInput.value = '';
+                if (waApiUrlInput && waApiUrlInput.value === 'http://localhost:3001') waApiUrlInput.value = '';
             }
         }
 
