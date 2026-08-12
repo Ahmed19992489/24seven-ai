@@ -1778,15 +1778,18 @@
 
                     // Resolve incoming normalized sender key
                     const activeKey = payload.new ? (payload.new.channel === 'whatsapp' ? normalizeWhatsAppId(payload.new.sender_id) : payload.new.sender_id) : null;
+                    const activeNormalized = activeChatId ? normalizeWhatsAppId(activeChatId) : null;
                     
                     // Render messages if we are currently looking at this chat
-                    if (activeKey && activeChatType === 'omni' && activeChatId === activeKey) {
+                    if (activeKey && activeChatType === 'omni' && (activeChatId === activeKey || activeNormalized === activeKey)) {
                         renderMessages();
-                        // Update profile sidebar if open
-                        const chat = groupedChats[activeKey];
+                        renderChatList();
+                        const chat = groupedChats[activeKey] || groupedChats[activeChatId];
                         if (chat) {
-                            updateProfileSidebar(activeKey, chat.channel);
+                            updateProfileSidebar(activeChatId, chat.channel);
                         }
+                    } else {
+                        renderChatList();
                     }
 
                     // Play sound for incoming customer messages
@@ -1825,6 +1828,39 @@
                     renderUnifiedChatList();
                 })
                 .subscribe();
+
+            // 🔄 Polling فائق السرعة كل 3 ثواني كنسخة احتياطية لضمان ظهور الرسائل فوراً بدون ريفرش
+            if (!window.omniFastPoller) {
+                window.omniFastPoller = setInterval(async () => {
+                    if (!sbClient) return;
+                    try {
+                        const thirtySecAgo = new Date(Date.now() - 30000).toISOString();
+                        const { data } = await sbClient
+                            .from('omnichannel_messages')
+                            .select('id, sender_id, sender_name, channel, message_text, message_type, media_url, is_from_admin, created_at, whatsapp_instance_id')
+                            .gte('created_at', thirtySecAgo)
+                            .order('created_at', { ascending: true });
+
+                        if (data && data.length > 0) {
+                            let hasNew = false;
+                            data.forEach(m => {
+                                if (!allMessages.some(existing => existing.id === m.id)) {
+                                    allMessages.push(m);
+                                    hasNew = true;
+                                }
+                            });
+
+                            if (hasNew) {
+                                regroupChatsOnly();
+                                renderChatList();
+                                if (activeChatId) {
+                                    renderMessages();
+                                }
+                            }
+                        }
+                    } catch (e) {}
+                }, 3000);
+            }
         }
 
         // [FIX] Normalize WhatsApp IDs to merge duplicates (201xxx, 1xxx, 01xxx → same chat)
@@ -2537,11 +2573,42 @@
             `).join('');
         }
 
+        async function fetchFullChatHistory(senderId) {
+            if (!senderId || !sbClient) return;
+            const cleanId = normalizeWhatsAppId(senderId);
+            try {
+                const { data, error } = await sbClient
+                    .from('omnichannel_messages')
+                    .select('id, sender_id, sender_name, channel, message_text, message_type, media_url, is_from_admin, created_at, whatsapp_instance_id')
+                    .or(`sender_id.eq.${senderId},sender_id.eq.${cleanId},sender_id.eq.20${cleanId},sender_id.eq.0${cleanId}`)
+                    .order('created_at', { ascending: true })
+                    .limit(300);
+
+                if (data && data.length > 0) {
+                    let hasNew = false;
+                    data.forEach(m => {
+                        if (!allMessages.some(existing => existing.id === m.id)) {
+                            allMessages.push(m);
+                            hasNew = true;
+                        }
+                    });
+                    if (hasNew) {
+                        regroupChatsOnly();
+                        if (activeChatId && (activeChatId === senderId || normalizeWhatsAppId(activeChatId) === cleanId)) {
+                            renderMessages();
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Error fetching full chat history:", err);
+            }
+        }
+
         function openChat(id) {
             activeChatId = id;
             activeChatType = 'omni';
             document.getElementById('no-chat').classList.add('hidden');
-            const chat = groupedChats[id];
+            const chat = groupedChats[id] || { name: id, channel: 'whatsapp' };
             document.getElementById('chat-name').textContent = chat.name || chat.id;
             document.getElementById('chat-avatar').textContent = (chat.name || '?').charAt(0);
             
@@ -2557,6 +2624,9 @@
             
             renderMessages();
             renderChatList();
+
+            // 📥 جلب وتوليد تاريخ الرسائل الكامل لهذا العميل فوراً من قاعدة البيانات
+            fetchFullChatHistory(id);
 
             // تصفير شارة المراسلات عند فتح أي محادثة
             const chatBadge = document.getElementById('chat-badge');

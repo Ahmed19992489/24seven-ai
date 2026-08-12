@@ -383,15 +383,42 @@ async function initSession(id, forceReconnect = false) {
                             }
                         } else {
                             console.log(`[Gateway] Incoming msg from ${senderPhone} (Session ${id}): ${text}`);
+                            let pythonSuccess = false;
                             try {
-                                await axios.post(`${PYTHON_BACKEND_URL}/api/whatsapp/webhook/local/${id}`, {
+                                const res = await axios.post(`${PYTHON_BACKEND_URL}/api/whatsapp/webhook/local/${id}`, {
                                     sender_phone: senderPhone,
                                     sender_name: msg.key.fromMe ? 'Admin' : senderName,
                                     message_text: text,
                                     is_from_admin: msg.key.fromMe ? true : false
                                 });
+                                if (res.status === 200) pythonSuccess = true;
                             } catch (err) {
                                 console.error(`[Webhook Error] Failed to forward message to Python:`, err.message);
+                            }
+
+                            // 🛡️ Fallback: إذا تعذر الوصول لـ Python (مثلاً السيرفر متوقف أو يعيد التشغيل)، ندخل الرسالة مباشرة لـ Supabase لمنع ضياعها!
+                            if (!pythonSuccess) {
+                                try {
+                                    await axios.post(`${SUPABASE_URL}/rest/v1/omnichannel_messages`, {
+                                        channel: 'whatsapp',
+                                        sender_id: senderPhone,
+                                        sender_name: msg.key.fromMe ? 'Admin' : senderName,
+                                        message_text: text,
+                                        is_from_admin: msg.key.fromMe ? true : false,
+                                        read_by_admin: msg.key.fromMe ? true : false,
+                                        whatsapp_instance_id: id
+                                    }, {
+                                        headers: {
+                                            'apikey': SUPABASE_KEY,
+                                            'Authorization': `Bearer ${SUPABASE_KEY}`,
+                                            'Content-Type': 'application/json',
+                                            'Prefer': 'return=minimal'
+                                        }
+                                    });
+                                    console.log(`[Gateway Fallback] Direct insert into Supabase succeeded for msg from ${senderPhone}`);
+                                } catch (supaErr) {
+                                    console.error(`[Gateway Direct Supabase Error]:`, supaErr.message);
+                                }
                             }
                         }
                     }
