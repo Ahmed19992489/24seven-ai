@@ -89,8 +89,11 @@ async function initSession(id, forceReconnect = false) {
     const sock = makeWASocket({
         auth: state,
         version: version,
+        browser: ['Ubuntu', 'Chrome', '20.0.04'],
         printQRInTerminal: false,
-        logger: pino({ level: 'silent' })
+        logger: pino({ level: 'silent' }),
+        connectTimeoutMs: 60000,
+        defaultQueryTimeoutMs: 60000
     });
 
     activeSessions[id] = {
@@ -602,6 +605,16 @@ app.post('/instance/:id/logout', async (req, res) => {
     return res.json({ status: 'success' });
 });
 
+// Delete instance handler
+app.delete(['/api/whatsapp/instances/:id', '/instance/:id'], async (req, res) => {
+    const { id } = req.params;
+    console.log(`[Gateway] Received request to delete instance ${id}`);
+    cleanupSession(id);
+    await updateSupabaseInstance(id, { status: 'disconnected', phone: null });
+    return res.json({ status: 'success', message: 'Instance deleted' });
+});
+
+
 // Startup hook: load all local instances from Supabase, or fallback to disk sessions if Supabase fails (e.g. 402 Egress limit)
 async function loadLocalInstances() {
     console.log('[Gateway] Loading local instances...');
@@ -615,7 +628,13 @@ async function loadLocalInstances() {
         if (res.status === 200 && Array.isArray(res.data) && res.data.length > 0) {
             console.log(`[Gateway] Found ${res.data.length} local instances in Supabase.`);
             for (const inst of res.data) {
-                initSession(inst.id);
+                // Only auto-initialize instances that were already connected to prevent infinite background QR loops
+                if (inst.status === 'connected') {
+                    console.log(`[Gateway Auto-Start] Initializing connected instance ${inst.id}...`);
+                    initSession(inst.id);
+                } else {
+                    console.log(`[Gateway Auto-Start] Skipping unconnected instance ${inst.id} until requested.`);
+                }
             }
             loadedFromCloud = true;
         }
@@ -643,12 +662,6 @@ async function loadLocalInstances() {
             console.error('[Gateway Disk Error] Failed to load local disk sessions:', diskErr.message);
         }
 
-        // Always ensure default automation session is initialized
-        const defaultTaskId = "692921bb-a5df-451d-8527-e1ee55a736f4";
-        if (!activeSessions[defaultTaskId]) {
-            console.log(`[Gateway Fallback] Initializing default task automation instance: ${defaultTaskId}`);
-            initSession(defaultTaskId);
-        }
     }
 }
 
