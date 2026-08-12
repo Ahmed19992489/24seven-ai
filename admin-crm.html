@@ -52,9 +52,9 @@
             if (pageId === 'coupons' && typeof window.loadCouponsPage === 'function') setTimeout(window.loadCouponsPage, 50);
             if (pageId === 'staff' && typeof window.loadStaff === 'function') {
                 setTimeout(function() {
-                    var savedUrl = localStorage.getItem('staff_api_url');
+                    var currentUrl = (typeof getStaffApiBaseUrl === 'function') ? getStaffApiBaseUrl() : (localStorage.getItem('staff_api_url') || 'https://tommye-unlionized-pat.ngrok-free.dev');
                     var input = document.getElementById('staff-api-url');
-                    if (input && savedUrl) input.value = savedUrl;
+                    if (input) input.value = currentUrl;
                     window.loadStaff();
                 }, 100);
             }
@@ -831,6 +831,7 @@
                     </div>
                 </div>
             </div>
+        </div>
 
         <!-- صفحة تقارير تدريب الموظفين -->
         <div id="page-training-reports" class="page-section hidden">
