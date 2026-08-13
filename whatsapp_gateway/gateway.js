@@ -669,8 +669,8 @@ async function loadLocalInstances() {
         console.warn(`[Gateway Notice] Supabase cloud lookup unavailable (${err.message}). Switching to local session storage fallback...`);
     }
 
-    // Fallback: Scan disk sessions folder for offline resilience
-    if (!loadedFromCloud || Object.keys(activeSessions).length === 0) {
+    // Fallback: Scan disk sessions folder ONLY if cloud lookup failed completely
+    if (!loadedFromCloud) {
         try {
             if (fs.existsSync(SESSIONS_DIR)) {
                 const files = fs.readdirSync(SESSIONS_DIR);
