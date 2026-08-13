@@ -1785,7 +1785,7 @@
                 
             if (data) {
                 allMessages = data.reverse();
-                regroupChatsOnly();
+                updateUnifiedOmniChats();
             }
 
             // --- 🛡️ Prevent Multiple Subscriptions ---
@@ -2649,26 +2649,11 @@
         }
 
         function renderChatList() {
-            const list = document.getElementById('chat-list');
-            const search = document.getElementById('chat-search').value.toLowerCase();
-            
-            const sorted = Object.values(groupedChats).sort((a,b) => new Date(b.last.created_at) - new Date(a.last.created_at));
-            
-            list.innerHTML = sorted.filter(c => c.name?.toLowerCase().includes(search) || c.id?.includes(search)).map(c => `
-                <div onclick="openChat('${c.id}')" class="p-3 rounded-2xl cursor-pointer flex items-center gap-3 transition ${activeChatId === c.id ? 'bg-teal-50 border border-teal-200 shadow-sm' : 'hover:bg-slate-50'}">
-                    <div class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-500">${c.name?.charAt(0) || '?'}</div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex justify-between items-baseline">
-                            <h4 class="text-sm font-bold truncate ${activeChatId === c.id ? 'text-teal-700' : 'text-slate-800'}">
-                                ${c.name || c.id}
-                                ${(!c.name || c.name === c.id || c.name === 'Messenger User') ? '<span class="text-[8px] text-amber-500 ml-1">✏️</span>' : ''}
-                            </h4>
-                            <span class="text-[9px] text-slate-400">${new Date(c.last.created_at).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}</span>
-                        </div>
-                        <p class="text-[11px] text-slate-500 truncate">${c.last.message_text}</p>
-                    </div>
-                </div>
-            `).join('');
+            if (typeof updateUnifiedOmniChats === 'function') {
+                updateUnifiedOmniChats();
+            } else if (typeof renderUnifiedChatList === 'function') {
+                renderUnifiedChatList();
+            }
         }
 
         async function fetchFullChatHistory(senderId) {
@@ -2691,7 +2676,7 @@
                         }
                     });
                     if (hasNew) {
-                        regroupChatsOnly();
+                        updateUnifiedOmniChats();
                         if (activeChatId && (activeChatId === senderId || normalizeWhatsAppId(activeChatId) === cleanId)) {
                             renderMessages();
                         }
