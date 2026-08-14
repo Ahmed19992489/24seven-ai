@@ -241,6 +241,82 @@ def download_whatsapp_media(media_id, mime_type):
 PHONE_ID = "597129733493778"
 VERIFY_TOKEN = "24seven_secret_token"
 SHEET_NAME = "امر حجز عميل"
+# =====================================================
+# [AI INTENT] نظام فهم النوايا بـ Groq AI (لفهم ردود العملاء بشكل ذكي)
+# =====================================================
+GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
+GROQ_MODEL = os.getenv('GROQ_MODEL', 'llama-3.1-8b-instant')
+
+def ai_understand_intent(text, context='confirmation'):
+    """
+    يستخدم Groq AI لفهم نية العميل بالعربي بشكل ذكي.
+    context: 'confirmation' أو 'feedback_yes_no' أو 'feedback_rating' أو 'feedback_suggest'
+    يعيد: dict بـ {'intent': str, 'value': str, 'confidence': float}
+    """
+    try:
+        if context == 'confirmation':
+            system_msg = """أنت محلل نوايا لشركة ليموزين. مهمتك تحديد هل العميل يؤكد أو يلغي حجزه.
+رد فقط بـ JSON هكذا: {"intent": "confirm" أو "cancel" أو "unclear", "confidence": 0.0-1.0}
+أمثلة تأكيد: تأكيد، اوكي، نعم، تمام، موافق، اكيد، اه، يلا، حلو، ماشي، أيوه، ايوه، يس، اتفقنا
+أمثلة إلغاء: لأ، لا، إلغاء، مش عايز، بلغي، كنسل، مستأجلنا، بردد
+أمثلة غير واضح: سؤال عن موعد، شكوى، موضوع آخر"""
+        elif context == 'feedback_yes_no':
+            system_msg = """أنت محلل نوايا. مهمتك تحديد هل رد العميل إيجابي أو سلبي.
+رد فقط بـ JSON: {"intent": "yes" أو "no" أو "unclear", "confidence": 0.0-1.0}
+نعم = نعم، أيوه، تمام، جداً، كويس، ايجابي، أكيد، طبعاً، بالتأكيد، معاك، معها
+لا = لا، لأ، مش، مش كويس، سلبي، لم"""
+        elif context == 'feedback_rating':
+            system_msg = """أنت محلل نوايا. استخرج التقييم من كلام العميل (1-5 نجوم أو وصف).
+رد فقط بـ JSON: {"intent": "rated", "value": "(النص الأصلي للعميل)", "stars": رقم 1-5 أو null, "confidence": 0.0-1.0}
+ممتاز/رائع/5 = 5، كويس/جيد/4 = 4، متوسط/3 = 3، وحش/2 = 2، سيء/1 = 1"""
+        else:  # feedback_suggest (اقتراحات اختيارية)
+            system_msg = """العميل أرسل رسالة كاقتراح اختياري. استخرج محتوى الاقتراح أو "لا يوجد" لو قال لا.
+رد فقط بـ JSON: {"intent": "suggestion", "value": "(نص الاقتراح أو لا يوجد)", "confidence": 0.0-1.0}"""
+
+        url = 'https://api.groq.com/openai/v1/chat/completions'
+        headers = {
+            'Authorization': f'Bearer {GROQ_API_KEY}',
+            'Content-Type': 'application/json'
+        }
+        payload = {
+            'model': GROQ_MODEL,
+            'messages': [
+                {'role': 'system', 'content': system_msg},
+                {'role': 'user', 'content': f'رسالة العميل: "{text}"'}
+            ],
+            'temperature': 0.1,
+            'max_tokens': 100,
+            'response_format': {'type': 'json_object'}
+        }
+        r = requests.post(url, headers=headers, json=payload, timeout=8)
+        if r.status_code == 200:
+            result = r.json()
+            content = result['choices'][0]['message']['content']
+            import json as _json
+            parsed = _json.loads(content)
+            print(f"[AI-Intent] context={context}, text='{text}', result={parsed}")
+            return parsed
+        else:
+            print(f"[AI-Intent] Groq error: {r.status_code} {r.text[:200]}")
+    except Exception as e:
+        print(f"[AI-Intent] Exception: {e}")
+    
+    # Fallback: regex بسيط
+    t = text.lower().strip()
+    if context == 'confirmation':
+        if re.search(r'تأكيد|تاكيد|نعم|اوكي|موافق|تمام|ماشي|يلا|اه\b|ايه\b|اكيد|يس|اتفقنا|ماشيين|ايوه|اوك', t):
+            return {'intent': 'confirm', 'confidence': 0.8}
+        if re.search(r'لا\b|لأ|إلغاء|الغاء|كنسل|مش عايز|بلغي', t):
+            return {'intent': 'cancel', 'confidence': 0.8}
+        return {'intent': 'unclear', 'confidence': 0.3}
+    elif context == 'feedback_yes_no':
+        if re.search(r'نعم|اه\b|ايوه|تمام|اكيد|طبعاً|بالتأكيد', t):
+            return {'intent': 'yes', 'confidence': 0.8}
+        if re.search(r'لا\b|لأ|مش|لم', t):
+            return {'intent': 'no', 'confidence': 0.8}
+        return {'intent': 'unclear', 'confidence': 0.3}
+    return {'intent': 'unclear', 'value': text, 'confidence': 0.3}
+
 AI_AUTOREPLY_ENABLED = False   # ❌ إيقاف الرد التلقائي بـ Gemini AI على ماسنجر
 AI_CHAT_PROXY_ENABLED = True   # ✅ مفعل للوحة التحكم
 ADMIN_NOTIFY_ENABLED = True    # ✅ تفعيل إشعارات الأدمن
@@ -485,15 +561,32 @@ def handle_confirmation(sender, text, row=None):
         if stype != "confirm": return # لا نعالج التأكيد لو الجلسة ليست "تأكيد"
         
     if row != -1:
-        if row in processed_confirmations:
-            print(f"[INFO] Row {row} is already processed or being processed for confirmation. Skipping duplicate request.")
+        # [FIX] استخدم (row, text[:20]) كـ key لمنع نفس الرسالة فقط (مش كل الصف)
+        proc_key = f"{row}_{text.strip()[:25]}"
+        if proc_key in processed_confirmations:
+            print(f"[INFO] Same message for row {row} already processed. Skipping.")
             return
-        processed_confirmations.add(row)
+        processed_confirmations.add(proc_key)
+        # تنظيف الـ set تلقائياً لمنع التراكم
+        if len(processed_confirmations) > 300:
+            processed_confirmations.clear()
+        
+        # [AI] استخدام Groq AI لفهم نية العميل بدل الـ regex الصارم
+        intent_result = ai_understand_intent(text, context='confirmation')
+        intent = intent_result.get('intent', 'unclear')
+        confidence = intent_result.get('confidence', 0.0)
+        
+        # fallback للـ regex لو AI مش متأكد
         import re
         text_lower = text.lower()
+        if intent == 'unclear' or confidence < 0.5:
+            if re.search(r"(?i)\b(confirm|ok|yes)\b|تأكيد|تاكيد|نعم|وافق|تمام|ماشي|اه\b|اوكي|اكيد|ايوه", text_lower):
+                intent = 'confirm'
+            elif re.search(r"(?i)\b(cancel|no)\b|إلغاء|الغاء|\bلا\b|رفض|لأ|كنسل", text_lower):
+                intent = 'cancel'
         
-        is_confirm = re.search(r"(?i)\b(confirm|ok|yes)\b|تأكيد|تاكيد|نعم|وافق|تمام", text_lower)
-        is_cancel = re.search(r"(?i)\b(cancel|no)\b|إلغاء|الغاء|\bلا\b|رفض", text_lower)
+        is_confirm = (intent == 'confirm')
+        is_cancel = (intent == 'cancel')
         
         if is_confirm:
             print(f"[INFO] Recording confirmation in AB{row} for sender {sender}...")
@@ -590,42 +683,59 @@ def start_feedback_flow(sender, text, row):
     """البدء في تسجيل التقييم (تسجيل أول إجابة: التقييم العام)"""
     sheet = get_main_sheet()
     try:
+        # [AI] استخدام AI لاستخراج قيمة التقييم بشكل ذكي
+        rating_result = ai_understand_intent(text, context='feedback_rating')
+        rating_value = rating_result.get('value', text)  # حفظ النص الأصلي
+        
         # 1. تسجيل التقييم العام في AD (Column 30)
-        sheet.update_acell(f"AD{row}", text)
+        sheet.update_acell(f"AD{row}", rating_value)
         # 2. تحديث الحالة في Z لكي لا نكرر البدء
         sheet.update_acell(f"Z{row}", "جاري التقييم... [INFO]")
         # 3. حفظ الحالة في الذاكرة
         user_state[sender] = {"step": "q2", "row": row, "timestamp": time.time()}
-        send_whatsapp_message(sender, "س2: هل كانت السيارة نظيفة؟ (نعم / لا)")
+        send_whatsapp_message(sender, "شكراً 😊\nس2: هل كانت السيارة نظيفة ومريحة؟")
     except Exception as e:
         print(f"[ERROR] start_feedback_flow failed: {e}")
 
 def handle_feedback_flow(sender, text):
+    """[AI-POWERED] معالجة التقييم بفهم ذكي للردود العربية المرنة"""
     state = user_state[sender]
     step = state['step']
     row = state['row']
     sheet = get_main_sheet()
     try:
         if step == "q2":
-            sheet.update_acell(f"AE{row}", text)
+            # [AI] فهم رد نعم/لا مرن
+            intent = ai_understand_intent(text, context='feedback_yes_no')
+            answer = "نعم" if intent.get('intent') == 'yes' else ("لا" if intent.get('intent') == 'no' else text)
+            sheet.update_acell(f"AE{row}", answer)
             user_state[sender]['step'] = "q3"
-            send_whatsapp_message(sender, "س3: تقييمك للكابتن؟ (مثلاً: ممتاز، جيد، ..)")
+            send_whatsapp_message(sender, "س3: كيف تقيّم الكابتن؟ (ممتاز / جيد / متوسط / سيئ)")
         elif step == "q3":
-            sheet.update_acell(f"AF{row}", text)
+            # [AI] استخراج تقييم الكابتن
+            rating = ai_understand_intent(text, context='feedback_rating')
+            answer = rating.get('value', text)
+            sheet.update_acell(f"AF{row}", answer)
             user_state[sender]['step'] = "q4"
-            send_whatsapp_message(sender, "س4: هل ترشحنا لأقاربك؟ (نعم / لا)")
+            send_whatsapp_message(sender, "س4: هل ستوصي بنا لأصدقائك وعائلتك؟ 😊")
         elif step == "q4":
-            sheet.update_acell(f"AG{row}", text)
+            # [AI] فهم رد نعم/لا مرن
+            intent = ai_understand_intent(text, context='feedback_yes_no')
+            answer = "نعم" if intent.get('intent') == 'yes' else ("لا" if intent.get('intent') == 'no' else text)
+            sheet.update_acell(f"AG{row}", answer)
             user_state[sender]['step'] = "q5"
-            send_whatsapp_message(sender, "س5: (اختياري) هل لديك أي اقتراحات؟")
+            send_whatsapp_message(sender, "س5: (اختياري) أي اقتراحات أو ملاحظات؟ أو اكتب 'لا' للتخطي")
         elif step == "q5":
-            sheet.update_acell(f"AH{row}", text)
+            # [AI] استخراج الاقتراح
+            suggest = ai_understand_intent(text, context='feedback_suggest')
+            answer = suggest.get('value', text)
+            sheet.update_acell(f"AH{row}", answer)
             # تحديث الحالة النهائية في الشيت
             sheet.update_acell(f"Z{row}", "تم انتهاء التقييم [OK]")
             user_state.pop(sender, None)
             # [FIX] منع البوت من الرد على أي رسالة بعد انتهاء الفيدباك لمدة ساعة
             _mark_post_feedback_cooldown(sender)
-            send_whatsapp_message(sender, "شكراً لملاحظاتك ❤️، دمت بودنا.")
+            send_whatsapp_message(sender, "شكراً جزيلاً على وقتك وتقييمك ❤️\nرأيك يساعدنا نتحسن باستمرار 🌟")
     except Exception as e:
         print(f"[ERROR] Feedback save failed: {e}")
 
