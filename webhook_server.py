@@ -512,54 +512,70 @@ def _phones_match(p1, p2):
         return True
     return False
 
-def find_active_session(sheet, sender_phone):
-    """البحث عن جلسة نشطة (تأكيد أو تقييم) بناءً على حالة الشيت مع تصفية الرحلات القديمة"""
+def find_active_session(sheet, sender_phone, message_text=""):
+    """البحث عن جلسة نشطة (تأكيد أو تقييم) بدقة متناهية لمنع التداخل بين الرحلات القادمة والماضية"""
     try:
         clean_sender = clean_phone_strict(sender_phone)
         all_rows = sheet.get_all_values()
         today = datetime.now().date()
         
-        # 1. فحص التقييم (Z = index 25) - له الأولوية لو أرسلنا تقييم (محدود بـ 3 أيام من تاريخ الرحلة)
+        # ----------------------------------------------------
+        # أولوية 1: الحجوزات القادمة أو اليومية (تأكيد الرحلة وتفاصيلها لها الأولوية القصوى)
+        # ----------------------------------------------------
         for i in range(len(all_rows)-1, 0, -1):
             row = list(all_rows[i])
-            while len(row) < 35:
-                row.append("")
-            
-            trip_date = _parse_trip_date(row[1])
-            is_recent = False
-            if trip_date:
-                is_recent = (today - trip_date).days <= 3 and (today - trip_date).days >= 0
+            while len(row) < 35: row.append("")
             
             row_phone = str(row[4])
-            if _phones_match(row_phone, clean_sender) and any(kw in str(row[25]) for kw in ["طلب التقييم", "تقييم", "تقيم", "تم الإرسال"]) and is_recent:
-                print(f"[Debug-Session] Found feedback session on row {i+1} for sender {sender_phone}")
-                return i + 1, "feedback"
+            if not _phones_match(row_phone, clean_sender):
+                continue
                 
-        # 2. فحص التأكيد (AA = index 26 أو X = index 23) - يجب أن تكون الرحلة اليوم أو مستقبلاً
-        for i in range(len(all_rows)-1, 0, -1):
-            row = list(all_rows[i])
-            while len(row) < 35:
-                row.append("")
-            
-            # القرارات النهائية الحقيقية فقط تمنع إعادة الفحص
-            raw_dec = str(row[27]).strip()
-            has_decision = raw_dec in ["وافق", "مؤكد", "تأكيد", "رفض", "ملغي", "إلغاء", "رفضت"]
-            
             trip_date = _parse_trip_date(row[1])
             is_future_or_today = (trip_date is None) or (trip_date >= today)
             
-            row_phone = str(row[4])
-            is_confirm_sent = any(kw in str(row[23]) or kw in str(row[26]) for kw in ["تأكيد", "تاكيد", "تذكير", "التذكير", "إرسال", "ارسال", "مطلوب"])
-            
-            if _phones_match(row_phone, clean_sender) and is_confirm_sent and not has_decision and is_future_or_today:
-                print(f"[Debug-Session] Found confirmation session on row {i+1} for sender {sender_phone}")
-                return i + 1, "confirm"
-        
-        # fallback: آخر رحلة (لعمليات عامة)
+            if is_future_or_today:
+                raw_dec = str(row[27]).strip() # Column AB: client_decision
+                has_final_decision = raw_dec in ["وافق", "مؤكد", "تأكيد", "رفض", "ملغي", "إلغاء", "رفضت"]
+                
+                # لو الحجز قادم ولم يُتخذ فيه قرار نهائي بعد
+                if not has_final_decision:
+                    print(f"[Debug-Session] Found upcoming confirmation session on row {i+1} for sender {sender_phone}")
+                    return i + 1, "confirm"
+                    
+        # ----------------------------------------------------
+        # أولوية 2: فحص التقييم (Z = index 25) - فقط للرحلات المنتهية خلال آخر 3 أيام
+        # ويشترط ألا يكون التقييم قد انتهى بالفعل أو جاري!
+        # ----------------------------------------------------
         for i in range(len(all_rows)-1, 0, -1):
             row = list(all_rows[i])
-            while len(row) < 35:
-                row.append("")
+            while len(row) < 35: row.append("")
+            
+            row_phone = str(row[4])
+            if not _phones_match(row_phone, clean_sender):
+                continue
+                
+            trip_date = _parse_trip_date(row[1])
+            is_recent_past = False
+            if trip_date:
+                # رحلة ماضية (خلال 3 أيام ماضية)
+                is_recent_past = 0 <= (today - trip_date).days <= 3
+            
+            raw_z = str(row[25]).strip() # Column Z: msg_feedback_status
+            
+            # الشرط الصارم: تم طلب التقييم ولم ينته بعد!
+            is_done = any(done in raw_z for done in ["انتهاء", "تم انتهاء", "[OK]", "مكتمل", "جاري"])
+            is_feedback_pending = ("طلب التقييم" in raw_z or "تم طلب التقييم" in raw_z) and not is_done
+            
+            if is_feedback_pending and is_recent_past:
+                print(f"[Debug-Session] Found pending feedback session on row {i+1} for sender {sender_phone}")
+                return i + 1, "feedback"
+                
+        # ----------------------------------------------------
+        # fallback: أي رحلة قادمة أو عامة للمستخدم
+        # ----------------------------------------------------
+        for i in range(len(all_rows)-1, 0, -1):
+            row = list(all_rows[i])
+            while len(row) < 35: row.append("")
             if _phones_match(str(row[4]), clean_sender):
                 print(f"[Debug-Session] Fallback: Found general session on row {i+1} for sender {sender_phone}")
                 return i + 1, "unknown"
@@ -647,7 +663,7 @@ def handle_confirmation(sender, text, row=None):
         import re
         text_lower = text.lower()
         if intent == 'unclear' or confidence < 0.5:
-            if re.search(r"(?i)\b(confirm|ok|yes)\b|تأكيد|تاكيد|نعم|وافق|تمام|ماشي|اه\b|اوكي|اكيد|ايوه|يلا|اتفقنا", text_lower):
+            if re.search(r"(?i)\b(confirm|ok|yes)\b|تأكيد|تاكيد|نعم|وافق|تمام|ماشي|اه\b|اوكي|اكيد|ايوه|يلا|اتفقنا|اوك", text_lower):
                 intent = 'confirm'
             elif re.search(r"(?i)\b(cancel|no)\b|إلغاء|الغاء|\bلا\b|رفض|لأ|كنسل|مش عايز", text_lower):
                 intent = 'cancel'
@@ -681,16 +697,18 @@ def handle_confirmation(sender, text, row=None):
                     print(f"[WARNING] Could not check pickup address: {e}")
                 
                 if is_airport:
-                    send_whatsapp_message(sender, "شكراً لتأكيدك 🌹\nرحلة سعيدة وآمنة إن شاء الله 🚗💨")
+                    send_whatsapp_message(sender, "شكراً لتأكيدك يا فندم 🌹\nتم تأكيد حجز الرحلة بنجاح! رحلة سعيدة وآمنة إن شاء الله 🚗💨")
                     try:
                         sheet.update_acell(f"AC{row}", "مطار / غير مطلوب")
                         sheet.update_acell(f"AA{row}", "مكتمل اللوكيشن [OK]")
                     except Exception as e:
                         print(f"[WARNING] Could not update location status for airport: {e}")
                 else:
-                    send_whatsapp_message(sender, "شكراً لتأكيدك 🌹\nيسعدنا خدمتكم في 24Seven! ✨")
-                    time.sleep(1)
-                    send_location_request_template(sender)
+                    send_whatsapp_message(sender, 
+                        "شكراً لتأكيدك يا فندم 🌹\n"
+                        "تم تأكيد حجز الرحلة بنجاح! يسعدنا خدمتكم في 24Seven ✨\n\n"
+                        "📍 من فضلك قم بإرسال اللوكيشن (موقع التحرك) الخاص بك في رسالة لتسهيل وصول الكابتن في الموعد المحدد."
+                    )
             except Exception as e:
                 print(f"[ERROR] Write failed: {e}")
         elif is_cancel:
