@@ -697,12 +697,62 @@ def start_feedback_flow(sender, text, row):
     except Exception as e:
         print(f"[ERROR] start_feedback_flow failed: {e}")
 
+def _is_human_escalation_request(text):
+    """[AI] يتحقق هل العميل يطلب التحدث مع إنسان أو يشكو من البوت"""
+    escalation_keywords = [
+        'محتاج حد يكلمني', 'عايز حد يكلمني', 'عاوز حد يكلمني',
+        'حد يكلمني', 'كلمني', 'ابعتلي', 'اتصل بي', 'اتصل',
+        'مش عايز بوت', 'بوت', 'روبوت', 'مش تلقائي',
+        'تكلم معي', 'عايز ادمن', 'ادمن', 'خدمة عملاء', 
+        'شكوى', 'مشكلة', 'غلطة', 'خطأ', 'مش صح',
+        'انا مش فاهم', 'مش فاهم', 'إيه ده', 'ايه ده', 'اي ده',
+        'مش عارف', 'توقف', 'وقف', 'بلاش', 'كفاية',
+        'help', 'human', 'agent', 'support'
+    ]
+    text_lower = text.lower().strip()
+    for kw in escalation_keywords:
+        if kw in text_lower:
+            return True
+    return False
+
+ADMIN_WA_NUMBER = "201121748885"  # رقم الأدمن للتنبيه
+
 def handle_feedback_flow(sender, text):
     """[AI-POWERED] معالجة التقييم بفهم ذكي للردود العربية المرنة"""
     state = user_state[sender]
     step = state['step']
     row = state['row']
     sheet = get_main_sheet()
+    
+    # ========================================
+    # [ESCAPE HATCH] كشف طلبات التحدث مع إنسان
+    # ========================================
+    if _is_human_escalation_request(text):
+        print(f"[Feedback-Escape] Client {sender} requested human support: '{text}'")
+        # إيقاف فلو التقييم
+        user_state.pop(sender, None)
+        _mark_post_feedback_cooldown(sender)
+        
+        # إعلام الأدمن فوراً
+        try:
+            admin_alert = (
+                f"🚨 *طلب تدخل بشري أثناء التقييم*\n"
+                f"📱 العميل: {sender}\n"
+                f"💬 قال: \"{text}\"\n"
+                f"⚡ يرجى التواصل معه فوراً!"
+            )
+            send_whatsapp_message(ADMIN_WA_NUMBER, admin_alert)
+        except Exception as ae:
+            print(f"[Escape-Notify Error]: {ae}")
+        
+        # رد للعميل
+        send_whatsapp_message(sender, 
+            "فهمنا يا فندم 🙏\n"
+            "سيتواصل معك أحد ممثلينا في أقرب وقت.\n"
+            "شكراً لصبرك! ❤️"
+        )
+        return
+    
     try:
         if step == "q2":
             # [AI] فهم رد نعم/لا مرن
@@ -738,6 +788,8 @@ def handle_feedback_flow(sender, text):
             send_whatsapp_message(sender, "شكراً جزيلاً على وقتك وتقييمك ❤️\nرأيك يساعدنا نتحسن باستمرار 🌟")
     except Exception as e:
         print(f"[ERROR] Feedback save failed: {e}")
+
+
 
 # = [WHATSAPP HOOK] WhatsApp Webhook نقطة استقبال الواتساب
 # =====================================================
