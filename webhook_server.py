@@ -29,6 +29,16 @@ requests.post = _global_http_session.post
 requests.patch = _global_http_session.patch
 requests.put = _global_http_session.put
 requests.delete = _global_http_session.delete
+import os
+import sys
+
+# Ensure current directory and parent directory are always in Python's search path
+_this_dir = os.path.dirname(os.path.abspath(__file__))
+_parent_dir = os.path.dirname(_this_dir)
+for _p in [_this_dir, _parent_dir]:
+    if _p and _p not in sys.path:
+        sys.path.insert(0, _p)
+
 import json
 import re
 from datetime import datetime, timedelta
@@ -36,13 +46,16 @@ import time
 import ai_agent         # [WA] مخ الواتساب
 import messenger_agent  # [FB] مخ الماسنجر الجديد (تأكد من وجود الملف بجانبه)
 import uuid
-import os
 from dotenv import load_dotenv
 import threading
 
 # تحميل متغيرات البيئة من ملف .env في المجلد الفرعي أو الرئيسي
 if os.path.exists('24Seven_SaaS_Platform/.env'):
     load_dotenv('24Seven_SaaS_Platform/.env')
+elif os.path.exists(os.path.join(_this_dir, '.env')):
+    load_dotenv(os.path.join(_this_dir, '.env'))
+elif os.path.exists(os.path.join(_parent_dir, '.env')):
+    load_dotenv(os.path.join(_parent_dir, '.env'))
 else:
     load_dotenv()
 
@@ -489,6 +502,16 @@ def _parse_trip_date(date_str):
             pass
     return None
 
+def _phones_match(p1, p2):
+    """مطابقة أرقام الهواتف بدقة ومرونة (تطابق كامل أو آخر 8 أرقام)"""
+    c1 = clean_phone_strict(p1)
+    c2 = clean_phone_strict(p2)
+    if not c1 or not c2: return False
+    if c1 == c2: return True
+    if len(c1) >= 8 and len(c2) >= 8 and c1[-8:] == c2[-8:]:
+        return True
+    return False
+
 def find_active_session(sheet, sender_phone):
     """البحث عن جلسة نشطة (تأكيد أو تقييم) بناءً على حالة الشيت مع تصفية الرحلات القديمة"""
     try:
@@ -507,8 +530,8 @@ def find_active_session(sheet, sender_phone):
             if trip_date:
                 is_recent = (today - trip_date).days <= 3 and (today - trip_date).days >= 0
             
-            row_phone = clean_phone_strict(row[4])
-            if row_phone == clean_sender and "طلب التقييم" in str(row[25]) and is_recent:
+            row_phone = str(row[4])
+            if _phones_match(row_phone, clean_sender) and any(kw in str(row[25]) for kw in ["طلب التقييم", "تقييم", "تقيم", "تم الإرسال"]) and is_recent:
                 print(f"[Debug-Session] Found feedback session on row {i+1} for sender {sender_phone}")
                 return i + 1, "feedback"
                 
@@ -518,17 +541,17 @@ def find_active_session(sheet, sender_phone):
             while len(row) < 35:
                 row.append("")
             
-            # [FIX] القرارات النهائية الحقيقية فقط تمنع إعادة الفحص (استبعاد جاري الإرسال...)
+            # القرارات النهائية الحقيقية فقط تمنع إعادة الفحص
             raw_dec = str(row[27]).strip()
             has_decision = raw_dec in ["وافق", "مؤكد", "تأكيد", "رفض", "ملغي", "إلغاء", "رفضت"]
             
             trip_date = _parse_trip_date(row[1])
             is_future_or_today = (trip_date is None) or (trip_date >= today)
             
-            row_phone = clean_phone_strict(row[4])
-            is_confirm_sent = ("تأكيد" in str(row[23]) or "تأكيد" in str(row[26]) or "التذكير" in str(row[26]))
+            row_phone = str(row[4])
+            is_confirm_sent = any(kw in str(row[23]) or kw in str(row[26]) for kw in ["تأكيد", "تاكيد", "تذكير", "التذكير", "إرسال", "ارسال", "مطلوب"])
             
-            if row_phone == clean_sender and is_confirm_sent and not has_decision and is_future_or_today:
+            if _phones_match(row_phone, clean_sender) and is_confirm_sent and not has_decision and is_future_or_today:
                 print(f"[Debug-Session] Found confirmation session on row {i+1} for sender {sender_phone}")
                 return i + 1, "confirm"
         
@@ -537,7 +560,7 @@ def find_active_session(sheet, sender_phone):
             row = list(all_rows[i])
             while len(row) < 35:
                 row.append("")
-            if clean_phone_strict(row[4]) == clean_sender:
+            if _phones_match(str(row[4]), clean_sender):
                 print(f"[Debug-Session] Fallback: Found general session on row {i+1} for sender {sender_phone}")
                 return i + 1, "unknown"
                 
@@ -551,6 +574,28 @@ def find_active_row(sheet, sender_phone):
     row, _ = find_active_session(sheet, sender_phone)
     return row
 
+ADMIN_WA_NUMBER = "201121748885"  # رقم الأدمن للتنبيه
+
+def _is_human_escalation_request(text):
+    """[AI] يتحقق هل العميل يطلب التحدث مع إنسان أو يشكو من البوت أو يطرح سؤالاً خارج السياق"""
+    escalation_keywords = [
+        'محتاج حد يكلمني', 'محتاج حد يكلمنى', 'عايز حد يكلمني', 'عايز حد يكلمنى', 
+        'عاوز حد يكلمني', 'عاوز حد يكلمنى', 'حد يكلمني', 'حد يكلمنى',
+        'كلمني', 'كلمنى', 'ابعتلي', 'ابعتلى', 'اتصل بي', 'اتصل بى', 'اتصل',
+        'مش عايز بوت', 'هو ده بوت', 'هو دا بوت', 'بوت', 'روبوت', 'مش تلقائي',
+        'تكلم معي', 'تكلم معايا', 'عايز ادمن', 'ادمن', 'خدمة عملاء', 'خدمه عملاء',
+        'شكوى', 'مشكلة', 'مشكله', 'غلطة', 'غلطه', 'خطأ', 'خطا', 'مش صح',
+        'انا مش فاهم', 'مش فاهم', 'إيه ده', 'ايه ده', 'اي ده', 'اى دا', 'اى ده',
+        'مش عارف', 'توقف', 'وقف', 'بلاش', 'كفاية', 'كفايه',
+        'العربية واقفة', 'العربيه واقفه', 'السواق مجاش', 'الكابتن مجاش', 'فين السواق',
+        'help', 'human', 'agent', 'support'
+    ]
+    text_lower = text.lower().strip()
+    for kw in escalation_keywords:
+        if kw in text_lower:
+            return True
+    return False
+
 processed_confirmations = set()
 
 def handle_confirmation(sender, text, row=None):
@@ -561,15 +606,37 @@ def handle_confirmation(sender, text, row=None):
         if stype != "confirm": return # لا نعالج التأكيد لو الجلسة ليست "تأكيد"
         
     if row != -1:
-        # [FIX] استخدم (row, text[:20]) كـ key لمنع نفس الرسالة فقط (مش كل الصف)
+        # منع تكرار نفس الرسالة لنفس الصف
         proc_key = f"{row}_{text.strip()[:25]}"
         if proc_key in processed_confirmations:
             print(f"[INFO] Same message for row {row} already processed. Skipping.")
             return
         processed_confirmations.add(proc_key)
-        # تنظيف الـ set تلقائياً لمنع التراكم
         if len(processed_confirmations) > 300:
             processed_confirmations.clear()
+            
+        # ========================================
+        # [ESCAPE HATCH] كشف طلبات التحدث مع إنسان أثناء التأكيد
+        # ========================================
+        if _is_human_escalation_request(text):
+            print(f"[Confirm-Escape] Client {sender} requested human support: '{text}'")
+            try:
+                admin_alert = (
+                    f"🚨 *طلب تدخل بشري أثناء تأكيد الرحلة*\n"
+                    f"📱 العميل: {sender}\n"
+                    f"📄 صف الرحلة: {row}\n"
+                    f"💬 رسالة العميل: \"{text}\"\n"
+                    f"⚡ يرجى التواصل معه فوراً!"
+                )
+                send_whatsapp_message(ADMIN_WA_NUMBER, admin_alert)
+            except Exception as ae:
+                print(f"[Escape-Notify Error]: {ae}")
+                
+            send_whatsapp_message(sender,
+                "أهلاً بحضرتك يا فندم 🙏\n"
+                "تم تحويل طلبك لخدمة العملاء، وسيتواصل معك أحد مسؤولينا فوراً للمساعدة وتأكيد كافة التفاصيل. ✨"
+            )
+            return
         
         # [AI] استخدام Groq AI لفهم نية العميل بدل الـ regex الصارم
         intent_result = ai_understand_intent(text, context='confirmation')
@@ -580,9 +647,9 @@ def handle_confirmation(sender, text, row=None):
         import re
         text_lower = text.lower()
         if intent == 'unclear' or confidence < 0.5:
-            if re.search(r"(?i)\b(confirm|ok|yes)\b|تأكيد|تاكيد|نعم|وافق|تمام|ماشي|اه\b|اوكي|اكيد|ايوه", text_lower):
+            if re.search(r"(?i)\b(confirm|ok|yes)\b|تأكيد|تاكيد|نعم|وافق|تمام|ماشي|اه\b|اوكي|اكيد|ايوه|يلا|اتفقنا", text_lower):
                 intent = 'confirm'
-            elif re.search(r"(?i)\b(cancel|no)\b|إلغاء|الغاء|\bلا\b|رفض|لأ|كنسل", text_lower):
+            elif re.search(r"(?i)\b(cancel|no)\b|إلغاء|الغاء|\bلا\b|رفض|لأ|كنسل|مش عايز", text_lower):
                 intent = 'cancel'
         
         is_confirm = (intent == 'confirm')
@@ -643,9 +710,13 @@ def handle_confirmation(sender, text, row=None):
                 except Exception as sb_err:
                     print(f"[Supabase-Decision-Sync Error]: {sb_err}")
 
-                send_whatsapp_message(sender, "تم إلغاء الطلب بناءً على رغبتك.")
+                send_whatsapp_message(sender, "تم إلغاء الطلب بناءً على رغبتك. نتمنى أن نتشرف بخدمتكم في رحلات أخرى قادمة 🌸")
             except Exception as e:
                 print(f"[ERROR] Write failed: {e}")
+        else:
+            # رد مرن للعميل في حالة إرسال نص غير التأكيد/الإلغاء
+            print(f"[INFO] Unclear confirmation reply from {sender}: {text}")
+            send_whatsapp_message(sender, "وصلتنا رسالتك يا فندم 🌹\nهل تؤكد حجز الرحلة؟ (يرجى الرد بـ: نعم / تأكيد أو إلغاء)")
 
 def handle_location_received(sender, msg):
     sheet = get_main_sheet()
@@ -680,7 +751,32 @@ def handle_location_url_received(sender, url):
             print(f"[ERROR] Sheet write failed: {e}")
 
 def start_feedback_flow(sender, text, row):
-    """البدء في تسجيل التقييم (تسجيل أول إجابة: التقييم العام)"""
+    """البدء في تسجيل التقييم (تسجيل أول إجابة: التقييم العام) مع كشف طلبات الإنسان فوراً"""
+    # ========================================
+    # [ESCAPE HATCH] لو العميل من أول رسالة طلب إنسان
+    # ========================================
+    if _is_human_escalation_request(text):
+        print(f"[Feedback-Start-Escape] Client {sender} requested human support on Q1: '{text}'")
+        _mark_post_feedback_cooldown(sender)
+        try:
+            admin_alert = (
+                f"🚨 *طلب تدخل بشري أثناء التقييم (س1)*\n"
+                f"📱 العميل: {sender}\n"
+                f"📄 صف الرحلة: {row}\n"
+                f"💬 قال: \"{text}\"\n"
+                f"⚡ يرجى التواصل معه فوراً!"
+            )
+            send_whatsapp_message(ADMIN_WA_NUMBER, admin_alert)
+        except Exception as ae:
+            print(f"[Escape-Notify Error]: {ae}")
+        
+        send_whatsapp_message(sender, 
+            "فهمنا حضرتك تماماً يا فندم 🙏\n"
+            "تم تحويل رسالتك للإدارة وسيتواصل معك أحد مسؤولينا في أقرب وقت لمعالجة أي ملاحظات.\n"
+            "شكراً لصبرك وثقتك بنا! ❤️"
+        )
+        return
+
     sheet = get_main_sheet()
     try:
         # [AI] استخدام AI لاستخراج قيمة التقييم بشكل ذكي
@@ -693,32 +789,12 @@ def start_feedback_flow(sender, text, row):
         sheet.update_acell(f"Z{row}", "جاري التقييم... [INFO]")
         # 3. حفظ الحالة في الذاكرة
         user_state[sender] = {"step": "q2", "row": row, "timestamp": time.time()}
-        send_whatsapp_message(sender, "شكراً 😊\nس2: هل كانت السيارة نظيفة ومريحة؟")
+        send_whatsapp_message(sender, "شكراً لتقييمك 😊\nس2: هل كانت السيارة نظيفة ومريحة؟")
     except Exception as e:
         print(f"[ERROR] start_feedback_flow failed: {e}")
 
-def _is_human_escalation_request(text):
-    """[AI] يتحقق هل العميل يطلب التحدث مع إنسان أو يشكو من البوت"""
-    escalation_keywords = [
-        'محتاج حد يكلمني', 'عايز حد يكلمني', 'عاوز حد يكلمني',
-        'حد يكلمني', 'كلمني', 'ابعتلي', 'اتصل بي', 'اتصل',
-        'مش عايز بوت', 'بوت', 'روبوت', 'مش تلقائي',
-        'تكلم معي', 'عايز ادمن', 'ادمن', 'خدمة عملاء', 
-        'شكوى', 'مشكلة', 'غلطة', 'خطأ', 'مش صح',
-        'انا مش فاهم', 'مش فاهم', 'إيه ده', 'ايه ده', 'اي ده',
-        'مش عارف', 'توقف', 'وقف', 'بلاش', 'كفاية',
-        'help', 'human', 'agent', 'support'
-    ]
-    text_lower = text.lower().strip()
-    for kw in escalation_keywords:
-        if kw in text_lower:
-            return True
-    return False
-
-ADMIN_WA_NUMBER = "201121748885"  # رقم الأدمن للتنبيه
-
 def handle_feedback_flow(sender, text):
-    """[AI-POWERED] معالجة التقييم بفهم ذكي للردود العربية المرنة"""
+    """[AI-POWERED] معالجة التقييم بفهم ذكي للردود العربية المرنة والتوقف فور طلب إنسان"""
     state = user_state[sender]
     step = state['step']
     row = state['row']
@@ -729,7 +805,7 @@ def handle_feedback_flow(sender, text):
     # ========================================
     if _is_human_escalation_request(text):
         print(f"[Feedback-Escape] Client {sender} requested human support: '{text}'")
-        # إيقاف فلو التقييم
+        # إيقاف فلو التقييم فوراً
         user_state.pop(sender, None)
         _mark_post_feedback_cooldown(sender)
         
@@ -738,6 +814,7 @@ def handle_feedback_flow(sender, text):
             admin_alert = (
                 f"🚨 *طلب تدخل بشري أثناء التقييم*\n"
                 f"📱 العميل: {sender}\n"
+                f"📄 صف الرحلة: {row}\n"
                 f"💬 قال: \"{text}\"\n"
                 f"⚡ يرجى التواصل معه فوراً!"
             )
@@ -747,8 +824,8 @@ def handle_feedback_flow(sender, text):
         
         # رد للعميل
         send_whatsapp_message(sender, 
-            "فهمنا يا فندم 🙏\n"
-            "سيتواصل معك أحد ممثلينا في أقرب وقت.\n"
+            "فهمنا حضرتك تماماً يا فندم 🙏\n"
+            "تم تحويل رسالتك للإدارة وسيتواصل معك أحد مسؤولينا في أقرب وقت لمتابعة الأمر.\n"
             "شكراً لصبرك! ❤️"
         )
         return
@@ -783,7 +860,7 @@ def handle_feedback_flow(sender, text):
             # تحديث الحالة النهائية في الشيت
             sheet.update_acell(f"Z{row}", "تم انتهاء التقييم [OK]")
             user_state.pop(sender, None)
-            # [FIX] منع البوت من الرد على أي رسالة بعد انتهاء الفيدباك لمدة ساعة
+            # منع البوت من الرد على أي رسالة بعد انتهاء الفيدباك لمدة ساعة
             _mark_post_feedback_cooldown(sender)
             send_whatsapp_message(sender, "شكراً جزيلاً على وقتك وتقييمك ❤️\nرأيك يساعدنا نتحسن باستمرار 🌟")
     except Exception as e:
