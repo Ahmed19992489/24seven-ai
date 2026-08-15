@@ -33,22 +33,10 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 # 🛡️ إعداد المحول الشبكي المقاوم للقطع وانهيار SSL/TLS
-class ResilientTLSAdapter(HTTPAdapter):
-    def init_poolmanager(self, *args, **kwargs):
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-        try:
-            ctx.set_ciphers('DEFAULT:@SECLEVEL=1')
-        except Exception:
-            pass
-        kwargs['ssl_context'] = ctx
-        return super().init_poolmanager(*args, **kwargs)
-
 def create_resilient_session():
     session = requests.Session()
-    retries = Retry(total=5, backoff_factor=0.3, status_forcelist=[500, 502, 503, 504], raise_on_status=False)
-    adapter = ResilientTLSAdapter(max_retries=retries)
+    retries = Retry(total=3, backoff_factor=0.3, status_forcelist=[500, 502, 503, 504], raise_on_status=False)
+    adapter = HTTPAdapter(max_retries=retries, pool_connections=20, pool_maxsize=20)
     session.mount("https://", adapter)
     session.mount("http://", adapter)
     return session

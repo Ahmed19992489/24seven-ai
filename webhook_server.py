@@ -1255,7 +1255,7 @@ def messenger_webhook():
         return "Error", 403
 
     if request.method == 'POST':
-        data = request.json
+        data = request.get_json(silent=True) or {}
         try:
             if data.get('object') == 'page':
                 for entry in data['entry']:
