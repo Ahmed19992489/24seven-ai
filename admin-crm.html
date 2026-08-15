@@ -6986,23 +6986,27 @@
             
             if (rawText.startsWith('MEDIA_IMAGE:')) {
                 const parts = rawText.substring(12).split('|CAPTION:');
-                const mediaUrl = parts[0];
+                let mediaUrl = parts[0].trim();
                 const caption = parts[1] || '';
-                const apiBase = (typeof getStaffApiBaseUrl === 'function') ? (getStaffApiBaseUrl() || '') : '';
-                const fullUrl = mediaUrl.startsWith('http') ? mediaUrl : apiBase + mediaUrl;
+                if (mediaUrl.startsWith('/static/uploads/') || mediaUrl.startsWith('static/uploads/') || mediaUrl.startsWith('http://localhost:3000/static/uploads/') || mediaUrl.startsWith('http://127.0.0.1:3000/static/uploads/')) {
+                    const fname = mediaUrl.split('/').pop();
+                    mediaUrl = `https://khskudtxbypohvnreloi.supabase.co/storage/v1/object/public/omni-media/${fname}`;
+                }
                 
                 messageHtml = `
                     <div class="flex flex-col gap-1">
-                        <img src="${fullUrl}" class="max-w-xs rounded-xl cursor-pointer border border-slate-200 shadow-sm transition hover:opacity-90" onclick="window.open('${fullUrl}', '_blank')" onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','<span class=\\'text-xs text-red-400\\'>⚠️ صورة غير متاحة</span>');" />
+                        <img src="${mediaUrl}" class="max-w-xs max-h-80 rounded-xl cursor-pointer border border-slate-200 shadow-sm transition hover:opacity-90 object-cover" onclick="window.open('${mediaUrl}', '_blank')" onerror="const fn = this.src.split('/').pop(); if (!this.dataset.retried) { this.dataset.retried='1'; this.src='https://khskudtxbypohvnreloi.supabase.co/storage/v1/object/public/omni-media/' + fn; } else { this.style.display='none'; this.insertAdjacentHTML('afterend','<span class=\\'text-xs text-red-400\\'>⚠️ صورة غير متاحة</span>'); }" />
                         ${caption ? `<p class="text-xs mt-1 ${msg.is_from_admin ? 'text-teal-100' : 'text-slate-600'}">${escapeHtml(caption)}</p>` : ''}
                     </div>
                 `;
             } else if (rawText.startsWith('MEDIA_AUDIO:')) {
-                const mediaUrl = rawText.substring(12);
-                const apiBase = (typeof getStaffApiBaseUrl === 'function') ? (getStaffApiBaseUrl() || '') : '';
-                const fullUrl = mediaUrl.startsWith('http') ? mediaUrl : apiBase + mediaUrl;
+                let mediaUrl = rawText.substring(12).trim();
+                if (mediaUrl.startsWith('/static/uploads/') || mediaUrl.startsWith('static/uploads/') || mediaUrl.startsWith('http://localhost:3000/static/uploads/') || mediaUrl.startsWith('http://127.0.0.1:3000/static/uploads/')) {
+                    const fname = mediaUrl.split('/').pop();
+                    mediaUrl = `https://khskudtxbypohvnreloi.supabase.co/storage/v1/object/public/omni-media/${fname}`;
+                }
                 messageHtml = `
-                    <audio data-src="${fullUrl}" controls preload="none" class="max-w-xs rounded-lg mt-1" onerror="this.onerror=null;this.parentElement.innerHTML='<span class=\\'text-xs text-red-400\\'>⚠️ ملف صوتي غير متاح</span>';"></audio>
+                    <audio src="${mediaUrl}" controls preload="metadata" class="max-w-xs rounded-lg mt-1" onerror="const fn = this.src.split('/').pop(); if (!this.dataset.retried) { this.dataset.retried='1'; this.src='https://khskudtxbypohvnreloi.supabase.co/storage/v1/object/public/omni-media/' + fn; } else { this.parentElement.innerHTML='<span class=\\'text-xs text-red-400\\'>⚠️ ملف صوتي غير متاح</span>'; }"></audio>
                 `;
             } else {
                 messageHtml = `<p class="text-sm whitespace-pre-wrap">${escapeHtml(rawText)}</p>`;

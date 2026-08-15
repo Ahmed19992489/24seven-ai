@@ -2929,41 +2929,53 @@
                 const rawText = m.message_text || m.message || '';
                 let messageHtml = '';
                 
+                // دالة مساعدة لتحويل أي مسار نسبي أو محلي إلى رابط Supabase Storage العام
+                function resolveMediaSrc(url) {
+                    if (!url) return '';
+                    url = url.trim();
+                    if (url.startsWith('/static/uploads/') || url.startsWith('static/uploads/') || url.startsWith('http://localhost:3000/static/uploads/') || url.startsWith('http://127.0.0.1:3000/static/uploads/')) {
+                        const fname = url.split('/').pop();
+                        return `https://khskudtxbypohvnreloi.supabase.co/storage/v1/object/public/omni-media/${fname}`;
+                    }
+                    return url;
+                }
+
                 // رسائل العميل القادمة من واتساب/إنستجرام/ماسنجر تحتوي على صور كـ URLs مباشرة
                 const imageExtPattern = /^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i;
                 const audioPattern = /^https?:\/\/.+\.(ogg|mp3|m4a|aac|webm|opus)(\?.*)?$/i;
 
                 if (rawText.startsWith('MEDIA_IMAGE:')) {
                     const parts = rawText.substring(12).split('|CAPTION:');
-                    const mediaUrl = parts[0];
+                    const mediaUrl = resolveMediaSrc(parts[0]);
                     const caption = parts[1] || '';
                     messageHtml = `
                         <div class="flex flex-col gap-1">
-                            <img src="${mediaUrl}" class="max-w-xs rounded-xl cursor-pointer border border-slate-200 shadow-sm transition hover:opacity-90" onclick="window.open('${mediaUrl}', '_blank')" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" />
+                            <img src="${mediaUrl}" class="max-w-xs max-h-80 rounded-xl cursor-pointer border border-slate-200 shadow-sm transition hover:opacity-90 object-cover" onclick="window.open('${mediaUrl}', '_blank')" onerror="const fn = this.src.split('/').pop(); if (!this.dataset.retried) { this.dataset.retried='1'; this.src='https://khskudtxbypohvnreloi.supabase.co/storage/v1/object/public/omni-media/' + fn; } else { this.style.display='none'; this.nextElementSibling.style.display='block'; }" />
                             <span style="display:none" class="text-xs text-red-400">⚠️ لا يمكن عرض الصورة</span>
                             ${caption ? `<p class="text-xs mt-1 ${m.is_from_admin ? 'text-teal-100' : 'text-slate-600'}">${escapeHtml(caption)}</p>` : ''}
                         </div>
                     `;
                 } else if (rawText.startsWith('MEDIA_AUDIO:')) {
-                    const mediaUrl = rawText.substring(12);
+                    const mediaUrl = resolveMediaSrc(rawText.substring(12));
                     messageHtml = `
-                        <audio data-src="${mediaUrl}" controls preload="none" class="max-w-xs rounded-lg mt-1" onerror="this.onerror=null;this.parentElement.innerHTML='<span class=\'text-xs text-red-300\'>⚠️ ملف صوتي غير متاح</span>';"></audio>
+                        <audio src="${mediaUrl}" controls preload="metadata" class="max-w-xs rounded-lg mt-1" onerror="const fn = this.src.split('/').pop(); if (!this.dataset.retried) { this.dataset.retried='1'; this.src='https://khskudtxbypohvnreloi.supabase.co/storage/v1/object/public/omni-media/' + fn; } else { this.parentElement.innerHTML='<span class=\\'text-xs text-red-300\\'>⚠️ ملف صوتي غير متاح</span>'; }"></audio>
                     `;
                 } else if (rawText.startsWith('MEDIA_VIDEO:') || rawText.includes('[فيديو') || rawText.includes('[Video')) {
-                    const mediaUrl = rawText.startsWith('MEDIA_VIDEO:') ? rawText.substring(12) : null;
+                    const mediaUrl = rawText.startsWith('MEDIA_VIDEO:') ? resolveMediaSrc(rawText.substring(12)) : null;
                     messageHtml = mediaUrl
                         ? `<video src="${mediaUrl}" controls class="max-w-xs rounded-xl mt-1" style="max-height:200px"></video>`
                         : `<p class="text-sm italic opacity-70">📹 ${escapeHtml(rawText)}</p>`;
                 } else if (imageExtPattern.test(rawText)) {
-                    // رابط صورة مباشر (من واتساب أو إنستجرام)
+                    const mediaUrl = resolveMediaSrc(rawText);
                     messageHtml = `
                         <div class="flex flex-col gap-1">
-                            <img src="${rawText}" class="max-w-xs rounded-xl cursor-pointer border border-slate-200 shadow-sm" onclick="window.open('${rawText}', '_blank')" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" />
+                            <img src="${mediaUrl}" class="max-w-xs max-h-80 rounded-xl cursor-pointer border border-slate-200 shadow-sm" onclick="window.open('${mediaUrl}', '_blank')" onerror="const fn = this.src.split('/').pop(); if (!this.dataset.retried) { this.dataset.retried='1'; this.src='https://khskudtxbypohvnreloi.supabase.co/storage/v1/object/public/omni-media/' + fn; } else { this.style.display='none'; this.nextElementSibling.style.display='block'; }" />
                             <span style="display:none" class="text-xs text-red-400">⚠️ انتهت صلاحية رابط الصورة</span>
                         </div>
                     `;
                 } else if (audioPattern.test(rawText)) {
-                    messageHtml = `<audio data-src="${rawText}" controls preload="none" class="max-w-xs rounded-lg mt-1"></audio>`;
+                    const mediaUrl = resolveMediaSrc(rawText);
+                    messageHtml = `<audio src="${mediaUrl}" controls preload="metadata" class="max-w-xs rounded-lg mt-1"></audio>`;
                 } else if (rawText.startsWith('[رسالة وسائط]') || rawText.startsWith('[رسالة وسالطة]')) {
                     messageHtml = `<p class="text-sm italic opacity-70">📎 ${escapeHtml(rawText)}</p>`;
                 } else {
