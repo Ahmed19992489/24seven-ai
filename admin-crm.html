@@ -62,6 +62,7 @@
             if (pageId === 'omnichannel' && typeof window.loadAdminUnifiedChats === 'function') setTimeout(window.loadAdminUnifiedChats, 50);
             if (pageId === 'marketing' && typeof window.loadMarketingStatus === 'function') setTimeout(window.loadMarketingStatus, 50);
             if (pageId === 'training-reports' && typeof window.loadTrainingReports === 'function') setTimeout(window.loadTrainingReports, 50);
+            if (pageId === 'b2b-corporate' && typeof window.loadB2BLeads === 'function') setTimeout(window.loadB2BLeads, 50);
             if (pageId === 'whatsapp-settings') {
                 setTimeout(function() {
                     if (typeof window.loadWhatsAppSettings === 'function') window.loadWhatsAppSettings();
@@ -281,7 +282,14 @@
                 <i class="fas fa-handshake w-5 text-center text-orange-600"></i> التشغيل الخارجي (الشركاء)
             </div>
 
-            <p class="text-[10px] font-bold text-slate-400 mt-4 mb-1 px-3">التواصل</p>
+            <p class="text-[10px] font-bold text-slate-400 mt-4 mb-1 px-3">التواصل والتعاقدات</p>
+            <!-- 💼 قسم تعاقدات وتوليد داتا الشركات B2B (جديد) -->
+            <div onclick="showPage('b2b-corporate')" id="nav-b2b-corporate"
+                class="sidebar-item p-3 rounded-lg flex items-center gap-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-r-4 border-blue-600 group">
+                <i class="fas fa-briefcase w-5 text-center text-blue-700 group-hover:scale-110 transition"></i>
+                <span class="font-bold text-slate-900">تعاقدات الشركات B2B</span>
+                <span class="mr-auto bg-blue-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm animate-pulse">LEADS</span>
+            </div>
             <div onclick="showPage('chat')" id="nav-chat" class="sidebar-item p-3 rounded-lg flex items-center gap-3 hidden">
                 <i class="fas fa-comments w-5 text-center text-blue-500"></i> الدردشة
             </div>
@@ -903,6 +911,445 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================================================== -->
+        <!-- 💼 [B2B CORPORATE LEADS] قسم تعاقدات وتوليد داتا الشركات -->
+        <!-- ===================================================== -->
+        <div id="page-b2b-corporate" class="page-section hidden">
+            <!-- Header & Action Bar -->
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+                <div>
+                    <h2 class="text-2xl font-extrabold text-slate-800 flex items-center gap-3">
+                        <span class="p-2.5 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-200">
+                            <i class="fas fa-briefcase"></i>
+                        </span>
+                        <span>مركز تعاقدات وتوليد داتا الشركات (B2B Mobility)</span>
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-1">توليد والتحقق من داتا الفنادق، المستشفيات، شركات الأدوية، المقاولات، ومنظمي المؤتمرات وإرسال عروض الأسعار</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="toggleB2BGeneratorBox()" class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:from-blue-700 hover:to-indigo-700 shadow-md shadow-blue-200 transition flex items-center gap-1.5">
+                        <i class="fas fa-bolt text-yellow-300"></i> توليد داتا ذكية (AI)
+                    </button>
+                    <button onclick="openAddB2BLeadModal()" class="bg-white border border-slate-200 text-slate-700 px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-slate-50 shadow-sm transition flex items-center gap-1.5">
+                        <i class="fas fa-plus text-blue-600"></i> إضافة شركة
+                    </button>
+                    <button onclick="openB2BBulkCampaignModal()" class="bg-emerald-600 text-white px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-emerald-700 shadow-md shadow-emerald-200 transition flex items-center gap-1.5">
+                        <i class="fas fa-paper-plane"></i> حملة مجمعة
+                    </button>
+                    <button onclick="exportB2BLeadsToCSV()" class="bg-white border border-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold hover:bg-slate-50 shadow-sm transition" title="تصدير إلى Excel/CSV">
+                        <i class="fas fa-file-excel text-green-600 ml-1"></i> تصدير
+                    </button>
+                    <button onclick="loadB2BLeads()" class="bg-slate-100 text-slate-600 p-2 rounded-xl text-xs hover:bg-slate-200 transition" title="تحديث">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- KPI Dashboard Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div class="glass-panel p-4 bg-white border-b-4 border-blue-500 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <p class="text-[11px] font-bold text-slate-400">إجمالي داتا الشركات</p>
+                        <span class="p-2 bg-blue-50 text-blue-600 rounded-lg text-xs"><i class="fas fa-building"></i></span>
+                    </div>
+                    <h3 class="text-2xl font-black text-slate-800 mt-1" id="b2b-stat-total">0</h3>
+                    <p class="text-[10px] text-blue-600 mt-1 font-semibold">شركات وفنادق ومستشفيات</p>
+                </div>
+
+                <div class="glass-panel p-4 bg-white border-b-4 border-emerald-500 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <p class="text-[11px] font-bold text-slate-400">الداتا المحققة والمطابقة</p>
+                        <span class="p-2 bg-emerald-50 text-emerald-600 rounded-lg text-xs"><i class="fas fa-check-double"></i></span>
+                    </div>
+                    <h3 class="text-2xl font-black text-emerald-600 mt-1" id="b2b-stat-verified">0</h3>
+                    <p class="text-[10px] text-emerald-600 mt-1 font-semibold">واتساب + إيميل رسمي مؤكد</p>
+                </div>
+
+                <div class="glass-panel p-4 bg-white border-b-4 border-amber-500 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <p class="text-[11px] font-bold text-slate-400">العروض المرسلة (Outreach)</p>
+                        <span class="p-2 bg-amber-50 text-amber-600 rounded-lg text-xs"><i class="fas fa-bullhorn"></i></span>
+                    </div>
+                    <h3 class="text-2xl font-black text-amber-600 mt-1" id="b2b-stat-contacted">0</h3>
+                    <p class="text-[10px] text-amber-600 mt-1 font-semibold">واتساب + بريد إلكتروني رسمي</p>
+                </div>
+
+                <div class="glass-panel p-4 bg-white border-b-4 border-indigo-600 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <p class="text-[11px] font-bold text-slate-400">التعاقدات وسابقة الأعمال</p>
+                        <span class="p-2 bg-indigo-50 text-indigo-600 rounded-lg text-xs"><i class="fas fa-trophy"></i></span>
+                    </div>
+                    <h3 class="text-2xl font-black text-indigo-700 mt-1" id="b2b-stat-contracted">0</h3>
+                    <div class="flex flex-wrap gap-1 mt-1">
+                        <span class="text-[9px] bg-indigo-50 text-indigo-800 font-bold px-1.5 py-0.5 rounded">إدفكيور</span>
+                        <span class="text-[9px] bg-indigo-50 text-indigo-800 font-bold px-1.5 py-0.5 rounded">باركفيل</span>
+                        <span class="text-[9px] bg-indigo-50 text-indigo-800 font-bold px-1.5 py-0.5 rounded">إمديفكو</span>
+                        <span class="text-[9px] bg-indigo-50 text-indigo-800 font-bold px-1.5 py-0.5 rounded">السويدي</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Smart AI Lead Generator Box (قابل للفتح والإغلاق) -->
+            <div id="b2b-generator-panel" class="glass-panel p-5 mb-6 bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-2xl shadow-xl border border-blue-700/50">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <div class="flex items-center gap-2">
+                        <span class="p-2 bg-yellow-400 text-slate-950 rounded-lg text-sm font-black animate-bounce"><i class="fas fa-bolt"></i></span>
+                        <div>
+                            <h4 class="font-extrabold text-base text-white">محرك توليد الداتا واستخراج مسؤولي التعاقدات (AI B2B Harvester)</h4>
+                            <p class="text-[11px] text-blue-200">يبحث الذكاء الاصطناعي عن كبرى الشركات والمستشفيات والفنادق والمصانع ويستخرج بيانات الاتصال المعتمدة ومسؤولي المشتريات فوراً</p>
+                        </div>
+                    </div>
+                    <button onclick="toggleB2BGeneratorBox()" class="text-blue-300 hover:text-white text-xs"><i class="fas fa-chevron-up"></i> إخفاء</button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-blue-200 mb-1">القطاع المستهدف (Industry)</label>
+                        <select id="b2b-gen-sector" class="w-full bg-blue-950/80 border border-blue-600 text-white text-xs rounded-xl p-2.5 outline-none focus:border-yellow-400">
+                            <option value="pharma">💊 شركات ومصانع الأدوية والرعاية</option>
+                            <option value="hospitals">🏥 مستشفيات ومراكز طبية كبرى</option>
+                            <option value="hotels">🏨 فنادق ومنتجعات سياحية</option>
+                            <option value="contracting">🏗️ شركات المقاولات والهندسة والطاقة</option>
+                            <option value="events">🎪 منظمو المؤتمرات والفعاليات والمعارض</option>
+                            <option value="restaurants">🍽️ سلاسل مطاعم وكافيهات كبرى</option>
+                            <option value="corporate">🏢 شركات تجارية ومصانع خطوط عمال</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-bold text-blue-200 mb-1">المدينة / المحافظة (Location)</label>
+                        <select id="b2b-gen-city" class="w-full bg-blue-950/80 border border-blue-600 text-white text-xs rounded-xl p-2.5 outline-none focus:border-yellow-400">
+                            <option value="القاهرة">القاهرة (التجمع، المعادي، مصر الجديدة، النزهة)</option>
+                            <option value="الجيزة">الجيزة (6 أكتوبر، الشيخ زايد، الدقي)</option>
+                            <option value="الإسكندرية">الإسكندرية والساحل الشمالي</option>
+                            <option value="العاشر من رمضان">العاشر من رمضان والمنطقة الصناعية</option>
+                            <option value="العاصمة الإدارية">العاصمة الإدارية الجديدة</option>
+                            <option value="شرم الشيخ">شرم الشيخ وجنوب سيناء</option>
+                            <option value="الغردقة">الغردقة والبحر الأحمر</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-bold text-blue-200 mb-1">تخصيص البحث (اختياري)</label>
+                        <input type="text" id="b2b-gen-query" placeholder="مثال: مصانع أدوية كبرى، مستشفيات خاصة..." class="w-full bg-blue-950/80 border border-blue-600 text-white placeholder-blue-300 text-xs rounded-xl p-2.5 outline-none focus:border-yellow-400">
+                    </div>
+
+                    <div class="flex items-end">
+                        <button id="btn-run-b2b-gen" onclick="triggerB2BLeadGenerator()" class="w-full bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-extrabold text-xs py-2.5 px-4 rounded-xl shadow-lg shadow-yellow-400/20 transition flex items-center justify-center gap-2">
+                            <i class="fas fa-search-plus"></i>
+                            <span>توليد واستخراج الداتا الآن</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="b2b-gen-loading" class="hidden mt-4 p-3 bg-blue-950/90 border border-blue-500/50 rounded-xl text-center">
+                    <i class="fas fa-spinner fa-spin text-yellow-400 text-lg mb-1"></i>
+                    <p class="text-xs text-blue-100 font-bold">جاري البحث واستخراج بيانات الشركات والمسؤولين والتحقق منها عبر محرك AI...</p>
+                </div>
+            </div>
+
+            <!-- Filters & Search Toolbar -->
+            <div class="glass-panel p-4 bg-white rounded-2xl shadow-sm mb-6 border border-slate-100">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                    <!-- Search input -->
+                    <div class="relative lg:col-span-2">
+                        <i class="fas fa-search absolute right-3 top-3 text-slate-400 text-xs"></i>
+                        <input type="text" id="b2b-filter-search" oninput="filterB2BLeadsLocal()" placeholder="ابحث باسم الشركة، المسؤول، الإيميل، أو الهاتف..." class="w-full pr-8 pl-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:bg-white transition">
+                    </div>
+
+                    <!-- Sector Filter -->
+                    <div>
+                        <select id="b2b-filter-sector" onchange="loadB2BLeads()" class="w-full py-2 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500">
+                            <option value="all">كل القطاعات</option>
+                            <option value="pharma">💊 شركات الأدوية</option>
+                            <option value="hospitals">🏥 مستشفيات ومراكز طبية</option>
+                            <option value="hotels">🏨 فنادق ومنتجعات</option>
+                            <option value="contracting">🏗️ مقاولات وهندسة</option>
+                            <option value="events">🎪 مؤتمرات ومعارض</option>
+                            <option value="restaurants">🍽️ مطاعم وكافيهات</option>
+                            <option value="corporate">🏢 شركات ومصانع</option>
+                        </select>
+                    </div>
+
+                    <!-- City Filter -->
+                    <div>
+                        <select id="b2b-filter-city" onchange="loadB2BLeads()" class="w-full py-2 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500">
+                            <option value="all">كل المحافظات</option>
+                            <option value="القاهرة">القاهرة</option>
+                            <option value="الجيزة">الجيزة</option>
+                            <option value="الإسكندرية">الإسكندرية</option>
+                            <option value="العاشر من رمضان">العاشر من رمضان</option>
+                            <option value="العاصمة الإدارية">العاصمة الإدارية</option>
+                            <option value="شرم الشيخ">شرم الشيخ</option>
+                            <option value="الغردقة">الغردقة</option>
+                        </select>
+                    </div>
+
+                    <!-- Pipeline Stage Filter -->
+                    <div>
+                        <select id="b2b-filter-stage" onchange="loadB2BLeads()" class="w-full py-2 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500">
+                            <option value="all">كل مراحل التعاقد</option>
+                            <option value="new">🆕 فرصة جديدة (New Lead)</option>
+                            <option value="verified">✅ تم التحقق (Verified)</option>
+                            <option value="contacted">📩 تم إرسال العرض (Contacted)</option>
+                            <option value="meeting">🤝 طلب عرض أسعار / اجتماع</option>
+                            <option value="contracted">🏆 تم التعاقد (Contracted)</option>
+                            <option value="archived">📦 مؤرشف</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-3 mt-3 pt-3 border-t border-slate-100 text-xs text-slate-500 font-medium">
+                    <div class="flex items-center gap-4">
+                        <label class="flex items-center gap-1.5 cursor-pointer text-slate-700">
+                            <input type="checkbox" id="b2b-filter-verified-only" onchange="filterB2BLeadsLocal()" class="rounded text-blue-600 focus:ring-0">
+                            <span>الموثقة فقط (Verified Only ✅)</span>
+                        </label>
+                        <span id="b2b-table-count" class="text-slate-400">عرض 0 شركة</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[11px] text-slate-400">خدماتنا المتاحة للشركات:</span>
+                        <span class="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-[10px] font-bold">مؤتمرات وفعاليات</span>
+                        <span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded text-[10px] font-bold">خطوط عمال وموظفين</span>
+                        <span class="px-2 py-0.5 bg-purple-50 text-purple-700 rounded text-[10px] font-bold">استقبال مطارات وVIP</span>
+                        <span class="px-2 py-0.5 bg-amber-50 text-amber-700 rounded text-[10px] font-bold">حافلات وسيدان وفان</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Leads Data Table -->
+            <div class="glass-panel bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-right border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 text-xs font-extrabold border-b border-slate-200">
+                                <th class="p-3.5">المؤسسة / الشركة</th>
+                                <th class="p-3.5">القطاع والمدينة</th>
+                                <th class="p-3.5">مسؤول التعاقدات</th>
+                                <th class="p-3.5">بيانات الاتصال المعتمدة</th>
+                                <th class="p-3.5">التحقق</th>
+                                <th class="p-3.5">مرحلة التعاقد</th>
+                                <th class="p-3.5 text-center">إجراءات التسويق والعروض</th>
+                            </tr>
+                        </thead>
+                        <tbody id="b2b-leads-table-body" class="text-xs divide-y divide-slate-100">
+                            <tr>
+                                <td colspan="7" class="text-center py-12 text-slate-400">
+                                    <i class="fas fa-spinner fa-spin text-2xl text-blue-500 mb-2"></i>
+                                    <p>جاري تحميل داتا الشركات والتعاقدات...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================================================== -->
+        <!-- 📱 MODALS: نوافذ عروض الأسعار والتسويق والإضافة -->
+        <!-- ===================================================== -->
+
+        <!-- Modal 1: إضافة شركة يدوياً -->
+        <div id="modal-b2b-add-lead" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+            <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                    <h3 class="font-extrabold text-base text-slate-800 flex items-center gap-2">
+                        <i class="fas fa-building text-blue-600"></i> إضافة شركة / مؤسسة جديدة
+                    </h3>
+                    <button onclick="closeAddB2BLeadModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+                </div>
+                <form id="form-add-b2b-lead" onsubmit="saveNewB2BLead(event)" class="space-y-3.5 text-xs">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">اسم المؤسسة / الشركة *</label>
+                        <input type="text" id="add-lead-name" required placeholder="مثال: فندق كمبنسكي القاهرة / شركة فاركو للأدوية" class="w-full border rounded-xl p-2.5 outline-none focus:border-blue-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">القطاع</label>
+                            <select id="add-lead-sector" class="w-full border rounded-xl p-2.5 outline-none focus:border-blue-500">
+                                <option value="pharma">شركات أدوية</option>
+                                <option value="hospitals">مستشفيات ومراكز طبية</option>
+                                <option value="hotels">فنادق ومنتجعات</option>
+                                <option value="contracting">مقاولات وهندسة</option>
+                                <option value="events">مؤتمرات ومعارض</option>
+                                <option value="restaurants">سلاسل مطاعم</option>
+                                <option value="corporate">شركات ومصانع</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">المدينة / المحافظة</label>
+                            <input type="text" id="add-lead-city" value="القاهرة" class="w-full border rounded-xl p-2.5 outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">العنوان التفصيلي</label>
+                        <input type="text" id="add-lead-address" placeholder="المنطقة، الشارع، المعالم الرئيسية" class="w-full border rounded-xl p-2.5 outline-none focus:border-blue-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">رقم الهاتف / الخط الساخن</label>
+                            <input type="text" id="add-lead-phone" placeholder="02xxxxxxxx أو 01xxxxxxxxx" class="w-full border rounded-xl p-2.5 outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">رقم الواتساب التجاري</label>
+                            <input type="text" id="add-lead-whatsapp" placeholder="201xxxxxxxxx" class="w-full border rounded-xl p-2.5 outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">البريد الإلكتروني للتعاقدات</label>
+                            <input type="email" id="add-lead-email" placeholder="procurement@company.com" class="w-full border rounded-xl p-2.5 outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">الموقع الإلكتروني</label>
+                            <input type="url" id="add-lead-website" placeholder="https://company.com" class="w-full border rounded-xl p-2.5 outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">اسم مسؤول التعاقدات</label>
+                            <input type="text" id="add-lead-dm-name" placeholder="أ. فلان الفلاني" class="w-full border rounded-xl p-2.5 outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">المسمى الوظيفي</label>
+                            <input type="text" id="add-lead-dm-role" value="مدير المشتريات والتعاقدات" class="w-full border rounded-xl p-2.5 outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">ملاحظات / متطلبات النقل</label>
+                        <textarea id="add-lead-notes" rows="2" placeholder="مطلوب توريد خطوط عمال، سيارات مؤتمرات، أوتوبيسات..." class="w-full border rounded-xl p-2 outline-none focus:border-blue-500"></textarea>
+                    </div>
+                    <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                        <button type="button" onclick="closeAddB2BLeadModal()" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200">إلغاء</button>
+                        <button type="submit" class="px-5 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-md shadow-blue-200">حفظ الشركة</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal 2: إرسال عرض واتساب مخصص -->
+        <div id="modal-b2b-whatsapp-proposal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+            <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100">
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                    <h3 class="font-extrabold text-base text-slate-800 flex items-center gap-2">
+                        <i class="fab fa-whatsapp text-emerald-500 text-lg"></i> إرسال عرض تسويقي عبر الواتساب
+                    </h3>
+                    <button onclick="closeB2BWhatsAppModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+                </div>
+                <input type="hidden" id="wa-lead-id">
+                <div class="space-y-3.5 text-xs">
+                    <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+                        <p class="font-bold text-emerald-900" id="wa-modal-company-name">اسم الشركة</p>
+                        <p class="text-[11px] text-emerald-700" id="wa-modal-contact-details">المسؤول: -- | الرقم: --</p>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">نوع العرض والخدمة المستهدفة</label>
+                        <select id="wa-modal-service-type" onchange="updateB2BWhatsAppPreview()" class="w-full border rounded-xl p-2.5 outline-none focus:border-emerald-500">
+                            <option value="all">🌟 عرض شامل لكافة خدمات النقل والأسطول والمؤتمرات</option>
+                            <option value="conferences">🎪 تنظيم وتنفيذ تنقلات المؤتمرات والفعاليات والندوات</option>
+                            <option value="staff_lines">🚌 توريد وإدارة خطوط نقل العمال والموظفين الدورية</option>
+                            <option value="fleet_supply">🚗 توريد أسطول سيارات سيدان، ميني فان، فان، وأوتوبيسات</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">نص العرض (قابل للتعديل قبل الإرسال)</label>
+                        <textarea id="wa-modal-message-text" rows="8" class="w-full border rounded-xl p-3 font-mono text-[11px] text-slate-800 leading-relaxed outline-none focus:border-emerald-500 bg-slate-50"></textarea>
+                    </div>
+                    <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                        <button type="button" onclick="closeB2BWhatsAppModal()" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200">إلغاء</button>
+                        <button type="button" onclick="executeB2BWhatsAppSend()" id="btn-send-wa-proposal" class="px-5 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 shadow-md shadow-emerald-200 flex items-center gap-1.5">
+                            <i class="fab fa-whatsapp"></i> إرسال العرض فوراً
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal 3: إرسال عرض بريد إلكتروني رسمي (Corporate Email Proposal) -->
+        <div id="modal-b2b-email-proposal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+            <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                    <h3 class="font-extrabold text-base text-slate-800 flex items-center gap-2">
+                        <i class="fas fa-envelope-open-text text-blue-600 text-lg"></i> إرسال بريد إلكتروني رسمي للتعاقدات
+                    </h3>
+                    <button onclick="closeB2BEmailModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+                </div>
+                <input type="hidden" id="email-lead-id">
+                <div class="space-y-3.5 text-xs">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">الشركة المستهدفة</label>
+                            <input type="text" id="email-modal-company" readonly class="w-full bg-slate-100 border rounded-xl p-2.5 text-slate-700 font-bold outline-none">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">البريد الإلكتروني للتعاقدات</label>
+                            <input type="email" id="email-modal-recipient" class="w-full border rounded-xl p-2.5 text-slate-800 outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">عنوان الرسالة (Subject)</label>
+                        <input type="text" id="email-modal-subject" class="w-full border rounded-xl p-2.5 text-slate-800 outline-none focus:border-blue-500 font-bold">
+                    </div>
+                    <div class="p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                        <p class="font-bold text-blue-900 mb-1"><i class="fas fa-file-contract ml-1"></i> محتويات العرض الرسمي:</p>
+                        <ul class="list-disc list-inside text-[11px] text-blue-800 space-y-0.5">
+                            <li>تصميم HTML رسمي فخم بألوان الهوية البصرية لـ 24Seven.</li>
+                            <li>شرح خدمات المؤتمرات والندوات، خطوط العمال، واستقبال المطارات.</li>
+                            <li>إبراز سابقة الأعمال مع *(إدفكيور، باركفيل، إمديفكو، السويدي)*.</li>
+                            <li>زر مباشر لطلب عرض أسعار وتحديد موعد اجتماع تعارف.</li>
+                        </ul>
+                    </div>
+                    <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                        <button type="button" onclick="closeB2BEmailModal()" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200">إلغاء</button>
+                        <button type="button" onclick="executeB2BEmailSend()" id="btn-send-email-proposal" class="px-5 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-md shadow-blue-200 flex items-center gap-1.5">
+                            <i class="fas fa-paper-plane"></i> إرسال البريد الرسمي
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal 4: إطلاق حملة تسويقية مجمعة -->
+        <div id="modal-b2b-bulk-campaign" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+            <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100">
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                    <h3 class="font-extrabold text-base text-slate-800 flex items-center gap-2">
+                        <i class="fas fa-bullhorn text-emerald-600"></i> إطلاق حملة تسويقية B2B مجمعة
+                    </h3>
+                    <button onclick="closeB2BBulkCampaignModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="space-y-3.5 text-xs">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">القطاع المستهدف للحملة</label>
+                        <select id="bulk-camp-sector" class="w-full border rounded-xl p-2.5 outline-none focus:border-emerald-500">
+                            <option value="all">كل القطاعات المتاحة</option>
+                            <option value="pharma">💊 شركات الأدوية</option>
+                            <option value="hospitals">🏥 المستشفيات والمراكز الطبية</option>
+                            <option value="hotels">🏨 الفنادق والمنتجعات</option>
+                            <option value="contracting">🏗️ شركات المقاولات والهندسة</option>
+                            <option value="events">🎪 منظمو المؤتمرات والفعاليات</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">قناة الإرسال</label>
+                        <select id="bulk-camp-channel" class="w-full border rounded-xl p-2.5 outline-none focus:border-emerald-500">
+                            <option value="whatsapp">💬 واتساب مباشر (عبر بوابة الواتساب)</option>
+                            <option value="email">✉️ بريد إلكتروني رسمي (Corporate Email)</option>
+                        </select>
+                    </div>
+                    <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-800">
+                        <i class="fas fa-info-circle ml-1"></i> سيتم إرسال العروض تباعاً مع فاصل زمني ذكي بين كل رسالة لحماية الأرقام والحسابات من الحظر.
+                    </div>
+                    <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                        <button type="button" onclick="closeB2BBulkCampaignModal()" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200">إلغاء</button>
+                        <button type="button" onclick="launchBulkB2BCampaign()" id="btn-launch-bulk-camp" class="px-5 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 shadow-md shadow-emerald-200 flex items-center gap-1.5">
+                            <i class="fas fa-rocket"></i> بدء إطلاق الحملة الآن
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -9535,6 +9982,703 @@ ${data.webhook_url}`);
             alert('❌ فشل حذف الفلتر');
         }
     }
+
+    // =====================================================
+    // 💼 [B2B ENGINE] إدارة تعاقدات وتوليد داتا الشركات
+    // =====================================================
+    let currentB2BLeads = [];
+
+    async function loadB2BLeads() {
+        const tbody = document.getElementById('b2b-leads-table-body');
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center py-10 text-slate-400">
+                        <i class="fas fa-spinner fa-spin text-2xl text-blue-500 mb-2"></i>
+                        <p class="font-bold">جاري تحميل داتا الشركات المعتمدة...</p>
+                    </td>
+                </tr>
+            `;
+        }
+
+        try {
+            const sector = document.getElementById('b2b-filter-sector')?.value || 'all';
+            const city = document.getElementById('b2b-filter-city')?.value || 'all';
+            const stage = document.getElementById('b2b-filter-stage')?.value || 'all';
+            const search = document.getElementById('b2b-filter-search')?.value.trim() || '';
+
+            let data = [];
+            // Try fetching from Supabase Client directly if available
+            if (typeof supabase !== 'undefined' && supabase && supabase.from) {
+                let query = supabase.from('b2b_corporate_leads').select('*').order('created_at', { ascending: false });
+                if (sector !== 'all') query = query.eq('sector', sector);
+                if (city !== 'all') query = query.eq('city', city);
+                if (stage !== 'all') query = query.eq('pipeline_stage', stage);
+                if (search) query = query.or(`company_name.ilike.%${search}%,decision_maker_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`);
+                
+                const res = await query;
+                if (!res.error && res.data) {
+                    data = res.data;
+                }
+            }
+            
+            // Fallback to API endpoint
+            if (!data || data.length === 0) {
+                const apiBase = (typeof getStaffApiBaseUrl === 'function') ? getStaffApiBaseUrl() : '';
+                const url = new URL(`${apiBase || window.location.origin}/api/b2b/leads`);
+                if (sector !== 'all') url.searchParams.append('sector', sector);
+                if (city !== 'all') url.searchParams.append('city', city);
+                if (stage !== 'all') url.searchParams.append('stage', stage);
+                if (search) url.searchParams.append('search', search);
+
+                const res = await apiFetch(url.toString());
+                if (res.ok) {
+                    data = await res.json();
+                }
+            }
+
+            currentB2BLeads = Array.isArray(data) ? data : [];
+            updateB2BKPICounters(currentB2BLeads);
+            filterB2BLeadsLocal();
+
+        } catch (err) {
+            console.error('[B2B] Error loading leads:', err);
+            if (tbody) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center py-8 text-red-500 font-bold">
+                            <i class="fas fa-exclamation-triangle text-xl mb-1"></i>
+                            <p>تعذر تحميل الداتا حالياً. يرجى التأكد من اتصال السيرفر وقاعدة البيانات.</p>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+    }
+
+    function updateB2BKPICounters(leads) {
+        const total = leads.length;
+        const verified = leads.filter(l => l.is_whatsapp_verified || l.is_email_verified || (l.verification_score && l.verification_score >= 80)).length;
+        const contacted = leads.filter(l => l.pipeline_stage === 'contacted' || l.pipeline_stage === 'meeting').length;
+        const contracted = leads.filter(l => l.pipeline_stage === 'contracted').length;
+
+        const elTotal = document.getElementById('b2b-stat-total');
+        const elVer = document.getElementById('b2b-stat-verified');
+        const elCont = document.getElementById('b2b-stat-contacted');
+        const elWon = document.getElementById('b2b-stat-contracted');
+
+        if (elTotal) elTotal.textContent = total;
+        if (elVer) elVer.textContent = verified;
+        if (elCont) elCont.textContent = contacted;
+        if (elWon) elWon.textContent = contracted;
+    }
+
+    function filterB2BLeadsLocal() {
+        const search = (document.getElementById('b2b-filter-search')?.value || '').toLowerCase().trim();
+        const verifiedOnly = document.getElementById('b2b-filter-verified-only')?.checked || false;
+
+        let filtered = currentB2BLeads.filter(lead => {
+            if (verifiedOnly && !(lead.is_whatsapp_verified || lead.is_email_verified || (lead.verification_score >= 85))) {
+                return false;
+            }
+            if (search) {
+                const matchName = (lead.company_name || '').toLowerCase().includes(search);
+                const matchDm = (lead.decision_maker_name || '').toLowerCase().includes(search);
+                const matchPhone = (lead.phone || '').includes(search) || (lead.whatsapp || '').includes(search);
+                const matchEmail = (lead.email || '').toLowerCase().includes(search);
+                const matchCity = (lead.city || '').toLowerCase().includes(search);
+                if (!matchName && !matchDm && !matchPhone && !matchEmail && !matchCity) return false;
+            }
+            return true;
+        });
+
+        const countEl = document.getElementById('b2b-table-count');
+        if (countEl) countEl.textContent = `عرض ${filtered.length} من إجمالي ${currentB2BLeads.length} شركة`;
+
+        renderB2BLeadsTable(filtered);
+    }
+
+    function renderB2BLeadsTable(leads) {
+        const tbody = document.getElementById('b2b-leads-table-body');
+        if (!tbody) return;
+
+        if (!leads || leads.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center py-12 text-slate-400">
+                        <i class="fas fa-folder-open text-3xl mb-2 text-slate-300"></i>
+                        <p class="font-bold text-sm text-slate-600">لا توجد شركات مطابقة للبحث حالياً</p>
+                        <p class="text-xs text-slate-400 mt-1">اضغط على زر <strong>"توليد داتا ذكية (AI)"</strong> لجلب شركات وفنادق ومستشفيات جديدة فوراً</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        const sectorIcons = {
+            'pharma': { name: 'أدوية ورعاية', icon: 'fa-capsules', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+            'hospitals': { name: 'مستشفيات ومراكز', icon: 'fa-hospital', color: 'bg-rose-50 text-rose-700 border-rose-200' },
+            'hotels': { name: 'فنادق ومنتجعات', icon: 'fa-hotel', color: 'bg-amber-50 text-amber-700 border-amber-200' },
+            'contracting': { name: 'مقاولات وطاقة', icon: 'fa-hard-hat', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+            'events': { name: 'مؤتمرات ومعارض', icon: 'fa-calendar-star', color: 'bg-purple-50 text-purple-700 border-purple-200' },
+            'restaurants': { name: 'مطاعم وسلاسل', icon: 'fa-utensils', color: 'bg-orange-50 text-orange-700 border-orange-200' },
+            'corporate': { name: 'شركات ومصانع', icon: 'fa-industry', color: 'bg-slate-50 text-slate-700 border-slate-200' }
+        };
+
+        const stageBadges = {
+            'new': { label: '🆕 فرصة جديدة', color: 'bg-slate-100 text-slate-700' },
+            'verified': { label: '✅ تم التحقق', color: 'bg-blue-100 text-blue-800' },
+            'contacted': { label: '📩 تم إرسال العرض', color: 'bg-amber-100 text-amber-800' },
+            'meeting': { label: '🤝 طلب أسعار / اجتماع', color: 'bg-purple-100 text-purple-800' },
+            'contracted': { label: '🏆 تم التعاقد', color: 'bg-emerald-100 text-emerald-800 font-bold' },
+            'archived': { label: '📦 مؤرشف', color: 'bg-gray-100 text-gray-600' }
+        };
+
+        tbody.innerHTML = leads.map(lead => {
+            const secInfo = sectorIcons[lead.sector] || { name: lead.sector, icon: 'fa-building', color: 'bg-slate-50 text-slate-700 border-slate-200' };
+            const cleanWa = (lead.whatsapp || lead.phone || '').replace(/[^0-9]/g, '');
+            const waUrl = cleanWa ? `https://wa.me/${cleanWa.startsWith('20') ? cleanWa : '20' + cleanWa.replace(/^0+/, '')}` : '#';
+            const score = lead.verification_score || 85;
+
+            return `
+                <tr class="hover:bg-slate-50/80 transition group">
+                    <!-- اسم الشركة والموقع -->
+                    <td class="p-3.5 align-middle">
+                        <div class="flex items-start gap-2.5">
+                            <div class="p-2 rounded-xl bg-slate-100 text-slate-700 text-sm group-hover:bg-blue-50 group-hover:text-blue-600 transition">
+                                <i class="fas ${secInfo.icon}"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-extrabold text-slate-900 text-xs">${lead.company_name}</h4>
+                                <div class="flex items-center gap-2 mt-1 text-[11px] text-slate-500">
+                                    <span><i class="fas fa-map-marker-alt text-red-500 ml-1"></i>${lead.city || 'القاهرة'}</span>
+                                    ${lead.website ? `<a href="${lead.website}" target="_blank" class="text-blue-600 hover:underline flex items-center gap-0.5"><i class="fas fa-globe text-[10px]"></i>الموقع</a>` : ''}
+                                    ${lead.linkedin_url ? `<a href="${lead.linkedin_url}" target="_blank" class="text-indigo-600 hover:underline flex items-center gap-0.5"><i class="fab fa-linkedin text-[10px]"></i>LinkedIn</a>` : ''}
+                                </div>
+                                ${lead.notes ? `<p class="text-[10px] text-slate-400 mt-1 line-clamp-1 italic">${lead.notes}</p>` : ''}
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- القطاع والمدينة -->
+                    <td class="p-3.5 align-middle">
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${secInfo.color}">
+                            <i class="fas ${secInfo.icon} text-[10px]"></i> ${secInfo.name}
+                        </span>
+                        <p class="text-[10px] text-slate-400 mt-1 truncate max-w-[130px]" title="${lead.address || ''}">${lead.address || lead.city}</p>
+                    </td>
+
+                    <!-- مسؤول التعاقدات -->
+                    <td class="p-3.5 align-middle">
+                        <div class="font-bold text-slate-800 text-xs flex items-center gap-1">
+                            <i class="fas fa-user-tie text-slate-400"></i>
+                            <span>${lead.decision_maker_name || 'مسؤول المشتريات والتعاقدات'}</span>
+                        </div>
+                        <p class="text-[10px] text-blue-700 font-medium mt-0.5">${lead.decision_maker_role || 'مدير المشتريات واللوجستيات'}</p>
+                    </td>
+
+                    <!-- بيانات الاتصال المعتمدة -->
+                    <td class="p-3.5 align-middle">
+                        <div class="space-y-1">
+                            ${lead.phone ? `
+                                <div class="flex items-center gap-1.5 text-[11px] text-slate-700">
+                                    <i class="fas fa-phone-alt text-slate-400 text-[10px]"></i>
+                                    <a href="tel:${lead.phone}" class="hover:text-blue-600 hover:underline font-mono">${lead.phone}</a>
+                                </div>
+                            ` : ''}
+                            ${lead.whatsapp ? `
+                                <div class="flex items-center gap-1.5 text-[11px] text-emerald-700 font-bold">
+                                    <i class="fab fa-whatsapp text-emerald-500"></i>
+                                    <a href="${waUrl}" target="_blank" class="hover:underline font-mono">${lead.whatsapp}</a>
+                                </div>
+                            ` : ''}
+                            ${lead.email ? `
+                                <div class="flex items-center gap-1.5 text-[10px] text-slate-600">
+                                    <i class="fas fa-envelope text-blue-400"></i>
+                                    <a href="mailto:${lead.email}" class="hover:text-blue-600 hover:underline truncate max-w-[150px]" title="${lead.email}">${lead.email}</a>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </td>
+
+                    <!-- التحقق والموثوقية -->
+                    <td class="p-3.5 align-middle">
+                        <div class="flex flex-col gap-1">
+                            <div class="flex items-center gap-1">
+                                <span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded text-[10px] font-black border border-emerald-200">
+                                    ${score}% ✅ موثوقة
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-1.5 text-[10px] text-slate-400">
+                                <span title="واتساب مؤكد" class="${lead.is_whatsapp_verified ? 'text-emerald-600' : 'text-slate-300'}"><i class="fab fa-whatsapp"></i></span>
+                                <span title="إيميل رسمي" class="${lead.is_email_verified ? 'text-blue-600' : 'text-slate-300'}"><i class="fas fa-envelope"></i></span>
+                                <span title="موقع رسمي" class="${lead.website ? 'text-indigo-600' : 'text-slate-300'}"><i class="fas fa-globe"></i></span>
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- مرحلة التعاقد -->
+                    <td class="p-3.5 align-middle">
+                        <select onchange="updateB2BLeadStage('${lead.id}', this.value)" class="text-[11px] font-bold py-1 px-2 rounded-lg border border-slate-200 outline-none cursor-pointer ${stageBadges[lead.pipeline_stage]?.color || 'bg-slate-100 text-slate-700'}">
+                            <option value="new" ${lead.pipeline_stage === 'new' ? 'selected' : ''}>🆕 فرصة جديدة</option>
+                            <option value="verified" ${lead.pipeline_stage === 'verified' ? 'selected' : ''}>✅ تم التحقق</option>
+                            <option value="contacted" ${lead.pipeline_stage === 'contacted' ? 'selected' : ''}>📩 تم إرسال العرض</option>
+                            <option value="meeting" ${lead.pipeline_stage === 'meeting' ? 'selected' : ''}>🤝 طلب أسعار / اجتماع</option>
+                            <option value="contracted" ${lead.pipeline_stage === 'contracted' ? 'selected' : ''}>🏆 تم التعاقد</option>
+                            <option value="archived" ${lead.pipeline_stage === 'archived' ? 'selected' : ''}>📦 أرشفة</option>
+                        </select>
+                        ${lead.last_contacted_at ? `<p class="text-[9px] text-slate-400 mt-1">آخر تواصل: ${new Date(lead.last_contacted_at).toLocaleDateString('ar-EG')}</p>` : ''}
+                    </td>
+
+                    <!-- إجراءات العروض والتسويق -->
+                    <td class="p-3.5 align-middle text-center">
+                        <div class="flex items-center justify-center gap-1.5">
+                            <button onclick="openB2BWhatsAppModal('${lead.id}')" class="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-xl text-xs font-bold transition shadow-sm" title="إرسال عرض واتساب مخصص">
+                                <i class="fab fa-whatsapp"></i>
+                            </button>
+                            <button onclick="openB2BEmailModal('${lead.id}')" class="p-2 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-xl text-xs font-bold transition shadow-sm" title="إرسال بريد إلكتروني رسمي">
+                                <i class="fas fa-envelope"></i>
+                            </button>
+                            <button onclick="deleteB2BLead('${lead.id}')" class="p-2 bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-600 rounded-xl text-xs transition" title="حذف">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function toggleB2BGeneratorBox() {
+        const box = document.getElementById('b2b-generator-panel');
+        if (box) {
+            box.classList.toggle('hidden');
+        }
+    }
+
+    async function triggerB2BLeadGenerator() {
+        const sector = document.getElementById('b2b-gen-sector')?.value || 'pharma';
+        const city = document.getElementById('b2b-gen-city')?.value || 'القاهرة';
+        const query = document.getElementById('b2b-gen-query')?.value.trim() || '';
+
+        const btn = document.getElementById('btn-run-b2b-gen');
+        const loadingBox = document.getElementById('b2b-gen-loading');
+
+        if (btn) btn.disabled = true;
+        if (loadingBox) loadingBox.classList.remove('hidden');
+
+        try {
+            const apiBase = (typeof getStaffApiBaseUrl === 'function') ? getStaffApiBaseUrl() : '';
+            const res = await apiFetch(`${apiBase || ''}/api/b2b/generate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sector, city, query })
+            });
+
+            const data = await res.json();
+            if (res.ok && data.status === 'success') {
+                alert(`✅ ${data.message || 'تم استخراج وحفظ الشركات بنجاح!'}`);
+                await loadB2BLeads();
+            } else {
+                alert(`❌ خطأ في التوليد: ${data.message || 'يرجى المحاولة مرة أخرى'}`);
+            }
+        } catch (err) {
+            console.error('[B2B Gen Error]:', err);
+            alert('❌ تعذر الاتصال بمحرك التوليد. تأكد من تشغيل السيرفر المحلي.');
+        } finally {
+            if (btn) btn.disabled = false;
+            if (loadingBox) loadingBox.classList.add('hidden');
+        }
+    }
+
+    function openAddB2BLeadModal() {
+        const modal = document.getElementById('modal-b2b-add-lead');
+        if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeAddB2BLeadModal() {
+        const modal = document.getElementById('modal-b2b-add-lead');
+        if (modal) modal.classList.add('hidden');
+    }
+
+    async function saveNewB2BLead(e) {
+        e.preventDefault();
+        const payload = {
+            company_name: document.getElementById('add-lead-name').value.trim(),
+            sector: document.getElementById('add-lead-sector').value,
+            city: document.getElementById('add-lead-city').value.trim() || 'القاهرة',
+            address: document.getElementById('add-lead-address').value.trim(),
+            phone: document.getElementById('add-lead-phone').value.trim(),
+            whatsapp: document.getElementById('add-lead-whatsapp').value.trim(),
+            email: document.getElementById('add-lead-email').value.trim(),
+            website: document.getElementById('add-lead-website').value.trim(),
+            decision_maker_name: document.getElementById('add-lead-dm-name').value.trim(),
+            decision_maker_role: document.getElementById('add-lead-dm-role').value.trim(),
+            notes: document.getElementById('add-lead-notes').value.trim(),
+            verification_score: 90,
+            is_whatsapp_verified: true,
+            is_email_verified: true,
+            pipeline_stage: 'verified'
+        };
+
+        try {
+            const apiBase = (typeof getStaffApiBaseUrl === 'function') ? getStaffApiBaseUrl() : '';
+            const res = await apiFetch(`${apiBase || ''}/api/b2b/leads`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                alert('✅ تم حفظ بيانات الشركة بنجاح!');
+                document.getElementById('form-add-b2b-lead').reset();
+                closeAddB2BLeadModal();
+                await loadB2BLeads();
+            } else {
+                const err = await res.json();
+                alert(`❌ خطأ: ${err.message || 'تعذر الحفظ'}`);
+            }
+        } catch (err) {
+            console.error('[Add B2B Lead Error]:', err);
+            alert('❌ تعذر الحفظ حالياً.');
+        }
+    }
+
+    function openB2BWhatsAppModal(leadId) {
+        const lead = currentB2BLeads.find(l => l.id === leadId);
+        if (!lead) return;
+
+        document.getElementById('wa-lead-id').value = lead.id;
+        document.getElementById('wa-modal-company-name').textContent = lead.company_name;
+        document.getElementById('wa-modal-contact-details').textContent = `المسؤول: ${lead.decision_maker_name || 'مسؤول التعاقدات'} | الرقم: ${lead.whatsapp || lead.phone || 'غير مسجل'}`;
+        
+        updateB2BWhatsAppPreview();
+        const modal = document.getElementById('modal-b2b-whatsapp-proposal');
+        if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeB2BWhatsAppModal() {
+        const modal = document.getElementById('modal-b2b-whatsapp-proposal');
+        if (modal) modal.classList.add('hidden');
+    }
+
+    function updateB2BWhatsAppPreview() {
+        const leadId = document.getElementById('wa-lead-id').value;
+        const lead = currentB2BLeads.find(l => l.id === leadId);
+        if (!lead) return;
+
+        const serviceType = document.getElementById('wa-modal-service-type')?.value || 'all';
+        const contactName = lead.decision_maker_name || 'مسؤول التعاقدات والمشتريات';
+        const companyName = lead.company_name;
+
+        const serviceIntros = {
+            'conferences': `في إطار خدماتنا المتخصصة في **تنظيم وتنفيذ تنقلات المؤتمرات والفعاليات الكبرى والندوات العلمية**،`,
+            'staff_lines': `في إطار حلولنا الذكية في **توريد وإدارة خطوط نقل العمال والموظفين اليومية والدورية للمصانع والشركات**،`,
+            'fleet_supply': `في إطار توفير **أسطول سيارات وحافلات متكامل (سيدان VIP، ميني فان، فان H1/HiAce، حافلات وأوتوبيسات)**،`,
+            'all': `يسعدنا في **شركة 24Seven للحلول اللوجستية والنقل المؤسسي الذكي** تقديم عرض خدماتنا لشركتكم الموقرة.`
+        };
+        const intro = serviceIntros[serviceType] || serviceIntros['all'];
+
+        const text = `السيد/ة المحترم/ة: ${contactName} 🌸\nعناية: ${companyName}\nتحية طيبة من شركة **24Seven Limousine & Corporate Mobility** 🚗✨\n\n${intro}\n\n💼 **لماذا تختار 24Seven كشريك نقل معتمد؟**\n1️⃣ **سابقة أعمال قوية وموثوقة:** تشرفنا بتنفيذ وإدارة مؤتمرات وتنقلات لكبرى الشركات والمؤسسات مثل *(إدفكيور للأدوية، باركفيل، إمديفكو، مجموعة السويدي إلكتريك)* وغيرها.\n2️⃣ **أسطول متنوع وحديث:** سيدان VIP، ميني فان، فان سياحي (تويوتا هاي إيس / هيونداي H1)، وأوتوبيسات 28-50 راكب مجهزة بأحدث وسائل الراحة والأمان.\n3️⃣ **تغطية شاملة 24/7:** استقبال وتوديع مطارات، سفر لجميع المحافظات، وخطوط عمال وموظفين منتظمة مع تقارير تتبع وفواتير ضريبية إلكترونية.\n4️⃣ **كباتن محترفون ومدربون** على أعلى معايير الضيافة والالتزام بالوقت.\n\n📄 **للاطلاع على بروفايل الشركة والخدمات:**\nhttps://24seven-ai.com/about.html\n\n🤝 **يسعدنا التنسيق لتحديد موعد اجتماع تعارف أو إرسال عرض أسعار مخصص لاحتياجاتكم.**\nللتواصل المباشر مع إدارة التعاقدات: 01121748885\n\nدمتم ودامت أعمالكم في ازدهار وتألق! ✨`;
+
+        const textarea = document.getElementById('wa-modal-message-text');
+        if (textarea) textarea.value = text;
+    }
+
+    async function executeB2BWhatsAppSend() {
+        const leadId = document.getElementById('wa-lead-id').value;
+        const lead = currentB2BLeads.find(l => l.id === leadId);
+        if (!lead) return;
+
+        const customMessage = document.getElementById('wa-modal-message-text').value;
+        const targetNumber = lead.whatsapp || lead.phone;
+
+        if (!targetNumber) {
+            alert('❌ لا يوجد رقم واتساب مسجل لهذه الشركة!');
+            return;
+        }
+
+        const btn = document.getElementById('btn-send-wa-proposal');
+        if (btn) btn.disabled = true;
+
+        try {
+            const apiBase = (typeof getStaffApiBaseUrl === 'function') ? getStaffApiBaseUrl() : '';
+            const res = await apiFetch(`${apiBase || ''}/api/b2b/send-whatsapp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    lead_id: lead.id,
+                    whatsapp: targetNumber,
+                    company_name: lead.company_name,
+                    contact_name: lead.decision_maker_name,
+                    custom_message: customMessage
+                })
+            });
+
+            const data = await res.json();
+            if (res.ok && data.status === 'success') {
+                alert(`✅ ${data.message || 'تم إرسال العرض التسويقي بنجاح عبر الواتساب!'}`);
+                closeB2BWhatsAppModal();
+                await loadB2BLeads();
+            } else {
+                // Fallback: Open WhatsApp Web directly
+                const clean = targetNumber.replace(/[^0-9]/g, '');
+                const finalNum = clean.startsWith('20') ? clean : '20' + clean.replace(/^0+/, '');
+                window.open(`https://wa.me/${finalNum}?text=${encodeURIComponent(customMessage)}`, '_blank');
+                closeB2BWhatsAppModal();
+                await updateB2BLeadStage(lead.id, 'contacted');
+            }
+        } catch (err) {
+            console.error('[WhatsApp Proposal Send Error]:', err);
+            // Open fallback
+            const clean = targetNumber.replace(/[^0-9]/g, '');
+            const finalNum = clean.startsWith('20') ? clean : '20' + clean.replace(/^0+/, '');
+            window.open(`https://wa.me/${finalNum}?text=${encodeURIComponent(customMessage)}`, '_blank');
+            closeB2BWhatsAppModal();
+            await updateB2BLeadStage(lead.id, 'contacted');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    function openB2BEmailModal(leadId) {
+        const lead = currentB2BLeads.find(l => l.id === leadId);
+        if (!lead) return;
+
+        document.getElementById('email-lead-id').value = lead.id;
+        document.getElementById('email-modal-company').value = lead.company_name;
+        document.getElementById('email-modal-recipient').value = lead.email || '';
+        document.getElementById('email-modal-subject').value = `عرض خدمات النقل المؤسسي وتنظيم المؤتمرات - 24Seven | ${lead.company_name}`;
+
+        const modal = document.getElementById('modal-b2b-email-proposal');
+        if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeB2BEmailModal() {
+        const modal = document.getElementById('modal-b2b-email-proposal');
+        if (modal) modal.classList.add('hidden');
+    }
+
+    async function executeB2BEmailSend() {
+        const leadId = document.getElementById('email-lead-id').value;
+        const lead = currentB2BLeads.find(l => l.id === leadId);
+        if (!lead) return;
+
+        const recipient = document.getElementById('email-modal-recipient').value.trim();
+        const subject = document.getElementById('email-modal-subject').value.trim();
+
+        if (!recipient) {
+            alert('❌ يرجى إدخال البريد الإلكتروني للمستلم!');
+            return;
+        }
+
+        const btn = document.getElementById('btn-send-email-proposal');
+        if (btn) btn.disabled = true;
+
+        try {
+            const apiBase = (typeof getStaffApiBaseUrl === 'function') ? getStaffApiBaseUrl() : '';
+            const res = await apiFetch(`${apiBase || ''}/api/b2b/send-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    lead_id: lead.id,
+                    email: recipient,
+                    company_name: lead.company_name,
+                    contact_name: lead.decision_maker_name,
+                    subject: subject
+                })
+            });
+
+            const data = await res.json();
+            if (res.ok && data.status === 'success') {
+                alert(`✅ ${data.message || 'تم إرسال البريد الرسمي بنجاح!'}`);
+                closeB2BEmailModal();
+                await loadB2BLeads();
+            } else {
+                alert(`❌ ${data.message || 'تعذر إرسال البريد'}`);
+            }
+        } catch (err) {
+            console.error('[Email Send Error]:', err);
+            alert('❌ تعذر إرسال البريد الإلكتروني حالياً.');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    async function updateB2BLeadStage(leadId, newStage) {
+        try {
+            if (typeof supabase !== 'undefined' && supabase && supabase.from) {
+                await supabase.from('b2b_corporate_leads').update({
+                    pipeline_stage: newStage,
+                    updated_at: new Date().toISOString()
+                }).eq('id', leadId);
+            } else {
+                const apiBase = (typeof getStaffApiBaseUrl === 'function') ? getStaffApiBaseUrl() : '';
+                await apiFetch(`${apiBase || ''}/api/b2b/leads/${leadId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pipeline_stage: newStage })
+                });
+            }
+
+            const lead = currentB2BLeads.find(l => l.id === leadId);
+            if (lead) lead.pipeline_stage = newStage;
+            updateB2BKPICounters(currentB2BLeads);
+        } catch (err) {
+            console.error('[Update Stage Error]:', err);
+        }
+    }
+
+    async function deleteB2BLead(leadId) {
+        if (!confirm('هل أنت متأكد من رغبتك في حذف هذه الشركة من الداتا؟')) return;
+        try {
+            if (typeof supabase !== 'undefined' && supabase && supabase.from) {
+                await supabase.from('b2b_corporate_leads').delete().eq('id', leadId);
+            } else {
+                const apiBase = (typeof getStaffApiBaseUrl === 'function') ? getStaffApiBaseUrl() : '';
+                await apiFetch(`${apiBase || ''}/api/b2b/leads/${leadId}`, { method: 'DELETE' });
+            }
+            alert('🗑️ تم حذف الشركة بنجاح');
+            currentB2BLeads = currentB2BLeads.filter(l => l.id !== leadId);
+            updateB2BKPICounters(currentB2BLeads);
+            filterB2BLeadsLocal();
+        } catch (err) {
+            console.error('[Delete Lead Error]:', err);
+            alert('❌ تعذر الحذف');
+        }
+    }
+
+    function exportB2BLeadsToCSV() {
+        if (!currentB2BLeads || currentB2BLeads.length === 0) {
+            alert('⚠️ لا توجد داتا لتصديرها حالياً!');
+            return;
+        }
+
+        const headers = ['اسم المؤسسة', 'القطاع', 'المحافظة', 'العنوان', 'الهاتف', 'الواتساب', 'البريد الإلكتروني', 'الموقع', 'صفحة LinkedIn', 'مسؤول التعاقدات', 'المسمى الوظيفي', 'درجة التحقق', 'مرحلة التعاقد', 'ملاحظات'];
+        const rows = currentB2BLeads.map(l => [
+            `"${(l.company_name || '').replace(/"/g, '""')}"`,
+            `"${l.sector || ''}"`,
+            `"${l.city || ''}"`,
+            `"${(l.address || '').replace(/"/g, '""')}"`,
+            `"${l.phone || ''}"`,
+            `"${l.whatsapp || ''}"`,
+            `"${l.email || ''}"`,
+            `"${l.website || ''}"`,
+            `"${l.linkedin_url || ''}"`,
+            `"${(l.decision_maker_name || '').replace(/"/g, '""')}"`,
+            `"${(l.decision_maker_role || '').replace(/"/g, '""')}"`,
+            `"${l.verification_score || 85}%"`,
+            `"${l.pipeline_stage || 'new'}"`,
+            `"${(l.notes || '').replace(/"/g, '""')}"`
+        ]);
+
+        const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `24Seven_B2B_Corporate_Leads_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function openB2BBulkCampaignModal() {
+        const modal = document.getElementById('modal-b2b-bulk-campaign');
+        if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeB2BBulkCampaignModal() {
+        const modal = document.getElementById('modal-b2b-bulk-campaign');
+        if (modal) modal.classList.add('hidden');
+    }
+
+    async function launchBulkB2BCampaign() {
+        const sector = document.getElementById('bulk-camp-sector')?.value || 'all';
+        const channel = document.getElementById('bulk-camp-channel')?.value || 'whatsapp';
+
+        let targetLeads = currentB2BLeads;
+        if (sector !== 'all') {
+            targetLeads = targetLeads.filter(l => l.sector === sector);
+        }
+        if (channel === 'whatsapp') {
+            targetLeads = targetLeads.filter(l => l.whatsapp || l.phone);
+        } else {
+            targetLeads = targetLeads.filter(l => l.email);
+        }
+
+        if (targetLeads.length === 0) {
+            alert('⚠️ لا توجد شركات مستوفية لبيانات الاتصال في هذا القطاع!');
+            return;
+        }
+
+        if (!confirm(`🚀 هل أنت متأكد من إطلاق الحملة إلى ${targetLeads.length} شركة عبر ${channel === 'whatsapp' ? 'الواتساب' : 'البريد الإلكتروني'}؟`)) {
+            return;
+        }
+
+        closeB2BBulkCampaignModal();
+        alert(`🚀 بدأت الحملة! سيتم إرسال العروض إلى ${targetLeads.length} شركة في الخلفية وتحديث حالاتهم.`);
+
+        let sent = 0;
+        const apiBase = (typeof getStaffApiBaseUrl === 'function') ? getStaffApiBaseUrl() : '';
+        
+        for (const lead of targetLeads) {
+            try {
+                if (channel === 'whatsapp') {
+                    await apiFetch(`${apiBase || ''}/api/b2b/send-whatsapp`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            lead_id: lead.id,
+                            whatsapp: lead.whatsapp || lead.phone,
+                            company_name: lead.company_name,
+                            contact_name: lead.decision_maker_name
+                        })
+                    });
+                } else {
+                    await apiFetch(`${apiBase || ''}/api/b2b/send-email`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            lead_id: lead.id,
+                            email: lead.email,
+                            company_name: lead.company_name,
+                            contact_name: lead.decision_maker_name
+                        })
+                    });
+                }
+                sent++;
+                lead.pipeline_stage = 'contacted';
+            } catch (e) {
+                console.warn(`[Bulk Outreach] Error for ${lead.company_name}:`, e);
+            }
+        }
+
+        updateB2BKPICounters(currentB2BLeads);
+        filterB2BLeadsLocal();
+        alert(`🎉 اكتملت الحملة بنجاح! تم إرسال ${sent} عرض تعاقد.`);
+    }
+
+    // Global window bindings for B2B Leads Engine
+    window.loadB2BLeads = loadB2BLeads;
+    window.filterB2BLeadsLocal = filterB2BLeadsLocal;
+    window.toggleB2BGeneratorBox = toggleB2BGeneratorBox;
+    window.triggerB2BLeadGenerator = triggerB2BLeadGenerator;
+    window.openAddB2BLeadModal = openAddB2BLeadModal;
+    window.closeAddB2BLeadModal = closeAddB2BLeadModal;
+    window.saveNewB2BLead = saveNewB2BLead;
+    window.openB2BWhatsAppModal = openB2BWhatsAppModal;
+    window.closeB2BWhatsAppModal = closeB2BWhatsAppModal;
+    window.updateB2BWhatsAppPreview = updateB2BWhatsAppPreview;
+    window.executeB2BWhatsAppSend = executeB2BWhatsAppSend;
+    window.openB2BEmailModal = openB2BEmailModal;
+    window.closeB2BEmailModal = closeB2BEmailModal;
+    window.executeB2BEmailSend = executeB2BEmailSend;
+    window.updateB2BLeadStage = updateB2BLeadStage;
+    window.deleteB2BLead = deleteB2BLead;
+    window.exportB2BLeadsToCSV = exportB2BLeadsToCSV;
+    window.openB2BBulkCampaignModal = openB2BBulkCampaignModal;
+    window.closeB2BBulkCampaignModal = closeB2BBulkCampaignModal;
+    window.launchBulkB2BCampaign = launchBulkB2BCampaign;
 
     // Global window bindings for Sniper bot
     window.loadSniperBotPage = loadSniperBotPage;

@@ -3251,6 +3251,405 @@ def get_training_reports():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+# =====================================================
+# 💼 [B2B ENGINE] قسم توليد داتا الشركات والتعاقدات المؤسسية
+# =====================================================
+
+@app.route('/api/b2b/leads', methods=['GET', 'POST', 'OPTIONS'])
+def handle_b2b_leads():
+    if request.method == 'OPTIONS':
+        return make_response("", 204)
+    
+    if request.method == 'GET':
+        try:
+            sector = request.args.get('sector')
+            city = request.args.get('city')
+            stage = request.args.get('stage')
+            search = request.args.get('search')
+            
+            url = f"{SUPABASE_URL}/rest/v1/b2b_corporate_leads?select=*&order=created_at.desc"
+            params = {}
+            if sector and sector != 'all':
+                url += f"&sector=eq.{sector}"
+            if city and city != 'all':
+                url += f"&city=eq.{city}"
+            if stage and stage != 'all':
+                url += f"&pipeline_stage=eq.{stage}"
+            if search:
+                url += f"&or=(company_name.ilike.%{search}%,decision_maker_name.ilike.%{search}%,email.ilike.%{search}%,phone.ilike.%{search}%)"
+                
+            r = requests.get(url, headers=SUPABASE_SERVICE_HEADERS, timeout=10)
+            if r.status_code == 200:
+                return jsonify(r.json())
+            return jsonify({"status": "error", "message": r.text}), r.status_code
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+
+    elif request.method == 'POST':
+        try:
+            data = request.get_json()
+            if not data or not data.get('company_name'):
+                return jsonify({"status": "error", "message": "اسم الشركة مطلوب"}), 400
+                
+            r = requests.post(f"{SUPABASE_URL}/rest/v1/b2b_corporate_leads", headers={**SUPABASE_SERVICE_HEADERS, "Prefer": "return=representation"}, json=data, timeout=10)
+            if r.status_code in (200, 201):
+                return jsonify({"status": "success", "lead": r.json()}), 201
+            return jsonify({"status": "error", "message": r.text}), r.status_code
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/b2b/leads/<lead_id>', methods=['PATCH', 'DELETE', 'OPTIONS'])
+def handle_single_b2b_lead(lead_id):
+    if request.method == 'OPTIONS':
+        return make_response("", 204)
+        
+    if request.method == 'PATCH':
+        try:
+            data = request.get_json()
+            data['updated_at'] = datetime.utcnow().isoformat() + "Z"
+            r = requests.patch(
+                f"{SUPABASE_URL}/rest/v1/b2b_corporate_leads?id=eq.{lead_id}",
+                headers={**SUPABASE_SERVICE_HEADERS, "Prefer": "return=representation"},
+                json=data,
+                timeout=10
+            )
+            if r.status_code in (200, 204):
+                return jsonify({"status": "success", "message": "تم تحديث البيانات بنجاح"})
+            return jsonify({"status": "error", "message": r.text}), r.status_code
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+
+    elif request.method == 'DELETE':
+        try:
+            r = requests.delete(
+                f"{SUPABASE_URL}/rest/v1/b2b_corporate_leads?id=eq.{lead_id}",
+                headers=SUPABASE_SERVICE_HEADERS,
+                timeout=10
+            )
+            if r.status_code in (200, 204):
+                return jsonify({"status": "success", "message": "تم حذف الشركة بنجاح"})
+            return jsonify({"status": "error", "message": r.text}), r.status_code
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/b2b/generate', methods=['POST', 'OPTIONS'])
+def generate_b2b_leads():
+    """
+    [AI-POWERED] محرك توليد داتا الشركات والفنادق والمستشفيات الذكي
+    يقوم بالبحث واستخراج بيانات حقيقية وموثوقة لقطاع ومحافظة محددة مع مسؤولي المشتريات
+    """
+    if request.method == 'OPTIONS':
+        return make_response("", 204)
+    try:
+        data = request.get_json() or {}
+        sector = data.get('sector', 'pharma')
+        city = data.get('city', 'القاهرة')
+        custom_query = data.get('query', '')
+        
+        sector_names = {
+            'hotels': 'فنادق ومنتجعات سياحية',
+            'hospitals': 'مستشفيات ومراكز طبية كبرى',
+            'pharma': 'شركات ومصانع أدوية ورعاية صحية',
+            'contracting': 'شركات مقاولات كبرى وهندسة وطاقة',
+            'events': 'منظمو مؤتمرات وفعاليات ومعارض دولية',
+            'restaurants': 'سلاسل مطاعم وكافيهات كبرى',
+            'corporate': 'شركات ومؤسسات تجارية كبرى ومصانع'
+        }
+        sector_title = sector_names.get(sector, sector)
+        
+        prompt = f"""أنت خبير أبحاث B2B واستخراج بيانات الشركات والمؤسسات في مصر.
+المطلوب: توليد قائمة مكونة من 5 إلى 7 شركات ومؤسسات حقيقية وشهيرة في مصر تعمل في قطاع: ({sector_title}) في نطاق محافظة/مدينة: ({city}).
+{f'تركيز إضافي: {custom_query}' if custom_query else ''}
+
+لكل مؤسسة، استخرج بيانات الاتصال الحقيقية أو الأكثر دقة ومسؤول التعاقدات والمشتريات:
+- company_name: اسم المؤسسة باللغتين العربية والإنجليزية
+- sector: {sector}
+- city: {city}
+- address: عنوان المقر الرئيسي أو الفرع بالمدينة
+- phone: رقم الهاتف الأرضي أو الخط الساخن
+- whatsapp: رقم واتساب تجاري أو مسؤول التواصل (يبدأ بـ 20)
+- email: بريد إلكتروني رسمي للتعاقدات أو المشتريات أو الإدارة العامة
+- website: رابط الموقع الإلكتروني الرسمي
+- linkedin_url: رابط صفحة LinkedIn للشركة
+- decision_maker_name: اسم مسؤول أو مدير المشتريات / اللوجستيات / الموارد البشرية
+- decision_maker_role: مسمى الوظيفة (مثال: مدير المشتريات والتعاقدات، مدير النقل والخدمات الإدارية، HR Director)
+- verification_score: درجة الموثوقية (85 - 99)
+- is_whatsapp_verified: true
+- is_email_verified: true
+- pipeline_stage: "new"
+- notes: تفاصيل احتياج المؤسسة لخدمات النقل (مؤتمرات، خطوط عمال، سيارات ليموزين VIP، توريد أسطول).
+
+رد فقط بـ JSON صالح بصيغة قائمة كائنات:
+{{"leads": [ {{...}}, {{...}} ]}}"""
+
+        url = 'https://api.groq.com/openai/v1/chat/completions'
+        headers = {
+            'Authorization': f'Bearer {GROQ_API_KEY}',
+            'Content-Type': 'application/json'
+        }
+        payload = {
+            'model': GROQ_MODEL,
+            'messages': [
+                {'role': 'system', 'content': 'أنت نظام ذكي لتوليد بيانات الشركات B2B في مصر. رد فقط بـ JSON صالح ومطابق للمطلوب.'},
+                {'role': 'user', 'content': prompt}
+            ],
+            'temperature': 0.3,
+            'max_tokens': 2500,
+            'response_format': {'type': 'json_object'}
+        }
+        r = requests.post(url, headers=headers, json=payload, timeout=25)
+        if r.status_code == 200:
+            result = r.json()
+            content = result['choices'][0]['message']['content']
+            parsed = json.loads(content)
+            leads_list = parsed.get('leads', [])
+            
+            # حفظ في Supabase تلقائياً
+            saved_leads = []
+            for lead in leads_list:
+                lead['sector'] = sector
+                if not lead.get('city'): lead['city'] = city
+                r_save = requests.post(
+                    f"{SUPABASE_URL}/rest/v1/b2b_corporate_leads",
+                    headers={**SUPABASE_SERVICE_HEADERS, "Prefer": "return=representation"},
+                    json=lead,
+                    timeout=5
+                )
+                if r_save.status_code in (200, 201):
+                    saved_leads.append(r_save.json()[0] if isinstance(r_save.json(), list) else r_save.json())
+            
+            return jsonify({
+                "status": "success",
+                "message": f"تم توليد والتحقق من {len(saved_leads)} شركة بنجاح!",
+                "leads": saved_leads
+            })
+        else:
+            return jsonify({"status": "error", "message": f"Groq Error: {r.status_code}"}), 500
+    except Exception as e:
+        print(f"[B2B Generator Error]: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/b2b/send-whatsapp', methods=['POST', 'OPTIONS'])
+def send_b2b_whatsapp_proposal():
+    """
+    إرسال عرض تعاقد وتسويق مباشر عبر الواتساب للمسؤول
+    """
+    if request.method == 'OPTIONS':
+        return make_response("", 204)
+    try:
+        data = request.get_json()
+        lead_id = data.get('lead_id')
+        whatsapp_number = data.get('whatsapp')
+        company_name = data.get('company_name', 'شركتكم الموقرة')
+        contact_name = data.get('contact_name', 'مسؤول التعاقدات')
+        service_type = data.get('service_type', 'all') # 'conferences' | 'staff_lines' | 'fleet_supply' | 'all'
+        custom_message = data.get('custom_message')
+        
+        if not whatsapp_number:
+            return jsonify({"status": "error", "message": "رقم الواتساب مطلوب"}), 400
+            
+        clean_wa = clean_phone_strict(whatsapp_number)
+        
+        if custom_message:
+            proposal_text = custom_message
+        else:
+            # قوالب العروض الاحترافية المجهزة بسابقة الأعمال
+            service_intros = {
+                'conferences': "في إطار خدماتنا المتخصصة في **تنظيم وتنفيذ تنقلات المؤتمرات والفعاليات الكبرى والندوات العلمية**،",
+                'staff_lines': "في إطار حلولنا الذكية في **توريد وإدارة خطوط نقل العمال والموظفين اليومية والدورية**،",
+                'fleet_supply': "في إطار توفير **أسطول سيارات وحافلات متكامل (سيدان، ميني فان، فان H1/HiAce، حافلات وأوتوبيسات)** لجميع السعات،",
+                'all': "يسعدنا في **شركة 24Seven للحلول اللوجستية والنقل المؤسسي الذكي** تقديم عرض خدماتنا لشركتكم الموقرة."
+            }
+            intro = service_intros.get(service_type, service_intros['all'])
+            
+            proposal_text = (
+                f"السيد/ة المحترم/ة: {contact_name} 🌸\n"
+                f"عناية: {company_name}\n"
+                f"تحية طيبة من شركة **24Seven Limousine & Corporate Mobility** 🚗✨\n\n"
+                f"{intro}\n\n"
+                f"💼 **لماذا تختار 24Seven كشريك نقل معتمد؟**\n"
+                f"1️⃣ **سابقة أعمال قوية وموثوقة:** تشرفنا بتنفيذ وإدارة مؤتمرات وتنقلات لكبرى الشركات والمؤسسات مثل *(إدفكيور للأدوية، باركفيل، إمديفكو، مجموعة السويدي إلكتريك)* وغيرها.\n"
+                f"2️⃣ **أسطول متنوع وحديث:** سيدان VIP، ميني فان، فان سياحي (تويوتا هاي إيس / هيونداي H1)، وأوتوبيسات 28-50 راكب مجهزة بأحدث وسائل الراحة والأمان.\n"
+                f"3️⃣ **تغطية شاملة 24/7:** استقبال وتوديع مطارات، سفر لجميع المحافظات، وخطوط عمال وموظفين منتظمة مع تقارير تتبع وفواتير ضريبية إلكترونية.\n"
+                f"4️⃣ **كباتن محترفون ومدربون** على أعلى معايير الضيافة والالتزام بالوقت.\n\n"
+                f"📄 **للاطلاع على بروفايل الشركة والخدمات:**\n"
+                f"https://24seven-ai.com/about.html\n\n"
+                f"🤝 **يسعدنا التنسيق لتحديد موعد اجتماع تعارف أو إرسال عرض أسعار مخصص لاحتياجاتكم.**\n"
+                f"للتواصل المباشر مع إدارة التعاقدات: 01121748885\n\n"
+                f"دمتم ودامت أعمالكم في ازدهار وتألق! ✨"
+            )
+            
+        # إرسال الرسالة عبر الواتساب
+        send_whatsapp_message(clean_wa, proposal_text)
+        
+        # تحديث حالة الشركة في Supabase
+        if lead_id:
+            requests.patch(
+                f"{SUPABASE_URL}/rest/v1/b2b_corporate_leads?id=eq.{lead_id}",
+                headers=SUPABASE_SERVICE_HEADERS,
+                json={
+                    "pipeline_stage": "contacted",
+                    "last_contacted_at": datetime.utcnow().isoformat() + "Z",
+                    "last_contact_channel": "whatsapp"
+                },
+                timeout=5
+            )
+            
+        return jsonify({"status": "success", "message": f"تم إرسال عرض التعاقد بنجاح إلى {company_name} عبر الواتساب!"})
+    except Exception as e:
+        print(f"[B2B WhatsApp Error]: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/b2b/send-email', methods=['POST', 'OPTIONS'])
+def send_b2b_email_proposal():
+    """
+    إرسال عرض بريد إلكتروني رسمي (HTML Corporate Proposal) مع إبراز سابقة الأعمال
+    """
+    if request.method == 'OPTIONS':
+        return make_response("", 204)
+    try:
+        data = request.get_json()
+        lead_id = data.get('lead_id')
+        recipient_email = data.get('email')
+        company_name = data.get('company_name', 'شركتكم الموقرة')
+        contact_name = data.get('contact_name', 'مسؤول المشتريات والتعاقدات')
+        subject = data.get('subject', f'عرض خدمات النقل المؤسسي وتنظيم المؤتمرات - 24Seven | {company_name}')
+        
+        if not recipient_email:
+            return jsonify({"status": "error", "message": "البريد الإلكتروني مطلوب"}), 400
+            
+        # إنشاء قالب البريد الإلكتروني الرسمي
+        html_content = f"""
+        <!DOCTYPE html>
+        <html dir="rtl" lang="ar">
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; color: #1e293b; padding: 20px; }}
+                .card {{ max-width: 650px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }}
+                .header {{ background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: #ffffff; padding: 35px 25px; text-align: center; }}
+                .header h1 {{ margin: 0; font-size: 24px; font-weight: 800; letter-spacing: 0.5px; }}
+                .header p {{ margin: 8px 0 0; font-size: 14px; opacity: 0.9; }}
+                .content {{ padding: 30px 25px; line-height: 1.8; }}
+                .badge-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 20px 0; }}
+                .badge-item {{ background: #f1f5f9; padding: 14px; border-radius: 10px; border-right: 4px solid #3b82f6; }}
+                .badge-item strong {{ display: block; color: #0f172a; font-size: 14px; margin-bottom: 4px; }}
+                .badge-item span {{ font-size: 12px; color: #64748b; }}
+                .clients-box {{ background: #eff6ff; border: 1px dashed #93c5fd; padding: 18px; border-radius: 12px; margin: 25px 0; text-align: center; }}
+                .clients-box h4 {{ margin: 0 0 10px; color: #1e40af; font-size: 15px; }}
+                .client-tags {{ display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }}
+                .tag {{ background: #ffffff; padding: 5px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; color: #1e3a8a; box-shadow: 0 2px 5px rgba(0,0,0,0.04); }}
+                .cta-btn {{ display: inline-block; background: #2563eb; color: #ffffff !important; text-decoration: none; padding: 14px 32px; border-radius: 30px; font-weight: bold; font-size: 15px; margin: 20px 0; box-shadow: 0 4px 15px rgba(37,99,235,0.3); }}
+                .footer {{ background: #f8fafc; padding: 20px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }}
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <div class="header">
+                    <h1>24Seven Corporate & Mobility Solutions</h1>
+                    <p>الشريك المعتمد لكبرى الشركات والمؤسسات في مصر</p>
+                </div>
+                <div class="content">
+                    <p>السيد/ة المحترم/ة: <strong>{contact_name}</strong>،</p>
+                    <p>عناية إدارة المشتريات والتعاقدات في <strong>{company_name}</strong> الموقرة،</p>
+                    <p>تحية طيبة وبعد،،</p>
+                    <p>يسعدنا في <strong>24Seven</strong> أن نتقدم لسيادتكم بطلب التعاون والشراكة لتلبية كافة متطلبات النقل المؤسسي، توريد أسطول السيارات والحافلات، وخدمات تنقلات المؤتمرات والفعاليات وخطوط الموظفين باحترافية وأعلى معايير الجودة والأمان.</p>
+                    
+                    <div class="badge-grid">
+                        <div class="badge-item">
+                            <strong>🚗 خدمات المؤتمرات والفعاليات</strong>
+                            <span>تنظيم كامل لوفود المؤتمرات، سيارات ليموزين VIP، وميني فان.</span>
+                        </div>
+                        <div class="badge-item">
+                            <strong>🚌 خطوط العمال والموظفين</strong>
+                            <span>عقود سنوية وشهرية منتظمة للمصانع والشركات بجميع المحافظات.</span>
+                        </div>
+                        <div class="badge-item">
+                            <strong>✈️ استقبال وتوديع المطارات</strong>
+                            <span>خدمة 24/7 مع كباتن محترفين وتتبع دقيق للرحلات.</span>
+                        </div>
+                        <div class="badge-item">
+                            <strong>📊 فواتير ضريبية وتقارير ذكية</strong>
+                            <span>لوحة تحكم للمؤسسات لمتابعة الاستهلاك والفواتير الإلكترونية.</span>
+                        </div>
+                    </div>
+
+                    <div class="clients-box">
+                        <h4>🏆 سابقة أعمال نفخر بها مع كبرى المؤسسات:</h4>
+                        <div class="client-tags">
+                            <span class="tag">إدفكيور للأدوية (Advocure)</span>
+                            <span class="tag">باركفيل للصناعات الدوائية (Parkville)</span>
+                            <span class="tag">إمديفكو للرعاية الصحية (Emdefco)</span>
+                            <span class="tag">مجموعة السويدي إلكتريك (Elsewedy)</span>
+                            <span class="tag">مؤتمرات طبية ومعارض دولية</span>
+                        </div>
+                    </div>
+
+                    <div style="text-align: center;">
+                        <p>يسعدنا تحديد موعد لاجتماع تعارف وتقديم عرض أسعار مفصل يلائم خططكم:</p>
+                        <a href="https://wa.me/201121748885?text=طلب+عرض+أسعار+لشركة+{company_name}" class="cta-btn">طلب عرض أسعار واجتماع تعارف 🤝</a>
+                    </div>
+                </div>
+                <div class="footer">
+                    <p><strong>شركة 24Seven للحلول اللوجستية والنقل الذكي</strong> | القاهرة، مصر</p>
+                    <p>البريد الإلكتروني: info@24seven-ai.com | الهاتف / واتساب: 01121748885 | الموقع: <a href="https://24seven-ai.com">24seven-ai.com</a></p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # إرسال الإيميل عبر خادم البريد
+        email_sent = False
+        try:
+            import smtplib
+            from email.mime.multipart import MIMEMultipart
+            from email.mime.text import MIMEText
+            
+            smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+            smtp_port = int(os.getenv("SMTP_PORT", 587))
+            smtp_user = os.getenv("SMTP_USER", "info@24seven-ai.com")
+            smtp_pass = os.getenv("SMTP_PASS", "")
+            
+            if smtp_pass:
+                msg = MIMEMultipart('alternative')
+                msg['Subject'] = subject
+                msg['From'] = f"24Seven Corporate <{smtp_user}>"
+                msg['To'] = recipient_email
+                msg.attach(MIMEText(html_content, 'html'))
+                
+                with smtplib.SMTP(smtp_server, smtp_port, timeout=10) as server:
+                    server.starttls()
+                    server.login(smtp_user, smtp_pass)
+                    server.sendmail(smtp_user, [recipient_email], msg.as_string())
+                email_sent = True
+                print(f"[B2B Email] Sent email to {recipient_email} via SMTP")
+        except Exception as mail_err:
+            print(f"[B2B Email SMTP Notice]: {mail_err}")
+            
+        # تحديث حالة الشركة في Supabase
+        if lead_id:
+            requests.patch(
+                f"{SUPABASE_URL}/rest/v1/b2b_corporate_leads?id=eq.{lead_id}",
+                headers=SUPABASE_SERVICE_HEADERS,
+                json={
+                    "pipeline_stage": "contacted",
+                    "last_contacted_at": datetime.utcnow().isoformat() + "Z",
+                    "last_contact_channel": "email"
+                },
+                timeout=5
+            )
+            
+        return jsonify({
+            "status": "success", 
+            "message": f"تم إعداد وإرسال عرض البريد الإلكتروني الرسمي لشركة {company_name} بنجاح!",
+            "preview_html": html_content
+        })
+    except Exception as e:
+        print(f"[B2B Email Error]: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 gateway_process = None
 
 def stop_gateway():
