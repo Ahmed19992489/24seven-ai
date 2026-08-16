@@ -443,7 +443,7 @@ def log_chat_to_sheet(phone, sender, message):
 
 # = [WHATSAPP] WhatsApp Functions وظائف الواتساب
 # =====================================================
-def send_whatsapp_message(to, body_text):
+def send_whatsapp_message(to, body_text, instance_id=None):
     print(f"OUTGOING -> {to}: {body_text}")
     clean_to = str(to).replace('+', '').replace('0020', '20').replace(' ', '').strip()
     if clean_to.startswith('01'):
@@ -451,7 +451,8 @@ def send_whatsapp_message(to, body_text):
     elif clean_to.startswith('1'):
         clean_to = '20' + clean_to
 
-    instance_id = "692921bb-a5df-451d-8527-e1ee55a736f4" # local instance id for 201121748885
+    if not instance_id:
+        instance_id = "692921bb-a5df-451d-8527-e1ee55a736f4" # local instance id for 201121748885
     send_url = f"http://localhost:3001/instance/{instance_id}/send"
     payload = {
         "to": clean_to,
@@ -3444,6 +3445,7 @@ def send_b2b_whatsapp_proposal():
         contact_name = data.get('contact_name', 'مسؤول التعاقدات')
         service_type = data.get('service_type', 'all') # 'conferences' | 'staff_lines' | 'fleet_supply' | 'all'
         custom_message = data.get('custom_message')
+        instance_id = data.get('instance_id')
         
         if not whatsapp_number:
             return jsonify({"status": "error", "message": "رقم الواتساب مطلوب"}), 400
@@ -3479,8 +3481,8 @@ def send_b2b_whatsapp_proposal():
                 f"دمتم ودامت أعمالكم في ازدهار وتألق! ✨"
             )
             
-        # إرسال الرسالة عبر الواتساب
-        send_whatsapp_message(clean_wa, proposal_text)
+        # إرسال الرسالة عبر الواتساب من الرقم المختار
+        send_whatsapp_message(clean_wa, proposal_text, instance_id=instance_id)
         
         # تحديث حالة الشركة في Supabase
         if lead_id:
