@@ -16,7 +16,7 @@ creds_path = os.path.join(current_dir, 'credentials.json')
 
 # إعدادات التوقيت
 last_full_sync_time = 0
-FULL_SYNC_INTERVAL = 300  # كل 5 دقائق تحديث شامل
+FULL_SYNC_INTERVAL = 600  # كل 10 دقائق تحديث شامل للأرشيف
 
 # =======================================================
 # دوال مساعدة
@@ -98,7 +98,7 @@ def get_driver_id_by_phone(cursor, phone):
     except: return None
 
 # =======================================================
-# دالة المزامنة العكسية (تحديث الأرشيف)
+# دالة المزامنة العكسية (تحديث الأرشيف بالـ Chunks السريعة)
 # =======================================================
 def sync_sql_to_google_sheet(cursor, client):
     try:
@@ -133,9 +133,8 @@ def sync_sql_to_google_sheet(cursor, client):
         cursor.execute(query)
         rows = cursor.fetchall()
         
-        data_to_upload = []
         headers = ["التاريخ", "الوقت", "العميل", "هاتف العميل", "من", "إلى", "ركاب", "شنط", "السيارة", "النوع", "السعر", "ملاحظات", "الدفع", "الموظف", "SQL_ID", "السائق", "رقم السائق"]
-        data_to_upload.append(headers)
+        data_to_upload = [headers]
 
         for r in rows:
             row_data = [
@@ -147,8 +146,15 @@ def sync_sql_to_google_sheet(cursor, client):
             data_to_upload.append(row_data)
 
         if len(data_to_upload) > 1:
+            # تقسيم التحديث إلى حزم (Chunks) بحجم 500 صف لتفادي انقطاع الاتصال
+            CHUNK_SIZE = 500
             worksheet_db.clear()
-            worksheet_db.update(data_to_upload)
+            for i in range(0, len(data_to_upload), CHUNK_SIZE):
+                chunk = data_to_upload[i:i + CHUNK_SIZE]
+                start_row = i + 1
+                end_row = i + len(chunk)
+                worksheet_db.update(range_name=f'A{start_row}:Q{end_row}', values=chunk, value_input_option='USER_ENTERED')
+                time.sleep(0.5)
             print_log(f"🔄 تم تحديث الأرشيف بـ {len(data_to_upload)-1} رحلة (الأحدث في الأعلى).")
             
     except Exception as e:
@@ -510,8 +516,11 @@ while True:
     except Exception as e:
         err_str = str(e)
         if '429' in err_str or 'Quota exceeded' in err_str:
-            print_log("⏳ [حد أقتباس Google Sheets] تم الوصول للحد الأقصى لطلبات جوجل شيت (429). جاري التوقف المؤقت لمدة 45 ثانية لتصفير الحصة...")
+            print_log("⏳ [حد طلبات Google Sheets] تم الوصول للحد الأقصى لطلبات جوجل شيت (429). جاري التوقف المؤقت لمدة 45 ثانية لتصفير الحصة...")
             time.sleep(45)
+        elif 'getaddrinfo failed' in err_str or 'NameResolutionError' in err_str or 'RemoteDisconnected' in err_str or 'Read timed out' in err_str or '10054' in err_str or '10053' in err_str:
+            print_log(f"⚠️ [تذبذب اتصال الإنترنت] تعذر الاتصال بـ Google Sheets/السحابة مؤقتاً. جاري إعادة المحاولة التلقائية بعد 15 ثانية...")
+            time.sleep(15)
         else:
             print(f"\n❌ خطأ عام: {e}")
             print("⏳ إعادة المحاولة خلال 10 ثواني...")
