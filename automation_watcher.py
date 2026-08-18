@@ -429,15 +429,28 @@ while True:
                     status_to_check = ""
 
                 booking_was_sent = msg_booking_status != "" and "فشل" not in msg_booking_status
-                cache_key_driver = f"{str(t_date)}_{cust_phone}_{driver_name}_driver"
-                # ✅ إصلاح: اشتراط أن يكون تأكيد الحجز الفوري قد أُرسل أولاً
+                is_invalid_driver = (
+                    not driver_name or
+                    len(driver_name.strip()) < 3 or
+                    "تست" in driver_name or
+                    "test" in driver_name.lower() or
+                    "سائق" == driver_name.strip() or
+                    "كابتن" == driver_name.strip() or
+                    not driver_phone or
+                    len(driver_phone.strip()) < 8 or
+                    "0000000" in driver_phone or
+                    "01121747555" in driver_phone
+                )
+
+                # ✅ إصلاح: اشتراط أن يكون تأكيد الحجز الفوري قد أُرسل أولاً + وجود كابتن حقيقي برقم صحيح
                 if (driver_name.strip() != ""
+                        and not is_invalid_driver
                         and status_to_check == ""
                         and not is_past_trip
                         and booking_was_sent
                         and not sent_cache.get(cache_key_driver)):
 
-                    print(f"🚕 صف {real_idx}: تم تعيين سائق ({driver_name}) لـ ({cust_name})...")
+                    print(f"🚕 صف {real_idx}: تم تعيين كابتن حقيقي ({driver_name} - {driver_phone}) لـ ({cust_name})...")
 
                     # رسالة العميل — بيانات الكابتن
                     client_msg = (
