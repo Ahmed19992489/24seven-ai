@@ -1491,7 +1491,10 @@
                 if (extD) {
                     driverId = extD.id;
                 } else {
+                    const { data: topD } = await sb.from('drivers').select('id').order('id', { ascending: false }).limit(1);
+                    const nextDrvId = (topD && topD.length > 0 && topD[0].id) ? (topD[0].id + 1) : 1;
                     const { data: newD, error: dErr } = await sb.from('drivers').insert([{
+                        id: nextDrvId,
                         name: drvName,
                         phone: drvPhone,
                         is_external: true,
@@ -1530,7 +1533,10 @@
                         await sb.from('cars').update({ car_image_url: carPhotoUrl }).eq('id', carId);
                     }
                 } else {
+                    const { data: topC } = await sb.from('cars').select('id').order('id', { ascending: false }).limit(1);
+                    const nextCarId = (topC && topC.length > 0 && topC[0].id) ? (topC[0].id + 1) : 1;
                     const { data: newC, error: cErr } = await sb.from('cars').insert([{
+                        id: nextCarId,
                         brand: carBrand,
                         plate_number: carPlate,
                         is_external: true,
@@ -1766,7 +1772,10 @@
             if (!cleanPhone) { alert("رقم الهاتف غير صالح"); return; }
             
             try {
+                const { data: topD } = await sb.from('drivers').select('id').order('id', { ascending: false }).limit(1);
+                const nextDrvId = (topD && topD.length > 0 && topD[0].id) ? (topD[0].id + 1) : 1;
                 const { error } = await sb.from('drivers').insert([{
+                    id: nextDrvId,
                     name: name,
                     phone: cleanPhone,
                     is_external: true,
@@ -1788,7 +1797,10 @@
             const photoUrl = prompt("📸 أدخل رابط صورة السيارة (اختياري):") || "";
             
             try {
+                const { data: topC } = await sb.from('cars').select('id').order('id', { ascending: false }).limit(1);
+                const nextCarId = (topC && topC.length > 0 && topC[0].id) ? (topC[0].id + 1) : 1;
                 const { error } = await sb.from('cars').insert([{
+                    id: nextCarId,
                     brand: brand,
                     plate_number: plate,
                     is_external: true,
