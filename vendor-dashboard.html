@@ -517,6 +517,24 @@
             throw new Error("تعذر رفع صورة السيارة، يرجى المحاولة مرة أخرى.");
         }
 
+        function getApiBaseUrl() {
+            const loc = window.location;
+            const saved = localStorage.getItem('mod_api_url');
+            if (saved && saved.trim() !== '') {
+                let s = saved.trim().replace(/\/$/, '').replace(/\/moderator$/, '').replace(/\/dashboard$/, '');
+                if (s.startsWith('ps://')) s = 'https://' + s.substring(5);
+                else if (s.startsWith('p://')) s = 'http://' + s.substring(4);
+                else if (!s.startsWith('http://') && !s.startsWith('https://')) s = 'https://' + s;
+                return s;
+            }
+            if (loc.protocol === 'file:') return 'http://localhost:3000';
+            if (loc.hostname.includes('24seven-ai.com') || loc.hostname.includes('onrender.com')) {
+                return `${loc.protocol}//${loc.hostname}`;
+            }
+            if (loc.hostname === 'localhost' || loc.hostname === '127.0.0.1') return 'http://localhost:3000';
+            return `${loc.protocol}//${loc.hostname}${loc.port ? ':' + loc.port : ''}`;
+        }
+
         // تهيئة EmailJS
         (function () { emailjs.init('KkVNrxD2AIrmD-BxM'); })();
 
@@ -1568,9 +1586,56 @@
                     message_type: 'system'
                 }]);
 
-                // 5. ✅ مزامنة بيانات السائق مع الشيت لإرسال رسائل الواتساب
+                // 5. جلب بيانات الرحلة الكاملة لإرسال رسائل الواتساب
+                let tripObj = (cachedTrips || []).find(t => String(t.id) === String(tripId));
+                if (!tripObj) {
+                    const { data: tDb } = await sb.from('trips').select('*').eq('id', tripId).maybeSingle();
+                    tripObj = tDb;
+                }
+
+                const custPhone = (tripObj?.client_phone || tripObj?.customer_phone || '').replace(/\D/g, '');
+                const custName = tripObj?.manual_client_name || 'عزيزنا العميل';
+                const pickupLoc = tripObj?.pickup_location || '';
+                const dropoffLoc = tripObj?.dropoff_location || '';
+                const tripDateVal = tripObj?.trip_date || '';
+                const tripTimeVal = tripObj?.trip_time || '';
+                const priceVal = tripObj?.estimated_price || 0;
+                const notesVal = tripObj?.admin_notes || '';
+
+                // 6. ✅ إرسال رسالة واتساب للعميل فوراً
+                if (custPhone) {
+                    const clientMsg = `أهلاً أستاذ ${custName} 👋\nتم تعيين الكابتن لرحلتك بنجاح! 🚕\n\n👤 الكابتن: ${drvName}\n📱 هاتف: 01121748885\n🚘 السيارة: ${carBrand} [ ${carPlate} ]\n📍 المسار: ${pickupLoc} ➝ ${dropoffLoc}\n\n🔗 لمتابعة الرحلة والتواصل مع الكابتن:\nhttps://24seven-ai.com/limousine.html\n\n24Seven تتمنى لك رحلة سعيدة! ✨`;
+                    
+                    fetch(`${getApiBaseUrl()}/api/send_reply`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+                        body: JSON.stringify({
+                            channel: 'whatsapp',
+                            sender_id: custPhone,
+                            message: clientMsg,
+                            mod_name: 'مكتب التشغيل'
+                        })
+                    }).then(r => r.json()).then(res => console.log('📤 Client WA sent:', res)).catch(e => console.warn('Customer WA send error:', e));
+                }
+
+                // 7. ✅ إرسال رسالة واتساب للسائق (أمر الشغل) فوراً
+                if (drvPhone) {
+                    const driverMsg = `أمر شغل جديد 🚨\n👤 العميل: ${custName}\n📱 تليفون العميل: ${custPhone || '-'}\n📅 التاريخ: ${tripDateVal}\n⏰ الوقت: ${tripTimeVal}\n📍 التحرك: ${pickupLoc}\n🏁 الوصول: ${dropoffLoc}\n💵 التحصيل من العميل: ${Number(priceVal).toLocaleString()} EGP\n📝 ملاحظات: ${notesVal}\n\n🔗 لبدء الرحلة عبر تطبيق الكابتن:\nhttps://24seven-ai.com/driver.html`;
+                    
+                    fetch(`${getApiBaseUrl()}/api/send_reply`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+                        body: JSON.stringify({
+                            channel: 'whatsapp',
+                            sender_id: drvPhone,
+                            message: driverMsg,
+                            mod_name: 'مكتب التشغيل'
+                        })
+                    }).then(r => r.json()).then(res => console.log('📤 Driver WA sent:', res)).catch(e => console.warn('Driver WA send error:', e));
+                }
+
+                // 8. ✅ مزامنة بيانات السائق مع الشيت وقاعدة البيانات
                 try {
-                    const tripObj = (cachedTrips || []).find(t => String(t.id) === String(tripId));
                     let finalSheetRow = tripObj?.sheet_row || '';
                     let finalWebId = tripObj?.google_res_id || '';
                     let finalSqlServerId = tripObj?.sql_server_id || tripObj?.admin_notes?.match(/sql[_-]?id[:\s]+(\d+)/i)?.[1] || '';
@@ -1588,6 +1653,20 @@
                         finalSheetRow = queryRes.sheet_row;
                         finalWebId = queryRes.id;
                         finalSqlServerId = queryRes.sql_server_id;
+                    }
+
+                    // تحديث مباشر في Supabase
+                    if (finalWebId || finalSqlServerId) {
+                        const updatePayload = {
+                            modified_driver_name: drvName,
+                            modified_driver_phone: drvPhone,
+                            driver_msg_status: 'تم إبلاغ الطرفين ✅'
+                        };
+                        if (finalWebId) {
+                            await sb.from('google_reservations').update(updatePayload).eq('id', finalWebId);
+                        } else if (finalSqlServerId) {
+                            await sb.from('google_reservations').update(updatePayload).eq('sql_server_id', String(finalSqlServerId));
+                        }
                     }
 
                     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
@@ -1610,7 +1689,7 @@
                 } catch(sheetErr) { console.error('Vendor Sheet Sync Error:', sheetErr); }
 
                 document.getElementById('assign-driver-modal').style.display = 'none';
-                alert("✅ تم إسناد الكابتن والسيارة بنجاح وتم تحويل حالة الرحلة للبدء!");
+                alert("✅ تم إسناد الكابتن والسيارة بنجاح وإرسال رسائل الواتساب للعميل وللكابتن!");
                 loadDashboardData();
             } catch(e) {
                 alert("❌ خطأ أثناء الإسناد: " + e.message);

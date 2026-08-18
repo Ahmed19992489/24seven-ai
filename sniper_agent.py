@@ -47,7 +47,7 @@ http_session = create_resilient_session()
 # 🤖 إعدادات Groq / AI Parser (فائق السرعة 300ms)
 # ==========================================
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "allam-2-7b")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 SYSTEM_PROMPT = """You are an expert data parsing assistant for a limousine and car booking platform in Egypt.
@@ -170,7 +170,7 @@ def save_setting(key, value):
         print(f"[Sniper Setting] Error saving {key}: {e}")
         return False
 
-GROQ_MODELS_POOL = ["llama-3.1-8b-instant", "allam-2-7b", "llama-3.3-70b-versatile", "qwen/qwen3.6-27b"]
+GROQ_MODELS_POOL = ["allam-2-7b", "qwen/qwen3.6-27b", "openai/gpt-oss-20b"]
 _groq_rate_limit_until = 0  # وقت انتهاء حظر الـ Rate Limit
 
 def call_ai_parser(text):
