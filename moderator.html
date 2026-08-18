@@ -3721,8 +3721,14 @@
                     if (assignType === 'external') {
                         // 2. Create actual trip record for external office
                         const extDriverInfo = externalDriverPhone ? `\n🚕 السائق الخارجي: ${externalDriverName || 'غير محدد'} | 📱 ${externalDriverPhone}` : '';
+                        const resIdVal = trip.google_res_id || (isGoogleRes ? currentAssignTripId.toString().replace('gr_', '') : '');
+                        const sheetRowVal = trip.sheet_row || '';
+                        const sqlIdVal = trip.sql_server_id || '';
+
                         const { data: newTrip, error: tripErr } = await sbClient.from('trips').insert([{
                             user_id: clientUserId,
+                            manual_client_name: trip.customer_name || '',
+                            client_phone: trip.customer_phone || '',
                             pickup_location: trip.pickup_address || '',
                             dropoff_location: trip.dropoff_address || '',
                             estimated_price: Number(trip.cost) || 0,
@@ -3730,23 +3736,22 @@
                             is_outsourced: true,
                             vendor_id: vendorId,
                             our_commission: commission,
-                            admin_notes: `📅 ${trip.trip_date || '--'} - ${trip.trip_time || '--'}\n👥 ${trip.passengers || '1'}\n🧳 ${trip.bags || '0'}\nنوع التحصيل: ${trip.payment_method || 'غير محدد'}\nحجز موديتور: ${currentModName}\nالعميل: ${trip.customer_name}${extDriverInfo}\nملاحظات: ${trip.notes || ''}\n${note ? '--- ملاحظات التعيين ---\n' + note : ''}`,
+                            admin_notes: `📅 ${trip.trip_date || '--'} - ${trip.trip_time || '--'}\n👥 ${trip.passengers || '1'}\n🧳 ${trip.bags || '0'}\nنوع التحصيل: ${trip.payment_method || 'غير محدد'}\nحجز موديتور: ${currentModName}\nالعميل: ${trip.customer_name}${extDriverInfo}\nملاحظات: ${trip.notes || ''}\n[google_res_id:${resIdVal}]\n[sheet_row:${sheetRowVal}]\n[sql_server_id:${sqlIdVal}]\n${note ? '--- ملاحظات التعيين ---\n' + note : ''}`,
                             car_type: trip.car_type
                         }]).select().single();
 
                         if (tripErr) throw tripErr;
 
                         realTripId = newTrip.id;
-                        finalSqlId = String(newTrip.id);
+                        finalSqlId = sqlIdVal || String(newTrip.id);
 
                         // 3. Update reservation status in Supabase
                         const { error: resErr } = await sbClient
                             .from('google_reservations')
                             .update({ 
-                                status: 'تم الترحيل',
-                                sql_server_id: finalSqlId
+                                status: 'تم الترحيل'
                             })
-                            .eq('id', trip.google_res_id || currentAssignTripId.toString().replace('gr_', ''));
+                            .eq('id', resIdVal);
                         
                         if(resErr) throw resErr;
                     } else {
