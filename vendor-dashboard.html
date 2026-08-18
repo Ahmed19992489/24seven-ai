@@ -476,6 +476,7 @@
         // إعداد اتصال Supabase
         const supabaseUrl = 'https://khskudtxbypohvnreloi.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtoc2t1ZHR4Ynlwb2h2bnJlbG9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTIwMjksImV4cCI6MjEwMTg4ODAyOX0.jrK8y5zpDncgFkmdD4hkFRd5-kW1gWdVSRIb0jh7o2I';
+        const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtoc2t1ZHR4Ynlwb2h2bnJlbG9pIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NjMxMjAyOSwiZXhwIjoyMTAxODg4MDI5fQ.uyCTVGkoeoz4xB3r2muV_fLiI62QIw-65g2nVeIb62w';
         const sb = supabase.createClient(supabaseUrl, supabaseKey);
 
         let currentVendor = null;
@@ -487,6 +488,34 @@
         let currentTripsFilter = 'today';
         
         let vendorProfileId = null;
+
+        async function uploadCarPhoto(file, carPlate) {
+            const compressed = await compressImage(file);
+            const safePlate = (carPlate || 'car').replace(/[^\w\d]/g, '_').replace(/_+/g, '_');
+            const fileName = `cars/${safePlate}_${Date.now()}.jpg`;
+            
+            const buckets = ['trip-photos', 'omni-media', 'cars'];
+            for (const b of buckets) {
+                try {
+                    const res = await fetch(`${supabaseUrl}/storage/v1/object/${b}/${fileName}`, {
+                        method: 'POST',
+                        headers: {
+                            'apikey': supabaseServiceKey,
+                            'Authorization': `Bearer ${supabaseServiceKey}`,
+                            'Content-Type': 'image/jpeg',
+                            'x-upsert': 'true'
+                        },
+                        body: compressed
+                    });
+                    if (res.ok) {
+                        return `${supabaseUrl}/storage/v1/object/public/${b}/${fileName}`;
+                    }
+                } catch(e) {
+                    console.warn(`Upload to bucket ${b} failed:`, e);
+                }
+            }
+            throw new Error("تعذر رفع صورة السيارة، يرجى المحاولة مرة أخرى.");
+        }
 
         // تهيئة EmailJS
         (function () { emailjs.init('KkVNrxD2AIrmD-BxM'); })();
@@ -1487,17 +1516,7 @@
                 // رفع الصورة إذا تم اختيارها
                 if (photoFileInput && photoFileInput.files[0]) {
                     btn.textContent = '⏳ جاري رفع صورة السيارة...';
-                    const compressed = await compressImage(photoFileInput.files[0]);
-                    // ✅ إصلاح: إزالة الحروف العربية والمسافات من اسم الملف لمنع خطأ "Invalid key"
-                    const safePlate = carPlate.replace(/[^\w\d]/g, '_').replace(/_+/g, '_');
-                    const path = `cars/${safePlate}_${Date.now()}.jpg`;
-                    const { error: uploadErr } = await sb.storage.from('trip-photos').upload(path, compressed, { upsert: true, contentType: 'image/jpeg' });
-                    if (uploadErr) throw uploadErr;
-
-                    const { data: urlData } = sb.storage.from('trip-photos').getPublicUrl(path);
-                    if (urlData && urlData.publicUrl) {
-                        carPhotoUrl = urlData.publicUrl;
-                    }
+                    carPhotoUrl = await uploadCarPhoto(photoFileInput.files[0], carPlate);
                 } else if (!existingCarPhoto) {
                     alert("❌ صورة السيارة مطلوبة للسيارات الجديدة! يرجى اختيار ملف صورة السيارة.");
                     btn.disabled = false;
