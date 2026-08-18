@@ -718,6 +718,25 @@ def handle_confirmation(sender, text, row=None):
                 sheet.update_acell(f"AB{row}", "رفض")
                 try: sheet.update_acell(f"AA{row}", "ملغي") 
                 except: pass
+                
+                # إلغاء كافة رحلات العميل المرتبطة (ذهاب وعودة أو في نفس الفترة)
+                try:
+                    all_rows_val = sheet.get_all_values()
+                    clean_s = clean_phone_strict(sender)
+                    cancel_batch = []
+                    for idx_r, r_data in enumerate(all_rows_val[1:], start=2):
+                        while len(r_data) < 28: r_data.append("")
+                        if idx_r != row and _phones_match(r_data[4], clean_s):
+                            r_dec = str(r_data[27]).strip()
+                            if r_dec not in ["وافق", "مؤكد", "تأكيد", "رفض", "ملغي", "إلغاء"]:
+                                cancel_batch.append({'range': f'AA{idx_r}', 'values': [['ملغي']]})
+                                cancel_batch.append({'range': f'AB{idx_r}', 'values': [['رفض']]})
+                    if cancel_batch:
+                        sheet.batch_update(cancel_batch, value_input_option='USER_ENTERED')
+                        print(f"[INFO] Also cancelled {len(cancel_batch)//2} linked trips for {sender}")
+                except Exception as link_err:
+                    print(f"[Linked-Cancel Error]: {link_err}")
+
                 # تحديث Supabase فورياً
                 try:
                     requests.patch(
@@ -733,6 +752,14 @@ def handle_confirmation(sender, text, row=None):
             except Exception as e:
                 print(f"[ERROR] Write failed: {e}")
         else:
+            # فحص عبارات الشكر والتحية والإنهاء لمنع تكرار طلب التأكيد
+            thanks_keywords = ['شكرا', 'شكر', 'تسلم', 'يسلمو', 'جزاك', 'الف شكر', 'العفو', 'حبيبي', 'يا غالي', 'مشكور', 'ذوق', 'ممتن', 'ربنا يخليك', 'تمام شكرا', 'صباح الخير', 'مساء الخير']
+            text_cleaned = text.lower().strip()
+            if any(kw in text_cleaned for kw in thanks_keywords):
+                print(f"[INFO] Client {sender} sent polite/thanks phrase: '{text}'")
+                send_whatsapp_message(sender, "العفو يا فندم، الشكر لله 🌹 دائماً في خدمتكم ونتشرف بكم في أي وقت! ✨")
+                return
+
             # رد مرن للعميل في حالة إرسال نص غير التأكيد/الإلغاء
             print(f"[INFO] Unclear confirmation reply from {sender}: {text}")
             send_whatsapp_message(sender, "وصلتنا رسالتك يا فندم 🌹\nهل تؤكد حجز الرحلة؟ (يرجى الرد بـ: نعم / تأكيد أو إلغاء)")
