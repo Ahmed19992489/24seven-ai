@@ -3432,7 +3432,7 @@
 
             // --- تحديث الواجهة عند النجاح المؤكد ---
             const newMsg = {
-                id: 'temp_' + Date.now(),
+                id: 'msg_' + Date.now(),
                 sender_id: apiSenderId,
                 sender_name: currentModName || 'Admin',
                 message_text: text,
@@ -3442,11 +3442,22 @@
                 whatsapp_instance_id: whatsappInstanceId
             };
             if (chat) {
-                chat.messages.push(newMsg);
+                const existingIdx = chat.messages.findIndex(m => m.id === newMsg.id || (m.id.startsWith('temp_') && m.message_text === text));
+                if (existingIdx !== -1) {
+                    chat.messages[existingIdx] = newMsg;
+                } else {
+                    chat.messages.push(newMsg);
+                }
+                chat.unrepliedCount = 0;
             }
-            allMessages.push(newMsg);
+            const existingAllIdx = allMessages.findIndex(m => m.id === newMsg.id || (m.id.startsWith('temp_') && m.message_text === text));
+            if (existingAllIdx !== -1) {
+                allMessages[existingAllIdx] = newMsg;
+            } else {
+                allMessages.push(newMsg);
+            }
             renderMessages();
-            loadUnifiedChats();
+            regroupAndRender();
         }
 
         async function handleSend(e) {
@@ -3458,23 +3469,40 @@
             if (activeChatType === 'omni') {
                 const chat = groupedChats[activeChatId];
                 input.value = '';
+                
+                // ⚡ تحديث فوري فائق السرعة للواجهة (Optimistic UI) بدون انتظار ثانية واحدة
+                const tempMsg = {
+                    id: 'temp_' + Date.now(),
+                    sender_id: activeChatId,
+                    sender_name: currentModName || 'Admin',
+                    message_text: text,
+                    is_from_admin: true,
+                    created_at: new Date().toISOString(),
+                    channel: chat ? chat.channel : 'whatsapp',
+                    whatsapp_instance_id: chat ? chat.whatsapp_instance_id : null
+                };
+                if (chat) {
+                    chat.messages.push(tempMsg);
+                    chat.unrepliedCount = 0;
+                }
+                allMessages.push(tempMsg);
+                renderMessages();
+                regroupAndRender();
+
                 const btn = document.getElementById('omni-send-btn');
                 const origHtml = btn ? btn.innerHTML : '';
                 if (btn) {
-                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-check text-emerald-400"></i>';
+                    setTimeout(() => { if (btn) btn.innerHTML = origHtml; }, 800);
                 }
+
                 try {
-                    await executeOmniSendReply(activeChatId, chat.channel, text);
+                    await executeOmniSendReply(activeChatId, chat ? chat.channel : 'whatsapp', text);
                     return true;
                 } catch(e) {
                     alert('خطأ في إرسال الرسالة: ' + e.message);
                     return false;
                 } finally {
-                    if (btn) {
-                        btn.innerHTML = origHtml;
-                        btn.disabled = false;
-                    }
                     input.focus();
                 }
             } 
