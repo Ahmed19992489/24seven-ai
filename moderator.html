@@ -1302,11 +1302,14 @@
         function getApiBaseUrl() {
             const loc = window.location;
             
-            // 1. تحقق من الرابط المحفوظ في localStorage أولاً (حتى على Production)
-            // هذا يسمح لك بتشغيل الباك إند على جهازك المحلي وربطه بالدومين الحي عبر ngrok
+            // 1. تحقق من الرابط المحفوظ في localStorage أولاً (مع التصحيح التلقائي للأخطاء مثل ps://)
             const saved = localStorage.getItem('mod_api_url');
             if (saved && saved.trim() !== '') {
-                return saved.trim().replace(/\/$/, '').replace(/\/moderator$/, '').replace(/\/dashboard$/, '');
+                let s = saved.trim().replace(/\/$/, '').replace(/\/moderator$/, '').replace(/\/dashboard$/, '');
+                if (s.startsWith('ps://')) s = 'https://' + s.substring(5);
+                else if (s.startsWith('p://')) s = 'http://' + s.substring(4);
+                else if (!s.startsWith('http://') && !s.startsWith('https://')) s = 'https://' + s;
+                return s;
             }
             
             if (loc.protocol === 'file:') {
@@ -1351,9 +1354,14 @@
         }
 
         function saveApiSettings() {
-            const val = document.getElementById('api-url-input').value;
+            let val = (document.getElementById('api-url-input').value || '').trim();
+            if (val.startsWith('ps://')) val = 'https://' + val.substring(5);
+            else if (val.startsWith('p://')) val = 'http://' + val.substring(4);
+            else if (val && !val.startsWith('http://') && !val.startsWith('https://')) val = 'https://' + val;
+            val = val.replace(/\/+$/, '');
             localStorage.setItem('mod_api_url', val);
-            alert('✅ تم حفظ عنوان السيرفر بنجاح!');
+            document.getElementById('api-url-input').value = val;
+            alert('✅ تم ضبط وحفظ عنوان السيرفر بنجاح!');
         }
         let currentModName = localStorage.getItem('mod_name');
         let currentModId = localStorage.getItem('mod_id');
@@ -2100,7 +2108,14 @@
         }
 
         async function loadUnifiedChats() {
-            if(allTrips.length === 0) await loadSummary();
+            const listEl = document.getElementById('chat-list');
+            if (listEl && (!unifiedChatsList || unifiedChatsList.length === 0)) {
+                listEl.innerHTML = '<div class="p-6 text-center text-xs text-slate-400"><i class="fas fa-spinner fa-spin text-teal-600 mb-2 text-base"></i><br>جاري تحميل المحادثات...</div>';
+            }
+
+            if(allTrips.length === 0) {
+                try { await loadSummary(); } catch(err) { console.warn("loadSummary skip:", err); }
+            }
 
             let omniData = null;
             try {
@@ -2108,7 +2123,7 @@
                     .from('omnichannel_messages')
                     .select('id, sender_id, sender_name, channel, message_text, message_type, is_from_admin, created_at')
                     .order('created_at', { ascending: false })
-                    .limit(300);
+                    .limit(800);
                 if (!res.error && res.data && res.data.length > 0) {
                     omniData = res.data;
                 }
@@ -2116,7 +2131,9 @@
 
             if (!omniData || omniData.length === 0) {
                 try {
-                    const fbResp = await fetch(`${getApiBaseUrl()}/api/omnichannel/fallback`);
+                    const fbResp = await fetch(`${getApiBaseUrl()}/api/omnichannel/fallback`, {
+                        headers: { 'ngrok-skip-browser-warning': 'true' }
+                    });
                     const fbJson = await fbResp.json();
                     if (fbJson && fbJson.data && fbJson.data.length > 0) {
                         omniData = fbJson.data;
@@ -4079,11 +4096,14 @@
             let reservations = [];
             let trips = [];
 
+            const dateHyphen = (dateStr || '').replace(/\//g, '-').trim();
+            const dateSlash = (dateStr || '').replace(/-/g, '/').trim();
+
             try {
                 const [reservationsResult, tripsResult] = await Promise.all([
                     sbClient.from('google_reservations')
                         .select('*')
-                        .eq('trip_date', dateStr)
+                        .or(`trip_date.eq.${dateHyphen},trip_date.eq.${dateSlash}`)
                         .order('trip_time', { ascending: true }),
                     sbClient.from('trips')
                         .select(`*, cars:cars(brand, plate_number, car_image_url), drivers:drivers(name, phone)`)
@@ -4093,7 +4113,10 @@
                     reservations = reservationsResult.data;
                 }
                 if (!tripsResult.error && tripsResult.data) {
-                    trips = tripsResult.data;
+                    trips = tripsResult.data.filter(t => {
+                        const tDate = (t.trip_date || '').replace(/\//g, '-').trim();
+                        return tDate === dateHyphen;
+                    });
                 }
             } catch(e) { console.warn("Supabase loadTripsForDate error, fallback active:", e); }
 
@@ -4101,13 +4124,12 @@
                 try {
                     const allSheetRes = await fetchDirectSheetReservations();
                     if (allSheetRes && allSheetRes.length > 0) {
-                        const targetClean = (dateStr || '').replace(/\//g, '-').trim();
                         reservations = allSheetRes.filter(r => {
                             const rDateClean = (r.trip_date || '').replace(/\//g, '-').trim();
                             if (!rDateClean) return false;
-                            if (rDateClean === targetClean) return true;
+                            if (rDateClean === dateHyphen) return true;
                             const partsR = rDateClean.split('-');
-                            const partsT = targetClean.split('-');
+                            const partsT = dateHyphen.split('-');
                             if (partsR.length === 3 && partsT.length === 3) {
                                 const fmtR = partsR.map(p => p.padStart(2, '0')).join('-');
                                 const fmtT = partsT.map(p => p.padStart(2, '0')).join('-');
@@ -4115,9 +4137,6 @@
                             }
                             return false;
                         });
-                        if (reservations.length === 0) {
-                            reservations = allSheetRes.slice(0, 50);
-                        }
                     }
                 } catch(e) { console.error("Direct Sheet Fallback error in loadTripsForDate:", e); }
             }
@@ -4417,31 +4436,38 @@
             document.getElementById('search-results-count').textContent = `تم تصفية ${filtered.length} نتيجة`;
         }
 
+        function formatLocalDate(d) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
         async function filterByDate(type) {
             const btnT = document.getElementById('filter-today');
             const btnTom = document.getElementById('filter-tomorrow');
             
-            btnT.classList.remove('bg-teal-600', 'text-white');
-            btnTom.classList.remove('bg-teal-600', 'text-white');
+            btnT?.classList.remove('bg-teal-600', 'text-white');
+            btnTom?.classList.remove('bg-teal-600', 'text-white');
             
             let dateStr = "";
             const now = new Date();
             if(type === 'today') {
-                dateStr = now.toISOString().split('T')[0];
-                btnT.classList.add('bg-teal-600', 'text-white');
+                dateStr = formatLocalDate(now);
+                btnT?.classList.add('bg-teal-600', 'text-white');
             } else {
                 const tomorrow = new Date(now);
                 tomorrow.setDate(now.getDate() + 1);
-                dateStr = tomorrow.toISOString().split('T')[0];
-                btnTom.classList.add('bg-teal-600', 'text-white');
+                dateStr = formatLocalDate(tomorrow);
+                btnTom?.classList.add('bg-teal-600', 'text-white');
             }
 
             const resultsCount = document.getElementById('search-results-count');
-            resultsCount.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحميل...';
+            if (resultsCount) resultsCount.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحميل...';
 
             const merged = await loadTripsForDate(dateStr);
             allTrips = merged;
-            resultsCount.textContent = `تم العثور على ${merged.length} رحلة لـ ${type === 'today' ? 'اليوم' : 'الغد'}`;
+            if (resultsCount) resultsCount.textContent = `تم العثور على ${merged.length} رحلة لـ ${type === 'today' ? 'اليوم' : 'الغد'}`;
             renderTripsTable(merged);
         }
 
