@@ -12,6 +12,8 @@
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         :root {
             --bg-dark: #0f172a;
@@ -1223,36 +1225,7 @@
         </div>
     </div>
 
-    <script>
-        window.gm_authFailure = function() {
-            console.warn("Google Maps Auth Failure (Key restriction or billing error). Hiding map container and cleaning up inputs.");
-            const mapDiv = document.getElementById('map');
-            if (mapDiv) mapDiv.style.display = 'none';
-            const infoBar = document.getElementById('map-info-bar');
-            if (infoBar) infoBar.style.display = 'none';
 
-            // تنظيف أي تراكبات خطأ خريطة تم حقنها من جوجل في خانات النصوص
-            setTimeout(() => {
-                document.querySelectorAll('.pac-container, .gm-err-container, .gm-err-content').forEach(el => el.remove());
-                ['pickup', 'dropoff', 'extra-point'].forEach(id => {
-                    const input = document.getElementById(id);
-                    if (input) {
-                        input.style.backgroundImage = 'none';
-                        input.style.backgroundColor = '';
-                        if (input.parentNode) {
-                            Array.from(input.parentNode.children).forEach(child => {
-                                if (child !== input && !child.classList.contains('fas') && !child.classList.contains('fa-circle-dot') && !child.classList.contains('fa-location-dot') && !child.classList.contains('fa-plus-circle')) {
-                                    child.remove();
-                                }
-                            });
-                        }
-                    }
-                });
-            }, 100);
-        };
-    </script>
-    <script
-        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBYKnZ70SKsvgM9_LAcQDzfgfy41eeRZqg&libraries=places&language=ar"></script>
 
     <script>
         // ==========================================
@@ -1470,259 +1443,383 @@
                 .subscribe();
         }
 
+        const EGYPT_LANDMARKS = {
+            'مطار القاهرة الدولي': { lat: 30.1219, lng: 31.4057, desc: 'مصر الجديدة، القاهرة' },
+            'مطار برج العرب الدولي': { lat: 30.9177, lng: 29.6964, desc: 'برج العرب، الإسكندرية' },
+            'مطار سفنكس الدولي': { lat: 30.1147, lng: 30.8252, desc: 'طريق القاهرة الإسكندرية الصحراوي' },
+            'مطار شرم الشيخ الدولي': { lat: 27.9774, lng: 34.3950, desc: 'شرم الشيخ، جنوب سيناء' },
+            'مطار الغردقة الدولي': { lat: 27.1801, lng: 33.7994, desc: 'الغردقة، البحر الأحمر' },
+            'الإسكندرية - محطة الرمل': { lat: 31.2001, lng: 29.9187, desc: 'وسط الإسكندرية' },
+            'الإسكندرية - سموحة': { lat: 31.2156, lng: 29.9553, desc: 'سموحة، الإسكندرية' },
+            'الإسكندرية - سيدي بشر / ميامي': { lat: 31.2650, lng: 29.9920, desc: 'شرق الإسكندرية' },
+            'الإسكندرية - العجمي': { lat: 31.1189, lng: 29.7719, desc: 'غرب الإسكندرية' },
+            'الإسكندرية - المعمورة': { lat: 31.2858, lng: 30.0272, desc: 'المنتزه، الإسكندرية' },
+            'القاهرة - التجمع الخامس': { lat: 30.0074, lng: 31.4312, desc: 'القاهرة الجديدة' },
+            'القاهرة - مدينة نصر': { lat: 30.0626, lng: 31.3219, desc: 'مدينة نصر، القاهرة' },
+            'القاهرة - مصر الجديدة': { lat: 30.0886, lng: 31.3219, desc: 'مصر الجديدة، القاهرة' },
+            'القاهرة - المعادي': { lat: 29.9602, lng: 31.2569, desc: 'المعادي، القاهرة' },
+            'القاهرة - الرحاب': { lat: 30.0667, lng: 31.4833, desc: 'القاهرة الجديدة' },
+            'القاهرة - مدينتي': { lat: 30.1150, lng: 31.6310, desc: 'طريق السويس، القاهرة' },
+            'الجيزة - الشيخ زايد': { lat: 30.0731, lng: 30.9462, desc: 'الشيخ زايد، الجيزة' },
+            'الجيزة - 6 أكتوبر': { lat: 29.9285, lng: 30.9188, desc: 'مدينة 6 أكتوبر، الجيزة' },
+            'الجيزة - الدقي / المهندسين': { lat: 30.0478, lng: 31.2079, desc: 'الجيزة' },
+            'الجيزة - الهرم / فيصل': { lat: 29.9783, lng: 31.1320, desc: 'الجيزة' },
+            'العاصمة الإدارية الجديدة': { lat: 30.0059, lng: 31.7350, desc: 'شرق القاهرة' },
+            'الساحل الشمالي - مارينا': { lat: 30.8258, lng: 28.9482, desc: 'العلمين، مطروح' },
+            'الساحل الشمالي - سيدي عبد الرحمن': { lat: 30.9500, lng: 28.5167, desc: 'العلمين، مطروح' },
+            'الساحل الشمالي - رأس الحكمة': { lat: 31.1100, lng: 27.8500, desc: 'مطروح' },
+            'مرسى مطروح': { lat: 31.3543, lng: 27.2374, desc: 'مدينة مرسى مطروح' },
+            'العين السخنة': { lat: 29.6000, lng: 32.3167, desc: 'السويس' },
+            'طنطا': { lat: 30.7865, lng: 31.0004, desc: 'محافظة الغربية' },
+            'المنصورة': { lat: 31.0364, lng: 31.3807, desc: 'محافظة الدقهلية' },
+            'الزقازيق': { lat: 30.5877, lng: 31.5020, desc: 'محافظة الشرقية' },
+            'بورسعيد': { lat: 31.2565, lng: 32.2841, desc: 'محافظة بورسعيد' },
+            'الإسماعيلية': { lat: 30.5965, lng: 32.2715, desc: 'محافظة الإسماعيلية' },
+            'السويس': { lat: 29.9668, lng: 32.5498, desc: 'محافظة السويس' },
+            'شرم الشيخ': { lat: 27.9158, lng: 34.3300, desc: 'جنوب سيناء' },
+            'الغردقة': { lat: 27.2579, lng: 33.8116, desc: 'البحر الأحمر' },
+            'الجونة': { lat: 27.3940, lng: 33.6766, desc: 'شمال الغردقة' },
+            'دهب': { lat: 28.5097, lng: 34.5137, desc: 'جنوب سيناء' }
+        };
+
         function initMaps() {
             try {
+                const mapEl = document.getElementById("map");
+                if (!mapEl) return;
+
+                if (window.leafletMap) {
+                    try { window.leafletMap.remove(); } catch(e) {}
+                }
+
+                // إنشاء خريطة Leaflet
+                const lMap = L.map('map', {
+                    center: [30.0444, 31.2357],
+                    zoom: 7,
+                    zoomControl: true
+                });
+
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; 24Seven Maps &copy; OpenStreetMap',
+                    subdomains: 'abcd',
+                    maxZoom: 19
+                }).addTo(lMap);
+
+                window.leafletMap = lMap;
+                window.leafletMarkers = [];
+                window.leafletRouteLayer = null;
+
                 const pickupInput = document.getElementById("pickup");
                 const dropoffInput = document.getElementById("dropoff");
                 const extraInput = document.getElementById("extra-point");
 
-                if (window.google && google.maps && google.maps.places) {
-                    try {
-                        const pickupAuto = new google.maps.places.Autocomplete(pickupInput);
-                        const dropoffAuto = new google.maps.places.Autocomplete(dropoffInput);
-                        new google.maps.places.Autocomplete(extraInput);
-
-                        pickupAuto.addListener('place_changed', () => { autoUpdateRouteAndPrice(); });
-                        dropoffAuto.addListener('place_changed', () => { autoUpdateRouteAndPrice(); });
-                    } catch (autoErr) {
-                        console.warn("Places Autocomplete notice:", autoErr);
-                    }
-                }
-
-                if (window.google && google.maps) {
-                    map = new google.maps.Map(document.getElementById("map"), {
-                        center: { lat: 30.0444, lng: 31.2357 }, zoom: 7, disableDefaultUI: true,
-                        styles: [{ "elementType": "geometry", "stylers": [{ "color": "#242f3e" }] }, { "elementType": "labels.text.stroke", "stylers": [{ "color": "#242f3e" }] }, { "elementType": "labels.text.fill", "stylers": [{ "color": "#746855" }] }, { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#38414e" }] }]
-                    });
-                    directionsService = new google.maps.DirectionsService();
-                    directionsRenderer = new google.maps.DirectionsRenderer();
-                    directionsRenderer.setMap(map);
-                }
-
-                // المستمعات التلقائية لتحديث المسار فور اختيار أو كتابة العميل (مع تأخير 800ms)
                 let _routeDebounce = null;
                 const debouncedUpdate = () => {
                     clearTimeout(_routeDebounce);
-                    _routeDebounce = setTimeout(() => autoUpdateRouteAndPrice(), 800);
+                    _routeDebounce = setTimeout(() => autoUpdateRouteAndPrice(), 600);
                 };
+
                 pickupInput.addEventListener('change', debouncedUpdate);
                 dropoffInput.addEventListener('change', debouncedUpdate);
-                pickupInput.addEventListener('blur', debouncedUpdate);
-                dropoffInput.addEventListener('blur', debouncedUpdate);
                 document.getElementById('opt-extra-point').addEventListener('change', () => { autoUpdateRouteAndPrice(); });
-                extraInput.addEventListener('change', debouncedUpdate);
-            } catch (e) { console.log("Maps Error:", e); }
+                if (extraInput) {
+                    extraInput.addEventListener('change', debouncedUpdate);
+                }
+
+                setupLivePlaceAutocomplete(pickupInput);
+                setupLivePlaceAutocomplete(dropoffInput);
+                if (extraInput) setupLivePlaceAutocomplete(extraInput);
+
+                setTimeout(() => { lMap.invalidateSize(); }, 400);
+            } catch (e) {
+                console.error("Maps Initialization Error:", e);
+            }
         }
 
-        // تحديث المسار والسعر التقديري في الخلفية وبشكل تلقائي
-        function autoUpdateRouteAndPrice(successCallback = null, errorCallback = null) {
-            const p = document.getElementById('pickup').value.trim();
-            const d = document.getElementById('dropoff').value.trim();
+        // محرك البحث الحي الشامل للأماكن في مصر (Live Free-Form Place Search)
+        function setupLivePlaceAutocomplete(inputEl) {
+            if (!inputEl) return;
+            const dropdownId = inputEl.id + '-live-suggestions';
+            let dropdown = document.getElementById(dropdownId);
+            if (!dropdown) {
+                dropdown = document.createElement('div');
+                dropdown.id = dropdownId;
+                dropdown.className = 'absolute z-50 left-0 right-0 top-full mt-1 bg-slate-900/95 backdrop-blur border border-slate-700 rounded-xl max-h-60 overflow-y-auto shadow-2xl hidden';
+                inputEl.parentNode.style.position = 'relative';
+                inputEl.parentNode.appendChild(dropdown);
+            }
+
+            let searchTimeout = null;
+
+            inputEl.addEventListener('input', function() {
+                const query = this.value.trim();
+                clearTimeout(searchTimeout);
+
+                if (!query || query.length < 2) {
+                    dropdown.classList.add('hidden');
+                    return;
+                }
+
+                // عرض نتائج فورية من الفهرس السريع أولاً
+                const qLower = query.toLowerCase();
+                const fastMatches = [];
+                for (const [name, data] of Object.entries(EGYPT_LANDMARKS)) {
+                    if (name.toLowerCase().includes(qLower) || (data.desc && data.desc.toLowerCase().includes(qLower))) {
+                        fastMatches.push({
+                            title: name,
+                            subtitle: data.desc,
+                            lat: data.lat,
+                            lon: data.lng
+                        });
+                    }
+                }
+
+                renderDropdown(fastMatches, true);
+
+                // استعلام البحث الحي المباشر لجميع شوارع وأماكن مصر عبر Nominatim Live Geocoder
+                searchTimeout = setTimeout(async () => {
+                    try {
+                        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&countrycodes=eg&format=json&addressdetails=1&limit=6`;
+                        const res = await fetch(url, { headers: { 'User-Agent': '24Seven-Limo-App/1.0' } });
+                        if (res.ok) {
+                            const data = await res.json();
+                            const liveResults = data.map(item => {
+                                const parts = (item.display_name || '').split(',');
+                                const title = parts[0] || item.name || query;
+                                const subtitle = parts.slice(1, 4).join(',').trim();
+                                return {
+                                    title: title,
+                                    subtitle: subtitle,
+                                    lat: parseFloat(item.lat),
+                                    lon: parseFloat(item.lon)
+                                };
+                            });
+
+                            // دمج النتائج مع إزالة التكرار
+                            const combined = [...fastMatches];
+                            liveResults.forEach(lr => {
+                                if (!combined.some(c => c.title === lr.title)) {
+                                    combined.push(lr);
+                                }
+                            });
+
+                            renderDropdown(combined.slice(0, 7), false);
+                        }
+                    } catch (e) {
+                        console.warn("Live Place Search fetch notice:", e);
+                    }
+                }, 350);
+            });
+
+            function renderDropdown(items, isSearching) {
+                if (!items || items.length === 0) {
+                    if (!isSearching) dropdown.classList.add('hidden');
+                    return;
+                }
+
+                dropdown.innerHTML = items.map((item, idx) => `
+                    <div class="px-3 py-2.5 text-xs text-slate-200 hover:bg-amber-500 hover:text-slate-950 cursor-pointer transition border-b border-slate-800 last:border-none flex items-start gap-2.5" data-idx="${idx}">
+                        <i class="fas fa-location-dot text-amber-400 text-xs mt-0.5 opacity-80"></i>
+                        <div class="flex-1 overflow-hidden">
+                            <span class="font-bold block truncate">${item.title}</span>
+                            <span class="text-[10px] opacity-70 block truncate">${item.subtitle || ''}</span>
+                        </div>
+                    </div>
+                `).join('');
+
+                dropdown.classList.remove('hidden');
+
+                dropdown.querySelectorAll('[data-idx]').forEach(el => {
+                    el.addEventListener('click', () => {
+                        const idx = parseInt(el.getAttribute('data-idx'));
+                        const selected = items[idx];
+                        if (selected) {
+                            inputEl.value = selected.title;
+                            inputEl.dataset.lat = selected.lat;
+                            inputEl.dataset.lon = selected.lon;
+                            dropdown.classList.add('hidden');
+                            autoUpdateRouteAndPrice();
+                        }
+                    });
+                });
+            }
+
+            document.addEventListener('click', (e) => {
+                if (!inputEl.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+        }
+
+        async function autoUpdateRouteAndPrice(successCallback = null, errorCallback = null) {
+            const pickupInput = document.getElementById('pickup');
+            const dropoffInput = document.getElementById('dropoff');
+            const p = pickupInput.value.trim();
+            const d = dropoffInput.value.trim();
             if (!p || !d) {
                 document.getElementById('map-info-bar').style.display = 'none';
                 return;
             }
 
-            if (!directionsService) {
-                const fallbackMsg = "خدمة الخرائط غير مفرغة حالياً أو غير متاحة. يمكن التنسيق مع قسم الإشراف لتفعيل المسار.";
-                if (errorCallback) errorCallback(fallbackMsg);
-                return;
-            }
-
             try {
-                const waypoints = [];
-                if (document.getElementById('opt-extra-point').checked && document.getElementById('extra-point').value) {
-                    waypoints.push({ location: document.getElementById('extra-point').value, stopover: true });
+                // استخراج إحداثيات نقطة الانطلاق
+                let pLat = parseFloat(pickupInput.dataset.lat);
+                let pLon = parseFloat(pickupInput.dataset.lon);
+                if (!pLat || !pLon) {
+                    for (const [name, coords] of Object.entries(EGYPT_LANDMARKS)) {
+                        if (p.toLowerCase().includes(name.toLowerCase())) { pLat = coords.lat; pLon = coords.lng; break; }
+                    }
                 }
 
-                directionsService.route({
-                    origin: p,
-                    destination: d,
-                    waypoints: waypoints,
-                    travelMode: 'DRIVING'
-                }, (response, status) => {
-                    if (status === 'OK') {
-                        if (directionsRenderer) directionsRenderer.setDirections(response);
-                        
-                        // حساب إجمالي المسافة
-                        const route = response.routes[0];
-                        let totalDist = 0;
-                        for (let i = 0; i < route.legs.length; i++) {
-                            totalDist += route.legs[i].distance.value;
-                        }
-                        const distKm = Math.ceil(totalDist / 1000);
-                        
-                        // حساب السعر بناءً على الشرائح
-                        const carRules = pricingRules.filter(r => r.car_type === tripData.car).sort((a, b) => a.min_km - b.min_km || a.max_km - b.max_km);
-                        let price = 0;
-                        if (carRules.length > 0) {
-                            price = Number(carRules[0].base_price) || 0;
-                            let remainingKm = distKm;
-                            for (const rule of carRules) {
-                                if (remainingKm <= 0) break;
-                                const tierSize = rule.max_km - rule.min_km;
-                                const kmInTier = Math.min(remainingKm, tierSize);
-                                price += kmInTier * Number(rule.price_per_km);
-                                remainingKm -= kmInTier;
-                            }
-                            if (remainingKm > 0) {
-                                price += remainingKm * Number(carRules[carRules.length - 1].price_per_km);
-                            }
-                        } else {
-                            price = 150 + (distKm * 10);
-                        }
-                        
-                        if (document.getElementById('opt-extra-point').checked) price += 100;
-                        if (tripData.type === 'round-same') price *= 1.75;
-                        else if (tripData.type === 'round-diff') price *= 2;
-                        
-                        const finalPrice = Math.round(price);
-                        
-                        // حفظ القيم في بيانات الرحلة
-                        tripData.dist = distKm;
-                        tripData.price = finalPrice;
-                        
-                        // تحديث شريط المعلومات الفوري أسفل الخريطة
-                        document.getElementById('realtime-dist').innerText = distKm + " كم";
-                        document.getElementById('realtime-price').innerText = finalPrice + " EGP";
-                        document.getElementById('map-info-bar').style.display = 'flex';
-                        
-                        if (successCallback) successCallback();
-                    } else {
-                        console.warn('Directions request returned ' + status + '. Using smart distance fallback.');
-                        let distKm = 150;
-                        const pLower = p.toLowerCase();
-                        const dLower = d.toLowerCase();
-
-                        if (pLower.includes('إسكندرية') || pLower.includes('اسكندرية') || pLower.includes('alex')) {
-                            if (dLower.includes('مطار القاهرة')) distKm = 240;
-                            else if (dLower.includes('قاهرة') || dLower.includes('زايد') || dLower.includes('أكتوبر') || dLower.includes('تجمع') || dLower.includes('رحاب') || dLower.includes('عاصمة')) distKm = 220;
-                            else if (dLower.includes('برج العرب') || dLower.includes('كرير')) distKm = 50;
-                            else if (dLower.includes('علمين') || dLower.includes('ساحل') || dLower.includes('حمام') || dLower.includes('توليب')) distKm = 140;
-                            else if (dLower.includes('مطروح')) distKm = 300;
-                            else if (dLower.includes('طنطا')) distKm = 95;
-                            else if (dLower.includes('منصورة')) distKm = 160;
-                            else if (dLower.includes('شرم')) distKm = 700;
-                            else if (dLower.includes('غردقة')) distKm = 750;
-                        }
-
-                        const carRules = pricingRules.filter(r => r.car_type === tripData.car).sort((a, b) => a.min_km - b.min_km || a.max_km - b.max_km);
-                        let price = 0;
-                        if (carRules.length > 0) {
-                            price = Number(carRules[0].base_price) || 0;
-                            let remainingKm = distKm;
-                            for (const rule of carRules) {
-                                if (remainingKm <= 0) break;
-                                const tierSize = rule.max_km - rule.min_km;
-                                const kmInTier = Math.min(remainingKm, tierSize);
-                                price += kmInTier * Number(rule.price_per_km);
-                                remainingKm -= kmInTier;
-                            }
-                            if (remainingKm > 0) {
-                                price += remainingKm * Number(carRules[carRules.length - 1].price_per_km);
-                            }
-                        } else {
-                            price = 150 + (distKm * 10);
-                        }
-                        
-                        if (document.getElementById('opt-extra-point').checked) price += 100;
-                        if (tripData.type === 'round-same') price *= 1.75;
-                        else if (tripData.type === 'round-diff') price *= 2;
-                        
-                        const finalPrice = Math.round(price);
-                        
-                        tripData.dist = distKm;
-                        tripData.price = finalPrice;
-                        
-                        document.getElementById('realtime-dist').innerText = distKm + " كم (تقديري)";
-                        document.getElementById('realtime-price').innerText = finalPrice + " EGP";
-                        document.getElementById('map-info-bar').style.display = 'flex';
-                        
-                        // رسم الخط والماركرات باستخدام إحداثيات المدن المصرية المضمنة (بدون أي API خارجي)
-                        if (map && window.google && google.maps) {
-                            const EGYPT_COORDS = {
-                                'إسكندرية': {lat:31.2001,lng:29.9187}, 'اسكندرية': {lat:31.2001,lng:29.9187},
-                                'alex': {lat:31.2001,lng:29.9187},
-                                'القاهرة': {lat:30.0444,lng:31.2357}, 'قاهرة': {lat:30.0444,lng:31.2357}, 'cairo': {lat:30.0444,lng:31.2357},
-                                'مطار القاهرة': {lat:30.1219,lng:31.4057}, 'مطار': {lat:30.1219,lng:31.4057},
-                                'الرحاب': {lat:30.0667,lng:31.4833}, 'رحاب': {lat:30.0667,lng:31.4833},
-                                'التجمع': {lat:30.0176,lng:31.4912}, 'تجمع': {lat:30.0176,lng:31.4912},
-                                'الشيخ زايد': {lat:30.0731,lng:30.9462}, 'زايد': {lat:30.0731,lng:30.9462},
-                                '6 أكتوبر': {lat:29.9285,lng:30.9188}, 'أكتوبر': {lat:29.9285,lng:30.9188},
-                                'العاصمة الإدارية': {lat:30.0059,lng:31.7350}, 'عاصمة': {lat:30.0059,lng:31.7350},
-                                'برج العرب': {lat:30.8927,lng:29.5616}, 'برج': {lat:30.8927,lng:29.5616},
-                                'العلمين': {lat:30.8369,lng:28.9552}, 'علمين': {lat:30.8369,lng:28.9552},
-                                'مرسى مطروح': {lat:31.3543,lng:27.2374}, 'مطروح': {lat:31.3543,lng:27.2374},
-                                'طنطا': {lat:30.7865,lng:31.0004},
-                                'المنصورة': {lat:31.0364,lng:31.3807}, 'منصورة': {lat:31.0364,lng:31.3807},
-                                'شرم الشيخ': {lat:27.9158,lng:34.3300}, 'شرم': {lat:27.9158,lng:34.3300},
-                                'الغردقة': {lat:27.2579,lng:33.8116}, 'غردقة': {lat:27.2579,lng:33.8116},
-                                'الساحل الشمالي': {lat:30.9167,lng:28.5833}, 'ساحل': {lat:30.9167,lng:28.5833},
-                                'أسوان': {lat:24.0889,lng:32.8998}, 'الأقصر': {lat:25.6872,lng:32.6396},
-                                'سيدي عبد الرحمن': {lat:30.9500,lng:28.5167}, 'هاسيندا': {lat:30.9167,lng:28.5333},
-                                'الإسماعيلية': {lat:30.5965,lng:32.2715}, 'إسماعيلية': {lat:30.5965,lng:32.2715},
-                                'بورسعيد': {lat:31.2565,lng:32.2841}, 'السويس': {lat:29.9668,lng:32.5498},
-                                'مدينة نصر': {lat:30.0626,lng:31.3219}, 'نصر': {lat:30.0626,lng:31.3219},
-                                'المعادي': {lat:29.9602,lng:31.2569}, 'معادي': {lat:29.9602,lng:31.2569},
-                                'الزمالك': {lat:30.0626,lng:31.2196}, 'مصر الجديدة': {lat:30.0886,lng:31.3219},
-                                'المهندسين': {lat:30.0583,lng:31.2008}, 'الدقي': {lat:30.0478,lng:31.2079},
-                                'الجيزة': {lat:30.0131,lng:31.2089}, 'جيزة': {lat:30.0131,lng:31.2089},
-                                'حلوان': {lat:29.8491,lng:31.3348}, 'الهرم': {lat:29.9783,lng:31.1320},
-                                'كرير': {lat:30.9283,lng:29.5742}, 'كفر الشيخ': {lat:31.1107,lng:30.9388},
-                                'دمياط': {lat:31.4165,lng:31.8133}, 'الفيوم': {lat:29.3084,lng:30.8428},
-                                'بنها': {lat:30.4667,lng:31.1833}, 'شبرا الخيمة': {lat:30.1285,lng:31.2444},
-                                'العبور': {lat:30.2167,lng:31.6333}, 'عبور': {lat:30.2167,lng:31.6333},
-                                'بدر': {lat:30.1319,lng:31.7222}, 'مدينة بدر': {lat:30.1319,lng:31.7222},
-                                'القاهرة الجديدة': {lat:30.0176,lng:31.4912},
-                                'الساحل': {lat:30.9167,lng:28.5833},
-                            };
-
-                            const findCoords = (text) => {
-                                const t = text.toLowerCase();
-                                for (const [name, coords] of Object.entries(EGYPT_COORDS)) {
-                                    if (t.includes(name.toLowerCase())) return new google.maps.LatLng(coords.lat, coords.lng);
-                                }
-                                return null;
-                            };
-
-                            const pickupLatLng = findCoords(p);
-                            const dropoffLatLng = findCoords(d);
-
-                            if (window._fallbackPolyline) { window._fallbackPolyline.setMap(null); window._fallbackPolyline = null; }
-                            if (window._fallbackMarkers) { window._fallbackMarkers.forEach(m => m.setMap(null)); window._fallbackMarkers = []; }
-
-                            if (pickupLatLng && dropoffLatLng) {
-                                const markerA = new google.maps.Marker({
-                                    position: pickupLatLng, map: map,
-                                    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 11, fillColor: '#22c55e', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2.5 },
-                                    title: 'نقطة الانطلاق'
-                                });
-                                const markerB = new google.maps.Marker({
-                                    position: dropoffLatLng, map: map,
-                                    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 11, fillColor: '#f59e0b', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2.5 },
-                                    title: 'الوجهة'
-                                });
-                                window._fallbackMarkers = [markerA, markerB];
-
-                                window._fallbackPolyline = new google.maps.Polyline({
-                                    path: [pickupLatLng, dropoffLatLng],
-                                    geodesic: true,
-                                    strokeColor: '#f59e0b',
-                                    strokeOpacity: 0,
-                                    icons: [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 4, strokeColor: '#f59e0b' }, offset: '0', repeat: '18px' }],
-                                    map: map
-                                });
-
-                                const bounds = new google.maps.LatLngBounds();
-                                bounds.extend(pickupLatLng);
-                                bounds.extend(dropoffLatLng);
-                                map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
-                            }
-                        }
-                        
-                        if (successCallback) successCallback();
+                // استخراج إحداثيات الوجهة
+                let dLat = parseFloat(dropoffInput.dataset.lat);
+                let dLon = parseFloat(dropoffInput.dataset.lon);
+                if (!dLat || !dLon) {
+                    for (const [name, coords] of Object.entries(EGYPT_LANDMARKS)) {
+                        if (d.toLowerCase().includes(name.toLowerCase())) { dLat = coords.lat; dLon = coords.lng; break; }
                     }
-                });
+                }
+
+                // إذا لم تكن الإحداثيات مخزنة، جلبها فوراً
+                if (!pLat || !pLon) {
+                    try {
+                        const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(p)}&countrycodes=eg&format=json&limit=1`);
+                        const json = await r.json();
+                        if (json && json.length > 0) { pLat = parseFloat(json[0].lat); pLon = parseFloat(json[0].lon); }
+                    } catch(e) {}
+                }
+                if (!dLat || !dLon) {
+                    try {
+                        const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(d)}&countrycodes=eg&format=json&limit=1`);
+                        const json = await r.json();
+                        if (json && json.length > 0) { dLat = parseFloat(json[0].lat); dLon = parseFloat(json[0].lon); }
+                    } catch(e) {}
+                }
+
+                let distKm = 0;
+
+                // رسم المسار والماركرات عبر Leaflet و OSRM
+                if (pLat && pLon && dLat && dLon && window.leafletMap) {
+                    if (window.leafletRouteLayer) {
+                        try { window.leafletMap.removeLayer(window.leafletRouteLayer); } catch(e) {}
+                        window.leafletRouteLayer = null;
+                    }
+                    if (window.leafletMarkers && window.leafletMarkers.length > 0) {
+                        window.leafletMarkers.forEach(m => { try { window.leafletMap.removeLayer(m); } catch(e) {} });
+                        window.leafletMarkers = [];
+                    }
+
+                    const createMarker = (lat, lng, color, text) => {
+                        const marker = L.circleMarker([lat, lng], {
+                            radius: 8,
+                            fillColor: color,
+                            color: '#ffffff',
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 0.95
+                        }).addTo(window.leafletMap);
+                        marker.bindTooltip(text, { permanent: false, direction: 'top' });
+                        return marker;
+                    };
+
+                    const pMarker = createMarker(pLat, pLon, '#22c55e', 'نقطة الانطلاق: ' + p);
+                    const dMarker = createMarker(dLat, dLon, '#f59e0b', 'الوجهة: ' + d);
+                    window.leafletMarkers.push(pMarker, dMarker);
+
+                    let osrmUrl = `https://router.project-osrm.org/route/v1/driving/${pLon},${pLat};${dLon},${dLat}?overview=full&geometries=geojson`;
+
+                    try {
+                        const res = await fetch(osrmUrl);
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.routes && data.routes.length > 0) {
+                                const route = data.routes[0];
+                                distKm = Math.ceil(route.distance / 1000);
+
+                                const routeGeoJson = {
+                                    type: "Feature",
+                                    properties: {},
+                                    geometry: route.geometry
+                                };
+                                window.leafletRouteLayer = L.geoJSON(routeGeoJson, {
+                                    style: { color: '#f59e0b', weight: 4.5, opacity: 0.85 }
+                                }).addTo(window.leafletMap);
+
+                                window.leafletMap.fitBounds(window.leafletRouteLayer.getBounds(), { padding: [35, 35] });
+                            }
+                        }
+                    } catch(osrmErr) {
+                        console.warn("OSRM Route Error, fallback to polyline:", osrmErr);
+                    }
+
+                    if (!window.leafletRouteLayer) {
+                        window.leafletRouteLayer = L.polyline([[pLat, pLon], [dLat, dLon]], {
+                            color: '#f59e0b',
+                            weight: 3.5,
+                            dashArray: '6, 8',
+                            opacity: 0.8
+                        }).addTo(window.leafletMap);
+
+                        window.leafletMap.fitBounds(window.leafletRouteLayer.getBounds(), { padding: [35, 35] });
+                    }
+                }
+
+                // الحساب الذكي الاحتياطي إذا تعذر OSRM
+                if (!distKm || distKm <= 0) {
+                    distKm = 150;
+                    const pLower = p.toLowerCase();
+                    const dLower = d.toLowerCase();
+                    if (pLower.includes('إسكندرية') || pLower.includes('اسكندرية') || pLower.includes('alex')) {
+                        if (dLower.includes('مطار القاهرة')) distKm = 240;
+                        else if (dLower.includes('قاهرة') || dLower.includes('زايد') || dLower.includes('أكتوبر') || dLower.includes('تجمع') || dLower.includes('رحاب')) distKm = 220;
+                        else if (dLower.includes('برج العرب')) distKm = 50;
+                        else if (dLower.includes('علمين') || dLower.includes('ساحل')) distKm = 140;
+                        else if (dLower.includes('مطروح')) distKm = 300;
+                        else if (dLower.includes('طنطا')) distKm = 95;
+                        else if (dLower.includes('منصورة')) distKm = 160;
+                        else if (dLower.includes('شرم')) distKm = 700;
+                        else if (dLower.includes('غردقة')) distKm = 750;
+                    } else if (pLower.includes('قاهرة') || pLower.includes('cairo')) {
+                        if (dLower.includes('إسكندرية') || dLower.includes('اسكندرية')) distKm = 220;
+                        else if (dLower.includes('شرم')) distKm = 500;
+                        else if (dLower.includes('غردقة')) distKm = 450;
+                        else if (dLower.includes('سخنة')) distKm = 140;
+                    }
+                }
+
+                // حساب السعر بناءً على الشرائح
+                const carRules = pricingRules.filter(r => r.car_type === tripData.car).sort((a, b) => a.min_km - b.min_km || a.max_km - b.max_km);
+                let price = 0;
+                if (carRules.length > 0) {
+                    price = Number(carRules[0].base_price) || 0;
+                    let remainingKm = distKm;
+                    for (const rule of carRules) {
+                        if (remainingKm <= 0) break;
+                        const tierSize = rule.max_km - rule.min_km;
+                        const kmInTier = Math.min(remainingKm, tierSize);
+                        price += kmInTier * Number(rule.price_per_km);
+                        remainingKm -= kmInTier;
+                    }
+                    if (remainingKm > 0) {
+                        price += remainingKm * Number(carRules[carRules.length - 1].price_per_km);
+                    }
+                } else {
+                    price = 150 + (distKm * 10);
+                }
+
+                if (document.getElementById('opt-extra-point').checked) price += 100;
+                if (tripData.type === 'round-same') price *= 1.75;
+                else if (tripData.type === 'round-diff') price *= 2;
+
+                const finalPrice = Math.round(price);
+
+                tripData.dist = distKm;
+                tripData.price = finalPrice;
+
+                document.getElementById('realtime-dist').innerText = distKm + " كم";
+                document.getElementById('realtime-price').innerText = finalPrice + " EGP";
+                document.getElementById('map-info-bar').style.display = 'flex';
+
+                if (successCallback) successCallback();
             } catch(e) {
                 console.error("autoUpdateRouteAndPrice exception:", e);
                 if (errorCallback) errorCallback("تعذر الوصول لخدمات الخرائط حالياً.");
