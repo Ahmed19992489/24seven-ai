@@ -4238,16 +4238,13 @@
                 return tDateClean === targetDateClean;
             });
 
-            // استبعاد المكرر
+            // استبعاد المكرر (فقط إذا كانت الرحلة مسجلة بالفعل في جدول الرحلات الفعلي)
             const existingTripIds = new Set(filteredMappedTrips.map(t => String(t.id)));
             const filteredReservations = reservations.filter(r => {
                 if (r.sql_server_id && existingTripIds.has(String(r.sql_server_id))) {
                     return false;
                 }
                 if (existingTripIds.has(String(r.id))) {
-                    return false;
-                }
-                if (r.modified_driver_name && r.modified_driver_name.trim() !== '' && r.modified_driver_name !== '--') {
                     return false;
                 }
                 if (r.trip_status === 'مكتملة' || r.trip_status === 'ملغاة') {
@@ -6706,49 +6703,53 @@ ${contextData}
                                 quickFilterTrips();
                             }
                         } else {
-                            // If not found in cache, reload the list for the current active filter/date
-                            const dateInput = document.getElementById('custom-date-filter');
-                            if (dateInput && dateInput.value) {
-                                filterByCustomDate(dateInput.value);
-                            } else {
-                                const filterTodayBtn = document.getElementById('filter-today');
-                                if (filterTodayBtn && filterTodayBtn.classList.contains('bg-teal-600')) {
-                                    filterByDate('today');
-                                } else {
-                                    filterByDate('tomorrow');
-                                }
-                            }
+                            debouncedRefreshTrips(fullTrip.trip_date);
                         }
                     } else if (payload.eventType === 'INSERT') {
-                        // Reload list to display the newly inserted trip
-                        const dateInput = document.getElementById('custom-date-filter');
-                        if (dateInput && dateInput.value) {
-                            filterByCustomDate(dateInput.value);
-                        } else {
-                            const filterTodayBtn = document.getElementById('filter-today');
-                            if (filterTodayBtn && filterTodayBtn.classList.contains('bg-teal-600')) {
-                                filterByDate('today');
-                            } else {
-                                filterByDate('tomorrow');
-                            }
-                        }
+                        debouncedRefreshTrips(payload.new?.trip_date);
                     }
                 })
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'google_reservations' }, async (payload) => {
-                    // Reload list to display the newly updated/inserted google reservation
-                    const dateInput = document.getElementById('custom-date-filter');
-                    if (dateInput && dateInput.value) {
-                        filterByCustomDate(dateInput.value);
-                    } else {
-                        const filterTodayBtn = document.getElementById('filter-today');
-                        if (filterTodayBtn && filterTodayBtn.classList.contains('bg-teal-600')) {
-                            filterByDate('today');
-                        } else {
-                            filterByDate('tomorrow');
-                        }
-                    }
+                    const rowDate = payload.new?.trip_date || payload.old?.trip_date;
+                    debouncedRefreshTrips(rowDate);
                 })
                 .subscribe();
+        }
+
+        let tripsReloadTimer = null;
+        function debouncedRefreshTrips(changedTripDate) {
+            if (activeTab !== 'trips') return;
+            
+            // تحقق إذا كان التغيير يخص التاريخ المعروض حالياً
+            const dateInput = document.getElementById('custom-date-filter');
+            const activeCustomDate = dateInput ? dateInput.value : '';
+            const isTodayActive = document.getElementById('filter-today')?.classList.contains('bg-teal-600');
+            const todayStr = formatLocalDate(new Date());
+            const tom = new Date(); tom.setDate(tom.getDate() + 1);
+            const tomorrowStr = formatLocalDate(tom);
+            
+            const currentFilterDate = activeCustomDate || (isTodayActive ? todayStr : tomorrowStr);
+            
+            if (changedTripDate) {
+                const cleanChanged = String(changedTripDate).replace(/\//g, '-').trim();
+                const cleanCurrent = String(currentFilterDate).replace(/\//g, '-').trim();
+                if (cleanChanged !== cleanCurrent) {
+                    return; // التغيير يخص تاريخ آخر، لا داعي لتحديث الصفحة
+                }
+            }
+
+            if (tripsReloadTimer) clearTimeout(tripsReloadTimer);
+            tripsReloadTimer = setTimeout(async () => {
+                try {
+                    const merged = await loadTripsForDate(currentFilterDate);
+                    allTrips = merged;
+                    renderTripsTable(merged);
+                    const countEl = document.getElementById('search-results-count');
+                    if (countEl && !countEl.innerHTML.includes('جاري')) {
+                        countEl.textContent = `تم تحديث ${merged.length} رحلة`;
+                    }
+                } catch(e) { console.warn("Background trip refresh error:", e); }
+            }, 1000);
         }
         setTimeout(setupModTripsRealtime, 2000);
 
