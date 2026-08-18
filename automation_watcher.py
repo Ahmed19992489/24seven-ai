@@ -443,6 +443,7 @@ while True:
                 )
 
                 # ✅ إصلاح: اشتراط أن يكون تأكيد الحجز الفوري قد أُرسل أولاً + وجود كابتن حقيقي برقم صحيح
+                cache_key_driver = f"{str(t_date)}_{cust_phone}_{driver_phone}_driver"
                 if (driver_name.strip() != ""
                         and not is_invalid_driver
                         and status_to_check == ""
