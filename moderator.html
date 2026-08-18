@@ -1986,7 +1986,7 @@
                 groupedChats[groupKey].originalIds.add(m.sender_id);
                 groupedChats[groupKey].messages.push(m);
                 groupedChats[groupKey].last = m;
-                if (m.whatsapp_instance_id) {
+                if (m.whatsapp_instance_id && !m.is_from_admin) {
                     groupedChats[groupKey].whatsapp_instance_id = m.whatsapp_instance_id;
                 }
 
@@ -3267,7 +3267,12 @@
             const chat = groupedChats[senderId];
             
             let apiSenderId = senderId;
+            // 🔒 الخط الرئيسي للعملاء (201121748885) - لا يتم استخدام خط الجروبات (201114323218) أبداً في ردود المودريتور
+            const MAIN_CUSTOMER_INSTANCE = '692921bb-a5df-451d-8527-e1ee55a736f4';
+            const GROUPS_ONLY_INSTANCE = 'f730e127-bb9e-47aa-ae4b-8d59cdb01ea8';
             let whatsappInstanceId = (chat && chat.whatsapp_instance_id) ? chat.whatsapp_instance_id : null;
+            // منع استخدام خط الجروبات للردود على العملاء
+            if (whatsappInstanceId === GROUPS_ONLY_INSTANCE) whatsappInstanceId = MAIN_CUSTOMER_INSTANCE;
             if (channel === 'whatsapp' && chat) {
                 if (chat.originalIds && chat.originalIds.size > 0) {
                     const originals = Array.from(chat.originalIds);
@@ -3275,7 +3280,7 @@
                 }
                 if (!whatsappInstanceId && chat.messages) {
                     for (let i = chat.messages.length - 1; i >= 0; i--) {
-                        if (chat.messages[i].whatsapp_instance_id) {
+                        if (chat.messages[i].whatsapp_instance_id && chat.messages[i].whatsapp_instance_id !== GROUPS_ONLY_INSTANCE) {
                             whatsappInstanceId = chat.messages[i].whatsapp_instance_id;
                             break;
                         }
