@@ -736,15 +736,15 @@
                 
                 if (net > 0) {
                     netEl.className = 'text-2xl font-black mt-1 text-green-400 font-num';
-                    netDescEl.textContent = '🟢 مستحق للمكتب طرف منصة 24Seven';
-                    netDescEl.className = 'text-[9px] text-green-400 mt-1';
+                    netDescEl.textContent = '🟢 رصيد مستحق لمكتب التشغيل (دين على شركة 24Seven لصالح المكتب)';
+                    netDescEl.className = 'text-[9px] text-green-400 mt-1 font-bold';
                 } else if (net < 0) {
                     netEl.className = 'text-2xl font-black mt-1 text-red-400 font-num';
-                    netDescEl.textContent = '🔴 مديونية على المكتب لصالح منصة 24Seven (عمولات)';
-                    netDescEl.className = 'text-[9px] text-red-400 mt-1';
+                    netDescEl.textContent = '🔴 مديونية على مكتب التشغيل (عمولات مستحقة للشركة طرف المكتب)';
+                    netDescEl.className = 'text-[9px] text-red-400 mt-1 font-bold';
                 } else {
                     netEl.className = 'text-2xl font-black mt-1 text-slate-300 font-num';
-                    netDescEl.textContent = '⚪ الحساب المالي مصفر ومتعادل';
+                    netDescEl.textContent = '⚪ الحساب المالي مصفر ومتعادل تماماً';
                     netDescEl.className = 'text-[9px] text-slate-400 mt-1';
                 }
             } catch(e) {
