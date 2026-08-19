@@ -156,6 +156,7 @@ function updateDriverInSheet(data) {
     var driverName = data.driverName || '';
     var driverPhone = String(data.driverPhone || '');
     var amountPaid = data.amountPaid || '';
+    var driverMsgStatus = data.driverMsgStatus || 'تم إبلاغ الطرفين ✅';
 
     // Set phone column as text format first
     sheet.getRange(rowNum, 23).setNumberFormat('@');
@@ -166,7 +167,7 @@ function updateDriverInSheet(data) {
         driverName,                     // Col 22 (V) - اسم السائق
         driverPhone,                    // Col 23 (W) - هاتف السائق
         amountPaid,                     // Col 24 (X) - النقدية المستلمة
-        ""                              // Col 25 (Y) - نفرغها ليقوم python بإرسال الرسائل
+        driverMsgStatus                 // Col 25 (Y) - حالة إبلاغ السائق والعميل
     ]]);
 
     // Return debug info

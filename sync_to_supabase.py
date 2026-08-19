@@ -165,7 +165,7 @@ while True:
         # جلب تفاصيل الرحلات الموجودة في قاعدة البيانات للمطابقة العكسية والتزامن الثنائي
         existing_trips_map = {}
         try:
-            r_trips = requests.get(f"{SUPABASE_URL}/rest/v1/google_reservations?select=sheet_row,modified_driver_name,modified_driver_phone,trip_status", headers=SUPABASE_HEADERS, timeout=15)
+            r_trips = requests.get(f"{SUPABASE_URL}/rest/v1/google_reservations?select=sheet_row,modified_driver_name,modified_driver_phone,trip_status,driver_msg_status,sql_server_id", headers=SUPABASE_HEADERS, timeout=15)
             if r_trips.status_code == 200:
                 for t in r_trips.json():
                     s_row = t.get('sheet_row')
@@ -232,16 +232,20 @@ while True:
             while len(row) < 35:
                 row.append("")
 
-            # [التزامن العكسي] تحديث السائق وحالة الرحلة من قاعدة البيانات إلى الشيت إذا كانت فارغة في الشيت ومملوءة في قاعدة البيانات
+            # [التزامن العكسي] تحديث السائق وحالة الرحلة وحالة الإبلاغ من قاعدة البيانات إلى الشيت إذا كانت فارغة في الشيت ومملوءة في قاعدة البيانات
             db_record = existing_trips_map.get(real_row_index)
             if db_record:
                 db_driver = safe_str(db_record.get('modified_driver_name')).strip()
                 db_driver_phone = safe_str(db_record.get('modified_driver_phone')).strip()
                 db_trip_status = safe_str(db_record.get('trip_status')).strip()
+                db_driver_msg_status = safe_str(db_record.get('driver_msg_status')).strip()
+                db_sql_id = safe_str(db_record.get('sql_server_id')).strip()
                 
                 sheet_driver = safe_str(row[21]).strip()
                 sheet_driver_phone = safe_str(row[22]).strip()
                 sheet_trip_status = safe_str(row[34]).strip()
+                sheet_driver_msg_status = safe_str(row[24]).strip()
+                sheet_sql_id = safe_str(row[20]).strip()
                 
                 if db_driver and not sheet_driver:
                     print_log(f"📝 تحديث اسم السائق للصف {real_row_index} من قاعدة البيانات: {db_driver}")
@@ -251,6 +255,16 @@ while True:
                 if db_driver_phone and not sheet_driver_phone:
                     worksheet.update_cell(real_row_index, 23, db_driver_phone)
                     row[22] = db_driver_phone
+
+                if db_sql_id and not sheet_sql_id:
+                    print_log(f"📝 تحديث SQL_ID للصف {real_row_index} من قاعدة البيانات: {db_sql_id}")
+                    worksheet.update_cell(real_row_index, 21, db_sql_id)
+                    row[20] = db_sql_id
+
+                if db_driver_msg_status and not sheet_driver_msg_status:
+                    print_log(f"📝 تحديث حالة إبلاغ السائق للصف {real_row_index} من قاعدة البيانات: {db_driver_msg_status}")
+                    worksheet.update_cell(real_row_index, 25, db_driver_msg_status)
+                    row[24] = db_driver_msg_status
                     
                 if db_trip_status and not sheet_trip_status:
                     print_log(f"📝 تحديث حالة الرحلة للصف {real_row_index} من قاعدة البيانات: {db_trip_status}")
