@@ -154,7 +154,60 @@ graph TD
 * **لوحة المشرفين ([moderator.html](file:///c:/Users/pc2/Downloads/New%20folder%20(2)/24Seven_SaaS_Platform/moderator.html))**:
   * تم تحديث فقاعات الشات للمشرف ([moderator.html: L2381-2397](file:///c:/Users/pc2/Downloads/New%20folder%20(2)/24Seven_SaaS_Platform/moderator.html#L2381-2397)) لتدعم تحليل رسائل النظام لطلبات تغيير الوجهة وعرض خيارات الموافقة والرفض للمشرفين بنفس آلية لوحة الإدارة.
 
+### 📅 تحديث 8 يوليو 2026: إصلاحات أتمتة الواتساب وأداء غرفة العمليات
+
+#### 1. إصلاح تداخل الأعمدة في `automation_watcher.py` (Bug Fix - Critical)
+* **المشكلة**: كان ملف الأتمتة يكتب حالة "تم إرسال تأكيد الحجز ✅" في **العمود 28 (AB) - قرار العميل** بدلاً من العمود الصحيح 24 (X).
+* **التأثير**: كان الـ Webhook Server يجد العمود 28 ممتلئاً فيتجاهل ردود العملاء ("تاكيد"/"الغاء") ولا يسجّلها ولا يرسل رسالة اللوكيشن.
+* **الحل**: تصحيح الإزاحة في [`automation_watcher.py`](file:///c:/Users/pc2/Downloads/New%20folder%20(2)/automation_watcher.py) بتغيير `row[27]` → `row[23]` وتحديث `update_cell` من العمود 28 → 24.
+
+#### 2. إصلاح أرقام الهواتف الدولية في Google Apps Script
+* **المشكلة**: الأرقام الدولية التي تبدأ بـ `+` (مثل `+966...`) كانت تُعالَج بواسطة جداول جوجل كمعادلة حسابية فتظهر `#ERROR!`.
+* **الحل**: تعديل دالة `appendBookingToSheet` في Google Apps Script لإضافة علامة اقتباس `'` قبل أي رقم هاتف عند الكتابة لإجبار الشيت على معاملته كنص.
+```javascript
+// قبل الإصلاح
+data.phone || ''
+// بعد الإصلاح
+data.phone ? "'" + String(data.phone) : ''
+```
+
+#### 3. تحديث رابط Google Apps Script في كل ملفات المشروع
+* بعد إعادة نشر الـ Apps Script بإصدار جديد، تم تحديث الـ Macro ID في جميع الملفات التالية:
+  * [`admin-crm.html`](file:///c:/Users/pc2/Downloads/New%20folder%20(2)/24Seven_SaaS_Platform/admin-crm.html) (6 مواضع)
+  * [`moderator.html`](file:///c:/Users/pc2/Downloads/New%20folder%20(2)/24Seven_SaaS_Platform/moderator.html) (3 مواضع)
+  * [`limousine.html`](file:///c:/Users/pc2/Downloads/New%20folder%20(2)/24Seven_SaaS_Platform/limousine.html) (موضع واحد)
+  * [`test.js`](file:///c:/Users/pc2/Downloads/New%20folder%20(2)/24Seven_SaaS_Platform/test.js) (موضعان)
+* **الرابط الجديد الفعّال**: `AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA`
+
+#### 4. إصلاح أداء غرفة العمليات في `admin-crm.html`
+* **المشكلة**: دالة `loadOperations()` كانت تسحب **كل الرحلات** من قاعدة البيانات دفعة واحدة بدون حد أقصى مما يتسبب في تجميد المتصفح وظهور رسالة "Page Unresponsive".
+* **الحل**: إضافة فلتر تلقائي لآخر 60 يوم وحد أقصى 200 رحلة:
+```javascript
+let tripsQuery = sbClient.from('trips')
+    .select(`*...`)
+    .gte('created_at', defaultFrom)  // آخر 60 يوم
+    .order('created_at', { ascending: false })
+    .limit(200);                       // حد أقصى
+```
+
+### 📅 تحديث 19 أغسطس 2026: استقرار السيرفر 24/7 والمزامنة الفورية لحجوزات الويب
+
+#### 1. استقرار السيرفر المحلي والتشغيل التلقائي المستمر (Server 24/7 Resilience)
+* **منع وضع السكون (No Sleep)**: تم تعطيل مؤقتات السكون وإيقاف الشاشة والهايبرنيت عبر `powercfg` لضمان استمرار عمل السيرفرات في الخلفية بدون انقطاع.
+* **التشغيل الذاتي عند الإقلاع (Auto-Start)**: إنشاء مهمة مجدولة في نظام ويندوز (`24Seven-AutoStart`) لتشغيل سكربت [`run_all.bat`](file:///c:/Users/pc2/Downloads/New%20folder%20(2)/run_all.bat) بكافة خدماته الـ 9 تلقائياً عند تشغيل الجهاز.
+* **إضافة LimoBot**: دمج بوت التليجرام [`main.pyw`](file:///c:/Users/pc2/LimoBot/main.pyw) ضمن قائمة السيرفرات التلقائية في `run_all.bat`.
+* **تنظيف اختصارات Startup**: إزالة الاختصارات اليدوية السابقة من مجلد بدء التشغيل لمنع تكرار فتح العمليات مرتين وتفادي تعارض البورتات (`EADDRINUSE`).
+
+#### 2. إصلاح وتأمين مزامنة حجوزات الموقع مع شيت جوجل (Web to Sheet Sync Fix)
+* **إصلاح `limousine.html`**:
+  * تحويل دالة `sendToGoogleSheet` إلى دالة غير متزامنة `async` وتفعيل خاصية `keepalive: true` في الـ `fetch`.
+  * استخدام `await sendToGoogleSheet` قبل استدعاء `location.reload()` لضمان عدم إحباط المتصفح للطلب قبل وصوله لـ Google Apps Script.
+* **حماية سحابية تلقائية في [`sync_to_supabase.py`](file:///c:/Users/pc2/Downloads/New%20folder%20(2)/sync_to_supabase.py)**:
+  * إضافة آلية فحص في حلقة المزامنة للبحث عن أي حجوزات جديدة في `google_reservations` ينقصها رقم الصف `sheet_row is null` وترحيلها تلقائياً كصف جديد في شيت جوجل وتحديث `sheet_row` مباشرة في كل دورة.
+* **ترحيل كافة الحجوزات السابقة**: تم ترحيل كافة الحجوزات المعلقة واختبارات الويب بنجاح إلى شيت جوجل.
+
 ---
 
 > [!NOTE]
 > يرجى الحرص على تحديث هذا الملف عند إضافة أي مكونات برمجية جديدة أو تغيير هيكل جداول قاعدة البيانات لتظل المرجعية صحيحة 100% لأي تطوير مستقبلي.
+

@@ -181,6 +181,40 @@ while True:
         sheet = client.open_by_url(SHEET_URL)
         worksheet = sheet.worksheet(SHEET_NAME)
 
+        # فحص الحجوزات السحابية الجديدة وغير الموجودة بالشيت لدفعها فوراً
+        try:
+            r_missing = requests.get(f"{SUPABASE_URL}/rest/v1/google_reservations?sheet_row=is.null&order=created_at.asc&limit=15", headers=SUPABASE_HEADERS, timeout=10)
+            if r_missing.status_code == 200:
+                missing_res = r_missing.json()
+                for m_res in missing_res:
+                    res_id = m_res.get('id')
+                    m_name = m_res.get('customer_name') or 'عميل'
+                    m_date = (m_res.get('trip_date') or '').replace('-', '/')
+                    m_time = m_res.get('trip_time') or ''
+                    m_phone = str(m_res.get('customer_phone') or '')
+                    m_whatsapp = str(m_res.get('whatsapp_num') or m_phone)
+                    m_pickup = m_res.get('pickup_address') or ''
+                    m_dropoff = m_res.get('dropoff_address') or ''
+                    m_pax = str(m_res.get('passengers') or '1')
+                    m_bags = str(m_res.get('bags') or '0')
+                    m_car = m_res.get('car_type') or 'سيدان'
+                    m_status = m_res.get('client_status') or 'عميل ويب'
+                    m_cost = str(m_res.get('cost') or '0')
+                    m_email = m_res.get('email') or ''
+                    m_notes = m_res.get('notes') or ''
+                    m_type = m_res.get('trip_type') or 'ذهاب فقط'
+                    m_web_id = str(res_id)
+                    m_emp = m_res.get('booking_employee') or 'موقع الويب'
+                    m_ts = datetime.now().strftime('%Y/%m/%d %H:%M:%S')
+
+                    new_row = [m_ts, m_date, m_time, m_name, m_phone, m_whatsapp, m_pickup, m_dropoff, m_pax, m_bags, m_car, m_status, m_cost, m_email, m_notes, m_type, m_web_id, m_emp]
+                    worksheet.append_row(new_row, value_input_option='USER_ENTERED')
+                    current_last_row = len(worksheet.get_all_values())
+                    requests.patch(f"{SUPABASE_URL}/rest/v1/google_reservations?id=eq.{res_id}", headers=SUPABASE_HEADERS, json={'sheet_row': current_last_row})
+                    print_log(f"📥 تم ترحيل حجز جديد من الويب ({m_name} - {m_phone}) إلى الشيت في السطر {current_last_row}")
+        except Exception as e_push:
+            print_log(f"⚠️ تحذير: خطأ أثناء فحص الحجوزات السحابية الجديدة: {e_push}")
+
         all_values = worksheet.get_all_values()
         if len(all_values) < 2:
             print_log("⚠️ الشيت فارغ أو يحتوي على عناوين فقط.")
