@@ -3758,20 +3758,6 @@
                         } catch(e) {}
                     }
 
-                    // 1e. Robust Fallback: Guarantee a valid non-null user_id from profiles
-                    if (!clientUserId) {
-                        try {
-                            const { data: anyProfiles } = await sbClient.from('profiles').select('id').limit(1);
-                            if (anyProfiles && anyProfiles.length > 0) {
-                                clientUserId = anyProfiles[0].id;
-                            } else {
-                                clientUserId = '5a9111b7-e6e7-4b54-95cd-a64adfc106ac';
-                            }
-                        } catch(e) {
-                            clientUserId = '5a9111b7-e6e7-4b54-95cd-a64adfc106ac';
-                        }
-                    }
-
                     if (assignType === 'external') {
                         // 2. Create actual trip record for external office
                         const extDriverInfo = externalDriverPhone ? `\n🚕 السائق الخارجي: ${externalDriverName || 'غير محدد'} | 📱 ${externalDriverPhone}` : '';
@@ -3779,8 +3765,8 @@
                         const sheetRowVal = trip.sheet_row || '';
                         const sqlIdVal = trip.sql_server_id || '';
 
-                        const { data: newTrip, error: tripErr } = await sbClient.from('trips').insert([{
-                            user_id: clientUserId,
+                        let insertPayload = {
+                            user_id: clientUserId || null,
                             manual_client_name: trip.customer_name || '',
                             client_phone: trip.customer_phone || '',
                             pickup_location: trip.pickup_address || '',
@@ -3792,9 +3778,20 @@
                             our_commission: commission,
                             admin_notes: `📅 ${trip.trip_date || '--'} - ${trip.trip_time || '--'}\n👥 ${trip.passengers || '1'}\n🧳 ${trip.bags || '0'}\nنوع التحصيل: ${trip.payment_method || 'غير محدد'}\nحجز موديتور: ${currentModName}\nالعميل: ${trip.customer_name}${extDriverInfo}\nملاحظات: ${trip.notes || ''}\n[google_res_id:${resIdVal}]\n[sheet_row:${sheetRowVal}]\n[sql_server_id:${sqlIdVal}]\n${note ? '--- ملاحظات التعيين ---\n' + note : ''}`,
                             car_type: trip.car_type
-                        }]).select().single();
+                        };
+
+                        let newTrip = null;
+                        let { data: insData, error: tripErr } = await sbClient.from('trips').insert([insertPayload]).select().single();
+                        
+                        if (tripErr && (tripErr.message?.includes('foreign key') || tripErr.message?.includes('user_id') || tripErr.code === '23503')) {
+                            insertPayload.user_id = null;
+                            const retryRes = await sbClient.from('trips').insert([insertPayload]).select().single();
+                            insData = retryRes.data;
+                            tripErr = retryRes.error;
+                        }
 
                         if (tripErr) throw tripErr;
+                        newTrip = insData;
 
                         realTripId = newTrip.id;
                         finalSqlId = sqlIdVal || String(newTrip.id);
@@ -3810,8 +3807,8 @@
                         if(resErr) throw resErr;
                     } else {
                         // 2. Create actual trip record for internal driver
-                        const { data: newTrip, error: tripErr } = await sbClient.from('trips').insert([{
-                            user_id: clientUserId,
+                        let insertPayload = {
+                            user_id: clientUserId || null,
                             driver_id: driverId,
                             car_id: carId,
                             pickup_location: trip.pickup_address || '',
@@ -3820,9 +3817,20 @@
                             status: 'driver_assigned',
                             admin_notes: `📅 ${trip.trip_date || '--'} - ${trip.trip_time || '--'}\n👥 ${trip.passengers || '1'}\n🧳 ${trip.bags || '0'}\nنوع التحصيل: ${trip.payment_method || 'غير محدد'}\nحجز موديتور: ${currentModName}\nالعميل: ${trip.customer_name}\nالسائق: ${driverName} (${driverPhone})\nملاحظات: ${trip.notes || ''}\n${note ? '--- ملاحظات التعيين ---\n' + note : ''}`,
                             car_type: trip.car_type
-                        }]).select().single();
+                        };
+
+                        let newTrip = null;
+                        let { data: insData, error: tripErr } = await sbClient.from('trips').insert([insertPayload]).select().single();
+                        
+                        if (tripErr && (tripErr.message?.includes('foreign key') || tripErr.message?.includes('user_id') || tripErr.code === '23503')) {
+                            insertPayload.user_id = null;
+                            const retryRes = await sbClient.from('trips').insert([insertPayload]).select().single();
+                            insData = retryRes.data;
+                            tripErr = retryRes.error;
+                        }
 
                         if (tripErr) throw tripErr;
+                        newTrip = insData;
 
                         realTripId = newTrip.id;
                         finalSqlId = String(newTrip.id);
