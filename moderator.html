@@ -3800,7 +3800,8 @@
                         const { error: resErr } = await sbClient
                             .from('google_reservations')
                             .update({ 
-                                status: 'تم الترحيل'
+                                status: 'تم الترحيل',
+                                sql_server_id: finalSqlId
                             })
                             .eq('id', resIdVal);
                         

@@ -774,27 +774,77 @@
         // تحليل التاريخ ومقارنته باليوم والغد
         function parseDateToYMD(dateStr) {
             if (!dateStr || dateStr === '--') return null;
-            let clean = dateStr.replace(/[\/\\]/g, '-').trim();
-            if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) return clean;
-            const dmy = clean.match(/^(\d{2})-(\d{2})-(\d{4})$/);
-            if (dmy) {
-                return `${dmy[3]}-${dmy[2]}-${dmy[1]}`;
+            // Normalize Arabic digits to English
+            let clean = dateStr.toString().replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[\/\\]/g, '-').trim();
+            
+            // YYYY-MM-DD or YYYY-M-D
+            let match = clean.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+            if (match) {
+                return `${match[1]}-${match[2].padStart(2, '0')}-${match[3].padStart(2, '0')}`;
             }
+
+            // DD-MM-YYYY or D-M-YYYY
+            match = clean.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+            if (match) {
+                return `${match[3]}-${match[2].padStart(2, '0')}-${match[1].padStart(2, '0')}`;
+            }
+
             const parts = clean.split('-');
             if (parts.length === 3) {
-                let y, m, d;
                 if (parts[0].length === 4) {
-                    y = parts[0];
-                    m = parts[1].padStart(2, '0');
-                    d = parts[2].padStart(2, '0');
+                    return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
                 } else if (parts[2].length === 4) {
-                    y = parts[2];
-                    m = parts[1].padStart(2, '0');
-                    d = parts[0].padStart(2, '0');
+                    return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
                 }
-                if (y && m && d) return `${y}-${m}-${d}`;
             }
             return clean;
+        }
+
+        // استخراج تفاصيل الرحلة النظيفة (التاريخ، الوقت، والملاحظات الحقيقية بدون وسوم النظام)
+        function extractCleanTripInfo(tripObj) {
+            const rawNotes = tripObj?.admin_notes || '';
+            const norm = (s) => (s || '').replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
+            const cleanNotes = norm(rawNotes);
+
+            // 1. استخراج التاريخ
+            let dateStr = tripObj?.trip_date || '';
+            if (!dateStr || dateStr === '--') {
+                const dtMatch = cleanNotes.match(/التاريخ:\s*([^\s|]+)/i);
+                const calMatch = cleanNotes.match(/📅\s*([0-9-/\\]+)/i);
+                if (dtMatch) dateStr = dtMatch[1].trim();
+                else if (calMatch) dateStr = calMatch[1].trim();
+            }
+            const ymdDate = parseDateToYMD(dateStr);
+
+            // 2. استخراج الوقت
+            let timeStr = tripObj?.trip_time || '';
+            if (!timeStr || timeStr === '--') {
+                const tmMatch = cleanNotes.match(/الوقت:\s*([^\n\r|]+)/i);
+                const calTimeMatch = cleanNotes.match(/📅\s*[0-9-/\\]+\s*[-:]\s*([^\n\r]+)/i);
+                if (tmMatch) timeStr = tmMatch[1].trim();
+                else if (calTimeMatch) timeStr = calTimeMatch[1].trim();
+            }
+
+            // 3. استخراج الملاحظات الفعلية فقط (تجاهل الوسوم الفنية مثل [sheet_row] والركاب وحجز موديتور)
+            let actualNotes = '';
+            const noteLineMatch = cleanNotes.match(/ملاحظات:\s*([^\n\r\[]+)/i);
+            const assignNoteMatch = cleanNotes.match(/--- ملاحظات التعيين ---\s*([\s\S]+?)(?:\[|$)/i);
+            
+            let parts = [];
+            if (noteLineMatch && noteLineMatch[1].trim() && noteLineMatch[1].trim() !== '--') {
+                parts.push(noteLineMatch[1].trim());
+            }
+            if (assignNoteMatch && assignNoteMatch[1].trim()) {
+                parts.push(assignNoteMatch[1].trim());
+            }
+            actualNotes = parts.join(' | ');
+
+            return {
+                tripDate: dateStr || ymdDate || '--',
+                tripDateYMD: ymdDate,
+                tripTime: timeStr || '--',
+                clientNotes: actualNotes || 'لا توجد'
+            };
         }
 
         async function loadTrips() {
@@ -819,7 +869,7 @@
                     const sheetRows = [];
                     cachedTrips.forEach(t => {
                         const notes = t.admin_notes || '';
-                        const match = notes.match(/حجز شيت صف\s*(\d+)/);
+                        const match = notes.match(/\[sheet_row:(\d+)\]/) || notes.match(/حجز شيت صف\s*(\d+)/);
                         if (match) {
                             sheetRows.push(parseInt(match[1]));
                         }
@@ -924,31 +974,20 @@
             const filtered = cachedTrips.filter(t => {
                 if (currentTripsFilter === 'all') return true;
 
-                // استخراج التاريخ
-                let tripDate = t.trip_date || '';
-                const notesText = t.admin_notes || '';
-                
                 let gr = cachedReservationsMap[String(t.id)];
                 if (!gr) {
-                    const rowMatch = notesText.match(/حجز شيت صف\s*(\d+)/);
+                    const rowMatch = (t.admin_notes || '').match(/\[sheet_row:(\d+)\]/) || (t.admin_notes || '').match(/حجز شيت صف\s*(\d+)/);
                     if (rowMatch) {
                         gr = cachedReservationsMap[`row_${rowMatch[1]}`];
                     }
                 }
 
-                if (gr && gr.trip_date) {
-                    tripDate = gr.trip_date;
-                } else {
-                    const dtMatch = notesText.match(/التاريخ:\s*([^\s|]+)\s*\|\s*الوقت:\s*([^\n\r]+)/);
-                    if (dtMatch) {
-                        tripDate = dtMatch[1].trim();
-                    } else {
-                        const dateMatch = notesText.match(/📅\s*([0-9-/\\]+)/i);
-                        if (dateMatch) tripDate = dateMatch[1].trim();
-                    }
+                const info = extractCleanTripInfo(t);
+                let normalizedDate = info.tripDateYMD;
+                if (!normalizedDate && gr && gr.trip_date) {
+                    normalizedDate = parseDateToYMD(gr.trip_date);
                 }
 
-                const normalizedDate = parseDateToYMD(tripDate);
                 if (currentTripsFilter === 'today') {
                     return normalizedDate === todayStr;
                 } else if (currentTripsFilter === 'tomorrow') {
@@ -1015,30 +1054,11 @@
                 }
 
                 // --- التاريخ والوقت ---
-                // trips table columns أولاً (يُحدَّثان عند التعديل)
-                let tripDate = '--';
-                let tripTime = '--';
-                if (t.trip_date) {
-                    tripDate = t.trip_date;
-                    if (t.trip_time) tripTime = t.trip_time;
-                } else {
-                    // محاولة استخراج من admin_notes
-                    const dtMatch = notesText.match(/التاريخ:\s*([^\s|]+)\s*\|\s*الوقت:\s*([^\n\r]+)/);
-                    if (dtMatch) {
-                        tripDate = dtMatch[1].trim();
-                        tripTime = dtMatch[2].trim();
-                    } else {
-                        const dateMatch = notesText.match(/📅\s*([0-9-/\\]+)(?:\s*[-:]\s*([^\n\r]+))?/i);
-                        if (dateMatch) {
-                            tripDate = dateMatch[1].trim();
-                            if (dateMatch[2]) tripTime = dateMatch[2].trim();
-                        } else if (gr && gr.trip_date) {
-                            // آخر fallback: google_reservations
-                            tripDate = gr.trip_date;
-                            if (gr.trip_time) tripTime = gr.trip_time;
-                        }
-                    }
-                }
+                const tripInfo = extractCleanTripInfo(t);
+                let tripDate = tripInfo.tripDate;
+                let tripTime = tripInfo.tripTime;
+                if ((!tripDate || tripDate === '--') && gr && gr.trip_date) tripDate = gr.trip_date;
+                if ((!tripTime || tripTime === '--') && gr && gr.trip_time) tripTime = gr.trip_time;
 
                 // --- تفاصيل الحجز (ركاب / شنط / نوع السيارة / نوع الرحلة) ---
                 // استخراج من admin_notes المعدّل أولاً
@@ -1638,13 +1658,21 @@
                 if (!custName) custName = 'عزيزنا العميل';
                 const pickupLoc = tripObj?.pickup_location || '';
                 const dropoffLoc = tripObj?.dropoff_location || '';
-                const tripDateVal = tripObj?.trip_date || '';
-                const tripTimeVal = tripObj?.trip_time || '';
                 const priceVal = tripObj?.estimated_price || 0;
+
+                const tripInfo = extractCleanTripInfo(tripObj);
+                let tripDateVal = tripInfo.tripDate;
+                let tripTimeVal = tripInfo.tripTime;
+                if ((!tripDateVal || tripDateVal === '--') && (finalSqlServerId || finalSheetRow)) {
+                    const grRes = cachedReservationsMap[finalSqlServerId] || cachedReservationsMap[`row_${finalSheetRow}`];
+                    if (grRes?.trip_date) tripDateVal = grRes.trip_date;
+                    if (grRes?.trip_time) tripTimeVal = grRes.trip_time;
+                }
+                const notesVal = tripInfo.clientNotes;
 
                 // 7. ✅ إرسال رسالة واتساب للعميل فوراً
                 if (custPhone) {
-                    const clientMsg = `أهلاً أستاذ ${custName} 👋\nتم تعيين الكابتن لرحلتك بنجاح! 🚕\n\n👤 الكابتن: ${drvName}\n📱 هاتف: 01121748885\n🚘 السيارة: ${carBrand} [ ${carPlate} ]\n📍 المسار: ${pickupLoc} ➝ ${dropoffLoc}\n\n🔗 لمتابعة الرحلة والتواصل مع الكابتن:\nhttps://24seven-ai.com/limousine.html\n\n24Seven تتمنى لك رحلة سعيدة! ✨`;
+                    const clientMsg = `أهلاً أستاذ ${custName} 👋\nتم تعيين الكابتن لرحلتك بنجاح! 🚕\n\n👤 الكابتن: ${drvName}\n📱 هاتف: ${drvPhone}\n🚘 السيارة: ${carBrand} [ ${carPlate} ]\n📍 المسار: ${pickupLoc} ➝ ${dropoffLoc}\n\n🔗 لمتابعة الرحلة والتواصل مع الكابتن:\nhttps://24seven-ai.com/limousine.html\n\n24Seven تتمنى لك رحلة سعيدة! ✨`;
                     
                     fetch(`${getApiBaseUrl()}/api/send_reply`, {
                         method: 'POST',
