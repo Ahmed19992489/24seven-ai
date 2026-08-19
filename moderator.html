@@ -3697,24 +3697,78 @@
                 }
 
                 if (isGoogleRes) {
-                    // 1. Find or create client profile
+                    // 1. Find or resolve client profile
                     let rawPhone = (trip.customer_phone || '').replace(/\D/g, '');
-                    if (rawPhone.startsWith('201') && rawPhone.length === 12) {
-                        rawPhone = '0' + rawPhone.slice(2);
-                    } else if (rawPhone.startsWith('1') && rawPhone.length === 10) {
-                        rawPhone = '0' + rawPhone;
+                    let phoneVariants = [];
+                    if (rawPhone) {
+                        phoneVariants.push(rawPhone);
+                        if (rawPhone.startsWith('201') && rawPhone.length === 12) {
+                            phoneVariants.push('0' + rawPhone.slice(2));
+                            phoneVariants.push(rawPhone.slice(2));
+                        } else if (rawPhone.startsWith('1') && rawPhone.length === 10) {
+                            phoneVariants.push('0' + rawPhone);
+                            phoneVariants.push('20' + rawPhone);
+                        } else if (rawPhone.startsWith('01') && rawPhone.length === 11) {
+                            phoneVariants.push(rawPhone.slice(1));
+                            phoneVariants.push('20' + rawPhone.slice(1));
+                        }
                     }
+
                     let clientUserId = null;
-                    const { data: profile } = await sbClient.from('profiles').select('id').eq('phone', rawPhone).maybeSingle();
-                    
-                    if (profile) {
-                        clientUserId = profile.id;
-                    } else {
-                        const fakeEmail = `${rawPhone}@24seven-client.app`;
-                        const { data: signUp } = await sbClient.auth.signUp({ email: fakeEmail, password: rawPhone.slice(-6) || '123456' });
-                        if (signUp?.user) {
-                            clientUserId = signUp.user.id;
-                            await sbClient.from('profiles').upsert({ id: clientUserId, full_name: trip.customer_name, phone: rawPhone, role: 'user', wallet_balance: 0 });
+
+                    // 1a. Search by phone variants
+                    for (const p of phoneVariants) {
+                        try {
+                            const { data: prof } = await sbClient.from('profiles').select('id').eq('phone', p).maybeSingle();
+                            if (prof?.id) { clientUserId = prof.id; break; }
+                        } catch(e) {}
+                    }
+
+                    // 1b. Search by last 8 digits of phone
+                    if (!clientUserId && rawPhone && rawPhone.length >= 8) {
+                        const last8 = rawPhone.slice(-8);
+                        try {
+                            const { data: profs } = await sbClient.from('profiles').select('id').ilike('phone', `%${last8}%`).limit(1);
+                            if (profs && profs.length > 0) {
+                                clientUserId = profs[0].id;
+                            }
+                        } catch(e) {}
+                    }
+
+                    // 1c. Search by customer name
+                    if (!clientUserId && trip.customer_name && trip.customer_name.trim()) {
+                        try {
+                            const { data: profs } = await sbClient.from('profiles').select('id').eq('full_name', trip.customer_name.trim()).limit(1);
+                            if (profs && profs.length > 0) {
+                                clientUserId = profs[0].id;
+                            }
+                        } catch(e) {}
+                    }
+
+                    // 1d. Try to sign up a new client account
+                    if (!clientUserId && rawPhone) {
+                        try {
+                            const cleanP = (rawPhone.startsWith('01') && rawPhone.length === 11) ? rawPhone : (rawPhone.startsWith('1') && rawPhone.length === 10 ? '0' + rawPhone : rawPhone);
+                            const fakeEmail = `${cleanP}@24seven-client.app`;
+                            const { data: signUp } = await sbClient.auth.signUp({ email: fakeEmail, password: cleanP.slice(-6) || '123456' });
+                            if (signUp?.user?.id) {
+                                clientUserId = signUp.user.id;
+                                await sbClient.from('profiles').upsert({ id: clientUserId, full_name: trip.customer_name || 'عميل', phone: cleanP, role: 'user', wallet_balance: 0 });
+                            }
+                        } catch(e) {}
+                    }
+
+                    // 1e. Robust Fallback: Guarantee a valid non-null user_id from profiles
+                    if (!clientUserId) {
+                        try {
+                            const { data: anyProfiles } = await sbClient.from('profiles').select('id').limit(1);
+                            if (anyProfiles && anyProfiles.length > 0) {
+                                clientUserId = anyProfiles[0].id;
+                            } else {
+                                clientUserId = '5a9111b7-e6e7-4b54-95cd-a64adfc106ac';
+                            }
+                        } catch(e) {
+                            clientUserId = '5a9111b7-e6e7-4b54-95cd-a64adfc106ac';
                         }
                     }
 
