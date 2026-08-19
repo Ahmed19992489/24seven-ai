@@ -1613,12 +1613,12 @@
                     tripObj = tDb;
                 }
 
-                const notesVal = tripObj?.admin_notes || '';
+                const rawAdminNotes = tripObj?.admin_notes || '';
                 let custName = tripObj?.manual_client_name || '';
                 let custPhone = (tripObj?.client_phone || tripObj?.customer_phone || '').replace(/\D/g, '');
 
                 if (!custName) {
-                    const custNameMatch = notesVal.match(/العميل:\s*([^\n\r]+)/);
+                    const custNameMatch = rawAdminNotes.match(/العميل:\s*([^\n\r]+)/);
                     if (custNameMatch) custName = custNameMatch[1].trim();
                 }
 
@@ -1627,9 +1627,9 @@
                 let finalWebId = tripObj?.google_res_id || '';
                 let finalSqlServerId = tripObj?.sql_server_id || '';
 
-                const sheetRowMatch = notesVal.match(/\[sheet_row:(\d+)\]/) || notesVal.match(/حجز شيت صف\s*(\d+)/);
-                const sqlIdMatch = notesVal.match(/\[sql_server_id:(\d+)\]/) || notesVal.match(/sql[_-]?id[:\s]+(\d+)/i);
-                const resIdMatch = notesVal.match(/\[google_res_id:(\d+)\]/);
+                const sheetRowMatch = rawAdminNotes.match(/\[sheet_row:(\d+)\]/) || rawAdminNotes.match(/حجز شيت صف\s*(\d+)/);
+                const sqlIdMatch = rawAdminNotes.match(/\[sql_server_id:(\d+)\]/) || rawAdminNotes.match(/sql[_-]?id[:\s]+(\d+)/i);
+                const resIdMatch = rawAdminNotes.match(/\[google_res_id:(\d+)\]/);
 
                 if (sheetRowMatch) finalSheetRow = sheetRowMatch[1];
                 if (sqlIdMatch) finalSqlServerId = sqlIdMatch[1];
@@ -1668,7 +1668,7 @@
                     if (grRes?.trip_date) tripDateVal = grRes.trip_date;
                     if (grRes?.trip_time) tripTimeVal = grRes.trip_time;
                 }
-                const notesVal = tripInfo.clientNotes;
+                const cleanNotesVal = tripInfo.clientNotes;
 
                 // 7. ✅ إرسال رسالة واتساب للعميل فوراً
                 if (custPhone) {
@@ -1688,7 +1688,7 @@
 
                 // 8. ✅ إرسال رسالة واتساب للسائق (أمر الشغل) فوراً
                 if (drvPhone) {
-                    const driverMsg = `أمر شغل جديد 🚨\n👤 العميل: ${custName}\n📱 تليفون العميل: ${custPhone || '-'}\n📅 التاريخ: ${tripDateVal}\n⏰ الوقت: ${tripTimeVal}\n📍 التحرك: ${pickupLoc}\n🏁 الوصول: ${dropoffLoc}\n💵 التحصيل من العميل: ${Number(priceVal).toLocaleString()} EGP\n📝 ملاحظات: ${notesVal}\n\n🔗 لبدء الرحلة عبر تطبيق الكابتن:\nhttps://24seven-ai.com/driver.html`;
+                    const driverMsg = `أمر شغل جديد 🚨\n👤 العميل: ${custName}\n📱 تليفون العميل: ${custPhone || '-'}\n📅 التاريخ: ${tripDateVal}\n⏰ الوقت: ${tripTimeVal}\n📍 التحرك: ${pickupLoc}\n🏁 الوصول: ${dropoffLoc}\n💵 التحصيل من العميل: ${Number(priceVal).toLocaleString()} EGP\n📝 ملاحظات: ${cleanNotesVal}\n\n🔗 لبدء الرحلة عبر تطبيق الكابتن:\nhttps://24seven-ai.com/driver.html`;
                     
                     fetch(`${getApiBaseUrl()}/api/send_reply`, {
                         method: 'POST',
