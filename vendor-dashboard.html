@@ -86,6 +86,13 @@
         .animate-fade {
             animation: fadeIn 0.4s ease forwards;
         }
+        @keyframes bounceSubtle {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+        .animate-bounce-subtle {
+            animation: bounceSubtle 3s ease-in-out infinite;
+        }
 
         /* ستايل الشات */
         .msg {
@@ -158,11 +165,23 @@
                     🤝
                 </div>
                 <div>
-                    <h2 id="header-vendor-name" class="font-bold text-lg text-white">تحميل...</h2>
-                    <p class="text-[10px] text-slate-400">مكتب تشغيل خارجي شريك</p>
+                    <div class="flex items-center gap-2">
+                        <h2 id="header-vendor-name" class="font-bold text-lg text-white">تحميل...</h2>
+                        <span id="live-indicator-badge" class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-green-500/10 text-green-400 border border-green-500/20">
+                            <span class="relative flex h-2 w-2 mr-0.5">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                            </span>
+                            بث حي وتنبيهات
+                        </span>
+                    </div>
+                    <p class="text-[10px] text-slate-400">مكتب تشغيل خارجي شريك — تنبيهات الرحلات الفورية مفعلة</p>
                 </div>
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 md:gap-3 flex-wrap justify-end">
+                <button onclick="playTestSound()" class="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm" title="فحص وتجربة صوت التنبيه">
+                    <i class="fas fa-bell"></i> تجربة الصوت 🔔
+                </button>
                 <button onclick="loadDashboardData()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 w-9 h-9 rounded-xl flex items-center justify-center border border-slate-700/60 transition" title="تحديث البيانات">
                     <i class="fas fa-sync-alt"></i>
                 </button>
@@ -472,6 +491,9 @@
         </div>
     </div>
 
+    <!-- منطقة الإشعارات الحية العائمة (Toast Container) -->
+    <div id="vendor-toast-container" class="fixed top-5 left-5 right-5 md:left-auto md:right-5 z-[99999] flex flex-col gap-3 pointer-events-none max-w-md w-full"></div>
+
     <script>
         // إعداد اتصال Supabase
         const supabaseUrl = 'https://khskudtxbypohvnreloi.supabase.co';
@@ -488,6 +510,264 @@
         let currentTripsFilter = 'today';
         
         let vendorProfileId = null;
+        let vendorTripsChannel = null;
+        let vendorPollingInterval = null;
+        let knownTripIds = new Set();
+        let audioCtx = null;
+
+        // ==========================================
+        // 🔔 محرك التنبيهات الصوتية والإشعارات الحية
+        // ==========================================
+        function initAudioContext() {
+            try {
+                if (!audioCtx) {
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContextClass) {
+                        audioCtx = new AudioContextClass();
+                    }
+                }
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+            } catch (e) {
+                console.warn("AudioContext init error:", e);
+            }
+        }
+
+        // إلغاء كتم الصوت تلقائياً بمجرد لمس أو النقر على الشاشة
+        ['click', 'touchstart', 'keydown'].forEach(evt => {
+            document.addEventListener(evt, () => {
+                initAudioContext();
+            }, { once: false, passive: true });
+        });
+
+        // نغمة جرس تنبيه احترافية ثلاثية النغمات (Web Audio API Chime)
+        function playNewOrderSound() {
+            try {
+                initAudioContext();
+                if (!audioCtx) return;
+
+                const now = audioCtx.currentTime;
+                const notes = [
+                    { freq: 587.33, start: 0.0, dur: 0.35, gain: 0.35 },  // D5
+                    { freq: 880.00, start: 0.12, dur: 0.45, gain: 0.40 }, // A5
+                    { freq: 1174.66, start: 0.26, dur: 0.70, gain: 0.45 }  // D6
+                ];
+
+                notes.forEach(n => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(n.freq, now + n.start);
+
+                    gain.gain.setValueAtTime(0.001, now + n.start);
+                    gain.gain.exponentialRampToValueAtTime(n.gain, now + n.start + 0.03);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + n.start + n.dur);
+
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+
+                    osc.start(now + n.start);
+                    osc.stop(now + n.start + n.dur + 0.05);
+                });
+            } catch (e) {
+                console.warn("Play sound error:", e);
+            }
+        }
+
+        function playTestSound() {
+            initAudioContext();
+            playNewOrderSound();
+            showNewOrderToast({
+                id: 'TEST',
+                manual_client_name: 'أحمد محمود (تجربة إشعار)',
+                pickup_location: 'مطار القاهرة صالة 3',
+                dropoff_location: 'فندق ماريوت الزمالك',
+                estimated_price: 650,
+                trip_date: new Date().toISOString().split('T')[0],
+                trip_time: '12:00 م'
+            });
+        }
+
+        function requestNotificationPermission() {
+            if ("Notification" in window && Notification.permission === "default") {
+                Notification.requestPermission().then(perm => {
+                    console.log("Notification permission:", perm);
+                });
+            }
+        }
+
+        function sendDesktopNotification(title, body, tripId) {
+            if ("Notification" in window && Notification.permission === "granted") {
+                try {
+                    const n = new Notification(title, {
+                        body: body,
+                        icon: 'https://24seven-ai.com/favicon.ico',
+                        tag: 'trip-' + (tripId || Date.now()),
+                        renotify: true
+                    });
+                    n.onclick = function() {
+                        window.focus();
+                        if (tripId && tripId !== 'TEST') openAssignDriverModal(tripId);
+                        this.close();
+                    };
+                } catch(e) {
+                    console.log("Desktop notification error:", e);
+                }
+            }
+        }
+
+        function showNewOrderToast(trip) {
+            const container = document.getElementById('vendor-toast-container');
+            if (!container) return;
+
+            const info = extractCleanTripInfo(trip);
+            const pickup = (trip.pickup_location || '').split(',')[0] || 'الموقع';
+            const dropoff = (trip.dropoff_location || '').split(',')[0] || 'الوجهة';
+            const clientName = trip.manual_client_name || 'عميل';
+            const price = trip.estimated_price || 0;
+            const tripId = trip.id;
+
+            const toastId = 'toast-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
+
+            const toast = document.createElement('div');
+            toast.id = toastId;
+            toast.className = 'pointer-events-auto bg-slate-900/95 border-2 border-blue-500 rounded-2xl p-4 shadow-2xl shadow-blue-500/40 flex flex-col gap-2 transform transition-all duration-500 animate-bounce-subtle backdrop-blur-xl';
+            
+            toast.innerHTML = `
+                <div class="flex items-center justify-between border-b border-slate-700/60 pb-2">
+                    <div class="flex items-center gap-2">
+                        <span class="relative flex h-3 w-3">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                        </span>
+                        <span class="font-bold text-xs text-blue-400">🚨 أوردر جديد مسند لمكتبكم #${tripId}</span>
+                    </div>
+                    <button onclick="dismissToast('${toastId}')" class="text-slate-400 hover:text-white text-xs p-1">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="space-y-1 text-xs">
+                    <p class="text-white font-bold"><i class="fas fa-user text-blue-400 ml-1.5"></i> ${clientName}</p>
+                    <p class="text-slate-300"><i class="fas fa-route text-amber-400 ml-1.5"></i> ${pickup} ➝ ${dropoff}</p>
+                    <div class="flex justify-between items-center text-[11px] text-slate-400 pt-1">
+                        <span>📅 ${info.tripDate} (${info.tripTime})</span>
+                        <span class="text-green-400 font-bold font-num text-sm">${price} EGP</span>
+                    </div>
+                </div>
+                <div class="flex gap-2 pt-2">
+                    ${tripId !== 'TEST' ? `
+                    <button onclick="openAssignDriverModal('${tripId}'); dismissToast('${toastId}');" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-lg shadow-blue-600/30">
+                        <i class="fas fa-user-plus"></i> تعيين كابتن الآن
+                    </button>` : ''}
+                    <button onclick="dismissToast('${toastId}')" class="px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2 rounded-xl text-xs transition">
+                        إغلاق
+                    </button>
+                </div>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                dismissToast(toastId);
+            }, 12000);
+        }
+
+        function dismissToast(id) {
+            const t = document.getElementById(id);
+            if (t) {
+                t.classList.add('opacity-0', 'translate-x-full');
+                setTimeout(() => t.remove(), 400);
+            }
+        }
+
+        // تهيئة البث المباشر (Supabase Realtime Channel)
+        function initVendorRealtime() {
+            if (!currentVendor) return;
+
+            requestNotificationPermission();
+
+            if (vendorTripsChannel) {
+                sb.removeChannel(vendorTripsChannel);
+                vendorTripsChannel = null;
+            }
+
+            console.log(`🔌 Initializing Supabase Realtime for Vendor ID: ${currentVendor.id}`);
+
+            // الاشتراك في جدول trips
+            vendorTripsChannel = sb.channel('vendor-trips-realtime-' + currentVendor.id)
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'trips',
+                    filter: `vendor_id=eq.${currentVendor.id}`
+                }, async (payload) => {
+                    console.log('🔔 Vendor Realtime Trip Event:', payload);
+                    
+                    const eventType = payload.eventType;
+                    const newRow = payload.new;
+                    const oldRow = payload.old;
+
+                    if (eventType === 'INSERT') {
+                        playNewOrderSound();
+                        showNewOrderToast(newRow);
+                        sendDesktopNotification(
+                            '🚕 رحلة جديدة مسندة لمكتبكم!',
+                            `${newRow.manual_client_name || 'عميل'} | ${(newRow.pickup_location || '').split(',')[0]} ➝ ${(newRow.dropoff_location || '').split(',')[0]} (${newRow.estimated_price || 0} EGP)`,
+                            newRow.id
+                        );
+                    } else if (eventType === 'UPDATE') {
+                        if (newRow && (!oldRow || oldRow.driver_id !== newRow.driver_id || oldRow.status !== newRow.status)) {
+                            if (!newRow.driver_id && newRow.status === 'approved') {
+                                if (!knownTripIds.has(newRow.id)) {
+                                    playNewOrderSound();
+                                    showNewOrderToast(newRow);
+                                }
+                            }
+                        }
+                    }
+
+                    if (newRow && newRow.id) knownTripIds.add(newRow.id);
+
+                    // تحديث هادئ للبيانات فوراً بدون وميض
+                    await loadTrips(true);
+                    await loadDashboardData(true);
+                })
+                .subscribe((status) => {
+                    console.log('📡 Realtime Subscription status:', status);
+                });
+
+            // Polling احتياطي في الخلفية كل 15 ثانية لضمان التزامن
+            if (vendorPollingInterval) clearInterval(vendorPollingInterval);
+            vendorPollingInterval = setInterval(async () => {
+                if (!currentVendor) return;
+                try {
+                    const { data: latestTrips } = await sb.from('trips')
+                        .select('id, vendor_id, status, manual_client_name, pickup_location, dropoff_location, estimated_price, admin_notes, trip_date, trip_time')
+                        .eq('vendor_id', currentVendor.id)
+                        .order('created_at', { ascending: false })
+                        .limit(20);
+
+                    if (latestTrips && latestTrips.length > 0) {
+                        let hasBrandNew = false;
+                        latestTrips.forEach(t => {
+                            if (knownTripIds.size > 0 && !knownTripIds.has(t.id) && t.status === 'approved') {
+                                hasBrandNew = true;
+                                playNewOrderSound();
+                                showNewOrderToast(t);
+                            }
+                            knownTripIds.add(t.id);
+                        });
+
+                        loadTrips(true);
+                        loadDashboardData(true);
+                    }
+                } catch (e) {
+                    console.warn("Polling error:", e);
+                }
+            }, 15000);
+        }
 
         async function uploadCarPhoto(file, carPlate) {
             const compressed = await compressImage(file);
@@ -683,6 +963,9 @@
 
             document.getElementById('header-vendor-name').textContent = currentVendor.name;
             switchVendorTab('trips');
+            initAudioContext();
+            requestNotificationPermission();
+            initVendorRealtime();
             loadDashboardData();
         }
 
@@ -690,6 +973,8 @@
             localStorage.removeItem('vendor_data');
             currentVendor = null;
             if (chatSub) sb.removeChannel(chatSub);
+            if (vendorTripsChannel) sb.removeChannel(vendorTripsChannel);
+            if (vendorPollingInterval) clearInterval(vendorPollingInterval);
             location.reload();
         }
 
@@ -705,11 +990,11 @@
         // ==========================================
         // جلب وتحميل البيانات المالية والإحصائيات
         // ==========================================
-        async function loadDashboardData() {
+        async function loadDashboardData(silent = false) {
             if (!currentVendor) return;
 
-            loadTrips();
-            loadLedger();
+            loadTrips(silent);
+            loadLedger(silent);
 
             // حساب الإحصائيات
             try {
@@ -847,9 +1132,11 @@
             };
         }
 
-        async function loadTrips() {
+        async function loadTrips(silent = false) {
             const list = document.getElementById('trips-list');
-            list.innerHTML = '<p class="text-center text-slate-400 py-8"><i class="fas fa-spinner fa-spin ml-2"></i>جاري تحميل الرحلات...</p>';
+            if (!silent) {
+                list.innerHTML = '<p class="text-center text-slate-400 py-8"><i class="fas fa-spinner fa-spin ml-2"></i>جاري تحميل الرحلات...</p>';
+            }
 
             try {
                 // جلب الرحلات المسندة للمكتب
@@ -1245,47 +1532,6 @@
                         </div>
                     </div>`;
             }).join('');
-        }
-
-        // ==========================================
-        // تحميل وعرض كشف الحساب
-        // ==========================================
-        async function loadLedger() {
-            const list = document.getElementById('ledger-list');
-            list.innerHTML = '<p class="text-center text-slate-500 py-4 text-xs"><i class="fas fa-spinner fa-spin ml-2"></i>جاري تحميل القيود...</p>';
-
-            try {
-                const { data: txs, error } = await sb.from('vendor_transactions')
-                    .select('*')
-                    .eq('vendor_id', currentVendor.id)
-                    .order('created_at', { ascending: false });
-
-                if (error) throw error;
-
-                if (!txs || txs.length === 0) {
-                    list.innerHTML = '<p class="text-center text-slate-500 py-8 text-xs">لا توجد حركات مالية مسجلة في كشف حسابكم بعد.</p>';
-                    return;
-                }
-
-                list.innerHTML = txs.map(t => {
-                    const date = new Date(t.created_at).toLocaleDateString('ar-EG');
-                    const isPlus = Number(t.amount) >= 0;
-                    const amountColor = isPlus ? 'text-green-400' : 'text-red-400';
-                    const amountPrefix = isPlus ? '+' : '';
-                    
-                    return `
-                        <div class="bg-slate-900/30 border border-slate-800 p-3 rounded-xl flex justify-between items-center text-xs">
-                            <div class="space-y-1">
-                                <p class="font-semibold text-slate-200">${t.description || 'حركة مقاصة'}</p>
-                                <p class="text-[9px] text-slate-500 font-mono">${date} | ${t.transaction_type}</p>
-                            </div>
-                            <span class="font-black font-num text-sm ${amountColor}">${amountPrefix}${t.amount} EGP</span>
-                        </div>`;
-                }).join('');
-
-            } catch(e) {
-                list.innerHTML = `<p class="text-center text-red-500 py-4 text-xs">خطأ في جلب كشف الحساب: ${e.message}</p>`;
-            }
         }
 
         // ==========================================
@@ -2295,9 +2541,11 @@
             }).join('');
         }
 
-        async function loadLedger() {
+        async function loadLedger(silent = false) {
             const list = document.getElementById('ledger-list');
-            list.innerHTML = '<p class="text-center text-slate-500 py-4 text-xs"><i class="fas fa-spinner fa-spin ml-2"></i>جاري تحميل القيود...</p>';
+            if (!silent) {
+                list.innerHTML = '<p class="text-center text-slate-500 py-4 text-xs"><i class="fas fa-spinner fa-spin ml-2"></i>جاري تحميل القيود...</p>';
+            }
 
             try {
                 const [txsRes, tripsRes] = await Promise.all([
