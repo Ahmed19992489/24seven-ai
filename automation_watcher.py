@@ -452,40 +452,53 @@ while True:
 
                     print(f"🚕 صف {real_idx}: تم تعيين كابتن حقيقي ({driver_name} - {driver_phone}) لـ ({cust_name})...")
 
-                    # رسالة العميل — بيانات الكابتن ورابط السايت بصيغة 24SEVEN LIMOUSINE
-                    client_msg_parts = [
-                        "✨ *24SEVEN LIMOUSINE* ✨",
-                        "🚕 *تم إسناد كابتن لرحلتك بنجاح!*",
-                        "━━━━━━━━━━━━━━━━━━━━━━━━",
-                        f"🎫 *كود الرحلة:* #{sql_id if sql_id else real_idx}",
-                        f"👤 *العميل:* *{cust_name}*",
-                        f"📅 *التاريخ:* *{str(t_date)}*",
-                        f"⏰ *الوقت:* *{str(trip_time)}*",
-                        "━━━━━━━━━━━━━━━━━━━━━━━━",
-                        f"👤 *الكابتن:* *{driver_name}*",
-                        f"🚘 *السيارة:* *{car_type}*",
-                        f"📍 *مكان التحرك:* {pickup}",
-                        f"🏁 *مكان الوصول:* {dropoff}"
-                    ]
-                    if flight_num and len(flight_num.strip()) > 1:
-                        client_msg_parts.append(f"✈️ *رقم رحلة الطيران:* {flight_num}")
+                    # رسالة العميل بالصيغة المعتمدة لشركة 24SEVEN LIMOUSINE ورابط السايت
+                    sql_id = str(row[0]).strip() if len(row) > 0 and row[0] else ""
+                    agent_name = str(row[11]).strip() if len(row) > 11 and row[11] else (str(row[17]).strip() if len(row) > 17 and row[17] else "فاطمه")
+                    agent_phone = str(row[5]).strip() if len(row) > 5 and row[5] else "01121747555"
+                    pax = str(row[8]).strip() if len(row) > 8 and row[8] else "1"
+                    bags = str(row[9]).strip() if len(row) > 9 and row[9] else "2"
+                    pay_method = str(row[13]).strip() if len(row) > 13 and row[13] else (str(row[15]).strip() if len(row) > 15 and row[15] else "ذهاب فقط")
+                    clean_notes = notes if notes else "لا يوجد"
+                    trip_code = sql_id if sql_id else real_idx
 
-                    client_msg_parts.extend([
-                        f"💵 *قيمة الرحلة:* *{price}*",
-                        "━━━━━━━━━━━━━━━━━━━━━━━━",
-                        "🔗 *للدخول على السايت ومتابعة الرحلة والتواصل مع الكابتن مباشرة عبر الشات:*",
-                        "https://24seven-ai.com/limousine.html",
-                        "━━━━━━━━━━━━━━━━━━━━━━━━",
-                        "💳 *في حالة رغبتك بالدفع بالتحويل (انستاباي / محفظة كاش):*",
-                        "📲 التحويل على الرقم المعتمد: *01121748885*",
-                        "━━━━━━━━━━━━━━━━━━━━━━━━",
-                        "☎️ *للتواصل مع مكتب التشغيل والطوارئ:*",
-                        "📞 01228482873",
-                        "📞 01226408587",
-                        "━━━━━━━━━━━━━━━━━━━━━━━━",
-                        "✨ *24SEVEN LIMOUSINE تتمنى لك رحلة سعيدة وآمنة!* ✨"
-                    ])
-                    client_msg = "\n".join(client_msg_parts)
+                    client_msg = (
+                        f"كود الحجز: {trip_code}\n"
+                        f"تاريخ الحجز : {str(t_date)}\n"
+                        f"ساعة الحجز : {str(trip_time)}\n"
+                        f"عنوان التحرك : {pickup}\n"
+                        f"عنوان الوصول : {dropoff}\n"
+                        f"نوع السيارة : {car_type or 'سيدان'}\n"
+                        f"اسم العميل : {cust_name}\n"
+                        f"موبايل العميل : {cust_phone}\n"
+                        f"اسم المُبلغ : {agent_name}\n"
+                        f"رقم المُبلغ : {agent_phone}\n"
+                        f"اسم السائق : {driver_name or 'غير محدد'}\n"
+                        f"موبايل السائق : {driver_phone or 'غير محدد'}\n"
+                        f"🔗 رابط السايت لمتابعة الرحلة والدردشة مع السائق:\n"
+                        f"https://24seven-ai.com/limousine.html\n"
+                        f"عدد الركاب : {pax}\n"
+                        f"عدد الشنط : {bags}\n"
+                        f"مبلغ التحصيل : {price}\n"
+                        f"طريقة الدفع : {pay_method}\n"
+                        f"💳 في حال التحويل للشركة: 01121748885 / 01007317927 فقط\n"
+                        f"ملاحظات : {clean_notes}\n"
+                        f"➖➖➖➖➖➖➖➖➖➖➖➖\n"
+                        f"24Seven Limousine\n"
+                        f"أرقام الشركة للمتابعة\n"
+                        f"01121747555 - 01007317927 للحجوزات و الاستفسارات\n"
+                        f"01121748885 للاقتراحات و الشكوى\n"
+                        f"01114323218 - 01228482873 - 01226408587 قسم التشغيل\n"
+                        f"عنــــوان الشـــركة\n"
+                        f"..الاسكندرية-ميامي خلف كومباوند مارسليا بجوار مركز الاوروبي للسيارات..\n"
+                        f"..القاهره - مساكن شيراتون اعلى توم اند بصل..\n"
+                        f".. الغردقه - الدهار اعلى كشري التحرير ..\n"
+                        f"للاستفاده من العروض و الخصومات تابعنا على موقع الرسمى للشركه\n"
+                        f"web: https://24seven-ai.com/home.html#home\n"
+                        f"تواصل معنا عبر email\n"
+                        f"email: info@24seven-ai.com\n"
+                        f"24seven limousine تتمنى لك رحله سعيده و امنه و مطمئنه"
+                    )
 
                     # ✅ إصلاح مكرر: سجّل أولاً
                     sheet.update_cell(real_idx, 25, "جاري إبلاغ العميل...")

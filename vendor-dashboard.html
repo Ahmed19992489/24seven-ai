@@ -2084,41 +2084,52 @@
 
                 const driverMsg = driverMsgParts.join('\n');
 
-                // 📱 رسالة العميل (بصيغة 24SEVEN LIMOUSINE الاحترافية ورابط السايت)
+                // 📱 رسالة العميل (بالصيغة المعتمدة لشركة 24SEVEN LIMOUSINE مع رابط السايت)
+                const carDisplay = carBrand ? (carBrand + (carPlate ? ` [ ${carPlate} ]` : '')) : (tripObj?.car_type || 'سيدان');
+                const paxCount = tripObj?.passengers_count || (grData && grData.passengers_count) || '1';
+                const bagsCount = tripObj?.luggage_count || (grData && grData.luggage_count) || '2';
+                const agentNameVal = tripObj?.booking_employee || tripObj?.moderator_name || (grData && (grData.booking_employee || grData.agent_name)) || 'فاطمه';
+                const agentPhoneVal = tripObj?.agent_phone || (grData && grData.agent_phone) || '01121747555';
+                const payMethodVal = tripObj?.payment_method || (grData && grData.payment_method) || 'ذهاب فقط';
+                const notesVal = cleanNotesVal || (grData && grData.notes) || 'لا يوجد';
+
                 let clientMsgParts = [
-                    `✨ *24SEVEN LIMOUSINE* ✨`,
-                    `🚕 *تم إسناد كابتن لرحلتك بنجاح!*`,
-                    `━━━━━━━━━━━━━━━━━━━━━━━━`,
-                    `🎫 *كود الرحلة:* #${tripCode}`,
-                    `👤 *العميل:* *${custName}*`,
-                    `📅 *التاريخ:* *${tripDateVal}*`,
-                    `⏰ *الوقت:* *${tripTimeVal}*`,
-                    `━━━━━━━━━━━━━━━━━━━━━━━━`,
-                    `👤 *الكابتن:* *${drvName}*`,
-                    `🚘 *السيارة:* *${carBrand} [ ${carPlate} ]*`,
-                    `📍 *مكان التحرك:* ${pickupLoc}`,
-                    `🏁 *مكان الوصول:* ${dropoffLoc}`
-                ];
-
-                if (flightNum) {
-                    clientMsgParts.push(`✈️ *رقم رحلة الطيران:* ${flightNum}`);
-                }
-
-                clientMsgParts.push(
-                    `💵 *قيمة الرحلة:* *${Number(priceVal).toLocaleString()} EGP*`,
-                    `━━━━━━━━━━━━━━━━━━━━━━━━`,
-                    `🔗 *للدخول على السايت ومتابعة الرحلة والتواصل مع الكابتن مباشرة عبر الشات:*`,
+                    `كود الحجز: ${tripCode}`,
+                    `تاريخ الحجز : ${tripDateVal}`,
+                    `ساعة الحجز : ${tripTimeVal}`,
+                    `عنوان التحرك : ${pickupLoc}`,
+                    `عنوان الوصول : ${dropoffLoc}`,
+                    `نوع السيارة : ${carDisplay}`,
+                    `اسم العميل : ${custName}`,
+                    `موبايل العميل : ${displayCustPhone || custPhone}`,
+                    `اسم المُبلغ : ${agentNameVal}`,
+                    `رقم المُبلغ : ${agentPhoneVal}`,
+                    `اسم السائق : ${drvName || 'غير محدد'}`,
+                    `موبايل السائق : ${displayDrvPhone || drvPhone || 'غير محدد'}`,
+                    `🔗 رابط السايت لمتابعة الرحلة والدردشة مع السائق:`,
                     clientLoginLink,
-                    `━━━━━━━━━━━━━━━━━━━━━━━━`,
-                    `💳 *في حالة رغبتك بالدفع بالتحويل (انستاباي / محفظة كاش):*`,
-                    `📲 التحويل على الرقم المعتمد: *01121748885*`,
-                    `━━━━━━━━━━━━━━━━━━━━━━━━`,
-                    `☎️ *للتواصل مع مكتب التشغيل والطوارئ:*`,
-                    `📞 01228482873`,
-                    `📞 01226408587`,
-                    `━━━━━━━━━━━━━━━━━━━━━━━━`,
-                    `✨ *24SEVEN LIMOUSINE تتمنى لك رحلة سعيدة وآمنة!* ✨`
-                );
+                    `عدد الركاب : ${paxCount}`,
+                    `عدد الشنط : ${bagsCount}`,
+                    `مبلغ التحصيل : ${Number(priceVal).toLocaleString()}`,
+                    `طريقة الدفع : ${payMethodVal}`,
+                    `💳 في حال التحويل للشركة: 01121748885 / 01007317927 فقط`,
+                    `ملاحظات : ${notesVal}`,
+                    `➖➖➖➖➖➖➖➖➖➖➖➖`,
+                    `24Seven Limousine`,
+                    `أرقام الشركة للمتابعة`,
+                    `01121747555 - 01007317927 للحجوزات و الاستفسارات`,
+                    `01121748885 للاقتراحات و الشكوى`,
+                    `01114323218 - 01228482873 - 01226408587 قسم التشغيل`,
+                    `عنــــوان الشـــركة`,
+                    `..الاسكندرية-ميامي خلف كومباوند مارسليا بجوار مركز الاوروبي للسيارات..`,
+                    `..القاهره - مساكن شيراتون اعلى توم اند بصل..`,
+                    `.. الغردقه - الدهار اعلى كشري التحرير ..`,
+                    `للاستفاده من العروض و الخصومات تابعنا على موقع الرسمى للشركه`,
+                    `web: https://24seven-ai.com/home.html#home`,
+                    `تواصل معنا عبر email`,
+                    `email: info@24seven-ai.com`,
+                    `24seven limousine تتمنى لك رحله سعيده و امنه و مطمئنه`
+                ];
 
                 const clientMsg = clientMsgParts.join('\n');
 
