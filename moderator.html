@@ -4064,7 +4064,34 @@
                 // --- 4.2. Notify Client (WhatsApp/Messenger) ---
                 const rawPhone = (trip.customer_phone || '').replace(/\D/g, '');
                 try {
-                    const clientMsg = `✅ تم تعيين الكابتن لرحلتك!\n🚕 الكابتن: ${driverName}\n📱 هاتف: 01121748885\n🚗 السيارة: ${trip.car_type || ''}\n📍 المسار: ${trip.pickup_address} ➝ ${trip.dropoff_address}\n\nنتمنى لك رحلة سعيدة! ✨`;
+                    const tripCode = trip.sql_server_id || trip.sheet_row || realTripId;
+                    const clientMsg = [
+                        `✨ *24SEVEN LIMOUSINE* ✨`,
+                        `🚕 *تم إسناد كابتن لرحلتك بنجاح!*`,
+                        `━━━━━━━━━━━━━━━━━━━━━━━━`,
+                        `🎫 *كود الرحلة:* #${tripCode}`,
+                        `👤 *العميل:* *${trip.customer_name || 'عزيزنا العميل'}*`,
+                        `📅 *التاريخ:* *${trip.trip_date || '--'}*`,
+                        `⏰ *الوقت:* *${trip.trip_time || '--'}*`,
+                        `━━━━━━━━━━━━━━━━━━━━━━━━`,
+                        `👤 *الكابتن:* *${driverName}*`,
+                        `🚘 *السيارة:* *${trip.car_type || (carInfo?.brand ? carInfo.brand + ' ' + (carInfo.model||'') : 'ليموزين')}*`,
+                        `📍 *مكان التحرك:* ${trip.pickup_address || ''}`,
+                        `🏁 *مكان الوصول:* ${trip.dropoff_address || ''}`,
+                        `💵 *قيمة الرحلة:* *${Number(trip.cost || 0).toLocaleString()} EGP*`,
+                        `━━━━━━━━━━━━━━━━━━━━━━━━`,
+                        `🔗 *للدخول على السايت ومتابعة الرحلة والتواصل مع الكابتن مباشرة عبر الشات:*`,
+                        `https://24seven-ai.com/limousine.html`,
+                        `━━━━━━━━━━━━━━━━━━━━━━━━`,
+                        `💳 *في حالة رغبتك بالدفع بالتحويل (انستاباي / محفظة كاش):*`,
+                        `📲 التحويل على الرقم المعتمد: *01121748885*`,
+                        `━━━━━━━━━━━━━━━━━━━━━━━━`,
+                        `☎️ *للتواصل مع مكتب التشغيل والطوارئ:*`,
+                        `📞 01228482873`,
+                        `📞 01226408587`,
+                        `━━━━━━━━━━━━━━━━━━━━━━━━`,
+                        `✨ *24SEVEN LIMOUSINE تتمنى لك رحلة سعيدة وآمنة!* ✨`
+                    ].join('\n');
                     
                     // Try to find an active chat to get the correct channel/id
                     let targetChannel = 'whatsapp';
