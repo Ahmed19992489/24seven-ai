@@ -6564,7 +6564,7 @@
                 const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
                 const { data: omniData } = await sbClient
                     .from('omnichannel_messages')
-                    .select('id, sender_id, sender_name, channel, message_text, message_type, media_url, is_from_admin, created_at, whatsapp_instance_id')
+                    .select('id, sender_id, sender_name, channel, message_text, is_from_admin, created_at, read_by_admin, whatsapp_instance_id')
                     .gte('created_at', sevenDaysAgo)
                     .order('created_at', { ascending: false })
                     .limit(300);

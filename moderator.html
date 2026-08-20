@@ -1786,7 +1786,7 @@
             const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
             const { data, error } = await sbClient
                 .from('omnichannel_messages')
-                .select('id, sender_id, sender_name, channel, message_text, message_type, media_url, is_from_admin, created_at, whatsapp_instance_id')
+                .select('id, sender_id, sender_name, channel, message_text, is_from_admin, created_at, read_by_admin, whatsapp_instance_id')
                 .gte('created_at', sevenDaysAgo)
                 .order('created_at', { ascending: false })
                 .limit(300);
@@ -1900,7 +1900,7 @@
                         const thirtySecAgo = new Date(Date.now() - 30000).toISOString();
                         const { data } = await sbClient
                             .from('omnichannel_messages')
-                            .select('id, sender_id, sender_name, channel, message_text, message_type, media_url, is_from_admin, created_at, whatsapp_instance_id')
+                            .select('id, sender_id, sender_name, channel, message_text, is_from_admin, created_at, read_by_admin, whatsapp_instance_id')
                             .gte('created_at', thirtySecAgo)
                             .order('created_at', { ascending: true });
 
@@ -2121,7 +2121,7 @@
             try {
                 const res = await sbClient
                     .from('omnichannel_messages')
-                    .select('id, sender_id, sender_name, channel, message_text, message_type, is_from_admin, created_at')
+                    .select('id, sender_id, sender_name, channel, message_text, is_from_admin, created_at, read_by_admin, whatsapp_instance_id')
                     .order('created_at', { ascending: false })
                     .limit(800);
                 if (!res.error && res.data && res.data.length > 0) {
@@ -2679,7 +2679,7 @@
             try {
                 const { data, error } = await sbClient
                     .from('omnichannel_messages')
-                    .select('id, sender_id, sender_name, channel, message_text, message_type, media_url, is_from_admin, created_at, whatsapp_instance_id')
+                    .select('id, sender_id, sender_name, channel, message_text, is_from_admin, created_at, read_by_admin, whatsapp_instance_id')
                     .or(`sender_id.eq.${senderId},sender_id.eq.${cleanId},sender_id.eq.20${cleanId},sender_id.eq.0${cleanId}`)
                     .order('created_at', { ascending: true })
                     .limit(300);
