@@ -442,13 +442,12 @@ while True:
                     "01121747555" in driver_phone
                 )
 
-                # ✅ إصلاح: اشتراط أن يكون تأكيد الحجز الفوري قد أُرسل أولاً + وجود كابتن حقيقي برقم صحيح
+                # ✅ فحص تعيين الكابتن: وجود كابتن حقيقي برقم صحيح ولم يتم إبلاغ الطرفين بعد
                 cache_key_driver = f"{str(t_date)}_{cust_phone}_{driver_phone}_driver"
                 if (driver_name.strip() != ""
                         and not is_invalid_driver
                         and status_to_check == ""
                         and not is_past_trip
-                        and booking_was_sent
                         and not sent_cache.get(cache_key_driver)):
 
                     print(f"🚕 صف {real_idx}: تم تعيين كابتن حقيقي ({driver_name} - {driver_phone}) لـ ({cust_name})...")

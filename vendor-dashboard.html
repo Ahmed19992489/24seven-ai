@@ -1963,10 +1963,24 @@
 
                 console.log('📱 Phone Normalization:', { originalCust: custPhone, normCust: normCustPhone, normDrv: normDrvPhone });
 
-                // 7. ✅ إرسال رسالة واتساب للعميل فوراً
+                // 7. ✅ تجهيز رسائل الواتساب
+                const clientMsg = `أهلاً أستاذ ${custName} 👋\nتم تعيين الكابتن لرحلتك بنجاح! 🚕\n\n👤 الكابتن: ${drvName}\n📱 هاتف: ${displayDrvPhone}\n🚘 السيارة: ${carBrand} [ ${carPlate} ]\n📍 المسار: ${pickupLoc} ➝ ${dropoffLoc}\n\n🔗 لمتابعة الرحلة والتواصل مع الكابتن:\nhttps://24seven-ai.com/limousine.html\n\n24Seven تتمنى لك رحلة سعيدة! ✨`;
+                const driverMsg = `أمر شغل جديد 🚨\n👤 العميل: ${custName}\n📱 تليفون العميل: ${displayCustPhone || '-'}\n📅 التاريخ: ${tripDateVal}\n⏰ الوقت: ${tripTimeVal}\n📍 التحرك: ${pickupLoc}\n🏁 الوصول: ${dropoffLoc}\n💵 التحصيل من العميل: ${Number(priceVal).toLocaleString()} EGP\n📝 ملاحظات: ${cleanNotesVal}\n\n🔗 لبدء الرحلة عبر تطبيق الكابتن:\nhttps://24seven-ai.com/driver.html`;
+
+                // 8. 🚀 إرسال الرسائل عبر المسار المباشر + طابور السحابة (Cloud Bridge) لضمان الوصول من الموبايل
+                const outboxInserts = [];
                 if (normCustPhone) {
-                    const clientMsg = `أهلاً أستاذ ${custName} 👋\nتم تعيين الكابتن لرحلتك بنجاح! 🚕\n\n👤 الكابتن: ${drvName}\n📱 هاتف: ${displayDrvPhone}\n🚘 السيارة: ${carBrand} [ ${carPlate} ]\n📍 المسار: ${pickupLoc} ➝ ${dropoffLoc}\n\n🔗 لمتابعة الرحلة والتواصل مع الكابتن:\nhttps://24seven-ai.com/limousine.html\n\n24Seven تتمنى لك رحلة سعيدة! ✨`;
-                    
+                    outboxInserts.push({
+                        channel: 'whatsapp',
+                        sender_id: normCustPhone,
+                        sender_name: 'مكتب التشغيل',
+                        message_text: clientMsg,
+                        is_from_admin: true,
+                        read_by_admin: false,
+                        whatsapp_instance_id: '692921bb-a5df-451d-8527-e1ee55a736f4'
+                    });
+
+                    // محاولة الإرسال المباشر
                     fetch(`${getApiBaseUrl()}/api/send_reply`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
@@ -1976,13 +1990,21 @@
                             message: clientMsg,
                             mod_name: 'مكتب التشغيل'
                         })
-                    }).then(r => r.json()).then(res => console.log('📤 Client WA sent:', res)).catch(e => console.warn('Customer WA send error:', e));
+                    }).then(r => r.json()).then(res => console.log('📤 Client WA API sent:', res)).catch(e => console.warn('Customer WA send error:', e));
                 }
 
-                // 8. ✅ إرسال رسالة واتساب للسائق (أمر الشغل) فوراً
                 if (normDrvPhone) {
-                    const driverMsg = `أمر شغل جديد 🚨\n👤 العميل: ${custName}\n📱 تليفون العميل: ${displayCustPhone || '-'}\n📅 التاريخ: ${tripDateVal}\n⏰ الوقت: ${tripTimeVal}\n📍 التحرك: ${pickupLoc}\n🏁 الوصول: ${dropoffLoc}\n💵 التحصيل من العميل: ${Number(priceVal).toLocaleString()} EGP\n📝 ملاحظات: ${cleanNotesVal}\n\n🔗 لبدء الرحلة عبر تطبيق الكابتن:\nhttps://24seven-ai.com/driver.html`;
-                    
+                    outboxInserts.push({
+                        channel: 'whatsapp',
+                        sender_id: normDrvPhone,
+                        sender_name: 'مكتب التشغيل',
+                        message_text: driverMsg,
+                        is_from_admin: true,
+                        read_by_admin: false,
+                        whatsapp_instance_id: '692921bb-a5df-451d-8527-e1ee55a736f4'
+                    });
+
+                    // محاولة الإرسال المباشر
                     fetch(`${getApiBaseUrl()}/api/send_reply`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
@@ -1992,7 +2014,18 @@
                             message: driverMsg,
                             mod_name: 'مكتب التشغيل'
                         })
-                    }).then(r => r.json()).then(res => console.log('📤 Driver WA sent:', res)).catch(e => console.warn('Driver WA send error:', e));
+                    }).then(r => r.json()).then(res => console.log('📤 Driver WA API sent:', res)).catch(e => console.warn('Driver WA send error:', e));
+                }
+
+                // إدراج فوري في طابور السحابة لضمان المعالجة من سيرفر البوابة المحلية
+                if (outboxInserts.length > 0) {
+                    try {
+                        const { error: outboxErr } = await sb.from('omnichannel_messages').insert(outboxInserts);
+                        if (outboxErr) console.warn("Supabase Outbox Queue insert err:", outboxErr);
+                        else console.log("✅ Outbox messages queued successfully in Supabase for local gateway processing.");
+                    } catch(qErr) {
+                        console.warn("Queue dispatch error:", qErr);
+                    }
                 }
 
                 // 9. ✅ مزامنة بيانات السائق مع الشيت وقاعدة البيانات

@@ -3708,28 +3708,64 @@ def send_b2b_email_proposal():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-gateway_process = None
-
-def stop_gateway():
-    global gateway_process
-    if gateway_process:
-        print("[Gateway] Stopping local WhatsApp gateway service...")
-        import subprocess
+# =====================================================
+# 🚀 WhatsApp Outbox Queue Worker (Cloud-to-Local Bridge)
+# =====================================================
+def _outbox_worker_loop():
+    print("🚀 [WhatsApp Outbox Queue Worker] Active and polling for mobile/cloud WhatsApp messages...")
+    LOCAL_GATEWAY_URL = "http://localhost:3001"
+    DEFAULT_INSTANCE_ID = "692921bb-a5df-451d-8527-e1ee55a736f4"
+    
+    while True:
         try:
-            import os
-            if os.name == 'nt':
-                subprocess.run(f"taskkill /F /T /PID {gateway_process.pid}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            else:
-                gateway_process.terminate()
-                gateway_process.wait(timeout=5)
-            print("[Gateway] Local WhatsApp gateway service stopped.")
-        except Exception as e:
-            print(f"[Gateway Error] Error stopping gateway: {e}")
+            url = f"{SUPABASE_URL}/rest/v1/omnichannel_messages?channel=eq.whatsapp&is_from_admin=eq.true&read_by_admin=eq.false&order=created_at.asc&limit=10"
+            r = requests.get(url, headers=SUPABASE_SERVICE_HEADERS, timeout=10)
+            if r.status_code == 200:
+                msgs = r.json()
+                for m in msgs:
+                    msg_id = m.get("id")
+                    phone = m.get("sender_id")
+                    text = m.get("message_text")
+                    inst_id = m.get("whatsapp_instance_id") or DEFAULT_INSTANCE_ID
+                    
+                    if not phone or not text:
+                        continue
+                    
+                    clean_phone = ''.join(c for c in str(phone) if c.isdigit())
+                    if clean_phone.startswith("01") and len(clean_phone) == 11:
+                        clean_phone = "20" + clean_phone[1:]
+                    elif clean_phone.startswith("1") and len(clean_phone) == 10:
+                        clean_phone = "20" + clean_phone
+                    elif clean_phone.startswith("0020"):
+                        clean_phone = clean_phone[2:]
+                    
+                    send_url = f"{LOCAL_GATEWAY_URL}/instance/{inst_id}/send"
+                    try:
+                        sr = requests.post(send_url, json={"to": clean_phone, "message": text}, timeout=15)
+                        if sr.status_code == 200:
+                            print(f"✅ [Outbox Queue] Dispatched message to {clean_phone} via gateway")
+                        else:
+                            print(f"⚠️ [Outbox Queue] Gateway response for {clean_phone}: {sr.text}")
+                    except Exception as gw_err:
+                        print(f"❌ [Outbox Queue Error] Failed sending to {clean_phone}: {gw_err}")
+                    
+                    try:
+                        patch_url = f"{SUPABASE_URL}/rest/v1/omnichannel_messages?id=eq.{msg_id}"
+                        requests.patch(patch_url, headers=SUPABASE_SERVICE_HEADERS, json={"read_by_admin": True}, timeout=5)
+                    except Exception as patch_err:
+                        print(f"❌ [Outbox Queue Error] Failed to update read_by_admin for {msg_id}: {patch_err}")
+        except Exception as loop_err:
+            pass
+        time.sleep(2.5)
+
+import threading
+threading.Thread(target=_outbox_worker_loop, daemon=True).start()
 
 if __name__ == '__main__':
     # تم تعطيل التشغيل التلقائي كعملية فرعية لتفادي انقطاع الاتصال عند إعادة تشغيل السيرفر.
     # يتم تشغيل بوابة الواتساب الآن كخدمة مستقلة ومستمرة من خلال ملف run_all.bat.
     print("[Gateway] Standalone WhatsApp gateway service is managed via run_all.bat")
+
 
     print("[STARTED] Server Started on Port 3000 (Handling WhatsApp & Messenger & API)...")
     app.run(host='0.0.0.0', port=3000, threaded=True)
