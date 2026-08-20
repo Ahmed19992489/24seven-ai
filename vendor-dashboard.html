@@ -1928,6 +1928,7 @@
                 let custName = tripObj?.manual_client_name || '';
                 let custPhone = (tripObj?.client_phone || tripObj?.customer_phone || '').replace(/\D/g, '');
 
+
                 if (!custName) {
                     const custNameMatch = rawAdminNotes.match(/العميل:\s*([^\n\r]+)/);
                     if (custNameMatch) custName = custNameMatch[1].trim();
@@ -1954,6 +1955,8 @@
                 let tripDateVal = tripInfo.tripDate;
                 let tripTimeVal = tripInfo.tripTime;
                 const cleanNotesVal = tripInfo.clientNotes;
+                let ticketUrl = '';
+                let flightNum = '';
 
                 // 🔍 جلب تفاصيل الحجز الشاملة من google_reservations للحصول على المعرفات ورقم الهاتف الدقيق
                 if (finalWebId || finalSqlServerId || finalSheetRow) {
@@ -1974,6 +1977,8 @@
                             if (grData.customer_name && (!custName || custName === 'عزيزنا العميل')) custName = grData.customer_name;
                             if (grData.trip_date && (!tripDateVal || tripDateVal === '--')) tripDateVal = grData.trip_date;
                             if (grData.trip_time && (!tripTimeVal || tripTimeVal === '--')) tripTimeVal = grData.trip_time;
+                            if (grData.ticket_image) ticketUrl = grData.ticket_image;
+                            if (grData.flight_number) flightNum = grData.flight_number;
                         }
                     } catch(lookupErr) {
                         console.warn("Reservation lookup error:", lookupErr);
@@ -1998,11 +2003,18 @@
                                 if (grByP.sheet_row) finalSheetRow = grByP.sheet_row;
                                 if (grByP.sql_server_id) finalSqlServerId = grByP.sql_server_id;
                                 if (grByP.customer_name && (!custName || custName === 'عزيزنا العميل')) custName = grByP.customer_name;
+                                if (grByP.ticket_image && !ticketUrl) ticketUrl = grByP.ticket_image;
+                                if (grByP.flight_number && !flightNum) flightNum = grByP.flight_number;
                             }
                         }
                     } catch(phoneLookupErr) {
                         console.warn("Phone fallback lookup error:", phoneLookupErr);
                     }
+                }
+
+                if (!flightNum) {
+                    const flightMatch = (rawAdminNotes + ' ' + (tripObj?.client_notes || '')).match(/رقم الرحلة:\s*([^|\n]+)/);
+                    if (flightMatch) flightNum = flightMatch[1].trim();
                 }
 
                 if (!custName) custName = 'عزيزنا العميل';
@@ -2016,8 +2028,69 @@
                 console.log('📱 Phone Normalization:', { originalCust: custPhone, normCust: normCustPhone, normDrv: normDrvPhone });
 
                 // 7. ✅ تجهيز رسائل الواتساب
-                const clientMsg = `أهلاً أستاذ ${custName} 👋\nتم تعيين الكابتن لرحلتك بنجاح! 🚕\n\n👤 الكابتن: ${drvName}\n📱 هاتف: ${displayDrvPhone}\n🚘 السيارة: ${carBrand} [ ${carPlate} ]\n📍 المسار: ${pickupLoc} ➝ ${dropoffLoc}\n\n🔗 لمتابعة الرحلة والتواصل مع الكابتن:\nhttps://24seven-ai.com/limousine.html\n\n24Seven تتمنى لك رحلة سعيدة! ✨`;
-                const driverMsg = `أمر شغل جديد 🚨\n👤 العميل: ${custName}\n📱 تليفون العميل: ${displayCustPhone || '-'}\n📅 التاريخ: ${tripDateVal}\n⏰ الوقت: ${tripTimeVal}\n📍 التحرك: ${pickupLoc}\n🏁 الوصول: ${dropoffLoc}\n💵 التحصيل من العميل: ${Number(priceVal).toLocaleString()} EGP\n📝 ملاحظات: ${cleanNotesVal}\n\n🔗 لبدء الرحلة عبر تطبيق الكابتن:\nhttps://24seven-ai.com/driver.html`;
+                const tripCode = finalSqlServerId || finalSheetRow || tripId;
+                const clientLoginLink = 'https://24seven-ai.com/limousine.html';
+                const driverLoginLink = 'https://24seven-ai.com/driver.html';
+
+                // 📱 رسالة السائق (الكابتن)
+                let driverMsgParts = [
+                    `🚨 *أمر شغل جديد - كود: ${tripCode}*`,
+                    `━━━━━━━━━━━━━━━━━━━━━━━━`,
+                    `👤 العميل: *${custName}*`,
+                    `📅 التاريخ: *${tripDateVal}*`,
+                    `⏰ الوقت: *${tripTimeVal}*`,
+                    `━━━━━━━━━━━━━━━━━━━━━━━━`,
+                    `📍 *لوكيشن التحرك:* ${pickupLoc}`,
+                    `🏁 *الوصول:* ${dropoffLoc}`
+                ];
+
+                if (flightNum) {
+                    driverMsgParts.push(`✈️ *رقم رحلة الطيران:* ${flightNum}`);
+                }
+                if (ticketUrl) {
+                    driverMsgParts.push(`🎟️ *رابط التذكرة:* ${ticketUrl}`);
+                }
+
+                driverMsgParts.push(
+                    `━━━━━━━━━━━━━━━━━━━━━━━━`,
+                    `💵 *التحصيل من العميل:* ${Number(priceVal).toLocaleString()} EGP`
+                );
+
+                if (cleanNotesVal) {
+                    driverMsgParts.push(`📝 *ملاحظات:* ${cleanNotesVal}`);
+                }
+
+                driverMsgParts.push(
+                    `━━━━━━━━━━━━━━━━━━━━━━━━`,
+                    `💳 *لو العميل طلب يحول:*\nبلغه يحول انستاباي أو محفظة كاش على رقم الشركة الثابت:\n📲 *01121748885*`,
+                    `━━━━━━━━━━━━━━━━━━━━━━━━`,
+                    `📲 *للتواصل مع العميل عبر الشات وبدء الرحلة:*\n${driverLoginLink}`,
+                    `━━━━━━━━━━━━━━━━━━━━━━━━`,
+                    `☎️ *للتواصل مع التشغيل:*\n📞 01228482873\n📞 01226408587`
+                );
+
+                const driverMsg = driverMsgParts.join('\n');
+
+                // 📱 رسالة العميل (بدون رقم هاتف السائق ليكون التواصل عبر الشات)
+                const clientMsg = [
+                    `أهلاً أستاذ ${custName} 👋`,
+                    `تم تعيين الكابتن لرحلتك بنجاح! 🚕`,
+                    ``,
+                    `👤 الكابتن: *${drvName}*`,
+                    `🚘 السيارة: *${carBrand} [ ${carPlate} ]*`,
+                    `📍 المسار: ${pickupLoc} ➜ ${dropoffLoc}`,
+                    `📅 التاريخ: ${tripDateVal}  |  ⏰ الوقت: ${tripTimeVal}`,
+                    ``,
+                    `🔗 *للتواصل مع الكابتن ومتابعة رحلتك مباشرة:*`,
+                    clientLoginLink,
+                    ``,
+                    `━━━━━━━━━━━━━━━━━━━━━━━━`,
+                    `💳 *في حالة الدفع بالتحويل:*`,
+                    `انستاباي أو محفظة كاش:`,
+                    `📲 *01121748885*`,
+                    `━━━━━━━━━━━━━━━━━━━━━━━━`,
+                    `24Seven تتمنى لك رحلة سعيدة! ✨`
+                ].join('\n');
 
                 // 8. 🚀 إرسال الرسائل عبر المسار المباشر + طابور السحابة (Cloud Bridge) لضمان الوصول من الموبايل
                 const outboxInserts = [];
