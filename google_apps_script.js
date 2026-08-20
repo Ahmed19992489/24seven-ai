@@ -102,24 +102,8 @@ function updateDriverInSheet(data) {
 
     Logger.log('🔍 Processing Assign: RowHint=' + rowHint + ', WebID=' + webId + ', SQLID=' + sqlId);
 
-    // 1. PRIMARY SEARCH: By Web_ID (Column Q / 17) - Highly reliable for newer records
-    if (webId) {
-        Logger.log('   -> Searching by WebID in Column Q...');
-        const lastRow = sheet.getLastRow();
-        if (lastRow > 1) {
-            const values = sheet.getRange(2, 17, lastRow - 1, 1).getValues();
-            for (let i = 0; i < values.length; i++) {
-                if (String(values[i][0]).trim() === String(webId).trim()) {
-                    rowNum = i + 2;
-                    Logger.log('   ✅ Found by WebID at row ' + rowNum);
-                    break;
-                }
-            }
-        }
-    }
-
-    // 2. SECONDARY SEARCH: By SQL_ID (Column U / 21) - Crucial for old/synced records
-    if (!rowNum && sqlId) {
+    // 1. PRIMARY SEARCH: By SQL_ID (Column U / 21) - Most stable and reliable identifier
+    if (sqlId) {
         Logger.log('   -> Searching by SQLID in Column U...');
         const lastRow = sheet.getLastRow();
         if (lastRow > 1) {
@@ -136,15 +120,31 @@ function updateDriverInSheet(data) {
         }
     }
 
-    // 3. TERTIARY FALLBACK: Trust the rowHint if IDs failed (last resort)
-    if (!rowNum && rowHint >= 2) {
-        Logger.log('   ⚠️ No ID match. Using rowHint: ' + rowHint);
+    // 2. SECONDARY SEARCH: Trust the rowHint if provided and within bounds
+    if (!rowNum && rowHint >= 2 && rowHint <= sheet.getLastRow()) {
+        Logger.log('   ⚠️ Using rowHint directly: ' + rowHint);
         rowNum = rowHint;
+    }
+
+    // 3. TERTIARY FALLBACK: By Web_ID (Column Q / 17) - only for actual web booking strings
+    if (!rowNum && webId && String(webId).startsWith('web_')) {
+        Logger.log('   -> Searching by WebID in Column Q...');
+        const lastRow = sheet.getLastRow();
+        if (lastRow > 1) {
+            const values = sheet.getRange(2, 17, lastRow - 1, 1).getValues();
+            for (let i = 0; i < values.length; i++) {
+                if (String(values[i][0]).trim() === String(webId).trim()) {
+                    rowNum = i + 2;
+                    Logger.log('   ✅ Found by WebID at row ' + rowNum);
+                    break;
+                }
+            }
+        }
     }
 
     if (!rowNum || rowNum < 2) {
         Logger.log('   ❌ NOT FOUND');
-        throw new Error('تعذر العثور على الحجز (Web_ID: ' + webId + ', SQL_ID: ' + sqlId + ') - تأكد من وجود المعرف في الشيت');
+        throw new Error('تعذر العثور على الحجز (SQL_ID: ' + sqlId + ', Row: ' + rowHint + ') - تأكد من وجود المعرف في الشيت');
     }
 
     // Final check to prevent writing to a random row if index is too high

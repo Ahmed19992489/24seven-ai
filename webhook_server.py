@@ -2070,9 +2070,13 @@ def send_omnichannel_reply():
     # 🧼 تنظيف وتنسيق معرف العميل أو رقم الهاتف بدقة
     clean_sender_id = str(raw_sender_id).replace("+", "").replace(" ", "").strip()
     if channel == 'whatsapp':
+        clean_sender_id = ''.join(c for c in clean_sender_id if c.isdigit())
         if clean_sender_id.startswith("01") and len(clean_sender_id) == 11:
             clean_sender_id = "20" + clean_sender_id[1:]
-        clean_sender_id = ''.join(c for c in clean_sender_id if c.isdigit())
+        elif clean_sender_id.startswith("1") and len(clean_sender_id) == 10:
+            clean_sender_id = "20" + clean_sender_id
+        elif clean_sender_id.startswith("0020"):
+            clean_sender_id = clean_sender_id[2:]
         sender_id = clean_sender_id if clean_sender_id else str(raw_sender_id).replace("+", "").strip()
     else:
         sender_id = clean_sender_id
@@ -2095,124 +2099,86 @@ def send_omnichannel_reply():
     api_error = ""
 
     if channel == 'whatsapp':
-        # Resolve custom WhatsApp instance if not specified
-        if not whatsapp_instance_id:
-            try:
-                local = sender_id[2:] if sender_id.startswith("20") else sender_id
-                r_inst = requests.get(
-                    f"{SUPABASE_URL}/rest/v1/omnichannel_messages",
-                    headers=SUPABASE_SERVICE_HEADERS,
-                    params={
-                        "channel": "eq.whatsapp",
-                        "sender_id": f"ilike.%{local}%",
-                        "whatsapp_instance_id": "is.not.null",
-                        "select": "whatsapp_instance_id",
-                        "limit": "1",
-                        "order": "created_at.desc"
-                    },
-                    timeout=1.5
-                )
-                if r_inst.status_code == 200 and r_inst.json():
-                    whatsapp_instance_id = r_inst.json()[0].get("whatsapp_instance_id")
-            except Exception as ex:
-                print(f"Error resolving whatsapp_instance_id: {ex}")
+        MAIN_CUSTOMER_INSTANCE = "692921bb-a5df-451d-8527-e1ee55a736f4"
+        GROUPS_ONLY_INSTANCE = "f730e127-bb9e-47aa-ae4b-8d59cdb01ea8"
 
-        # [FALLBACK] If still not resolved, find the first connected local instance
-        if not whatsapp_instance_id:
-            try:
-                r_active = requests.get(
-                    f"{SUPABASE_URL}/rest/v1/whatsapp_instances?status=eq.connected&limit=1",
-                    headers=SUPABASE_SERVICE_HEADERS,
-                    timeout=1.5
-                )
-                if r_active.status_code == 200 and r_active.json():
-                    whatsapp_instance_id = r_active.json()[0].get("id")
-                    print(f"[WA] Auto-resolved active WhatsApp instance ID: {whatsapp_instance_id}")
-            except Exception as ex:
-                print(f"Error auto-resolving default active instance: {ex}")
+        # إذا لم يُحدد أو حُدد خط الجروبات، نوجّه فوراً للخط الرئيسي للعملاء (8885)
+        if not whatsapp_instance_id or whatsapp_instance_id == GROUPS_ONLY_INSTANCE:
+            whatsapp_instance_id = MAIN_CUSTOMER_INSTANCE
 
         routed_via_custom = False
-        if whatsapp_instance_id:
-            r_creds = requests.get(f"{SUPABASE_URL}/rest/v1/whatsapp_instances?id=eq.{whatsapp_instance_id}", headers=SUPABASE_SERVICE_HEADERS, timeout=2)
-            if r_creds.status_code == 200 and r_creds.json():
-                inst = r_creds.json()[0]
-                provider = inst["provider"]
-                inst_id = inst["instance_id"]
-                token = inst["token"]
-                api_url = inst.get("api_url")
-                routed_via_custom = True
-                
-                if provider == "ultramsg":
-                    base = api_url.strip().rstrip('/') if api_url else "https://api.ultramsg.com"
-                    send_url = f"{base}/{inst_id}/messages/image" if media_url else f"{base}/{inst_id}/messages/chat"
-                    payload = {"token": token, "to": sender_id}
-                    if media_url:
-                        payload.update({"image": media_url, "caption": message})
-                    else:
-                        payload.update({"body": message})
-                    try:
-                        res = requests.post(send_url, data=payload, timeout=8)
+
+        # ⚡ Fast-path للموديم المحلي (Local Baileys Gateway) بدون استعلامات شبكة بطيئة لـ Supabase
+        if whatsapp_instance_id == MAIN_CUSTOMER_INSTANCE:
+            routed_via_custom = True
+            send_url = f"http://localhost:3001/instance/{MAIN_CUSTOMER_INSTANCE}/send"
+            payload = {
+                "to": sender_id,
+                "message": message,
+                "media_url": media_url,
+                "media_type": media_type
+            }
+            try:
+                res = requests.post(send_url, json=payload, timeout=5)
+                if res.status_code == 200 and res.json().get("status") == "success":
+                    send_success = True
+                else:
+                    api_error = res.text
+                    print(f"❌ Local WA send failed: {res.text}")
+            except Exception as e:
+                api_error = str(e)
+                print(f"❌ Local WA exception: {e}")
+        elif whatsapp_instance_id:
+            # حالة وجود مزود خارجي (UltraMsg / GreenAPI)
+            try:
+                r_creds = requests.get(f"{SUPABASE_URL}/rest/v1/whatsapp_instances?id=eq.{whatsapp_instance_id}", headers=SUPABASE_SERVICE_HEADERS, timeout=1.5)
+                if r_creds.status_code == 200 and r_creds.json():
+                    inst = r_creds.json()[0]
+                    provider = inst["provider"]
+                    inst_id = inst["instance_id"]
+                    token = inst["token"]
+                    api_url = inst.get("api_url")
+                    routed_via_custom = True
+                    
+                    if provider == "ultramsg":
+                        base = api_url.strip().rstrip('/') if api_url else "https://api.ultramsg.com"
+                        send_url = f"{base}/{inst_id}/messages/image" if media_url else f"{base}/{inst_id}/messages/chat"
+                        payload = {"token": token, "to": sender_id}
+                        if media_url:
+                            payload.update({"image": media_url, "caption": message})
+                        else:
+                            payload.update({"body": message})
+                        res = requests.post(send_url, data=payload, timeout=6)
                         if res.status_code == 200 and ("success" in res.text.lower() or "\"sent\":\"true\"" in res.text.lower()):
                             send_success = True
                         else:
                             api_error = res.text
-                            print(f"❌ UltraMsg send failed: {res.text}")
-                    except Exception as e:
-                        api_error = str(e)
-                        print(f"❌ UltraMsg exception: {e}")
-                elif provider == "greenapi":
-                    base = api_url.strip().rstrip('/') if api_url else "https://api.greenapi.com"
-                    if media_url:
-                        send_url = f"{base}/waInstance{inst_id}/sendFileByUrl/{token}"
-                        filename = media_url.split('/')[-1]
-                        payload = {
-                            "chatId": f"{sender_id}@c.us",
-                            "urlFile": media_url,
-                            "fileName": filename,
-                            "caption": message
-                        }
-                    else:
-                        send_url = f"{base}/waInstance{inst_id}/sendMessage/{token}"
-                        payload = {
-                            "chatId": f"{sender_id}@c.us",
-                            "message": message
-                        }
-                    try:
-                        res = requests.post(send_url, json=payload, timeout=8)
+                    elif provider == "greenapi":
+                        base = api_url.strip().rstrip('/') if api_url else "https://api.greenapi.com"
+                        if media_url:
+                            send_url = f"{base}/waInstance{inst_id}/sendFileByUrl/{token}"
+                            filename = media_url.split('/')[-1]
+                            payload = {"chatId": f"{sender_id}@c.us", "urlFile": media_url, "fileName": filename, "caption": message}
+                        else:
+                            send_url = f"{base}/waInstance{inst_id}/sendMessage/{token}"
+                            payload = {"chatId": f"{sender_id}@c.us", "message": message}
+                        res = requests.post(send_url, json=payload, timeout=6)
                         if res.status_code == 200:
                             send_success = True
                         else:
                             api_error = res.text
-                            print(f"❌ GreenAPI send failed: {res.text}")
-                    except Exception as e:
-                        api_error = str(e)
-                        print(f"❌ GreenAPI exception: {e}")
-                elif provider == "local":
-                    base = api_url.strip().rstrip('/') if api_url else "http://localhost:3001"
-                    send_url = f"{base}/instance/{whatsapp_instance_id}/send"
-                    payload = {
-                        "to": sender_id,
-                        "message": message,
-                        "media_url": media_url,
-                        "media_type": media_type
-                    }
-                    for attempt in range(3):
-                        try:
-                            res = requests.post(send_url, json=payload, timeout=8)
-                            if res.status_code == 200 and res.json().get("status") == "success":
-                                send_success = True
-                                break
-                            else:
-                                api_error = res.text
-                                print(f"❌ Local WA send failed (attempt {attempt+1}): {res.text}")
-                                if "Connection Closed" in res.text or "closed" in res.text.lower() or res.status_code == 500:
-                                    time.sleep(1.5)
-                                else:
-                                    break
-                        except Exception as e:
-                            api_error = str(e)
-                            print(f"❌ Local WA exception (attempt {attempt+1}): {e}")
-                            time.sleep(1.5)
+                    elif provider == "local":
+                        base = api_url.strip().rstrip('/') if api_url else "http://localhost:3001"
+                        send_url = f"{base}/instance/{whatsapp_instance_id}/send"
+                        payload = {"to": sender_id, "message": message, "media_url": media_url, "media_type": media_type}
+                        res = requests.post(send_url, json=payload, timeout=5)
+                        if res.status_code == 200 and res.json().get("status") == "success":
+                            send_success = True
+                        else:
+                            api_error = res.text
+            except Exception as e:
+                api_error = str(e)
+                print(f"❌ Custom provider exception: {e}")
 
             else:
                 print(f"⚠️ Could not fetch credentials for whatsapp_instance_id {whatsapp_instance_id}, falling back to Meta API")

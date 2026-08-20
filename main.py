@@ -267,11 +267,21 @@ async def send_reply_direct(data: dict):
 
     # --- إرسال الرسالة ---
     if channel == "whatsapp":
+        # 🧼 تنظيف وتنسيق أرقام الهواتف المصرية
+        clean_phone = ''.join(c for c in str(sender_id) if c.isdigit())
+        if clean_phone.startswith("01") and len(clean_phone) == 11:
+            clean_phone = "20" + clean_phone[1:]
+        elif clean_phone.startswith("1") and len(clean_phone) == 10:
+            clean_phone = "20" + clean_phone
+        elif clean_phone.startswith("0020"):
+            clean_phone = clean_phone[2:]
+        if clean_phone:
+            sender_id = clean_phone
+
         # Resolve custom WhatsApp instance if not specified
         if not whatsapp_instance_id:
             try:
-                clean_phone = sender_id.replace("+", "").replace("0020", "20")
-                local = clean_phone[2:] if clean_phone.startswith("20") else clean_phone
+                local = sender_id[2:] if sender_id.startswith("20") else sender_id
                 r_inst = _req.get(
                     f"{_SB_URL}/rest/v1/omnichannel_messages",
                     headers=_SB_HEADERS,

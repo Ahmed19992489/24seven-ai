@@ -1751,6 +1751,44 @@
             }
         }
 
+        // دالة تنظيف وتنسيق الأرقام المصرية للواتساب
+        function normalizeEgyptianPhone(phone) {
+            if (!phone) return '';
+            let clean = String(phone).replace(/\D/g, '');
+            if (clean.startsWith('201') && clean.length === 12) {
+                return clean;
+            }
+            if (clean.startsWith('01') && clean.length === 11) {
+                return '20' + clean.slice(1);
+            }
+            if (clean.startsWith('1') && clean.length === 10) {
+                return '20' + clean;
+            }
+            if (clean.startsWith('0020')) {
+                return clean.slice(2);
+            }
+            if (!clean.startsWith('20') && clean.length === 10) {
+                return '20' + clean;
+            }
+            return clean;
+        }
+
+        // دالة تنسيق الرقم للعرض المحلي
+        function formatLocalDisplayPhone(phone) {
+            if (!phone) return '';
+            let clean = String(phone).replace(/\D/g, '');
+            if (clean.startsWith('201') && clean.length === 12) {
+                return '0' + clean.slice(2);
+            }
+            if (clean.startsWith('1') && clean.length === 10) {
+                return '0' + clean;
+            }
+            if (clean.startsWith('01') && clean.length === 11) {
+                return clean;
+            }
+            return phone;
+        }
+
         async function confirmDriverAssignment() {
             const tripId = document.getElementById('assign-trip-id').value;
             const drvName = document.getElementById('assign-driver-name').value.trim();
@@ -1852,7 +1890,7 @@
                     message_type: 'system'
                 }]);
 
-                // 5. جلب بيانات الرحلة الكاملة لإرسال رسائل الواتساب
+                // 5. جلب بيانات الرحلة الكاملة
                 let tripObj = (cachedTrips || []).find(t => String(t.id) === String(tripId));
                 if (!tripObj) {
                     const { data: tDb } = await sb.from('trips').select('*').eq('id', tripId).maybeSingle();
@@ -1868,7 +1906,7 @@
                     if (custNameMatch) custName = custNameMatch[1].trim();
                 }
 
-                // 6. استخراج معرفات الشيت وقاعدة البيانات من الملاحظات أو البحث الذكي
+                // 6. استخراج معرفات الشيت وقاعدة البيانات من الملاحظات
                 let finalSheetRow = tripObj?.sheet_row || '';
                 let finalWebId = tripObj?.google_res_id || '';
                 let finalSqlServerId = tripObj?.sql_server_id || '';
@@ -1881,27 +1919,6 @@
                 if (sqlIdMatch) finalSqlServerId = sqlIdMatch[1];
                 if (resIdMatch) finalWebId = resIdMatch[1];
 
-                // إذا لم تكن المعرفات موجودة مباشرة، نبحث بالاسم أو رقم التليفون في google_reservations
-                if (!finalSqlServerId || !finalSheetRow) {
-                    try {
-                        let query = sb.from('google_reservations').select('id, sheet_row, sql_server_id, customer_phone, customer_name').order('id', { ascending: false }).limit(1);
-                        if (custName && custName !== 'عزيزنا العميل') {
-                            query = query.ilike('customer_name', `%${custName}%`);
-                        } else if (custPhone) {
-                            query = query.eq('customer_phone', custPhone);
-                        }
-                        const { data: matchedRes } = await query;
-                        if (matchedRes && matchedRes.length > 0) {
-                            if (!finalSheetRow) finalSheetRow = matchedRes[0].sheet_row || '';
-                            if (!finalSqlServerId) finalSqlServerId = matchedRes[0].sql_server_id || '';
-                            if (!finalWebId) finalWebId = matchedRes[0].id || '';
-                            if (!custPhone && matchedRes[0].customer_phone) custPhone = matchedRes[0].customer_phone.replace(/\D/g, '');
-                            if (!custName && matchedRes[0].customer_name) custName = matchedRes[0].customer_name;
-                        }
-                    } catch(lookupErr) { console.warn("Reservation lookup error:", lookupErr); }
-                }
-
-                if (!custName) custName = 'عزيزنا العميل';
                 const pickupLoc = tripObj?.pickup_location || '';
                 const dropoffLoc = tripObj?.dropoff_location || '';
                 const priceVal = tripObj?.estimated_price || 0;
@@ -1909,23 +1926,53 @@
                 const tripInfo = extractCleanTripInfo(tripObj);
                 let tripDateVal = tripInfo.tripDate;
                 let tripTimeVal = tripInfo.tripTime;
-                if ((!tripDateVal || tripDateVal === '--') && (finalSqlServerId || finalSheetRow)) {
-                    const grRes = cachedReservationsMap[finalSqlServerId] || cachedReservationsMap[`row_${finalSheetRow}`];
-                    if (grRes?.trip_date) tripDateVal = grRes.trip_date;
-                    if (grRes?.trip_time) tripTimeVal = grRes.trip_time;
-                }
                 const cleanNotesVal = tripInfo.clientNotes;
 
+                // 🔍 جلب تفاصيل الحجز الشاملة من google_reservations للحصول على المعرفات ورقم الهاتف الدقيق
+                if (finalWebId || finalSqlServerId || finalSheetRow) {
+                    try {
+                        let query = sb.from('google_reservations').select('*');
+                        if (finalWebId) {
+                            query = query.eq('id', finalWebId);
+                        } else if (finalSqlServerId) {
+                            query = query.eq('sql_server_id', String(finalSqlServerId));
+                        } else if (finalSheetRow) {
+                            query = query.eq('sheet_row', parseInt(finalSheetRow));
+                        }
+                        const { data: grData } = await query.maybeSingle();
+                        if (grData) {
+                            if (grData.sheet_row) finalSheetRow = grData.sheet_row;
+                            if (grData.sql_server_id) finalSqlServerId = grData.sql_server_id;
+                            if (grData.customer_phone) custPhone = grData.customer_phone;
+                            if (grData.customer_name && (!custName || custName === 'عزيزنا العميل')) custName = grData.customer_name;
+                            if (grData.trip_date && (!tripDateVal || tripDateVal === '--')) tripDateVal = grData.trip_date;
+                            if (grData.trip_time && (!tripTimeVal || tripTimeVal === '--')) tripTimeVal = grData.trip_time;
+                        }
+                    } catch(lookupErr) {
+                        console.warn("Reservation lookup error:", lookupErr);
+                    }
+                }
+
+                if (!custName) custName = 'عزيزنا العميل';
+
+                // تجهيز وتنسيق أرقام الهواتف
+                const normCustPhone = normalizeEgyptianPhone(custPhone);
+                const normDrvPhone = normalizeEgyptianPhone(drvPhone);
+                const displayCustPhone = formatLocalDisplayPhone(custPhone);
+                const displayDrvPhone = formatLocalDisplayPhone(drvPhone);
+
+                console.log('📱 Phone Normalization:', { originalCust: custPhone, normCust: normCustPhone, normDrv: normDrvPhone });
+
                 // 7. ✅ إرسال رسالة واتساب للعميل فوراً
-                if (custPhone) {
-                    const clientMsg = `أهلاً أستاذ ${custName} 👋\nتم تعيين الكابتن لرحلتك بنجاح! 🚕\n\n👤 الكابتن: ${drvName}\n📱 هاتف: ${drvPhone}\n🚘 السيارة: ${carBrand} [ ${carPlate} ]\n📍 المسار: ${pickupLoc} ➝ ${dropoffLoc}\n\n🔗 لمتابعة الرحلة والتواصل مع الكابتن:\nhttps://24seven-ai.com/limousine.html\n\n24Seven تتمنى لك رحلة سعيدة! ✨`;
+                if (normCustPhone) {
+                    const clientMsg = `أهلاً أستاذ ${custName} 👋\nتم تعيين الكابتن لرحلتك بنجاح! 🚕\n\n👤 الكابتن: ${drvName}\n📱 هاتف: ${displayDrvPhone}\n🚘 السيارة: ${carBrand} [ ${carPlate} ]\n📍 المسار: ${pickupLoc} ➝ ${dropoffLoc}\n\n🔗 لمتابعة الرحلة والتواصل مع الكابتن:\nhttps://24seven-ai.com/limousine.html\n\n24Seven تتمنى لك رحلة سعيدة! ✨`;
                     
                     fetch(`${getApiBaseUrl()}/api/send_reply`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
                         body: JSON.stringify({
                             channel: 'whatsapp',
-                            sender_id: custPhone,
+                            sender_id: normCustPhone,
                             message: clientMsg,
                             mod_name: 'مكتب التشغيل'
                         })
@@ -1933,15 +1980,15 @@
                 }
 
                 // 8. ✅ إرسال رسالة واتساب للسائق (أمر الشغل) فوراً
-                if (drvPhone) {
-                    const driverMsg = `أمر شغل جديد 🚨\n👤 العميل: ${custName}\n📱 تليفون العميل: ${custPhone || '-'}\n📅 التاريخ: ${tripDateVal}\n⏰ الوقت: ${tripTimeVal}\n📍 التحرك: ${pickupLoc}\n🏁 الوصول: ${dropoffLoc}\n💵 التحصيل من العميل: ${Number(priceVal).toLocaleString()} EGP\n📝 ملاحظات: ${cleanNotesVal}\n\n🔗 لبدء الرحلة عبر تطبيق الكابتن:\nhttps://24seven-ai.com/driver.html`;
+                if (normDrvPhone) {
+                    const driverMsg = `أمر شغل جديد 🚨\n👤 العميل: ${custName}\n📱 تليفون العميل: ${displayCustPhone || '-'}\n📅 التاريخ: ${tripDateVal}\n⏰ الوقت: ${tripTimeVal}\n📍 التحرك: ${pickupLoc}\n🏁 الوصول: ${dropoffLoc}\n💵 التحصيل من العميل: ${Number(priceVal).toLocaleString()} EGP\n📝 ملاحظات: ${cleanNotesVal}\n\n🔗 لبدء الرحلة عبر تطبيق الكابتن:\nhttps://24seven-ai.com/driver.html`;
                     
                     fetch(`${getApiBaseUrl()}/api/send_reply`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
                         body: JSON.stringify({
                             channel: 'whatsapp',
-                            sender_id: drvPhone,
+                            sender_id: normDrvPhone,
                             message: driverMsg,
                             mod_name: 'مكتب التشغيل'
                         })
@@ -1951,33 +1998,40 @@
                 // 9. ✅ مزامنة بيانات السائق مع الشيت وقاعدة البيانات
                 try {
                     // تحديث مباشر في Supabase
-                    if (finalWebId || finalSqlServerId) {
-                        const updatePayload = {
-                            modified_driver_name: drvName,
-                            modified_driver_phone: drvPhone,
-                            driver_msg_status: 'تم إبلاغ الطرفين ✅'
-                        };
-                        if (finalWebId) {
-                            await sb.from('google_reservations').update(updatePayload).eq('id', finalWebId);
-                        } else if (finalSqlServerId) {
-                            await sb.from('google_reservations').update(updatePayload).eq('sql_server_id', String(finalSqlServerId));
-                        }
+                    const updatePayload = {
+                        modified_driver_name: drvName,
+                        modified_driver_phone: displayDrvPhone,
+                        driver_msg_status: 'تم إرسال بيانات السائق ✅',
+                        column_25: 'تم إرسال بيانات السائق ✅'
+                    };
+
+                    if (finalWebId) {
+                        await sb.from('google_reservations').update(updatePayload).eq('id', finalWebId);
+                    } else if (finalSqlServerId) {
+                        await sb.from('google_reservations').update(updatePayload).eq('sql_server_id', String(finalSqlServerId));
+                    } else if (finalSheetRow) {
+                        await sb.from('google_reservations').update(updatePayload).eq('sheet_row', parseInt(finalSheetRow));
                     }
 
                     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
                     
-                    console.log('📊 Vendor Sheet Syncing:', { sheetRow: finalSheetRow, webId: finalWebId, sqlId: finalSqlServerId || String(tripId) });
+                    const sheetSyncPayload = {
+                        action: 'assignDriver',
+                        sheetRow: finalSheetRow || '',
+                        sqlId: finalSqlServerId || '',
+                        driverName: drvName,
+                        driverPhone: displayDrvPhone,
+                        driverMsgStatus: 'تم إرسال بيانات السائق ✅'
+                    };
+                    if (finalWebId && String(finalWebId).startsWith('web_')) {
+                        sheetSyncPayload.webId = finalWebId;
+                    }
+
+                    console.log('📊 Vendor Sheet Syncing:', sheetSyncPayload);
                     fetch(APPS_SCRIPT_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify({
-                            action: 'assignDriver',
-                            sheetRow: finalSheetRow || '',
-                            webId: finalWebId || String(tripId),
-                            sqlId: finalSqlServerId || String(tripId),
-                            driverName: drvName,
-                            driverPhone: drvPhone
-                        })
+                        body: JSON.stringify(sheetSyncPayload)
                     }).then(r => r.json()).then(res => {
                         console.log('📊 Vendor Sheet Sync Result:', res);
                     }).catch(e => console.error('Sheet Sync Error:', e));
