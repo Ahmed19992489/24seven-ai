@@ -2292,8 +2292,11 @@
                     } catch(_) {}
                 }
 
+                // إرسال طلب التقييم للعميل (واتساب + السايت والدردشة)
+                sendCustomerRatingRequest(tripId, tripObj);
+
                 document.getElementById('complete-trip-modal').style.display = 'none';
-                alert(`✅ تم إنهاء الرحلة #${tripId} بنجاح!\nالعمولة المسجلة: ${commission} EGP`);
+                alert(`✅ تم إنهاء الرحلة #${tripId} بنجاح!\nالعمولة المسجلة: ${commission} EGP\n⭐ تم إرسال رابط التقييم للعميل على الواتساب والموقع.`);
                 loadDashboardData();
 
             } catch(e) {
@@ -2301,6 +2304,116 @@
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'تأكيد الإنهاء';
+            }
+        }
+
+        // ==========================================
+        // إرسال طلب التقييم للعميل (واتساب + دردشة الموقع)
+        // ==========================================
+        async function sendCustomerRatingRequest(tripId, tripObj = null) {
+            try {
+                const sb = window._supabaseClient;
+                if (!sb) return;
+
+                let trip = tripObj;
+                if (!trip) {
+                    const { data: tDb } = await sb.from('trips').select('*').eq('id', tripId).maybeSingle();
+                    trip = tDb;
+                }
+                if (!trip) return;
+
+                const rawAdminNotes = trip.admin_notes || '';
+                let custName = trip.manual_client_name || '';
+                let custPhone = (trip.client_phone || trip.customer_phone || '').replace(/\D/g, '');
+
+                if (!custName) {
+                    const nm = rawAdminNotes.match(/العميل:\s*([^\n\r(]+)/);
+                    if (nm) custName = nm[1].trim();
+                }
+
+                // استخراج المعرفات
+                let finalSheetRow = trip.sheet_row || '';
+                let finalWebId = trip.google_res_id || '';
+                let finalSqlServerId = trip.sql_server_id || '';
+
+                const sheetRowMatch = rawAdminNotes.match(/\[sheet_row:(\d+)\]/) || rawAdminNotes.match(/حجز شيت صف\s*(\d+)/);
+                const sqlIdMatch = rawAdminNotes.match(/\[sql_server_id:(\d+)\]/) || rawAdminNotes.match(/sql[_-]?id[:\s]+(\d+)/i);
+                const resIdMatch = rawAdminNotes.match(/\[google_res_id:(\d+)\]/);
+
+                if (sheetRowMatch) finalSheetRow = sheetRowMatch[1];
+                if (sqlIdMatch) finalSqlServerId = sqlIdMatch[1];
+                if (resIdMatch) finalWebId = resIdMatch[1];
+
+                // محاولة جلب هاتف واسم العميل من google_reservations لو مش موجودين
+                if (!custPhone || !custName || custName === 'عميل' || custName === 'عزيزنا العميل') {
+                    try {
+                        let q = sb.from('google_reservations').select('*');
+                        if (finalWebId) q = q.eq('id', finalWebId);
+                        else if (finalSqlServerId) q = q.eq('sql_server_id', String(finalSqlServerId));
+                        else if (finalSheetRow) q = q.eq('sheet_row', parseInt(finalSheetRow));
+                        const { data: gr } = await q.maybeSingle();
+                        if (gr) {
+                            if (gr.customer_phone && !custPhone) custPhone = gr.customer_phone.replace(/\D/g, '');
+                            if (gr.customer_name && (!custName || custName === 'عميل')) custName = gr.customer_name;
+                        }
+                    } catch(e) {}
+                }
+
+                if (!custName) custName = 'عزيزنا العميل';
+                const normCustPhone = normalizeEgyptianPhone(custPhone);
+                const clientRatingLink = `https://24seven-ai.com/limousine.html?rate=${tripId}`;
+
+                // 1. رسالة الواتساب للعميل
+                const ratingWaMsg = [
+                    `أهلاً أستاذ ${custName} 👋`,
+                    `نتمنى أن تكون قد استمتعت برحلتك مع *24Seven Limousine*! ✨`,
+                    ``,
+                    `⭐ *يهمنا جداً رأيك لمساعدتنا في تقديم أفضل مستوى خدمة:*`,
+                    `لتقييم رحلتك وسائقك مباشرة برجاء الضغط على الرابط التالي:`,
+                    clientRatingLink,
+                    ``,
+                    `━━━━━━━━━━━━━━━━━━━━━━━━`,
+                    `نسعد دائماً بخدمتك في جميع مشاويرك ورحلاتك القادمة! 🚕`
+                ].join('\n');
+
+                if (normCustPhone) {
+                    // إرسال مباشر
+                    fetch(`${getApiBaseUrl()}/api/send_reply`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+                        body: JSON.stringify({
+                            channel: 'whatsapp',
+                            sender_id: normCustPhone,
+                            message: ratingWaMsg,
+                            mod_name: 'خدمة العملاء'
+                        })
+                    }).catch(e => console.warn('Rating WA API error:', e));
+
+                    // طابور السحابة
+                    await sb.from('omnichannel_messages').insert([{
+                        channel: 'whatsapp',
+                        sender_id: normCustPhone,
+                        sender_name: 'خدمة العملاء',
+                        message_text: ratingWaMsg,
+                        is_from_admin: true,
+                        read_by_admin: false,
+                        whatsapp_instance_id: '692921bb-a5df-451d-8527-e1ee55a736f4'
+                    }]);
+                }
+
+                // 2. إرسال إشعار التقييم لدردشة الرحلة على الموقع
+                await sb.from('chat_messages').insert([{
+                    trip_id: tripId,
+                    sender_role: 'system',
+                    sender_id: currentVendor?.id || 'system',
+                    sender_name: 'النظام',
+                    message: `🏁 تم إنهاء الرحلة بنجاح!\n⭐ عميلنا العزيز ${custName}، نسعد بتقييمك لرحلتك معنا عبر الرابط:\n${clientRatingLink}`,
+                    message_type: 'rating_request'
+                }]);
+
+                console.log(`✅ Rating request dispatched successfully for Trip #${tripId} to ${normCustPhone}`);
+            } catch(ratingErr) {
+                console.error('Error sending customer rating request:', ratingErr);
             }
         }
 

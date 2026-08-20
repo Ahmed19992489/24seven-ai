@@ -2415,6 +2415,26 @@
                     ${ratingHtml}
                 </div>`;
             }).join('') : '';
+
+            // فحص تلقائي لأحدث رحلة مكتملة غير مقيمة لعرض نافذة التقييم للعميل
+            try {
+                if (trips && trips.length > 0) {
+                    const unratedTrip = trips.find(t => {
+                        const st = normalizeStatus(t.status);
+                        return (st === 'completed' || st === 'trip_ended') && !ratingsMap[t.id] && !String(t.id).startsWith('gr_');
+                    });
+                    if (unratedTrip) {
+                        const isDismissed = sessionStorage.getItem('dismissed_rating_' + unratedTrip.id);
+                        if (!isDismissed) {
+                            setTimeout(() => {
+                                showFeedbackModal(unratedTrip.id);
+                            }, 1200);
+                        }
+                    }
+                }
+            } catch(e) {
+                console.warn('Auto rating check error:', e);
+            }
         }
 
         async function loadWallet() {
@@ -3142,40 +3162,89 @@
         }
 
         function showFeedbackModal(tripId) {
+            if (!tripId) return;
             document.getElementById('feedback-trip-id').value = tripId;
             initFeedbackStars();
             document.getElementById('feedback-modal').style.display = 'flex';
         }
 
         function closeFeedback() {
+            const tripId = document.getElementById('feedback-trip-id').value;
+            if (tripId) {
+                try { sessionStorage.setItem('dismissed_rating_' + tripId, '1'); } catch(_) {}
+            }
             document.getElementById('feedback-modal').style.display = 'none';
         }
 
         async function submitFeedback() {
             const tripId = document.getElementById('feedback-trip-id').value;
             if (!tripId) return;
-            if (feedbackRatings.driver === 0) return alert('من فضلك قيّم الكابتن');
+            if (feedbackRatings.driver === 0) return alert('من فضلك قيّم الكابتن ⭐');
 
-            const { error } = await sb.from('trip_ratings').insert([{
-                trip_id: tripId,
-                user_id: user.id,
-                driver_rating: feedbackRatings.driver,
-                car_rating: feedbackRatings.car,
-                service_rating: feedbackRatings.service,
-                would_recommend: feedbackRecommend,
-                feedback_notes: document.getElementById('feedback-notes').value.trim() || null
-            }]);
-
-            if (error) {
-                console.error(error);
-                alert('حدث خطأ أثناء إرسال التقييم');
-                return;
+            const submitBtn = document.querySelector('#feedback-modal button.bg-amber-500');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i>جاري إرسال التقييم...';
             }
-            closeFeedback();
-            alert('شكراً لتقييمك! ❤️');
-            // إرسال إيميل شكر بعد التقييم
-            sendClientEmail(tripId, '❤️ شكراً لتقييمك!', 'شكراً لوقتك في تقييم رحلتك معنا! رأيك يساعدنا نقدّم خدمة أفضل. يسعدنا خدمتك دائماً - احجز رحلتك القادمة الآن!');
+
+            try {
+                const currentUserId = (typeof user !== 'undefined' && user?.id) ? user.id : null;
+                const parsedTripId = parseInt(tripId) || tripId;
+
+                const ratingPayload = {
+                    trip_id: parsedTripId,
+                    driver_rating: feedbackRatings.driver,
+                    car_rating: feedbackRatings.car,
+                    service_rating: feedbackRatings.service,
+                    would_recommend: feedbackRecommend,
+                    feedback_notes: document.getElementById('feedback-notes').value.trim() || null
+                };
+                if (currentUserId) ratingPayload.user_id = currentUserId;
+
+                const { error } = await sb.from('trip_ratings').insert([ratingPayload]);
+
+                if (error) {
+                    console.error('Rating insert error:', error);
+                    alert('حدث خطأ أثناء إرسال التقييم: ' + (error.message || ''));
+                    return;
+                }
+
+                closeFeedback();
+                alert('شكراً جزيلاً لتقييمك! ❤️ رأيك يساعدنا على تطوير وتجويد خدماتنا دائماً.');
+
+                // إرسال إيميل شكر بعد التقييم
+                if (typeof sendClientEmail === 'function' && typeof parsedTripId === 'number') {
+                    sendClientEmail(parsedTripId, '❤️ شكراً لتقييمك!', 'شكراً لوقتك في تقييم رحلتك معنا! يسعدنا خدمتك دائماً - احجز رحلتك القادمة الآن!');
+                }
+
+                if (typeof loadTrips === 'function') loadTrips();
+
+            } catch(e) {
+                console.error('Feedback submission error:', e);
+                alert('حدث خطأ غير متوقع');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-paper-plane ml-2"></i>إرسال التقييم';
+                }
+            }
         }
+
+        // فحص بارامتر التقييم من الرابط المباشر
+        function checkRatingFromUrl() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const rateTripId = urlParams.get('rate') || urlParams.get('rating') || urlParams.get('feedback');
+                if (rateTripId) {
+                    setTimeout(() => {
+                        showFeedbackModal(rateTripId);
+                    }, 800);
+                }
+            } catch(e) {
+                console.warn('URL Rating check error:', e);
+            }
+        }
+        checkRatingFromUrl();
 
         // ==========================================
         // وظائف ربط رقم الهاتف
