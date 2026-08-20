@@ -2076,23 +2076,28 @@
                     const sheetSyncPayload = {
                         action: 'assignDriver',
                         sheetRow: finalSheetRow || '',
-                        sqlId: finalSqlServerId || '',
+                        webId: finalWebId || '',
+                        sqlId: finalSqlServerId || String(tripId),
                         driverName: drvName,
-                        driverPhone: displayDrvPhone,
+                        driverPhone: normDrvPhone || displayDrvPhone,
                         driverMsgStatus: 'تم إرسال بيانات السائق ✅'
                     };
-                    if (finalWebId && String(finalWebId).startsWith('web_')) {
-                        sheetSyncPayload.webId = finalWebId;
-                    }
 
-                    console.log('📊 Vendor Sheet Syncing:', sheetSyncPayload);
-                    fetch(APPS_SCRIPT_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify(sheetSyncPayload)
-                    }).then(r => r.json()).then(res => {
-                        console.log('📊 Vendor Sheet Sync Result:', res);
-                    }).catch(e => console.error('Sheet Sync Error:', e));
+                    console.log('📊 Vendor Sheet Syncing:', JSON.stringify(sheetSyncPayload));
+                    try {
+                        const sheetFetchRes = await fetch(APPS_SCRIPT_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify(sheetSyncPayload)
+                        });
+                        const sheetJson = await sheetFetchRes.json();
+                        console.log('📊 Vendor Sheet Sync Result:', JSON.stringify(sheetJson));
+                        if (!sheetJson.success) {
+                            console.warn('⚠️ Sheet sync returned failure:', sheetJson.error || 'unknown');
+                        }
+                    } catch(sheetFetchErr) {
+                        console.error('📊 Sheet Sync Fetch Error:', sheetFetchErr);
+                    }
                 } catch(sheetErr) { console.error('Vendor Sheet Sync Error:', sheetErr); }
 
                 document.getElementById('assign-driver-modal').style.display = 'none';
