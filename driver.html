@@ -484,8 +484,12 @@
             list.innerHTML = '<p class="text-center text-slate-400 py-8"><i class="fas fa-spinner fa-spin ml-2"></i>جاري التحميل...</p>';
 
             let allCards = [];
+            const coveredSheetRows = new Set();
+            const coveredSqlIds = new Set();
+            const coveredGoogleResIds = new Set();
+            const coveredTripKeys = new Set();
 
-            // === مصدر 1: رحلات من جدول trips (النظام القديم) ===
+            // === مصدر 1: رحلات من جدول trips (النظام المتكامل وفلو المراحل) ===
             try {
                 const { data: trips } = await sb.from('trips')
                     .select('*, cars:cars!fk_trips_car(*)')
@@ -500,11 +504,34 @@
                         const { data: profiles } = await sb.from('profiles').select('id, full_name').in('id', userIds);
                         if (profiles) profiles.forEach(p => profilesMap[p.id] = p);
                     }
-                    allCards.push(...trips.map(t => ({ type: 'trip', html: renderTripCard(t, profilesMap), date: t.created_at })));
+
+                    trips.forEach(t => {
+                        // تجميع المعرفات لمنع التكرار
+                        if (t.sheet_row) coveredSheetRows.add(String(t.sheet_row));
+                        if (t.sql_server_id) coveredSqlIds.add(String(t.sql_server_id));
+                        if (t.google_res_id) coveredGoogleResIds.add(String(t.google_res_id));
+
+                        const notes = t.admin_notes || '';
+                        const sheetM = notes.match(/\[sheet_row:(\d+)\]/) || notes.match(/حجز شيت صف\s*(\d+)/);
+                        const sqlM = notes.match(/\[sql_server_id:(\d+)\]/) || notes.match(/sql[_-]?id[:\s]+(\d+)/i);
+                        const resM = notes.match(/\[google_res_id:([^\]]+)\]/);
+
+                        if (sheetM) coveredSheetRows.add(String(sheetM[1]));
+                        if (sqlM) coveredSqlIds.add(String(sqlM[1]));
+                        if (resM) coveredGoogleResIds.add(String(resM[1]));
+
+                        // بصمة الرحلة (المسار + السعر) لمنع التكرار حتى لو المعرف مختلف
+                        const p = (t.pickup_location || '').trim().toLowerCase().slice(0, 15);
+                        const d = (t.dropoff_location || '').trim().toLowerCase().slice(0, 15);
+                        const cost = Math.round(Number(t.estimated_price || 0));
+                        if (p && d) coveredTripKeys.add(`${p}|${d}|${cost}`);
+
+                        allCards.push({ type: 'trip', html: renderTripCard(t, profilesMap), date: t.created_at });
+                    });
                 }
             } catch(e) { console.error('Error loading trips:', e); }
 
-            // === مصدر 2: رحلات من google_reservations (الشيت) ===
+            // === مصدر 2: رحلات من google_reservations (الشيت) فقط التي لم تسجل كرحلة داخلية ===
             try {
                 // البحث بعدة صيغ لرقم الهاتف (معالجة +20, 0020, 01, 1)
                 let driverPhone = currentDriver.phone.replace(/\D/g, '');
@@ -525,7 +552,23 @@
                     .limit(30);
 
                 if (sheetTrips && sheetTrips.length > 0) {
-                    allCards.push(...sheetTrips.map(t => ({ type: 'sheet', html: renderSheetTripCard(t), date: t.trip_date || t.created_at })));
+                    sheetTrips.forEach(st => {
+                        const stId = String(st.id);
+                        const stSqlId = String(st.sql_server_id || '');
+                        const stSheetRow = String(st.sheet_row || '');
+                        const p = (st.pickup_address || '').trim().toLowerCase().slice(0, 15);
+                        const d = (st.dropoff_address || '').trim().toLowerCase().slice(0, 15);
+                        const cost = Math.round(Number(st.cost || 0));
+                        const key = `${p}|${d}|${cost}`;
+
+                        // لو الرحلة تم تحميلها بالفعل من جدول trips بكامل الفلو والتفاصيل، نتخطاها لمنع التكرار
+                        if (coveredGoogleResIds.has(stId) || (stSqlId && coveredSqlIds.has(stSqlId)) || (stSheetRow && coveredSheetRows.has(stSheetRow)) || coveredTripKeys.has(key)) {
+                            console.log('Skipping duplicate sheet trip (already loaded in trips):', st.id);
+                            return;
+                        }
+
+                        allCards.push({ type: 'sheet', html: renderSheetTripCard(st), date: st.trip_date || st.created_at });
+                    });
                 }
             } catch(e) { console.error('Error loading sheet trips:', e); }
 
