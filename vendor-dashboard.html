@@ -451,6 +451,33 @@
         </div>
     </div>
 
+    <!-- مودال إنهاء الرحلة وتسجيل العمولة -->
+    <div id="complete-trip-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center p-4 z-50 backdrop-blur-sm" style="display:none">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-black text-white">✅ إنهاء الرحلة وتسجيل العمولة</h3>
+                <button onclick="document.getElementById('complete-trip-modal').style.display='none'" class="text-slate-400 hover:text-white text-xl">&times;</button>
+            </div>
+            <input type="hidden" id="complete-trip-id">
+            <div class="bg-slate-800/60 border border-slate-700 rounded-xl p-4 space-y-1 text-sm text-slate-300">
+                <p id="complete-trip-info" class="font-bold text-white text-base"></p>
+                <p id="complete-trip-price" class="text-blue-400 font-black text-lg font-num"></p>
+            </div>
+            <div>
+                <label class="text-xs text-slate-400 block mb-1">💰 عمولة المنصة (EGP) - الربح الصافي لـ 24Seven</label>
+                <input type="number" id="complete-trip-commission" min="0" step="1" placeholder="أدخل العمولة..."
+                    class="w-full bg-slate-950 border border-emerald-600/50 rounded-xl px-4 py-3 text-white outline-none focus:border-emerald-400 text-lg font-num text-center font-black">
+                <p class="text-[11px] text-slate-500 mt-1 text-center">الفرق بين سعر العميل وما يستحقه مكتب التشغيل</p>
+            </div>
+            <div class="flex gap-3 pt-1">
+                <button onclick="document.getElementById('complete-trip-modal').style.display='none'" class="flex-1 bg-slate-700 text-slate-300 py-2.5 rounded-xl text-sm font-bold">إلغاء</button>
+                <button id="btn-confirm-complete" onclick="confirmTripCompletion()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-sm font-black transition">
+                    <i class="fas fa-check-circle ml-1"></i> تأكيد الإنهاء
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- نافذة الشات المشترك (الرباعي) -->
     <div id="chat-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center p-4 z-50 backdrop-blur-sm">
         <div class="bg-slate-800 border border-slate-700 rounded-3xl w-full max-w-[550px] h-[85vh] flex flex-col shadow-2xl animate-fade overflow-hidden">
@@ -1458,12 +1485,12 @@
                     </button>
                 `;
 
-                // زر تم التنفيذ (إنهاء)
+                // زر إنهاء الرحلة - يظهر لكل الرحلات النشطة
                 let completeBtn = '';
-                if (t.status === 'driver_assigned' || t.status === 'trip_ended') {
+                if (t.status === 'approved' || t.status === 'driver_assigned' || t.status === 'trip_ended') {
                     completeBtn = `
-                        <button onclick="completeTripFromVendor('${t.id}', ${price}, ${commission}, ${isPostpaid})" class="bg-green-600 hover:bg-green-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition flex items-center justify-center gap-1">
-                            <i class="fas fa-check-circle"></i> تم التنفيذ (إنهاء)
+                        <button onclick="completeTripFromVendor('${t.id}', ${price}, ${commission})" class="bg-emerald-700 hover:bg-emerald-600 text-white font-bold px-4 py-2 rounded-xl text-xs transition flex items-center justify-center gap-1">
+                            <i class="fas fa-check-double"></i> تم التنفيذ (إنهاء)
                         </button>
                     `;
                 }
@@ -2109,6 +2136,85 @@
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'تأكيد الإسناد';
+            }
+        }
+
+        // ==========================================
+        // إنهاء الرحلة وتسجيل العمولة
+        // ==========================================
+        function completeTripFromVendor(tripId, price, currentCommission) {
+            const tripObj = (cachedTrips || []).find(t => String(t.id) === String(tripId));
+            const customerName = tripObj ? (tripObj.manual_client_name || 'عميل') : 'عميل';
+            const pickup = tripObj ? (tripObj.pickup_location || '--').split(',')[0] : '--';
+            const dropoff = tripObj ? (tripObj.dropoff_location || '--').split(',')[0] : '--';
+
+            document.getElementById('complete-trip-id').value = tripId;
+            document.getElementById('complete-trip-info').textContent = `#${tripId} | ${customerName} | ${pickup} ➝ ${dropoff}`;
+            document.getElementById('complete-trip-price').textContent = `💰 قيمة الرحلة: ${Number(price).toLocaleString()} EGP`;
+            document.getElementById('complete-trip-commission').value = currentCommission > 0 ? currentCommission : '';
+            document.getElementById('complete-trip-modal').style.display = 'flex';
+        }
+
+        async function confirmTripCompletion() {
+            const btn = document.getElementById('btn-confirm-complete');
+            const tripId = document.getElementById('complete-trip-id').value;
+            const commissionVal = document.getElementById('complete-trip-commission').value;
+
+            if (!tripId) { alert('خطأ: لم يتم تحديد الرحلة'); return; }
+
+            const commission = parseFloat(commissionVal);
+            if (isNaN(commission) || commission < 0) {
+                alert('❌ أدخل قيمة عمولة صحيحة (0 أو أكثر)');
+                document.getElementById('complete-trip-commission').focus();
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '⏳ جاري الحفظ...';
+
+            try {
+                const sb = window._supabaseClient;
+
+                // تحديث الرحلة: status=completed + our_commission
+                const { error } = await sb.from('trips')
+                    .update({ status: 'completed', our_commission: commission })
+                    .eq('id', tripId);
+
+                if (error) throw error;
+
+                // مزامنة الشيت (إن كان شيت row متاح)
+                const tripObj = (cachedTrips || []).find(t => String(t.id) === String(tripId));
+                const notesText = tripObj?.admin_notes || '';
+                const sheetRowMatch = notesText.match(/\[sheet_row:(\d+)\]/);
+                const webIdMatch = notesText.match(/\[google_res_id:([^\]]+)\]/);
+                const sqlIdMatch = notesText.match(/\[sql_server_id:([^\]]+)\]/);
+
+                if (sheetRowMatch || webIdMatch || sqlIdMatch) {
+                    try {
+                        const APPS_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
+                        fetch(APPS_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({
+                                action: 'assignDriver',
+                                sheetRow: sheetRowMatch ? sheetRowMatch[1] : '',
+                                webId: webIdMatch ? webIdMatch[1] : '',
+                                sqlId: sqlIdMatch ? sqlIdMatch[1] : '',
+                                driverMsgStatus: `✅ تم التنفيذ | عمولة: ${commission} EGP`
+                            })
+                        }).catch(() => {});
+                    } catch(_) {}
+                }
+
+                document.getElementById('complete-trip-modal').style.display = 'none';
+                alert(`✅ تم إنهاء الرحلة #${tripId} بنجاح!\nالعمولة المسجلة: ${commission} EGP`);
+                loadDashboardData();
+
+            } catch(e) {
+                alert('❌ خطأ أثناء الحفظ: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'تأكيد الإنهاء';
             }
         }
 
