@@ -605,6 +605,22 @@
 
             <!-- Trips Table -->
             <div class="glass-panel p-6 flex-1 overflow-hidden flex flex-col">
+                <!-- Operational Dispatch Filter Bar -->
+                <div class="flex items-center justify-between flex-wrap gap-3 mb-4 pb-3 border-b border-slate-200">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-xs font-bold text-slate-500 ml-1"><i class="fas fa-filter text-teal-600 ml-1"></i>حالة الترحيل للتشغيل:</span>
+                        <button onclick="setOpsFilter('all')" id="ops-filter-all" class="ops-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-black bg-teal-600 text-white shadow-sm transition">
+                            كل الحجوزات (<span id="ops-count-all">0</span>)
+                        </button>
+                        <button onclick="setOpsFilter('pending')" id="ops-filter-pending" class="ops-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 transition shadow-sm">
+                            ⏳ بانتظار الإرسال للتشغيل (<span id="ops-count-pending">0</span>)
+                        </button>
+                        <button onclick="setOpsFilter('dispatched')" id="ops-filter-dispatched" class="ops-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-900 border border-emerald-300 hover:bg-emerald-100 transition shadow-sm">
+                            🚀 تم الترحيل للتشغيل (<span id="ops-count-dispatched">0</span>)
+                        </button>
+                    </div>
+                </div>
+
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead class="bg-slate-50 text-slate-500 font-bold">
@@ -4930,13 +4946,91 @@
             renderTripsTable(merged);
         }
 
-        function renderTripsTable(trips) {
+        let currentOpsFilter = 'all';
+        let currentTripsCache = [];
+
+        function setOpsFilter(filter) {
+            currentOpsFilter = filter;
+            ['all', 'pending', 'dispatched'].forEach(f => {
+                const btn = document.getElementById(`ops-filter-${f}`);
+                if (!btn) return;
+                if (f === filter) {
+                    if (f === 'pending') {
+                        btn.className = 'ops-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-black bg-amber-500 text-white shadow-sm transition';
+                    } else if (f === 'dispatched') {
+                        btn.className = 'ops-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-black bg-emerald-600 text-white shadow-sm transition';
+                    } else {
+                        btn.className = 'ops-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-black bg-teal-600 text-white shadow-sm transition';
+                    }
+                } else {
+                    if (f === 'pending') {
+                        btn.className = 'ops-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 transition shadow-sm';
+                    } else if (f === 'dispatched') {
+                        btn.className = 'ops-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-900 border border-emerald-300 hover:bg-emerald-100 transition shadow-sm';
+                    } else {
+                        btn.className = 'ops-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition shadow-sm';
+                    }
+                }
+            });
+            if (currentTripsCache) {
+                renderTripsTable(currentTripsCache, true);
+            }
+        }
+
+        function renderTripsTable(trips, isFilterChange = false) {
+            if (!isFilterChange) {
+                currentTripsCache = trips || [];
+            }
+            const rawList = currentTripsCache || [];
+            
+            // حساب الإحصائيات لكامل القائمة
+            let countTotal = rawList.length;
+            let countDispatched = 0;
+            let countPending = 0;
+
+            rawList.forEach(t => {
+                const isDisp = !!t.is_real_trip || t.status === 'تم الترحيل' || t.status === 'driver_assigned' || t.status === 'approved' || t.status === 'in_progress' || t.status === 'completed' || !!t.driver_name || !!t.vendor_id;
+                const isCanc = t.status === 'ملغي' || t.status === 'cancelled' || (t.client_decision && (t.client_decision.includes('ملغي') || t.client_decision.includes('إلغاء')));
+                if (!isCanc) {
+                    if (isDisp) countDispatched++;
+                    else countPending++;
+                }
+            });
+
+            const countAllEl = document.getElementById('ops-count-all');
+            const countPendingEl = document.getElementById('ops-count-pending');
+            const countDispatchedEl = document.getElementById('ops-count-dispatched');
+            if (countAllEl) countAllEl.textContent = countTotal;
+            if (countPendingEl) countPendingEl.textContent = countPending;
+            if (countDispatchedEl) countDispatchedEl.textContent = countDispatched;
+
+            // فلترة القائمة حسب التبويب النشط
+            const displayedTrips = rawList.filter(t => {
+                const isDisp = !!t.is_real_trip || t.status === 'تم الترحيل' || t.status === 'driver_assigned' || t.status === 'approved' || t.status === 'in_progress' || t.status === 'completed' || !!t.driver_name || !!t.vendor_id;
+                const isCanc = t.status === 'ملغي' || t.status === 'cancelled' || (t.client_decision && (t.client_decision.includes('ملغي') || t.client_decision.includes('إلغاء')));
+                
+                if (currentOpsFilter === 'pending') return !isDisp && !isCanc;
+                if (currentOpsFilter === 'dispatched') return isDisp && !isCanc;
+                return true;
+            });
+
             const tbody = document.getElementById('trips-table-body');
-            tbody.innerHTML = trips.map(t => {
+            if (!tbody) return;
+
+            if (displayedTrips.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-slate-400 font-bold text-sm"><i class="fas fa-inbox text-2xl mb-2 block text-slate-300"></i>لا توجد حجوزات تطابق الفلتر المحدد</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = displayedTrips.map(t => {
                 const feedbackArr = [];
                 if(t.rating) feedbackArr.push(`${t.rating} ⭐`);
                 if(t.performance_comment) feedbackArr.push(`<span title="${t.performance_comment}">📝</span>`);
                 const feedbackHtml = feedbackArr.length > 0 ? feedbackArr.join(' ') : '<span class="text-slate-300">---</span>';
+
+                // فحص دقيق لحالة الإرسال للتشغيل
+                const isDispatched = !!t.is_real_trip || t.status === 'تم الترحيل' || t.status === 'driver_assigned' || t.status === 'approved' || t.status === 'in_progress' || t.status === 'completed' || !!t.driver_name || !!t.vendor_id;
+                const isCancelled = t.status === 'ملغي' || t.status === 'cancelled' || (t.client_decision && (t.client_decision.includes('ملغي') || t.client_decision.includes('إلغاء')));
 
                 // تحديد حالة التأكيد (قرار العميل)
                 let decision = 'لم يقرر';
@@ -4960,7 +5054,7 @@
                     }
                 }
 
-                // الأصل كل الأوردرات كاش - الزر يظهر دائماً ما لم يكن الأوردر آجل مسبقاً
+                // طريقة الدفع
                 let payMethodBadge = '';
                 const modNotesText = t.admin_notes || t.notes || '';
                 const modAllText = (modNotesText + ' ' + (t.payment_method || '')).toLowerCase();
@@ -4979,20 +5073,128 @@
                     `;
                 }
 
+                const resId = t.is_real_trip ? t.google_res_id : t.id;
+                const decisionHtml = resId ? `
+                    <div class="mt-1 flex items-center gap-1.5 flex-wrap">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${decisionClass} inline-flex items-center gap-1">
+                            <i class="fas ${decisionIcon}"></i> ${decision}
+                        </span>
+                        <button onclick="changeClientDecision('${resId}', '${decision}', '${t.id}', ${t.sheet_row || 'null'})" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold border border-blue-200 rounded px-1.5 py-0.5 bg-blue-50/50 hover:bg-blue-50 transition cursor-pointer" title="تعديل قرار العميل">تعديل القرار</button>
+                        ${payMethodBadge}
+                    </div>
+                ` : '';
 
-                 const resId = t.is_real_trip ? t.google_res_id : t.id;
-                 const decisionHtml = resId ? `
-                     <div class="mt-1 flex items-center gap-1.5 flex-wrap">
-                         <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${decisionClass} inline-flex items-center gap-1">
-                             <i class="fas ${decisionIcon}"></i> ${decision}
-                         </span>
-                         <button onclick="changeClientDecision('${resId}', '${decision}', '${t.id}', ${t.sheet_row || 'null'})" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold border border-blue-200 rounded px-1.5 py-0.5 bg-blue-50/50 hover:bg-blue-50 transition cursor-pointer" title="تعديل قرار العميل">تعديل القرار</button>
-                         ${payMethodBadge}
-                     </div>
-                 ` : '';
+                // تمييز الصف بصرياً
+                let rowBgBorder = '';
+                if (isCancelled) {
+                    rowBgBorder = 'border-r-4 border-r-red-400 bg-red-50/10 opacity-70';
+                } else if (isDispatched) {
+                    rowBgBorder = 'border-r-4 border-r-emerald-500 bg-white hover:bg-emerald-50/20';
+                } else {
+                    rowBgBorder = 'border-r-4 border-r-amber-500 bg-amber-50/25 hover:bg-amber-50/50';
+                }
+
+                // بادج الحالة الواضح
+                let statusBadgeHtml = '';
+                if (isCancelled) {
+                    statusBadgeHtml = `
+                        <span class="px-2.5 py-1 rounded-full text-[11px] font-black bg-red-100 text-red-700 border border-red-200 inline-flex items-center gap-1 shadow-sm">
+                            <i class="fas fa-times-circle"></i> ملغي
+                        </span>
+                    `;
+                } else if (isDispatched) {
+                    statusBadgeHtml = `
+                        <span class="px-2.5 py-1 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1 shadow-sm" title="تم ترحيل الحجز للتشغيل وتعيين السائق/المكتب">
+                            <i class="fas fa-check-double text-emerald-600"></i> تم الترحيل للتشغيل 🚀
+                        </span>
+                    `;
+                } else {
+                    statusBadgeHtml = `
+                        <span class="px-2.5 py-1 rounded-full text-[11px] font-black bg-amber-100 text-amber-900 border border-amber-300 inline-flex items-center gap-1 shadow-sm animate-pulse" title="هذا الأوردر بانتظار الإرسال للتشغيل">
+                            <i class="fas fa-hourglass-half text-amber-600"></i> بانتظار التشغيل ⏳
+                        </span>
+                    `;
+                }
+
+                // بيانات السائق أو التشغيل
+                let driverCarStageHtml = '<span class="text-slate-300">---</span>';
+                if (t.is_real_trip) {
+                    const driverName = t.driver_name || (t.is_outsourced ? 'مكتب خارجي' : 'بانتظار التعيين');
+                    const driverPhone = t.driver_phone ? ` (${t.driver_phone})` : '';
+                    const carBrand = t.car_brand || '';
+                    const carPlate = t.car_plate ? ` [ ${t.car_plate} ]` : '';
+                    
+                    let stageBadge = '';
+                    if (t.status === 'driver_assigned' || t.stage_status) {
+                        const stages = {
+                            'new': { text: 'عينت السائق 🚖', cls: 'bg-teal-50 text-teal-700 border-teal-200' },
+                            'garage_pickup': { text: 'استلم من الجراش 🏢', cls: 'bg-blue-50 text-blue-700 border-blue-200' },
+                            'heading_client': { text: 'في الطريق للعميل 📍', cls: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
+                            'arrived_client': { text: 'وصل للعميل 🔔', cls: 'bg-purple-50 text-purple-700 border-purple-200' },
+                            'trip_started': { text: 'الرحلة جارية ⚙️', cls: 'bg-green-50 text-green-700 border-green-200 font-bold animate-pulse' },
+                            'post_photos': { text: 'صور بعد الرحلة 📸', cls: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
+                            'financial_close': { text: 'قفل الحساب 💵', cls: 'bg-slate-50 text-slate-700 border-slate-200' },
+                            'trip_ended': { text: 'انتهت 🏁', cls: 'bg-slate-100 text-slate-600 border-slate-300' }
+                        };
+                        const stage = stages[t.stage_status] || { text: t.stage_status || 'بانتظار البدء', cls: 'bg-slate-50 text-slate-600 border-slate-200' };
+                        stageBadge = `
+                            <div class="mt-1">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] border ${stage.cls} inline-flex items-center gap-1 font-bold">
+                                    ${stage.text}
+                                </span>
+                            </div>
+                        `;
+                    }
+                    
+                    driverCarStageHtml = `
+                        <div class="text-xs text-slate-700">
+                            <span class="font-bold"><i class="fas fa-user-tie text-slate-400 ml-1"></i>${driverName}</span>
+                            ${driverPhone ? `<div class="text-[10px] text-slate-500">${driverPhone}</div>` : ''}
+                        </div>
+                        ${carBrand ? `
+                        <div class="text-[10px] text-slate-600 font-medium mt-0.5">
+                            <i class="fas fa-car text-slate-400 ml-1"></i>${carBrand}${carPlate}
+                        </div>` : ''}
+                        ${t.car_image_url ? `
+                        <div class="mt-1">
+                            <a href="${t.car_image_url}" target="_blank" class="inline-block w-16 h-10 rounded border border-slate-200 overflow-hidden hover:opacity-80 transition" title="عرض صورة السيارة">
+                                <img src="${t.car_image_url}" class="w-full h-full object-cover">
+                            </a>
+                        </div>` : ''}
+                        ${stageBadge}
+                    `;
+                } else if (isDispatched) {
+                    driverCarStageHtml = `
+                        <div class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200 inline-flex items-center gap-1">
+                            <i class="fas fa-check-circle text-emerald-600"></i> تم الترحيل للتشغيل
+                        </div>
+                    `;
+                } else {
+                    driverCarStageHtml = `
+                        <div class="text-xs font-bold text-amber-800 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200 inline-flex items-center gap-1">
+                            <i class="fas fa-clock text-amber-500"></i> لم يُرسل للتشغيل بعد
+                        </div>
+                    `;
+                }
+
+                // زر إجراء التعيين
+                let assignBtnHtml = '';
+                if (!isDispatched && !isCancelled) {
+                    assignBtnHtml = `
+                        <button onclick="openAssignModal('${t.id}')" title="إرسال للتشغيل وتعيين كابتن/مكتب" class="px-2.5 py-1.5 rounded-lg bg-teal-600 text-white hover:bg-teal-700 transition flex items-center gap-1 font-bold text-[11px] shadow-sm hover:scale-105 transform">
+                            <i class="fas fa-paper-plane text-[10px]"></i> إرسال للتشغيل
+                        </button>
+                    `;
+                } else {
+                    assignBtnHtml = `
+                        <button onclick="openAssignModal('${t.id}')" title="${isDispatched ? 'تعديل التعيين والتشغيل' : 'تعيين كابتن'}" class="w-8 h-8 rounded-lg ${isDispatched ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white' : 'bg-teal-50 text-teal-600 hover:bg-teal-600 hover:text-white'} transition flex items-center justify-center">
+                            <i class="fas ${isDispatched ? 'fa-user-check' : 'fa-user-plus'} text-xs"></i>
+                        </button>
+                    `;
+                }
 
                 return `
-                <tr class="border-b hover:bg-slate-50 transition border-r-4 ${t.client_status === 'قديم' ? 'border-r-blue-400' : 'border-r-teal-400'}">
+                <tr class="border-b transition ${rowBgBorder}">
                     <td class="p-4">
                         <div class="font-bold text-slate-700">${t.customer_name || '---'}</div>
                         <div class="text-[10px] text-slate-400">${t.customer_phone || ''} | ${t.client_status || 'جديد'}</div>
@@ -5023,64 +5225,13 @@
                         <div class="text-xs font-bold">${feedbackHtml}</div>
                     </td>
                     <td class="p-4 text-center">
-                        ${(() => {
-                            let driverCarStageHtml = '<span class="text-slate-300">---</span>';
-                            if (t.is_real_trip) {
-                                const driverName = t.driver_name || 'بانتظار التعيين';
-                                const driverPhone = t.driver_phone ? ` (${t.driver_phone})` : '';
-                                const carBrand = t.car_brand || '';
-                                const carPlate = t.car_plate ? ` [ ${t.car_plate} ]` : '';
-                                
-                                let stageBadge = '';
-                                if (t.status === 'driver_assigned' || t.stage_status) {
-                                    const stages = {
-                                        'new': { text: 'عينت السائق 🚖', cls: 'bg-teal-50 text-teal-700 border-teal-200' },
-                                        'garage_pickup': { text: 'استلم من الجراش 🏢', cls: 'bg-blue-50 text-blue-700 border-blue-200' },
-                                        'heading_client': { text: 'في الطريق للعميل 📍', cls: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
-                                        'arrived_client': { text: 'وصل للعميل 🔔', cls: 'bg-purple-50 text-purple-700 border-purple-200' },
-                                        'trip_started': { text: 'الرحلة جارية ⚙️', cls: 'bg-green-50 text-green-700 border-green-200 font-bold animate-pulse' },
-                                        'post_photos': { text: 'صور بعد الرحلة 📸', cls: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
-                                        'financial_close': { text: 'قفل الحساب 💵', cls: 'bg-slate-50 text-slate-700 border-slate-200' },
-                                        'trip_ended': { text: 'انتهت 🏁', cls: 'bg-slate-100 text-slate-600 border-slate-300' }
-                                    };
-                                    const stage = stages[t.stage_status] || { text: t.stage_status || 'بانتظار البدء', cls: 'bg-slate-50 text-slate-600 border-slate-200' };
-                                    stageBadge = `
-                                        <div class="mt-1">
-                                            <span class="px-2 py-0.5 rounded-full text-[10px] border ${stage.cls} inline-flex items-center gap-1 font-bold">
-                                                ${stage.text}
-                                            </span>
-                                        </div>
-                                    `;
-                                }
-                                
-                                driverCarStageHtml = `
-                                    <div class="text-xs text-slate-700">
-                                        <span class="font-bold"><i class="fas fa-user-tie text-slate-400 ml-1"></i>${driverName}</span>
-                                        ${driverPhone ? `<div class="text-[10px] text-slate-500">${driverPhone}</div>` : ''}
-                                    </div>
-                                    ${carBrand ? `
-                                    <div class="text-[10px] text-slate-600 font-medium mt-0.5">
-                                        <i class="fas fa-car text-slate-400 ml-1"></i>${carBrand}${carPlate}
-                                    </div>` : ''}
-                                    ${t.car_image_url ? `
-                                    <div class="mt-1">
-                                        <a href="${t.car_image_url}" target="_blank" class="inline-block w-16 h-10 rounded border border-slate-200 overflow-hidden hover:opacity-80 transition" title="عرض صورة السيارة">
-                                            <img src="${t.car_image_url}" class="w-full h-full object-cover">
-                                        </a>
-                                    </div>` : ''}
-                                    ${stageBadge}
-                                `;
-                            }
-                            return driverCarStageHtml;
-                        })()}
+                        ${driverCarStageHtml}
                     </td>
                     <td class="p-4 text-center">
-                        <span class="px-2 py-0.5 rounded-full text-[10px] ${t.status === 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'} font-black">${t.status || 'معلق'}</span>
+                        ${statusBadgeHtml}
                     </td>
-                    <td class="p-4 text-center flex gap-1 justify-center">
-                        <button onclick="openAssignModal('${t.id}')" title="تعيين كابتن" class="w-8 h-8 rounded-lg bg-teal-50 text-teal-600 hover:bg-teal-600 hover:text-white transition flex items-center justify-center">
-                            <i class="fas fa-user-plus text-xs"></i>
-                        </button>
+                    <td class="p-4 text-center flex gap-1 justify-center items-center">
+                        ${assignBtnHtml}
                         <button onclick="copyTripDetails('${t.id}')" title="نسخ البيانات" class="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-200 transition flex items-center justify-center">
                             <i class="fas fa-copy text-xs"></i>
                         </button>
