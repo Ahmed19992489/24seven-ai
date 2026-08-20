@@ -2011,6 +2011,15 @@
         async function loadTrips() {
             if (typeof activeClientTripIds === 'undefined' || !activeClientTripIds) activeClientTripIds = new Set();
             activeClientTripIds.clear();
+
+            // مزامنة أي رحلات برقم هاتف العميل لم تُربط بحسابه بعد
+            try {
+                const { data: prof } = await sb.from('profiles').select('phone').eq('id', user.id).maybeSingle();
+                if (prof?.phone) {
+                    await syncOldPhoneTrips(prof.phone, user.id);
+                }
+            } catch (e) {}
+
             // 1. Fetch assigned/completed trips from 'trips'
             const { data: trips, error } = await sb
                 .from('trips')
@@ -2762,23 +2771,34 @@
         // ربط الرحلات القديمة بحساب العميل عبر رقم الهاتف
         async function syncOldPhoneTrips(phone, userId) {
             try {
-                // ابحث عن جميع الرحلات الخاصة برقم التليفون لربطها
+                if (!phone || !userId) return;
+                const cleanDigits = phone.replace(/\D/g, '');
+                const last7 = cleanDigits.length >= 7 ? cleanDigits.slice(-7) : cleanDigits;
+
+                // 1. ابحث عن جميع الرحلات الخاصة برقم التليفون لربطها
                 const { data: trips } = await sb.from('trips')
-                    .select('id')
-                    .is('user_id', null)
-                    .or(`admin_notes.ilike.%${phone}%,client_phone.ilike.%${phone}%`);
+                    .select('id, client_phone, admin_notes')
+                    .is('user_id', null);
 
                 if (trips && trips.length > 0) {
-                    await Promise.all(trips.map(t =>
-                        sb.from('trips').update({ user_id: userId }).eq('id', t.id)
-                    ));
-                    console.log(`✅ تم ربط ${trips.length} رحلة بحساب العميل`);
+                    const matchedTrips = trips.filter(t => {
+                        const tPhoneClean = (t.client_phone || '').replace(/\D/g, '');
+                        const tNotesClean = (t.admin_notes || '').replace(/\D/g, '');
+                        return (tPhoneClean && tPhoneClean.includes(last7)) || (tNotesClean && tNotesClean.includes(last7));
+                    });
+
+                    if (matchedTrips.length > 0) {
+                        await Promise.all(matchedTrips.map(t =>
+                            sb.from('trips').update({ user_id: userId, client_phone: cleanDigits }).eq('id', t.id)
+                        ));
+                        console.log(`✅ تم ربط ${matchedTrips.length} رحلة بحساب العميل`);
+                    }
                 }
 
                 // أيضاً ابحث في الرحلات التي لها user_id مختلف خُزّن بشكل خاطئ
                 // (حالة الحجز اليدوي الجديد بالـ signUp من الأدمن)
                 const { data: profiles } = await sb.from('profiles')
-                    .select('id').eq('phone', phone).neq('id', userId);
+                    .select('id').ilike('phone', `%${last7}%`).neq('id', userId);
                 if (profiles && profiles.length > 0) {
                     for (const p of profiles) {
                         const { data: oldTrips } = await sb.from('trips')
