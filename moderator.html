@@ -3868,8 +3868,32 @@
                         // 2. Create actual trip record for external office
                         const extDriverInfo = externalDriverPhone ? `\n🚕 السائق الخارجي: ${externalDriverName || 'غير محدد'} | 📱 ${externalDriverPhone}` : '';
                         const resIdVal = trip.google_res_id || (isGoogleRes ? currentAssignTripId.toString().replace('gr_', '') : '');
-                        const sheetRowVal = trip.sheet_row || '';
-                        const sqlIdVal = trip.sql_server_id || '';
+                        let sheetRowVal = trip.sheet_row || '';
+                        let sqlIdVal = trip.sql_server_id || '';
+
+                        // إذا لم يكن رقم الصف أو SQL_ID موجوداً، ابحث برقم هاتف العميل
+                        if (!sheetRowVal || !sqlIdVal) {
+                            try {
+                                const cleanCustP = (trip.customer_phone || '').replace(/\D/g, '');
+                                if (cleanCustP.length >= 8) {
+                                    const last8 = cleanCustP.slice(-8);
+                                    const { data: grByP } = await sbClient
+                                        .from('google_reservations')
+                                        .select('sheet_row, sql_server_id')
+                                        .ilike('customer_phone', `%${last8}%`)
+                                        .not('sheet_row', 'is', null)
+                                        .order('id', { ascending: false })
+                                        .limit(1)
+                                        .maybeSingle();
+                                    if (grByP) {
+                                        if (grByP.sheet_row) sheetRowVal = grByP.sheet_row;
+                                        if (grByP.sql_server_id) sqlIdVal = grByP.sql_server_id;
+                                    }
+                                }
+                            } catch(errLookup) {
+                                console.warn('Fallback sheet row lookup error:', errLookup);
+                            }
+                        }
 
                         let insertPayload = {
                             user_id: clientUserId || null,
@@ -3997,25 +4021,27 @@
                             sender_role: 'admin',
                             sender_id: 'admin',
                             sender_name: 'الإدارة',
-                            message: `🎯 تم إسناد الرحلة إلى قسم التشغيل\n📍 من: ${pickup}\n🏁 إلى: ${dropoff}\n💰 القيمة المقدرة: ${price} EGP\n\nبانتظار إسناد السائق والسيارة لتفعيل التتبع والدردشة...`,
+                            message: `🎯 تم إسناد الرحلة إلى قسم التشغيل (${vendorInfo?.name || 'مكتب منفذ'})\n📍 من: ${pickup}\n🏁 إلى: ${dropoff}\n💰 القيمة المقدرة: ${price} EGP\n\nبانتظار إسناد السائق والسيارة من مكتب التشغيل...`,
                             message_type: 'system'
                         }]);
 
-                        // ✅ إصلاح: مزامنة الشيت للإسناد الخارجي أيضاً (كانت مفقودة!)
-                        try {
-                            await sendToGoogleSheet({
-                                action: 'assignDriver',
-                                sheetRow: trip.sheet_row,
-                                webId: trip.google_res_id || currentAssignTripId.toString().replace('gr_', ''),
-                                sqlId: finalSqlId,
-                                driverName: externalDriverName || vendorInfo?.name || '',
-                                driverPhone: externalDriverPhone || ''
-                            });
-                            console.log('✅ External Sheet Sync Done');
-                        } catch(sheetErr) { console.error('External Sheet Sync Error:', sheetErr); }
+                        // إذا كان المودريتور قد أدخل اسم سائق خارجي محدد يتم تحديث الشيت، وإلا يُترك فارغاً لمكتب التشغيل
+                        if (externalDriverName) {
+                            try {
+                                await sendToGoogleSheet({
+                                    action: 'assignDriver',
+                                    sheetRow: trip.sheet_row,
+                                    webId: trip.google_res_id || currentAssignTripId.toString().replace('gr_', ''),
+                                    sqlId: finalSqlId,
+                                    driverName: externalDriverName,
+                                    driverPhone: externalDriverPhone || ''
+                                });
+                                console.log('✅ External Sheet Sync Done');
+                            } catch(sheetErr) { console.error('External Sheet Sync Error:', sheetErr); }
+                        }
 
                         closeAssignModal();
-                        alert(`✅ تم إسناد الرحلة للمكتب الخارجي ${vendorInfo?.name || ''} بنجاح!`);
+                        alert(`✅ تم إسناد الرحلة لمكتب التشغيل (${vendorInfo?.name || ''}) بنجاح!`);
                         searchTrips();
                     } catch(e) { console.error('External Assignment Post Error:', e); }
                     return;

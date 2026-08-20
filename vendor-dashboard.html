@@ -1953,6 +1953,31 @@
                     }
                 }
 
+                // 🛡️ فحص إضافي برقم هاتف العميل إذا لم نجد رقم الصف أو SQL_ID
+                if (!finalSheetRow || !finalSqlServerId) {
+                    try {
+                        const cleanCustP = (custPhone || tripObj?.client_phone || '').replace(/\D/g, '');
+                        if (cleanCustP.length >= 8) {
+                            const last8 = cleanCustP.slice(-8);
+                            const { data: grByP } = await sb
+                                .from('google_reservations')
+                                .select('*')
+                                .ilike('customer_phone', `%${last8}%`)
+                                .not('sheet_row', 'is', null)
+                                .order('id', { ascending: false })
+                                .limit(1)
+                                .maybeSingle();
+                            if (grByP) {
+                                if (grByP.sheet_row) finalSheetRow = grByP.sheet_row;
+                                if (grByP.sql_server_id) finalSqlServerId = grByP.sql_server_id;
+                                if (grByP.customer_name && (!custName || custName === 'عزيزنا العميل')) custName = grByP.customer_name;
+                            }
+                        }
+                    } catch(phoneLookupErr) {
+                        console.warn("Phone fallback lookup error:", phoneLookupErr);
+                    }
+                }
+
                 if (!custName) custName = 'عزيزنا العميل';
 
                 // تجهيز وتنسيق أرقام الهواتف

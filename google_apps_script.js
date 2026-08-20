@@ -126,8 +126,8 @@ function updateDriverInSheet(data) {
         rowNum = rowHint;
     }
 
-    // 3. TERTIARY FALLBACK: By Web_ID (Column Q / 17) - only for actual web booking strings
-    if (!rowNum && webId && String(webId).startsWith('web_')) {
+    // 3. TERTIARY FALLBACK: By Web_ID (Column Q / 17)
+    if (!rowNum && webId) {
         Logger.log('   -> Searching by WebID in Column Q...');
         const lastRow = sheet.getLastRow();
         if (lastRow > 1) {
