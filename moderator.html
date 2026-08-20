@@ -3610,8 +3610,63 @@
             carSelect.innerHTML = '<option value="">جاري التحميل...</option>';
             vendorSelect.innerHTML = '<option value="">جاري التحميل...</option>';
 
-            // جلب قيمة الرحلة المقدرة وحفظها
-            const trip = allTrips.find(x => x.id == tripId);
+            // جلب قيمة الرحلة المقدرة وحفظها مع فحص الذاكرة وقاعدة البيانات
+            let trip = allTrips.find(x => String(x.id) === String(tripId) || String(x.id).replace('gr_', '') === String(tripId).replace('gr_', ''));
+            if (!trip) {
+                const cleanId = String(tripId).replace('gr_', '');
+                try {
+                    let { data: grData } = await sbClient.from('google_reservations').select('*').eq('id', cleanId).maybeSingle();
+                    if (!grData) {
+                        const { data: grSql } = await sbClient.from('google_reservations').select('*').eq('sql_server_id', cleanId).maybeSingle();
+                        grData = grSql;
+                    }
+                    if (grData) {
+                        const mapped = typeof mapTripObject === 'function' ? mapTripObject(grData) : {};
+                        trip = {
+                            id: 'gr_' + grData.id,
+                            google_res_id: grData.id,
+                            sheet_row: grData.sheet_row,
+                            sql_server_id: grData.sql_server_id,
+                            customer_name: grData.customer_name,
+                            customer_phone: grData.customer_phone,
+                            pickup_address: grData.pickup_address,
+                            dropoff_address: grData.dropoff_address,
+                            cost: grData.cost || 0,
+                            trip_date: mapped.tDate || grData.trip_date,
+                            trip_time: mapped.tTime || grData.trip_time,
+                            passengers: mapped.tPassengers || grData.passengers || 1,
+                            bags: mapped.tBags || grData.bags || 0,
+                            car_type: grData.car_type || 'سيدان',
+                            payment_method: grData.payment_method || 'cash',
+                            notes: grData.notes || '',
+                            status: grData.status || 'pending',
+                            is_google_res: true
+                        };
+                        allTrips.push(trip);
+                    } else {
+                        const { data: trData } = await sbClient.from('trips').select('*').eq('id', cleanId).maybeSingle();
+                        if (trData) {
+                            trip = {
+                                id: trData.id,
+                                customer_name: trData.manual_client_name || 'عميل',
+                                customer_phone: trData.client_phone || '',
+                                pickup_address: trData.pickup_location || '',
+                                dropoff_address: trData.dropoff_location || '',
+                                cost: trData.estimated_price || 0,
+                                car_type: trData.car_type || 'سيدان',
+                                admin_notes: trData.admin_notes || '',
+                                status: trData.status,
+                                is_outsourced: trData.is_outsourced,
+                                vendor_id: trData.vendor_id
+                            };
+                            allTrips.push(trip);
+                        }
+                    }
+                } catch(fetchErr) {
+                    console.warn('Modal trip fallback lookup error:', fetchErr);
+                }
+            }
+
             const tripPrice = trip ? Number(trip.cost) : 0;
             document.getElementById('modal-trip-id').setAttribute('data-price', tripPrice);
 
@@ -3677,8 +3732,59 @@
             btn.textContent = 'جاري الحفظ...';
 
             try {
-                const trip = allTrips.find(x => x.id == currentAssignTripId);
-                if(!trip) throw new Error('تعذر العثور على بيانات الرحلة');
+                let trip = allTrips.find(x => String(x.id) === String(currentAssignTripId) || String(x.id).replace('gr_', '') === String(currentAssignTripId).replace('gr_', ''));
+                if (!trip) {
+                    const cleanId = String(currentAssignTripId).replace('gr_', '');
+                    let { data: grData } = await sbClient.from('google_reservations').select('*').eq('id', cleanId).maybeSingle();
+                    if (!grData) {
+                        const { data: grSql } = await sbClient.from('google_reservations').select('*').eq('sql_server_id', cleanId).maybeSingle();
+                        grData = grSql;
+                    }
+                    if (grData) {
+                        const mapped = typeof mapTripObject === 'function' ? mapTripObject(grData) : {};
+                        trip = {
+                            id: 'gr_' + grData.id,
+                            google_res_id: grData.id,
+                            sheet_row: grData.sheet_row,
+                            sql_server_id: grData.sql_server_id,
+                            customer_name: grData.customer_name,
+                            customer_phone: grData.customer_phone,
+                            pickup_address: grData.pickup_address,
+                            dropoff_address: grData.dropoff_address,
+                            cost: grData.cost || 0,
+                            trip_date: mapped.tDate || grData.trip_date,
+                            trip_time: mapped.tTime || grData.trip_time,
+                            passengers: mapped.tPassengers || grData.passengers || 1,
+                            bags: mapped.tBags || grData.bags || 0,
+                            car_type: grData.car_type || 'سيدان',
+                            payment_method: grData.payment_method || 'cash',
+                            notes: grData.notes || '',
+                            status: grData.status || 'pending',
+                            is_google_res: true
+                        };
+                        allTrips.push(trip);
+                    } else {
+                        const { data: trData } = await sbClient.from('trips').select('*').eq('id', cleanId).maybeSingle();
+                        if (trData) {
+                            trip = {
+                                id: trData.id,
+                                customer_name: trData.manual_client_name || 'عميل',
+                                customer_phone: trData.client_phone || '',
+                                pickup_address: trData.pickup_location || '',
+                                dropoff_address: trData.dropoff_location || '',
+                                cost: trData.estimated_price || 0,
+                                car_type: trData.car_type || 'سيدان',
+                                admin_notes: trData.admin_notes || '',
+                                status: trData.status,
+                                is_outsourced: trData.is_outsourced,
+                                vendor_id: trData.vendor_id
+                            };
+                            allTrips.push(trip);
+                        }
+                    }
+                }
+
+                if(!trip) throw new Error('تعذر العثور على بيانات الرحلة في النظام');
 
                 const driverOpt = driverSelect.options[driverSelect.selectedIndex];
                 const driverName = driverOpt?.dataset?.name || 'كابتن معتمد';
@@ -3689,7 +3795,7 @@
                 let realTripId = currentAssignTripId;
                 let finalSqlId = '';
 
-                const isGoogleRes = currentAssignTripId.toString().startsWith('gr_');
+                const isGoogleRes = currentAssignTripId.toString().startsWith('gr_') || trip.is_google_res || !!trip.google_res_id;
                 const existingNotes = trip.admin_notes || trip.notes || '';
                 let updatedNotes = existingNotes;
                 if (note && note.trim()) {
