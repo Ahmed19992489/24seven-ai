@@ -1350,16 +1350,33 @@
 
         async function testConnection() {
             const statusDiv = document.getElementById('test-status');
+            const inputVal = (document.getElementById('api-url-input')?.value || '').trim();
             statusDiv.classList.remove('hidden', 'text-red-500', 'text-teal-600');
             statusDiv.textContent = 'جاري فحص الاتصال...';
             
+            let baseUrl = inputVal;
+            if (!baseUrl) {
+                baseUrl = getApiBaseUrl();
+            } else {
+                if (baseUrl.startsWith('ps://')) baseUrl = 'https://' + baseUrl.substring(5);
+                else if (baseUrl.startsWith('p://')) baseUrl = 'http://' + baseUrl.substring(4);
+                else if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) baseUrl = 'https://' + baseUrl;
+                baseUrl = baseUrl.replace(/\/+$/, '');
+            }
+            
             try {
-                const url = `${getApiBaseUrl()}/api/health`;
-                const res = await fetch(url, { headers: { 'ngrok-skip-browser-warning': 'true' } });
+                const url = `${baseUrl}/api/health`;
+                const res = await fetch(url, { 
+                    headers: { 
+                        'ngrok-skip-browser-warning': 'true',
+                        'Bypass-Tunnel-Reminder': 'true'
+                    } 
+                });
                 const data = await res.json();
                 if (data.status === 'ok') {
                     statusDiv.textContent = '✅ الاتصال بالسيرفر يعمل بنجاح!';
                     statusDiv.classList.add('text-teal-600');
+                    localStorage.setItem('mod_api_url', baseUrl);
                 } else {
                     throw new Error('Server responded but status not OK');
                 }
@@ -4636,8 +4653,17 @@
                     }
                 } else {
                     if (cleanResId && !isNaN(cleanResId)) {
+                        const isCanc = decisionText === 'ملغي' || decisionText === 'رفض';
+                        const updateData = { 
+                            client_decision: decisionText,
+                            trip_status: isCanc ? 'ملغاة' : '',
+                            status: isCanc ? 'ملغاة' : 'pending'
+                        };
+                        if (isCanc) {
+                            updateData.confirm_msg_status = 'ملغي';
+                        }
                         const { error } = await sbClient.from('google_reservations')
-                            .update({ client_decision: decisionText })
+                            .update(updateData)
                             .eq('id', cleanResId);
                             
                         if (error) throw error;
@@ -4663,27 +4689,21 @@
                     }
                 }
 
-                // 🌐 تحديث القرار في شيت جوجل لتفادي اختفائه عند التزامن (نحدثه حتى في حالة الحذف لكي يتحدث في الشيت أيضاً)
+                // 🌐 تحديث فوري مباشر في جوجل شيت
                 if (sheetRow) {
                     try {
-                        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
-                        const cleanTripId = (tripId && !String(tripId).startsWith('gr_')) ? String(tripId) : '';
-                        
-                        const sheetData = {
-                            action: 'updateDecision',
-                            sheetRow: sheetRow,
-                            webId: cleanTripId,
-                            sqlId: cleanTripId,
-                            decision: isDelete ? 'ملغي' : decisionText
-                        };
-                        
-                        fetch(APPS_SCRIPT_URL, {
+                        const isCanc = isDelete || decisionText === 'ملغي' || decisionText === 'رفض';
+                        fetch('/api/update_decision', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'text/plain' },
-                            body: JSON.stringify(sheetData)
-                        }).catch(e => console.error("Sheet Sync Error:", e));
-                    } catch (err) {
-                        console.error("Sheet Sync Error:", err);
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                sheet_row: sheetRow,
+                                decision: isDelete ? 'ملغي' : decisionText,
+                                is_cancelled: isCanc
+                            })
+                        }).catch(err => console.log('Sheet update background notice:', err));
+                    } catch(err) {
+                        console.log('Sheet fetch error:', err);
                     }
                 }
                 
@@ -4989,7 +5009,7 @@
             let countPending = 0;
 
             rawList.forEach(t => {
-                const isDisp = !!t.is_real_trip || t.status === 'تم الترحيل' || t.status === 'driver_assigned' || t.status === 'approved' || t.status === 'in_progress' || t.status === 'completed' || !!t.driver_name || !!t.vendor_id;
+                const isDisp = (t.is_real_trip && t.status !== 'pending') || t.status === 'driver_assigned' || t.status === 'in_progress' || t.status === 'completed' || (t.status === 'approved' && (!!t.driver_name || !!t.vendor_id)) || !!t.driver_name || !!t.vendor_id;
                 const isCanc = t.status === 'ملغي' || t.status === 'cancelled' || (t.client_decision && (t.client_decision.includes('ملغي') || t.client_decision.includes('إلغاء')));
                 if (!isCanc) {
                     if (isDisp) countDispatched++;
@@ -5006,7 +5026,7 @@
 
             // فلترة القائمة حسب التبويب النشط
             const displayedTrips = rawList.filter(t => {
-                const isDisp = !!t.is_real_trip || t.status === 'تم الترحيل' || t.status === 'driver_assigned' || t.status === 'approved' || t.status === 'in_progress' || t.status === 'completed' || !!t.driver_name || !!t.vendor_id;
+                const isDisp = (t.is_real_trip && t.status !== 'pending') || t.status === 'driver_assigned' || t.status === 'in_progress' || t.status === 'completed' || (t.status === 'approved' && (!!t.driver_name || !!t.vendor_id)) || !!t.driver_name || !!t.vendor_id;
                 const isCanc = t.status === 'ملغي' || t.status === 'cancelled' || (t.client_decision && (t.client_decision.includes('ملغي') || t.client_decision.includes('إلغاء')));
                 
                 if (currentOpsFilter === 'pending') return !isDisp && !isCanc;
@@ -5029,7 +5049,7 @@
                 const feedbackHtml = feedbackArr.length > 0 ? feedbackArr.join(' ') : '<span class="text-slate-300">---</span>';
 
                 // فحص دقيق لحالة الإرسال للتشغيل
-                const isDispatched = !!t.is_real_trip || t.status === 'تم الترحيل' || t.status === 'driver_assigned' || t.status === 'approved' || t.status === 'in_progress' || t.status === 'completed' || !!t.driver_name || !!t.vendor_id;
+                const isDispatched = (t.is_real_trip && t.status !== 'pending') || t.status === 'driver_assigned' || t.status === 'in_progress' || t.status === 'completed' || (t.status === 'approved' && (!!t.driver_name || !!t.vendor_id)) || !!t.driver_name || !!t.vendor_id;
                 const isCancelled = t.status === 'ملغي' || t.status === 'cancelled' || (t.client_decision && (t.client_decision.includes('ملغي') || t.client_decision.includes('إلغاء')));
 
                 // تحديد حالة التأكيد (قرار العميل)

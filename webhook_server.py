@@ -1,3 +1,6 @@
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
+sys.stderr.reconfigure(encoding='utf-8')
 from flask import Flask, request, jsonify, make_response, send_from_directory, redirect
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -106,7 +109,7 @@ app = Flask(__name__)
 @app.after_request
 def add_cors_headers(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,ngrok-skip-browser-warning')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,ngrok-skip-browser-warning,Bypass-Tunnel-Reminder')
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
     return response
 
@@ -1369,7 +1372,10 @@ def messenger_webhook():
                         if not sender_name:
                             sender_name = get_facebook_user_name(sender_id)
 
-                        print(f"[FB] Message from {sender_id}: {text}", flush=True)
+                        print("\n" + "="*50, flush=True)
+                        print(f"📩 [MESSENGER INCOMING] من: {sender_name} (ID: {sender_id})", flush=True)
+                        print(f"💬 النص: {text}", flush=True)
+                        print("="*50 + "\n", flush=True)
                         insert_message_to_supabase(
                             channel='messenger',
                             sender_id=sender_id,
@@ -1772,6 +1778,12 @@ def receive_local_webhook(instance_id_db):
             return jsonify({"status": "error", "message": "Missing fields"}), 400
             
         sender_phone = sender_phone.replace("+", "").replace("0020", "20")
+
+        # 📩 طباعة واضحة في شاشة السيرفر فور وصول الرسالة
+        print("\n" + "="*50, flush=True)
+        print(f"📩 [WHATSAPP INCOMING] من: {sender_phone} ({'Admin' if is_from_admin else (sender_name or 'العميل')})", flush=True)
+        print(f"💬 النص: {message_text}", flush=True)
+        print("="*50 + "\n", flush=True)
         
         # Deduplication for all messages to avoid duplicates from gateway echoes or double hits
         try:
@@ -1800,95 +1812,85 @@ def receive_local_webhook(instance_id_db):
         except Exception as check_err:
             print(f"[Local-Webhook] Error checking for duplicates: {check_err}")
 
-        # محاولة جلب اسم العميل من الحجوزات أو الرسائل السابقة (فقط لو كانت الرسالة من العميل)
-        resolved_name = sender_name
-        if not is_from_admin:
-            # 1. محاولة جلب الاسم من الرسائل السابقة لنفس الرقم في Supabase
+        # تشغيل المعالجة الكاملة والتسجيل في الخلفية لضمان سرعة الرد اللحظية وعدم تجميد السيرفر
+        def process_whatsapp_async():
             try:
-                url_prev = f"{SUPABASE_URL}/rest/v1/omnichannel_messages?sender_id=eq.{sender_phone}&select=sender_name&order=created_at.desc&limit=1"
-                r_prev = requests.get(url_prev, headers=SUPABASE_SERVICE_HEADERS, timeout=5)
-                if r_prev.status_code == 200:
-                    prev_data = r_prev.json()
-                    if prev_data and prev_data[0].get('sender_name') and prev_data[0]['sender_name'] not in [sender_phone, "Admin", "ش"]:
-                        resolved_name = prev_data[0]['sender_name']
-            except Exception as e:
-                print(f"[Local-Webhook] Error fetching previous name: {e}")
+                resolved_name = sender_name
+                if not is_from_admin:
+                    try:
+                        url_prev = f"{SUPABASE_URL}/rest/v1/omnichannel_messages?sender_id=eq.{sender_phone}&select=sender_name&order=created_at.desc&limit=1"
+                        r_prev = requests.get(url_prev, headers=SUPABASE_SERVICE_HEADERS, timeout=5)
+                        if r_prev.status_code == 200:
+                            prev_data = r_prev.json()
+                            if prev_data and prev_data[0].get('sender_name') and prev_data[0]['sender_name'] not in [sender_phone, "Admin", "ش"]:
+                                resolved_name = prev_data[0]['sender_name']
+                    except Exception:
+                        pass
 
-            # 2. إذا لم نجد الاسم، نبحث في جدول الحجوزات بآخر 8 أرقام للمطابقة المرنة
-            if not resolved_name or resolved_name == sender_phone:
-                try:
-                    clean = sender_phone.replace("+", "").replace("0020", "20").replace(" ", "").strip()
-                    if clean.startswith("20"):
-                        clean_local = clean[2:]
-                    else:
-                        clean_local = clean
-                    
-                    if len(clean_local) >= 8:
-                        last_8 = clean_local[-8:]
-                        r_name = requests.get(
-                            f"{SUPABASE_URL}/rest/v1/google_reservations",
-                            headers=SUPABASE_SERVICE_HEADERS,
-                            params={"customer_phone": f"ilike.%{last_8}%", "select": "customer_name", "limit": "1"},
-                            timeout=5
-                        )
-                        if r_name.status_code == 200:
-                            rows = r_name.json()
-                            if rows and rows[0].get("customer_name"):
-                                resolved_name = rows[0]["customer_name"]
-                except Exception as e:
-                    print(f"[Local-Webhook] Error searching reservations: {e}")
-        else:
-            resolved_name = sender_name or "Admin"
-                
-        # 1. إدراج في Supabase للمحادثات (باستخدام مفتاح الخدمة لتخطي الـ RLS)
-        sb_payload = {
-            "channel": "whatsapp",
-            "sender_id": sender_phone,
-            "sender_name": resolved_name,
-            "message_text": message_text,
-            "is_from_admin": is_from_admin,
-            "read_by_admin": True if is_from_admin else False,
-            "whatsapp_instance_id": instance_id_db
-        }
-        requests.post(f"{SUPABASE_URL}/rest/v1/omnichannel_messages", headers=SUPABASE_SERVICE_HEADERS, json=sb_payload, timeout=5)
-
-        # 2. تسجيل الرسالة في شيت المحادثات (فقط لو كانت الرسالة من العميل)
-        if not is_from_admin:
-            try:
-                log_chat_to_sheet(sender_phone, "Client", message_text)
-            except Exception as sheet_err:
-                print(f"[Local-Webhook Sheet Error]: {sheet_err}")
-
-            # 3. معالجة الرسائل الواردة برمجياً (تأكيد أو تقييم أو لوكيشن)
-            try:
-                import re
-                if re.search(r'(google\.com/maps|maps\.app\.goo\.gl|maps\.google\.com)', message_text):
-                    handle_location_url_received(sender_phone, message_text)
+                    if not resolved_name or resolved_name == sender_phone:
+                        try:
+                            clean = sender_phone.replace("+", "").replace("0020", "20").replace(" ", "").strip()
+                            clean_local = clean[2:] if clean.startswith("20") else clean
+                            if len(clean_local) >= 8:
+                                last_8 = clean_local[-8:]
+                                r_name = requests.get(
+                                    f"{SUPABASE_URL}/rest/v1/google_reservations",
+                                    headers=SUPABASE_SERVICE_HEADERS,
+                                    params={"customer_phone": f"ilike.%{last_8}%", "select": "customer_name", "limit": "1"},
+                                    timeout=5
+                                )
+                                if r_name.status_code == 200:
+                                    rows = r_name.json()
+                                    if rows and rows[0].get("customer_name"):
+                                        resolved_name = rows[0]["customer_name"]
+                        except Exception:
+                            pass
                 else:
-                    if sender_phone in user_state:
-                        # [FIX] منع التكرار: لو نفس الرسالة وصلت من رقمين واتساب
-                        if not _is_feedback_duplicate(sender_phone, message_text):
-                            handle_feedback_flow(sender_phone, message_text)
-                        else:
-                            print(f"[Local-Dedup] Skipping duplicate feedback from {sender_phone}")
-                    else:
-                        # [FIX] لو العميل في فترة ما بعد الفيدباك → نتجاهل
-                        if _is_in_post_feedback_cooldown(sender_phone):
-                            print(f"[Local] Post-feedback cooldown active for {sender_phone}, skipping.")
-                        else:
-                            sheet = get_main_sheet()
-                            row_idx, session_type = find_active_session(sheet, sender_phone)
-                            if session_type == "feedback":
-                                # [FIX] منع التكرار لأول رسالة أيضاً
-                                if not _is_feedback_duplicate(sender_phone, message_text):
-                                    start_feedback_flow(sender_phone, message_text, row_idx)
-                                else:
-                                    print(f"[Local-Dedup] Skipping duplicate feedback start for {sender_phone}")
-                            elif session_type == "confirm":
-                                handle_confirmation(sender_phone, message_text, row_idx)
-            except Exception as flow_err:
-                print(f"[Local-Webhook Flow Error]: {flow_err}")
+                    resolved_name = sender_name or "Admin"
 
+                # 1. إدراج في Supabase للمحادثات
+                sb_payload = {
+                    "channel": "whatsapp",
+                    "sender_id": sender_phone,
+                    "sender_name": resolved_name,
+                    "message_text": message_text,
+                    "is_from_admin": is_from_admin,
+                    "read_by_admin": True if is_from_admin else False,
+                    "whatsapp_instance_id": instance_id_db
+                }
+                requests.post(f"{SUPABASE_URL}/rest/v1/omnichannel_messages", headers=SUPABASE_SERVICE_HEADERS, json=sb_payload, timeout=5)
+
+                # 2. تسجيل الرسالة في شيت المحادثات (فقط للعميل)
+                if not is_from_admin:
+                    try:
+                        log_chat_to_sheet(sender_phone, "Client", message_text)
+                    except Exception as sheet_err:
+                        print(f"[Local-Webhook Sheet Error]: {sheet_err}")
+
+                    # 3. معالجة الرسائل الواردة برمجياً (لوكيشن، فيدباك، تأكيد)
+                    try:
+                        import re
+                        if re.search(r'(google\.com/maps|maps\.app\.goo\.gl|maps\.google\.com)', message_text):
+                            handle_location_url_received(sender_phone, message_text)
+                        else:
+                            if sender_phone in user_state:
+                                if not _is_feedback_duplicate(sender_phone, message_text):
+                                    handle_feedback_flow(sender_phone, message_text)
+                            else:
+                                if not _is_in_post_feedback_cooldown(sender_phone):
+                                    sheet = get_main_sheet()
+                                    row_idx, session_type = find_active_session(sheet, sender_phone)
+                                    if session_type == "feedback":
+                                        if not _is_feedback_duplicate(sender_phone, message_text):
+                                            start_feedback_flow(sender_phone, message_text, row_idx)
+                                    elif session_type == "confirm":
+                                        handle_confirmation(sender_phone, message_text, row_idx)
+                    except Exception as flow_err:
+                        print(f"[Local-Webhook Flow Error]: {flow_err}")
+            except Exception as outer_err:
+                print(f"[Local-Webhook Async Error]: {outer_err}")
+
+        threading.Thread(target=process_whatsapp_async, daemon=True).start()
         return jsonify({"status": "ok"})
     except Exception as e:
         print(f"[Local-Webhook Error]: {e}")
@@ -2879,6 +2881,33 @@ def save_reservation_api():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+@app.route('/api/update_decision', methods=['POST', 'OPTIONS'])
+def update_decision_api():
+    if request.method == 'OPTIONS':
+        return make_response("", 204)
+    try:
+        data = request.json or {}
+        sheet_row = int(data.get('sheet_row') or 0)
+        decision = str(data.get('decision') or '').strip()
+        is_canc = decision in ['ملغي', 'رفض'] or data.get('is_cancelled', False)
+        
+        if sheet_row >= 2:
+            sheet = get_main_sheet()
+            # Col 28 (AB): client_decision
+            sheet.update_cell(sheet_row, 28, "رفض" if is_canc else decision)
+            # Col 27 (AA): confirm_msg_status
+            if is_canc:
+                sheet.update_cell(sheet_row, 27, "ملغي")
+                sheet.update_cell(sheet_row, 35, "ملغاة")
+                sheet.update_cell(sheet_row, 20, "ملغاة")
+            else:
+                sheet.update_cell(sheet_row, 35, "")
+                sheet.update_cell(sheet_row, 20, "pending")
+            
+        return jsonify({'status': 'success', 'message': 'تم تحديث قرار العميل في الشيت بنجاح'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 @app.route('/moderator')
 def serve_moderator():
     directory = os.path.join(os.getcwd(), '24Seven_SaaS_Platform')
@@ -3709,57 +3738,10 @@ def send_b2b_email_proposal():
 
 
 # =====================================================
-# 🚀 WhatsApp Outbox Queue Worker (Cloud-to-Local Bridge)
+# 🚀 WhatsApp Outbox Queue Worker (Disabled to prevent automated unintended sending)
 # =====================================================
-def _outbox_worker_loop():
-    print("🚀 [WhatsApp Outbox Queue Worker] Active and polling for mobile/cloud WhatsApp messages...")
-    LOCAL_GATEWAY_URL = "http://localhost:3001"
-    DEFAULT_INSTANCE_ID = "692921bb-a5df-451d-8527-e1ee55a736f4"
-    
-    while True:
-        try:
-            url = f"{SUPABASE_URL}/rest/v1/omnichannel_messages?channel=eq.whatsapp&is_from_admin=eq.true&read_by_admin=eq.false&order=created_at.asc&limit=10"
-            r = requests.get(url, headers=SUPABASE_SERVICE_HEADERS, timeout=10)
-            if r.status_code == 200:
-                msgs = r.json()
-                for m in msgs:
-                    msg_id = m.get("id")
-                    phone = m.get("sender_id")
-                    text = m.get("message_text")
-                    inst_id = m.get("whatsapp_instance_id") or DEFAULT_INSTANCE_ID
-                    
-                    if not phone or not text:
-                        continue
-                    
-                    clean_phone = ''.join(c for c in str(phone) if c.isdigit())
-                    if clean_phone.startswith("01") and len(clean_phone) == 11:
-                        clean_phone = "20" + clean_phone[1:]
-                    elif clean_phone.startswith("1") and len(clean_phone) == 10:
-                        clean_phone = "20" + clean_phone
-                    elif clean_phone.startswith("0020"):
-                        clean_phone = clean_phone[2:]
-                    
-                    send_url = f"{LOCAL_GATEWAY_URL}/instance/{inst_id}/send"
-                    try:
-                        sr = requests.post(send_url, json={"to": clean_phone, "message": text}, timeout=15)
-                        if sr.status_code == 200:
-                            print(f"✅ [Outbox Queue] Dispatched message to {clean_phone} via gateway")
-                        else:
-                            print(f"⚠️ [Outbox Queue] Gateway response for {clean_phone}: {sr.text}")
-                    except Exception as gw_err:
-                        print(f"❌ [Outbox Queue Error] Failed sending to {clean_phone}: {gw_err}")
-                    
-                    try:
-                        patch_url = f"{SUPABASE_URL}/rest/v1/omnichannel_messages?id=eq.{msg_id}"
-                        requests.patch(patch_url, headers=SUPABASE_SERVICE_HEADERS, json={"read_by_admin": True}, timeout=5)
-                    except Exception as patch_err:
-                        print(f"❌ [Outbox Queue Error] Failed to update read_by_admin for {msg_id}: {patch_err}")
-        except Exception as loop_err:
-            pass
-        time.sleep(2.5)
-
-import threading
-threading.Thread(target=_outbox_worker_loop, daemon=True).start()
+# import threading
+# threading.Thread(target=_outbox_worker_loop, daemon=True).start()
 
 if __name__ == '__main__':
     # تم تعطيل التشغيل التلقائي كعملية فرعية لتفادي انقطاع الاتصال عند إعادة تشغيل السيرفر.

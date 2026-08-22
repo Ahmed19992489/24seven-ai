@@ -22,7 +22,7 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 const PORT = 3001;
-const PYTHON_BACKEND_URL = 'http://localhost:3000';
+const PYTHON_BACKEND_URL = 'http://127.0.0.1:3000';
 const SUPABASE_URL = 'https://khskudtxbypohvnreloi.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtoc2t1ZHR4Ynlwb2h2bnJlbG9pIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NjMxMjAyOSwiZXhwIjoyMTAxODg4MDI5fQ.uyCTVGkoeoz4xB3r2muV_fLiI62QIw-65g2nVeIb62w';
 const SUPABASE_HEADERS = {
@@ -391,7 +391,10 @@ async function initSession(id, forceReconnect = false) {
                                     message_text: text,
                                     is_from_admin: msg.key.fromMe ? true : false
                                 });
-                                if (res.status === 200) pythonSuccess = true;
+                                if (res.status === 200) {
+                                    pythonSuccess = true;
+                                    console.log(`✅ [Gateway -> Python Webhook] Forwarded msg from ${senderPhone} to Server (Status: 200 OK)`);
+                                }
                             } catch (err) {
                                 console.error(`[Webhook Error] Failed to forward message to Python:`, err.message);
                             }

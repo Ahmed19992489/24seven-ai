@@ -1,3 +1,6 @@
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
+sys.stderr.reconfigure(encoding='utf-8')
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
@@ -13,10 +16,10 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 creds_path = os.path.join(current_dir, 'credentials.json')
 
 SUPABASE_URL = 'https://khskudtxbypohvnreloi.supabase.co'
-SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtoc2t1ZHR4Ynlwb2h2bnJlbG9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTIwMjksImV4cCI6MjEwMTg4ODAyOX0.jrK8y5zpDncgFkmdD4hkFRd5-kW1gWdVSRIb0jh7o2I'
+SUPABASE_SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtoc2t1ZHR4Ynlwb2h2bnJlbG9pIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NjMxMjAyOSwiZXhwIjoyMTAxODg4MDI5fQ.uyCTVGkoeoz4xB3r2muV_fLiI62QIw-65g2nVeIb62w'
 SUPABASE_HEADERS = {
-    'apikey': SUPABASE_KEY,
-    'Authorization': f'Bearer {SUPABASE_KEY}',
+    'apikey': SUPABASE_SERVICE_ROLE_KEY,
+    'Authorization': f'Bearer {SUPABASE_SERVICE_ROLE_KEY}',
     'Content-Type': 'application/json',
     'Prefer': 'resolution=merge-duplicates'
 }
@@ -58,7 +61,6 @@ def clean_date(val):
                 pass
     except:
         pass
-    return None
     return None
 
 def upsert_to_supabase(records):
@@ -165,7 +167,7 @@ while True:
         # جلب تفاصيل الرحلات الموجودة في قاعدة البيانات للمطابقة العكسية والتزامن الثنائي
         existing_trips_map = {}
         try:
-            r_trips = requests.get(f"{SUPABASE_URL}/rest/v1/google_reservations?select=sheet_row,modified_driver_name,modified_driver_phone,trip_status,driver_msg_status,sql_server_id", headers=SUPABASE_HEADERS, timeout=15)
+            r_trips = requests.get(f"{SUPABASE_URL}/rest/v1/google_reservations?select=sheet_row,modified_driver_name,modified_driver_phone,trip_status,driver_msg_status,sql_server_id,client_decision,confirm_msg_status,status", headers=SUPABASE_HEADERS, timeout=15)
             if r_trips.status_code == 200:
                 for t in r_trips.json():
                     s_row = t.get('sheet_row')
@@ -188,10 +190,13 @@ while True:
                 missing_res = r_missing.json()
                 for m_res in missing_res:
                     res_id = m_res.get('id')
-                    m_name = m_res.get('customer_name') or 'عميل'
+                    m_name = (m_res.get('customer_name') or '').strip()
+                    m_phone = str(m_res.get('customer_phone') or '').strip()
+                    if not m_name or m_name == 'عميل' or not m_phone or len(clean_phone(m_phone)) < 8:
+                        # تجاهل الصفوف الفارغة أو الوهمية
+                        continue
                     m_date = (m_res.get('trip_date') or '').replace('-', '/')
                     m_time = m_res.get('trip_time') or ''
-                    m_phone = str(m_res.get('customer_phone') or '')
                     m_whatsapp = str(m_res.get('whatsapp_num') or m_phone)
                     m_pickup = m_res.get('pickup_address') or ''
                     m_dropoff = m_res.get('dropoff_address') or ''
@@ -232,7 +237,7 @@ while True:
             while len(row) < 35:
                 row.append("")
 
-            # [التزامن العكسي] تحديث السائق وحالة الرحلة وحالة الإبلاغ من قاعدة البيانات إلى الشيت إذا كانت فارغة في الشيت ومملوءة في قاعدة البيانات
+            # [التزامن الثنائي] تحديث بيانات الشيت من قاعدة البيانات
             db_record = existing_trips_map.get(real_row_index)
             if db_record:
                 db_driver = safe_str(db_record.get('modified_driver_name')).strip()
@@ -240,12 +245,16 @@ while True:
                 db_trip_status = safe_str(db_record.get('trip_status')).strip()
                 db_driver_msg_status = safe_str(db_record.get('driver_msg_status')).strip()
                 db_sql_id = safe_str(db_record.get('sql_server_id')).strip()
+                db_decision = safe_str(db_record.get('client_decision')).strip()
+                db_confirm = safe_str(db_record.get('confirm_msg_status')).strip()
                 
                 sheet_driver = safe_str(row[21]).strip()
                 sheet_driver_phone = safe_str(row[22]).strip()
                 sheet_trip_status = safe_str(row[34]).strip()
                 sheet_driver_msg_status = safe_str(row[24]).strip()
                 sheet_sql_id = safe_str(row[20]).strip()
+                sheet_confirm = safe_str(row[26]).strip()
+                sheet_decision = safe_str(row[27]).strip()
                 
                 if db_driver and not sheet_driver:
                     print_log(f"📝 تحديث اسم السائق للصف {real_row_index} من قاعدة البيانات: {db_driver}")
@@ -266,7 +275,17 @@ while True:
                     worksheet.update_cell(real_row_index, 25, db_driver_msg_status)
                     row[24] = db_driver_msg_status
                     
-                if db_trip_status and not sheet_trip_status:
+                if db_decision and db_decision != sheet_decision:
+                    print_log(f"📝 تحديث قرار العميل للصف {real_row_index} من قاعدة البيانات: {db_decision}")
+                    worksheet.update_cell(real_row_index, 28, db_decision)
+                    row[27] = db_decision
+
+                if db_confirm and db_confirm != sheet_confirm:
+                    print_log(f"📝 تحديث تأكيد الحجز للصف {real_row_index} من قاعدة البيانات: {db_confirm}")
+                    worksheet.update_cell(real_row_index, 27, db_confirm)
+                    row[26] = db_confirm
+
+                if db_trip_status and db_trip_status != sheet_trip_status:
                     print_log(f"📝 تحديث حالة الرحلة للصف {real_row_index} من قاعدة البيانات: {db_trip_status}")
                     worksheet.update_cell(real_row_index, 35, db_trip_status)
                     row[34] = db_trip_status
@@ -317,6 +336,8 @@ while True:
                 "trip_status":            safe_str(row[34])[:100],
                 "updated_at":             datetime.now().isoformat()
             }
+            if safe_str(row[16]).isdigit():
+                record["id"] = int(row[16])
             records.append(record)
 
         print_log(f"📊 إجمالي الصفوف المعالجة: {len(records)}")
