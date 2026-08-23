@@ -25,7 +25,7 @@ timeout /t 1 > nul
 start "webhook_server" cmd /k "python -u webhook_server.py"
 timeout /t 1 > nul
 
-start "whatsapp_gateway" cmd /k "cd whatsapp_gateway && (if not exist node_modules npm install) && node gateway.js"
+start "whatsapp_gateway" cmd /k "cd 24Seven_SaaS_Platform\whatsapp_gateway && node gateway.js"
 timeout /t 1 > nul
 
 start "automation_watcher" cmd /k "python -u automation_watcher.py"
