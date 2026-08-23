@@ -3465,7 +3465,16 @@
                         });
                     } catch(e) { console.error('Supabase save error:', e); }
                 } else {
-                    showToast('❌ فشل إرسال الرسالة للعميل عبر الواتساب: ' + (apiError ? apiError.substring(0, 100) : 'تأكد من الاتصال أو سلامة الرقم'), 'error');
+                    let friendlyErr = '';
+                    if (apiError.includes('outside the allowed window') || apiError.includes('(#10)')) {
+                        friendlyErr = '⚠️ تنبيه من ميتا: انتهت نافذة الـ 24 ساعة للرد، يرجى الرد على العميل من تطبيق Meta Business Suite.';
+                    } else if (apiError.includes('instagram_manage_messages') || apiError.includes('(#200)')) {
+                        friendlyErr = '⚠️ تنبيه: يرجى الرد على هذا العميل من تطبيق Meta Business Suite أو إنستجرام وستظهر الرسالة هنا تلقائياً.';
+                    } else {
+                        const chName = channel === 'whatsapp' ? 'الواتساب' : (channel === 'instagram' ? 'إنستجرام' : 'الماسنجر');
+                        friendlyErr = `❌ فشل إرسال الرسالة عبر ${chName}: ` + (apiError ? apiError.substring(0, 120) : 'تأكد من الاتصال أو صلاحيات القناة');
+                    }
+                    showToast(friendlyErr, 'error');
                     return false;
                 }
             }
