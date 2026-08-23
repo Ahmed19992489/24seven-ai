@@ -68,12 +68,12 @@ def send_fb_reply(recipient_id, text):
         print(f"Error sending FB reply: {e}")
         return False
 
-def save_to_supabase(sender_id, sender_name, text, is_admin=False):
+def save_to_supabase(sender_id, sender_name, text, is_admin=False, channel="messenger"):
     if not SUPABASE_KEY:
         return
     try:
         payload = {
-            "channel": "messenger",
+            "channel": channel,
             "sender_id": str(sender_id),
             "sender_name": sender_name,
             "message_text": text,
@@ -85,46 +85,7 @@ def save_to_supabase(sender_id, sender_name, text, is_admin=False):
         print(f"Error saving to Supabase: {e}")
 
 def get_ai_reply(client_text, sender_name="يا فندم"):
-    # 1. Quick rule-based responses for common questions
-    t = client_text.lower().strip()
-    if any(w in t for w in ["سلام", "مرحبا", "مساء الخير", "صباح الخير", "اهلا", "أهلا", "ازيك", "ازيكم", "السلام عليكم"]):
-        return f"أهلاً بحضرتك يا {sender_name} في 24Seven لخدمات الليموزين والنقل السياحي 🚗✨\nيسعدنا خدمتك، ممكن توضح لنا تفاصيل رحلتك (مكان التحرك، مكان الوصول، والتاريخ) وسنوافيك بالأسعار فوراً؟"
-    if any(w in t for w in ["اسعار", "أسعار", "كام", "بكام", "تكلفة", "سعر", "price", "cost"]):
-        return f"تحت أمرك يا فندم 🌹 لتحديد أفضل سعر لرحلتك، يرجى تزويدنا بالتفاصيل:\n📍 مكان التحرك\n📍 مكان الوصول\n📅 تاريخ وموعد الرحلة\n👥 عدد الأفراد ونوع السيارة المطلوبة."
-    if any(w in t for w in ["مطار", "airport", "حجز", "عايز احجز", "حجز رحلة"]):
-        return "أهلاً بك يا فندم ✈️ متوفر لدينا أحدث السيارات لخدمات المطار وجميع المحافظات 24 ساعة.\nمن فضلك أرسل موعد الرحلة وتفاصيل المسار لتأكيد الحجز فوراً."
-
-    # 2. Use Groq AI if key is set
-    try:
-        if GROQ_API_KEY:
-            url = 'https://api.groq.com/openai/v1/chat/completions'
-            headers = {
-                'Authorization': f'Bearer {GROQ_API_KEY}',
-                'Content-Type': 'application/json'
-            }
-            prompt = (
-                "أنت مساعد خدمة عملاء ذكي ولبق جداً لشركة ليموزين ونقل سياحي اسمها '24Seven Limousine' في مصر.\n"
-                "خدماتنا: رحلات المطار (القاهرة، برج العرب، سفنكس)، رحلات بين المحافظات، سيارات سيدان وH1 وفانات عائلية.\n"
-                "رد على العميل بأسلوب محترف، ودود، مصري لطيف، واطلب منه تفاصيل الرحلة (التحرك، الوصول، والموعد).\n"
-                "اجعل الرد مختصراً في 2-3 أسطر فقط مع إيموجي لطيف."
-            )
-            payload = {
-                'model': 'allam-2-7b',
-                'messages': [
-                    {'role': 'system', 'content': prompt},
-                    {'role': 'user', 'content': client_text}
-                ],
-                'max_tokens': 150,
-                'temperature': 0.3
-            }
-            r = requests.post(url, headers=headers, json=payload, timeout=5)
-            if r.status_code == 200:
-                reply = r.json()['choices'][0]['message']['content'].strip()
-                if reply: return reply
-    except Exception:
-        pass
-
-    return f"أهلاً بحضرتك يا فندم 🌹 تم استلام رسالتك، وسيقوم مسؤول الحجوزات بالرد عليك وتأكيد كافة التفاصيل في أقرب وقت. ✨"
+    return ""
 
 class handler(BaseHTTPRequestHandler):
     def _send_cors_headers(self):
@@ -166,6 +127,8 @@ class handler(BaseHTTPRequestHandler):
             post_body = self.rfile.read(content_len).decode('utf-8')
             data = json.loads(post_body) if post_body else {}
 
+            channel = "instagram" if data.get('object') == 'instagram' else "messenger"
+
             if data.get('object') in ['page', 'instagram']:
                 for entry in data.get('entry', []):
                     events = entry.get('messaging', []) or entry.get('standby', [])
@@ -177,11 +140,15 @@ class handler(BaseHTTPRequestHandler):
                         message = event.get('message', {}) or event.get('message_edit', {})
                         
                         if message.get('is_echo'):
-                            # Admin sent from Facebook Page directly
+                            # Admin sent reply from outside (Facebook Page Inbox / Meta Business Suite / Instagram)
                             admin_text = message.get('text', '').strip()
+                            if not admin_text and 'attachments' in message:
+                                att = message['attachments'][0]
+                                admin_text = f"📎 [{att.get('type')}] {att.get('payload', {}).get('url', '')}"
+                            
                             recipient_id = str(event.get('recipient', {}).get('id', ''))
                             if admin_text and recipient_id:
-                                save_to_supabase(recipient_id, "Admin", admin_text, is_admin=True)
+                                save_to_supabase(recipient_id, "فريق 24Seven", admin_text, is_admin=True, channel=channel)
                             continue
 
                         text = message.get('text')
@@ -193,10 +160,10 @@ class handler(BaseHTTPRequestHandler):
 
                         if sender_id and text:
                             # 1. Resolve sender name
-                            sender_name = get_fb_name(sender_id)
+                            sender_name = get_fb_name(sender_id) if channel == "messenger" else "عميل انستجرام"
 
                             # 2. Save client message to Supabase for human moderators
-                            save_to_supabase(sender_id, sender_name, text, is_admin=False)
+                            save_to_supabase(sender_id, sender_name, text, is_admin=False, channel=channel)
 
             self.send_response(200)
             self.send_header("Content-Type", "text/plain")

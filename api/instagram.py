@@ -82,7 +82,20 @@ class handler(BaseHTTPRequestHandler):
                         continue
 
                     sender_id = str(event.get('sender', {}).get('id', ''))
-                    message = event.get('message', {})
+                    message = event.get('message', {}) or event.get('message_edit', {})
+
+                    if message.get('is_echo'):
+                        # Admin sent reply from Instagram app / Meta Business Suite
+                        admin_text = message.get('text', '').strip()
+                        if not admin_text and 'attachments' in message:
+                            att = message['attachments'][0]
+                            admin_text = f"📎 [{att.get('type')}] {att.get('payload', {}).get('url', '')}"
+                        
+                        recipient_id = str(event.get('recipient', {}).get('id', ''))
+                        if admin_text and recipient_id:
+                            save_to_supabase(recipient_id, "فريق 24Seven", admin_text, is_admin=True)
+                        continue
+
                     text = message.get('text')
                     if not text and 'attachments' in message:
                         att = message['attachments'][0]
