@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مسجل الشاشة لـ Meta App Review</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .recorder-card {
+            background: rgba(30, 41, 59, 0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 40px 30px;
+            max-width: 550px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+        h1 { font-size: 24px; margin-bottom: 12px; color: #38bdf8; }
+        p { font-size: 15px; color: #94a3b8; line-height: 1.6; margin-bottom: 25px; }
+        .steps {
+            text-align: right;
+            background: rgba(15, 23, 42, 0.6);
+            padding: 18px 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            font-size: 14px;
+            color: #cbd5e1;
+            line-height: 1.8;
+            border-right: 4px solid #38bdf8;
+        }
+        .btn-container { display: flex; gap: 15px; justify-content: center; margin-bottom: 20px; }
+        button {
+            padding: 14px 28px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-start {
+            background: #10b981;
+            color: white;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35);
+        }
+        .btn-start:hover { background: #059669; transform: translateY(-2px); }
+        .btn-stop {
+            background: #ef4444;
+            color: white;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.35);
+            display: none;
+        }
+        .btn-stop:hover { background: #dc2626; transform: translateY(-2px); }
+        .recording-indicator {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: #ef4444;
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 15px;
+            animation: pulse 1.5s infinite;
+        }
+        .dot { width: 12px; height: 12px; background: #ef4444; border-radius: 50%; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .preview-video {
+            width: 100%;
+            border-radius: 12px;
+            margin-top: 20px;
+            display: none;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .btn-download {
+            background: #38bdf8;
+            color: #0f172a;
+            width: 100%;
+            margin-top: 15px;
+            display: none;
+            justify-content: center;
+        }
+        .btn-download:hover { background: #0284c7; color: white; }
+    </style>
+</head>
+<body>
+
+<div class="recorder-card">
+    <h1>🎥 مسجل الشاشة لـ Meta App Review</h1>
+    <p>أداة محلية سريعة لتسجيل فيديو الشاشة المطلوب لمراجعة ميتا وحفظه فوراً بصيغة MP4 / WebM</p>
+
+    <div class="steps">
+        <strong>📌 الخطوات السريعة:</strong><br>
+        1. اضغط على <b>"بدء تسجيل الشاشة"</b> أدناه.<br>
+        2. اختر علامة تبويب <b>لوحة تحكم المودريتور</b>.<br>
+        3. اكتب كلمة في خانة الرد لمدة 15 ثانية.<br>
+        4. اضغط <b>"إيقاف التسجيل وتحميل الفيديو"</b> وارفع الملف لـ Meta.
+    </div>
+
+    <div id="recordingIndicator" class="recording-indicator">
+        <div class="dot"></div>
+        <span>جاري التسجيل الآن... (<span id="timer">00:00</span>)</span>
+    </div>
+
+    <div class="btn-container">
+        <button id="startBtn" class="btn-start" onclick="startRecording()">🔴 بدء تسجيل الشاشة</button>
+        <button id="stopBtn" class="btn-stop" onclick="stopRecording()">⏹️ إيقاف وتحميل الفيديو</button>
+    </div>
+
+    <video id="previewVideo" class="preview-video" controls></video>
+    <button id="downloadBtn" class="btn-download" onclick="downloadVideo()">💾 تحميل الفيديو لجهازك</button>
+</div>
+
+<script>
+    let mediaRecorder;
+    let recordedChunks = [];
+    let timerInterval;
+    let seconds = 0;
+    let recordedBlob;
+
+    async function startRecording() {
+        try {
+            const stream = await navigator.mediaDevices.getDisplayMedia({
+                video: { mediaSource: "screen" },
+                audio: false
+            });
+
+            recordedChunks = [];
+            const options = { mimeType: 'video/webm; codecs=vp9' };
+            mediaRecorder = new MediaRecorder(stream, options);
+
+            mediaRecorder.ondataavailable = function(e) {
+                if (e.data.size > 0) {
+                    recordedChunks.push(e.data);
+                }
+            };
+
+            mediaRecorder.onstop = function() {
+                recordedBlob = new Blob(recordedChunks, { type: "video/webm" });
+                const videoUrl = URL.createObjectURL(recordedBlob);
+                const preview = document.getElementById('previewVideo');
+                preview.src = videoUrl;
+                preview.style.display = 'block';
+                document.getElementById('downloadBtn').style.display = 'flex';
+                
+                // Trigger auto download
+                downloadVideo();
+            };
+
+            mediaRecorder.start(200);
+            
+            // Handle when user stops sharing via browser bar
+            stream.getVideoTracks()[0].onended = function() {
+                stopRecording();
+            };
+
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('stopBtn').style.display = 'inline-flex';
+            document.getElementById('recordingIndicator').style.display = 'flex';
+
+            seconds = 0;
+            timerInterval = setInterval(() => {
+                seconds++;
+                const mins = String(Math.floor(seconds / 60)).padStart(2, '0');
+                const secs = String(seconds % 60).padStart(2, '0');
+                document.getElementById('timer').innerText = `${mins}:${secs}`;
+            }, 1000);
+
+        } catch (err) {
+            console.error("Error: " + err);
+            alert("⚠️ لم يتم اختيار الشاشة أو تم إلغاء الإذن: " + err.message);
+        }
+    }
+
+    function stopRecording() {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        }
+        clearInterval(timerInterval);
+        document.getElementById('startBtn').style.display = 'inline-flex';
+        document.getElementById('stopBtn').style.display = 'none';
+        document.getElementById('recordingIndicator').style.display = 'none';
+    }
+
+    function downloadVideo() {
+        if (!recordedBlob) return;
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = URL.createObjectURL(recordedBlob);
+        a.download = 'Meta_App_Review_Demo.mp4';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(a.href);
+        }, 100);
+    }
+</script>
+
+</body>
+</html>
