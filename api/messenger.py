@@ -176,15 +176,8 @@ class handler(BaseHTTPRequestHandler):
                             # 1. Resolve sender name
                             sender_name = get_fb_name(sender_id)
 
-                            # 2. Save client message to Supabase
+                            # 2. Save client message to Supabase for human moderators
                             save_to_supabase(sender_id, sender_name, text, is_admin=False)
-
-                            # 3. Generate AI response and reply back to client
-                            reply_text = get_ai_reply(text, sender_name)
-                            if reply_text:
-                                sent_ok = send_fb_reply(sender_id, reply_text)
-                                if sent_ok:
-                                    save_to_supabase(sender_id, "24Seven Bot", reply_text, is_admin=True)
 
             self.send_response(200)
             self.send_header("Content-Type", "text/plain")
