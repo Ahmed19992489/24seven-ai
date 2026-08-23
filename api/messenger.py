@@ -23,6 +23,25 @@ def get_fb_name(sender_id):
     if not FB_PAGE_TOKEN:
         return "عميل فيسبوك"
     try:
+        url = "https://graph.facebook.com/v18.0/me/conversations"
+        params = {
+            "access_token": FB_PAGE_TOKEN,
+            "user_id": str(sender_id),
+            "fields": "participants"
+        }
+        r = requests.get(url, params=params, timeout=4)
+        if r.status_code == 200:
+            data = r.json()
+            for conv in data.get('data', []):
+                for p in conv.get('participants', {}).get('data', []):
+                    if str(p.get('id')) == str(sender_id):
+                        name = p.get('name', '').strip()
+                        if name:
+                            return name
+    except Exception as e:
+        print(f"Error in conversations name lookup: {e}")
+
+    try:
         url = f"https://graph.facebook.com/v18.0/{sender_id}?fields=first_name,last_name,name&access_token={FB_PAGE_TOKEN}"
         r = requests.get(url, timeout=4)
         if r.status_code == 200:

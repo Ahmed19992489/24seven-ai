@@ -3337,11 +3337,18 @@
             }
 
             // === محاولة 1: الباكيند (لو شغال) ===
+            // === محاولة 1: الباكيند ===
             let backendOk = false;
-            const apiBaseUrl = getApiBaseUrl();
-            if (apiBaseUrl) {
+            let targetUrl = '';
+            if (channel === 'whatsapp') {
+                targetUrl = 'http://127.0.0.1:3000/api/send_reply';
+            } else {
+                const apiBaseUrl = getApiBaseUrl();
+                targetUrl = apiBaseUrl ? `${apiBaseUrl}/api/send_reply` : 'https://24seven-ai.com/api/send_reply';
+            }
+
+            if (targetUrl) {
                 try {
-                    const targetUrl = `${apiBaseUrl}/api/send_reply`;
                     const res = await fetch(targetUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
@@ -3360,12 +3367,12 @@
                                 showToast(resJson.message || '⚠️ تم حفظ الرسالة لكن لم تُرسل للعميل.', 'warning');
                             }
                         } else {
-                            showToast(resJson.message || '❌ فشل إرسال الرسالة للعميل عبر الواتساب.', 'error');
+                            showToast(resJson.message || `❌ فشل إرسال الرسالة للعميل عبر ${channel === 'whatsapp' ? 'الواتساب' : 'الماسنجر'}.`, 'error');
                             return false;
                         }
                     } else {
                         const errJson = await res.json().catch(() => ({}));
-                        showToast(errJson.message || '❌ فشل إرسال الرسالة للعميل عبر الواتساب.', 'error');
+                        showToast(errJson.message || `❌ فشل إرسال الرسالة للعميل عبر ${channel === 'whatsapp' ? 'الواتساب' : 'الماسنجر'}.`, 'error');
                         return false;
                     }
                 } catch(e) {
