@@ -261,7 +261,7 @@ SHEET_NAME = "امر حجز عميل"
 # [AI INTENT] نظام فهم النوايا بـ Groq AI (لفهم ردود العملاء بشكل ذكي)
 # =====================================================
 GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
-GROQ_MODEL = os.getenv('GROQ_MODEL', 'llama-3.1-8b-instant')
+GROQ_MODEL = os.getenv('GROQ_MODEL', 'allam-2-7b')
 
 def ai_understand_intent(text, context='confirmation'):
     """
@@ -538,13 +538,8 @@ def find_active_session(sheet, sender_phone, message_text=""):
             is_future_or_today = (trip_date is None) or (trip_date >= today)
             
             if is_future_or_today:
-                raw_dec = str(row[27]).strip() # Column AB: client_decision
-                has_final_decision = raw_dec in ["وافق", "مؤكد", "تأكيد", "رفض", "ملغي", "إلغاء", "رفضت"]
-                
-                # لو الحجز قادم ولم يُتخذ فيه قرار نهائي بعد
-                if not has_final_decision:
-                    print(f"[Debug-Session] Found upcoming confirmation session on row {i+1} for sender {sender_phone}")
-                    return i + 1, "confirm"
+                print(f"[Debug-Session] Found upcoming confirmation session on row {i+1} for sender {sender_phone}")
+                return i + 1, "confirm"
                     
         # ----------------------------------------------------
         # أولوية 2: فحص التقييم (Z = index 25) - فقط للرحلات المنتهية خلال آخر 3 أيام
@@ -667,9 +662,9 @@ def handle_confirmation(sender, text, row=None):
         import re
         text_lower = text.lower()
         if intent == 'unclear' or confidence < 0.5:
-            if re.search(r"(?i)\b(confirm|ok|yes)\b|تأكيد|تاكيد|نعم|وافق|تمام|ماشي|اه\b|اوكي|اكيد|ايوه|يلا|اتفقنا|اوك", text_lower):
+            if re.search(r"(?i)\b(confirm|ok|yes)\b|تأكيد|تاكيد|نعم|وافق|موافق|تمام|ماشي|اه\b|اوكي|اكيد|أيوه|ايوه|يلا|يس|اتفقنا|اوك|حاضر|ان شاء الله|إن شاء الله|انشالله|جاهز|مستعد|معاك|معاكم|توكلنا|مفيش مشكلة|تمام جدا|معادنا|خير|بالتوفيق|تسلم|شكرا|شكر", text_lower):
                 intent = 'confirm'
-            elif re.search(r"(?i)\b(cancel|no)\b|إلغاء|الغاء|\bلا\b|رفض|لأ|كنسل|مش عايز", text_lower):
+            elif re.search(r"(?i)\b(cancel|no)\b|إلغاء|الغاء|\bلا\b|رفض|لأ|كنسل|مش عايز|مش هحتاج|مش جاي|اعتذر|اعتذار|للاسف|للأسف", text_lower):
                 intent = 'cancel'
         
         is_confirm = (intent == 'confirm')
@@ -684,9 +679,17 @@ def handle_confirmation(sender, text, row=None):
                     requests.patch(
                         f"{SUPABASE_URL}/rest/v1/google_reservations?sheet_row=eq.{row}",
                         headers=SUPABASE_SERVICE_HEADERS,
-                        json={"client_decision": "وافق"},
+                        json={"client_decision": "وافق", "client_status": "مؤكد"},
                         timeout=5
                     )
+                    clean_p = clean_phone_strict(sender)
+                    if len(clean_p) >= 8:
+                        requests.patch(
+                            f"{SUPABASE_URL}/rest/v1/google_reservations?customer_phone=ilike.%{clean_p[-8:]}%&trip_date=gte.{datetime.now().strftime('%Y-%m-%d')}",
+                            headers=SUPABASE_SERVICE_HEADERS,
+                            json={"client_decision": "وافق", "client_status": "مؤكد"},
+                            timeout=5
+                        )
                 except Exception as sb_err:
                     print(f"[Supabase-Decision-Sync Error]: {sb_err}")
 
