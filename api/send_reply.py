@@ -44,7 +44,7 @@ class handler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"error": "Missing recipient_id or message"}).encode('utf-8'))
                 return
 
-            if channel in ["messenger", "facebook"]:
+            if channel in ["messenger", "facebook", "instagram"]:
                 if not FB_PAGE_TOKEN:
                     self.send_response(500)
                     self._send_cors_headers()
@@ -52,7 +52,7 @@ class handler(BaseHTTPRequestHandler):
                     self.wfile.write(json.dumps({"error": "FB_PAGE_TOKEN not configured"}).encode('utf-8'))
                     return
 
-                # Send via Facebook Graph API
+                # Send via Facebook/Instagram Graph API
                 url = f"https://graph.facebook.com/v18.0/me/messages?access_token={FB_PAGE_TOKEN}"
                 payload = {
                     "recipient": {"id": str(recipient_id)},
@@ -66,7 +66,7 @@ class handler(BaseHTTPRequestHandler):
                     # Save to Supabase
                     if SUPABASE_KEY:
                         sb_payload = {
-                            "channel": "messenger",
+                            "channel": channel,
                             "sender_id": str(recipient_id),
                             "sender_name": sender_name,
                             "message_text": message_text,
