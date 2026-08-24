@@ -304,41 +304,52 @@
                 </div>
 
                 <!-- AI Reply Suggestion Banner -->
-                <div id="ai-suggestion-bar" class="hidden px-4 py-2 bg-indigo-50 border-t border-indigo-100">
-                    <div class="flex items-start gap-2">
-                        <span class="text-indigo-500 text-xs font-black mt-0.5">🤖 اقتراح AI:</span>
-                        <p id="ai-suggestion-text" class="text-xs text-indigo-700 flex-1 leading-relaxed"></p>
-                        <div class="flex gap-1 shrink-0">
-                            <button onclick="acceptAiSuggestion()" class="text-[10px] bg-indigo-600 text-white px-2 py-1 rounded-lg font-bold hover:bg-indigo-700 transition">✓ قبول</button>
-                            <button onclick="dismissAiSuggestion()" class="text-[10px] bg-slate-200 text-slate-600 px-2 py-1 rounded-lg font-bold hover:bg-slate-300 transition">✕</button>
+                <div id="ai-suggestion-bar" class="hidden px-4 py-3 bg-gradient-to-r from-indigo-50 via-purple-50 to-teal-50 border-t border-indigo-100 shadow-inner transition-all duration-300">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div class="flex items-start gap-2 flex-1">
+                            <span class="text-indigo-600 text-sm font-black mt-0.5 shrink-0 flex items-center gap-1">
+                                <i class="fas fa-robot text-indigo-500 animate-bounce"></i> اقتراح الوكيل:
+                            </span>
+                            <p id="ai-suggestion-text" class="text-xs sm:text-sm text-slate-800 font-medium leading-relaxed select-text whitespace-pre-line"></p>
+                        </div>
+                        <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                            <button type="button" onclick="acceptAiSuggestion(false)" class="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-xl font-bold hover:bg-indigo-700 active:scale-95 shadow-sm transition flex items-center gap-1">
+                                <i class="fas fa-pen text-[10px]"></i> قبول وتعديل
+                            </button>
+                            <button type="button" onclick="acceptAiSuggestion(true)" class="text-xs bg-teal-600 text-white px-3 py-1.5 rounded-xl font-bold hover:bg-teal-700 active:scale-95 shadow-sm transition flex items-center gap-1">
+                                <i class="fas fa-paper-plane text-[10px]"></i> إرسال فوراً
+                            </button>
+                            <button type="button" onclick="dismissAiSuggestion()" class="text-xs bg-slate-200 text-slate-600 hover:bg-slate-300 px-2.5 py-1.5 rounded-xl font-bold transition" title="إغلاق">✕</button>
                         </div>
                     </div>
                 </div>
 
                 <!-- Input Area -->
-                <form id="chat-form" onsubmit="handleSend(event)" class="p-4 border-t flex items-center gap-3 bg-white relative">
+                <form id="chat-form" onsubmit="handleSend(event)" class="p-3 sm:p-4 border-t flex items-end gap-2 sm:gap-3 bg-white relative">
                     <!-- زر اختيار صورة -->
-                    <button type="button" onclick="triggerOmniImageUpload()" class="text-slate-400 hover:text-teal-600 p-2 transition shrink-0" title="إرسال صورة">
+                    <button type="button" onclick="triggerOmniImageUpload()" class="text-slate-400 hover:text-teal-600 p-2.5 transition shrink-0 self-center" title="إرسال صورة">
                         <i class="fas fa-image text-lg"></i>
                     </button>
                     <input type="file" id="omni-image-input" accept="image/*" class="hidden" onchange="handleOmniImageSelected(this)">
 
                     <!-- زر تسجيل فويس نوت -->
-                    <button type="button" id="omni-record-btn" onclick="toggleOmniVoiceRecording()" class="text-slate-400 hover:text-red-500 p-2 transition shrink-0" title="تسجيل رسالة صوتية">
+                    <button type="button" id="omni-record-btn" onclick="toggleOmniVoiceRecording()" class="text-slate-400 hover:text-red-500 p-2.5 transition shrink-0 self-center" title="تسجيل رسالة صوتية">
                         <i class="fas fa-microphone text-lg" id="omni-record-icon"></i>
                     </button>
 
-                    <input type="text" id="chat-input" placeholder="اكتب ردك هنا..." class="input-std flex-1">
-                    <button type="button" onclick="manualCoachAnalyze()" title="تحليل الرسالة (مساعد الكوتش)" class="w-10 h-10 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center hover:bg-purple-200 transition shrink-0 relative group">
+                    <!-- حقل الكتابة الموسع والمريح للشاشات والموبايل -->
+                    <textarea id="chat-input" rows="1" placeholder="اكتب ردك هنا (أو اضغط 🤖 لاقتراح وتسعير فوري)..." class="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[15px] sm:text-base font-semibold text-slate-800 placeholder:text-slate-400 placeholder:font-normal focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 focus:outline-none transition resize-none leading-relaxed min-h-[48px] max-h-[150px] overflow-y-auto"></textarea>
+
+                    <button type="button" onclick="manualCoachAnalyze()" title="تحليل الرسالة (مساعد الكوتش)" class="w-11 h-11 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center hover:bg-purple-200 active:scale-95 transition shrink-0 relative group self-center">
                         🎓
-                        <span class="absolute -top-9 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition whitespace-nowrap">تحليل الكوتش</span>
+                        <span class="absolute -top-9 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition whitespace-nowrap z-20 pointer-events-none">تحليل الكوتش</span>
                     </button>
-                    <button type="button" onclick="suggestAiReply()" title="اقتراح رد بالذكاء الاصطناعي" class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center hover:bg-indigo-200 transition shrink-0 relative group">
+                    <button type="button" onclick="suggestAiReply()" title="اقتراح رد ذكي بالأسعار" class="w-11 h-11 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center hover:bg-indigo-200 active:scale-95 transition shrink-0 relative group self-center">
                         🤖
-                        <span class="absolute -top-9 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition whitespace-nowrap">اقتراح رد ذكي</span>
+                        <span class="absolute -top-9 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition whitespace-nowrap z-20 pointer-events-none">اقتراح وتسعير AI</span>
                     </button>
-                    <button type="submit" id="omni-send-btn" class="w-10 h-10 bg-teal-600 text-white rounded-xl shadow-lg shadow-teal-200 flex items-center justify-center hover:scale-110 transition shrink-0">
-                        <i class="fas fa-paper-plane"></i>
+                    <button type="submit" id="omni-send-btn" class="w-11 h-11 bg-teal-600 text-white rounded-xl shadow-lg shadow-teal-200 flex items-center justify-center hover:bg-teal-700 active:scale-95 transition shrink-0 self-center">
+                        <i class="fas fa-paper-plane text-base"></i>
                     </button>
 
                     <!-- شريط حالة التسجيل الصوتي -->
@@ -6007,6 +6018,8 @@
         // ============================================================
         // 🤖 AI Reply Suggestion Functions
         // ============================================================
+        // 🤖 Feature: Smart AI Assistant & Full Pricing Context
+        // ============================================================
         async function suggestAiReply() {
             if (!activeChatId) return;
             const chat = groupedChats[activeChatId];
@@ -6014,31 +6027,17 @@
 
             // آخر رسالة من العميل
             const lastClientMsg = [...(chat.messages || [])].reverse().find(m => !m.is_from_admin);
-            if (!lastClientMsg) return;
+            const clientQuery = lastClientMsg ? lastClientMsg.message_text : "مرحبا";
 
             const bar = document.getElementById('ai-suggestion-bar');
             const textEl = document.getElementById('ai-suggestion-text');
             bar.classList.remove('hidden');
-            textEl.textContent = '⏳ جاري التفكير...';
+            textEl.innerHTML = '<span class="animate-pulse text-indigo-600 font-bold">⏳ جاري قراءة المحادثة بالكامل وحساب أفضل تسعير لرحلة العميل...</span>';
 
-            // سياق المحادثة (آخر 6 رسائل)
-            const recentContext = (chat.messages || []).slice(-6).map(m =>
-                `${m.is_from_admin ? 'موديتور' : 'عميل'}: ${m.message_text}`
+            // سياق المحادثة بالكامل (حتى آخر 15 رسالة للربط التام)
+            const recentContext = (chat.messages || []).slice(-15).map(m =>
+                `${m.is_from_admin ? 'الموديتور' : 'العميل'}: ${m.message_text}`
             ).join('\n');
-
-            const prompt = `أنت موظف خدمة عملاء ممتاز ومحترف في شركة ليموزين "24Seven" في مصر.
-مهامك الوحيدة هي: تأكيد حجوزات رحلات الليموزين (مطار، محافظات، مشاوير خاصة)، والإجابة على استفسارات الأسعار والسيارات فقط.
-القواعد الصارمة:
-1. الرد يجب أن يكون بالعامية المصرية الراقية والمحترمة.
-2. الرد يجب أن يكون قصيراً وعملياً (مباشرة نص الرد بدون أي مقدمات أو شرح إضافي).
-3. إياك تقديم أي معلومات أو خدمات خارج مجال السيارات والليموزين، وإذا سأل العميل في مجال آخر اعتذر بلطف وأكد أننا شركة ليموزين فقط.
-
-سياق المحادثة:
-${recentContext}
-
-رسالة العميل المطلوب الرد عليها: "${lastClientMsg.message_text}"
-
-اكتب الرد المناسب فوراً:`;
 
             try {
                 const apiBase = getApiBaseUrl() || 'https://24seven-ai.com';
@@ -6050,9 +6049,9 @@ ${recentContext}
                         'ngrok-skip-browser-warning': 'true'
                     },
                     body: JSON.stringify({ 
-                        messages: [{ role: 'user', content: lastClientMsg.message_text }],
+                        messages: [{ role: 'user', content: clientQuery }],
                         recent_context: recentContext,
-                        max_tokens: 200 
+                        max_tokens: 300 
                     })
                 });
                 const data = await res.json();
@@ -6064,11 +6063,23 @@ ${recentContext}
             }
         }
 
-        function acceptAiSuggestion() {
-            const suggestion = document.getElementById('ai-suggestion-text')?.textContent;
-            if (suggestion && suggestion !== '⏳ جاري التفكير...') {
-                document.getElementById('chat-input').value = suggestion;
-                document.getElementById('chat-input').focus();
+        function acceptAiSuggestion(sendDirectly = false) {
+            const textEl = document.getElementById('ai-suggestion-text');
+            const suggestion = textEl ? textEl.textContent.trim() : '';
+            if (suggestion && !suggestion.includes('جاري قراءة المحادثة')) {
+                const inputEl = document.getElementById('chat-input');
+                if (inputEl) {
+                    inputEl.value = suggestion;
+                    inputEl.style.height = 'auto';
+                    inputEl.style.height = Math.min(inputEl.scrollHeight, 150) + 'px';
+                    inputEl.focus();
+
+                    if (sendDirectly) {
+                        dismissAiSuggestion();
+                        handleSend(new Event('submit'));
+                        return;
+                    }
+                }
             }
             dismissAiSuggestion();
         }
@@ -6076,6 +6087,26 @@ ${recentContext}
         function dismissAiSuggestion() {
             document.getElementById('ai-suggestion-bar')?.classList.add('hidden');
         }
+
+        // Auto-growing textarea handler
+        function initChatInputAutoGrow() {
+            const inputEl = document.getElementById('chat-input');
+            if (inputEl && !inputEl.dataset.autogrowInit) {
+                inputEl.dataset.autogrowInit = 'true';
+                inputEl.addEventListener('input', function() {
+                    this.style.height = 'auto';
+                    this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+                });
+                inputEl.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' && !e.shiftKey && window.innerWidth > 768) {
+                        e.preventDefault();
+                        handleSend(new Event('submit'));
+                    }
+                });
+            }
+        }
+        window.addEventListener('DOMContentLoaded', initChatInputAutoGrow);
+        setTimeout(initChatInputAutoGrow, 1000);
 
         //  💬 Feature 4: Admin AI Assistant Tab
         // ============================================================
