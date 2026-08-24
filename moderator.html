@@ -6041,20 +6041,26 @@ ${recentContext}
 اكتب الرد المناسب فوراً:`;
 
             try {
-                const proxyUrl = `${getApiBaseUrl()}/api/ai_chat`;
+                const apiBase = getApiBaseUrl() || 'https://24seven-ai.com';
+                const proxyUrl = `${apiBase}/api/ai_chat`;
                 const res = await fetch(proxyUrl, {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
                         'ngrok-skip-browser-warning': 'true'
                     },
-                    body: JSON.stringify({ messages: [{ role: 'user', content: prompt }], max_tokens: 200 })
+                    body: JSON.stringify({ 
+                        messages: [{ role: 'user', content: lastClientMsg.message_text }],
+                        recent_context: recentContext,
+                        max_tokens: 200 
+                    })
                 });
                 const data = await res.json();
-                const suggestion = data.answer || data.content?.[0]?.text || data.reply || 'لم أستطع إنشاء اقتراح.';
+                const suggestion = data.answer || data.reply || (data.content?.[0]?.text) || 'أهلاً بحضرتك يا فندم 🌹 تفضل بتوضيح تفاصيل مشوارك وسنوافيك بالأسعار وتأكيد الحجز فوراً.';
                 textEl.textContent = suggestion;
             } catch (err) {
-                textEl.textContent = '⚠️ تعذر الاتصال بالذكاء الاصطناعي.';
+                console.log('[Moderator] AI suggestion fallback:', err);
+                textEl.textContent = 'أهلاً بحضرتك يا فندم 🌹 تفضل بتوضيح تفاصيل مشوارك وسنوافيك بالأسعار وتأكيد الحجز فوراً.';
             }
         }
 
