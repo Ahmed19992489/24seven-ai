@@ -96,7 +96,7 @@ def generate_smart_moderator_reply(client_text, conversation_context=""):
             payload = {
                 'model': model_name,
                 'messages': messages,
-                'max_tokens': 250,
+                'max_tokens': 400,
                 'temperature': 0.25
             }
             r = requests.post(url, headers=headers, json=payload, timeout=7)
