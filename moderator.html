@@ -304,22 +304,22 @@
                 </div>
 
                 <!-- AI Reply Suggestion Banner -->
-                <div id="ai-suggestion-bar" class="hidden px-4 py-3 bg-gradient-to-r from-indigo-50 via-purple-50 to-teal-50 border-t border-indigo-100 shadow-inner transition-all duration-300">
-                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                        <div class="flex items-start gap-2 flex-1">
-                            <span class="text-indigo-600 text-sm font-black mt-0.5 shrink-0 flex items-center gap-1">
-                                <i class="fas fa-robot text-indigo-500 animate-bounce"></i> اقتراح الوكيل:
+                <div id="ai-suggestion-bar" class="hidden px-4 py-3 bg-gradient-to-r from-indigo-50/95 via-purple-50/95 to-teal-50/95 border-t border-indigo-100 shadow-sm transition-all duration-300">
+                    <div class="w-full flex flex-col gap-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-indigo-700 text-xs sm:text-sm font-black flex items-center gap-1.5">
+                                <i class="fas fa-robot text-indigo-600 animate-bounce"></i> اقتراح الوكيل الذكي (وفق الأسعار الرسمية):
                             </span>
-                            <p id="ai-suggestion-text" class="text-xs sm:text-sm text-slate-800 font-medium leading-relaxed select-text whitespace-pre-line"></p>
+                            <button type="button" onclick="dismissAiSuggestion()" class="text-xs text-slate-400 hover:text-slate-700 font-bold px-2 py-0.5 rounded-lg transition" title="إغلاق">✕</button>
                         </div>
-                        <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
-                            <button type="button" onclick="acceptAiSuggestion(false)" class="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-xl font-bold hover:bg-indigo-700 active:scale-95 shadow-sm transition flex items-center gap-1">
+                        <div id="ai-suggestion-text" class="w-full bg-white border border-indigo-100 rounded-xl p-3 text-xs sm:text-sm text-slate-800 font-medium leading-relaxed select-text whitespace-pre-line shadow-xs"></div>
+                        <div class="flex items-center justify-end gap-2">
+                            <button type="button" onclick="acceptAiSuggestion(false)" class="text-xs bg-indigo-600 text-white px-3.5 py-1.5 rounded-xl font-bold hover:bg-indigo-700 active:scale-95 shadow-sm transition flex items-center gap-1.5">
                                 <i class="fas fa-pen text-[10px]"></i> قبول وتعديل
                             </button>
-                            <button type="button" onclick="acceptAiSuggestion(true)" class="text-xs bg-teal-600 text-white px-3 py-1.5 rounded-xl font-bold hover:bg-teal-700 active:scale-95 shadow-sm transition flex items-center gap-1">
-                                <i class="fas fa-paper-plane text-[10px]"></i> إرسال فوراً
+                            <button type="button" onclick="acceptAiSuggestion(true)" class="text-xs bg-teal-600 text-white px-3.5 py-1.5 rounded-xl font-bold hover:bg-teal-700 active:scale-95 shadow-sm transition flex items-center gap-1.5">
+                                <i class="fas fa-paper-plane text-[10px]"></i> إرسال فوراً للعميل
                             </button>
-                            <button type="button" onclick="dismissAiSuggestion()" class="text-xs bg-slate-200 text-slate-600 hover:bg-slate-300 px-2.5 py-1.5 rounded-xl font-bold transition" title="إغلاق">✕</button>
                         </div>
                     </div>
                 </div>
