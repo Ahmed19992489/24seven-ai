@@ -154,7 +154,16 @@ class handler(BaseHTTPRequestHandler):
                         text = message.get('text')
                         if not text and 'attachments' in message:
                             att = message['attachments'][0]
-                            text = f"📎 [{att.get('type')}] {att.get('payload', {}).get('url', '')}"
+                            att_type = att.get('type', '')
+                            att_url = att.get('payload', {}).get('url', '')
+                            if att_type in ['image', 'photo']:
+                                text = f"MEDIA_IMAGE:{att_url}"
+                            elif att_type in ['audio', 'voice']:
+                                text = f"MEDIA_AUDIO:{att_url}"
+                            elif att_type in ['video']:
+                                text = f"MEDIA_VIDEO:{att_url}"
+                            else:
+                                text = f"📎 [{att_type}] {att_url}"
                         elif not text and 'postback' in event:
                             text = event['postback'].get('payload')
 
