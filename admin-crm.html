@@ -2504,7 +2504,23 @@
         const sbClient = supabase.createClient(supabaseUrl, supabaseKey);
         const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtoc2t1ZHR4Ynlwb2h2bnJlbG9pIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NjMxMjAyOSwiZXhwIjoyMTAxODg4MDI5fQ.uyCTVGkoeoz4xB3r2muV_fLiI62QIw-65g2nVeIb62w';
         const sbService = supabase.createClient(supabaseUrl, supabaseServiceKey);
-        let activeVendors = [];
+        function getApiBaseUrl() {
+            const loc = window.location;
+            const saved = localStorage.getItem('mod_api_url');
+            if (saved && saved.trim() !== '') {
+                let s = saved.trim().replace(/\/$/, '').replace(/\/moderator$/, '').replace(/\/dashboard$/, '');
+                if (s.startsWith('ps://')) s = 'https://' + s.substring(5);
+                else if (s.startsWith('p://')) s = 'http://' + s.substring(4);
+                else if (!s.startsWith('http://') && !s.startsWith('https://')) s = 'https://' + s;
+                return s;
+            }
+            if (loc.protocol === 'file:') return 'http://localhost:3000';
+            if (loc.hostname.includes('24seven-ai.com') || loc.hostname.includes('onrender.com')) {
+                return `${loc.protocol}//${loc.hostname}`;
+            }
+            return loc.origin || '';
+        }
+        window.getApiBaseUrl = getApiBaseUrl;
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');

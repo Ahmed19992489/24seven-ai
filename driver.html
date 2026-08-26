@@ -545,11 +545,27 @@
                 const withZero = '0' + driverPhone; // 01121748885
                 const with20 = '20' + driverPhone;  // 201121748885
 
-                const { data: sheetTrips } = await sb.from('google_reservations')
-                    .select('*')
-                    .or(`modified_driver_phone.ilike.%${phoneSuffix}%,modified_driver_phone.eq.${withZero},modified_driver_phone.eq.${with20},modified_driver_phone.eq.${driverPhone}`)
-                    .order('trip_date', { ascending: false })
-                    .limit(30);
+                let sheetTrips = null;
+                try {
+                    const resSb = await sb.from('google_reservations')
+                        .select('*')
+                        .or(`modified_driver_phone.ilike.%${phoneSuffix}%,modified_driver_phone.eq.${withZero},modified_driver_phone.eq.${with20},modified_driver_phone.eq.${driverPhone}`)
+                        .order('trip_date', { ascending: false })
+                        .limit(30);
+                    if (!resSb.error && resSb.data) sheetTrips = resSb.data;
+                } catch(eSb) { console.warn("Supabase driver query error:", eSb); }
+
+                if (!sheetTrips || sheetTrips.length === 0) {
+                    try {
+                        const apiResp = await fetch(`https://24seven-ai.com/api/reservations?query=${encodeURIComponent(phoneSuffix)}`);
+                        if (apiResp.ok) {
+                            const json = await apiResp.json();
+                            if (json && json.data && json.data.length > 0) {
+                                sheetTrips = json.data;
+                            }
+                        }
+                    } catch(eApi) { console.warn("Backend API driver fallback error:", eApi); }
+                }
 
                 if (sheetTrips && sheetTrips.length > 0) {
                     sheetTrips.forEach(st => {
@@ -561,7 +577,6 @@
                         const cost = Math.round(Number(st.cost || 0));
                         const key = `${p}|${d}|${cost}`;
 
-                        // لو الرحلة تم تحميلها بالفعل من جدول trips بكامل الفلو والتفاصيل، نتخطاها لمنع التكرار
                         if (coveredGoogleResIds.has(stId) || (stSqlId && coveredSqlIds.has(stSqlId)) || (stSheetRow && coveredSheetRows.has(stSheetRow)) || coveredTripKeys.has(key)) {
                             console.log('Skipping duplicate sheet trip (already loaded in trips):', st.id);
                             return;

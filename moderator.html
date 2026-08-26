@@ -1611,8 +1611,19 @@
 
         async function fetchDirectSheetReservations() {
             try {
+                // First try our backend API which reads from Neon Postgres (fastest & 100% reliable)
+                try {
+                    const apiResp = await fetch(`${getApiBaseUrl()}/api/reservations?limit=300`);
+                    if (apiResp.ok) {
+                        const json = await apiResp.json();
+                        if (json && json.data && json.data.length > 0) {
+                            return json.data;
+                        }
+                    }
+                } catch(eApi) { console.warn("Backend API reservations fallback error:", eApi); }
+
                 const sheetId = "1-YglRYU8RZ6fl8xoWBNgxiV5IRna4KgE8ynpjsjtCD4";
-                const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent('قاعدة بيانات الحجوزات')}`;
+                const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent('امر حجز عميل')}`;
                 const resp = await fetch(url);
                 const text = await resp.text();
                 const jsonStr = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
@@ -1623,42 +1634,60 @@
                     const c = rows[i].c;
                     if (!c) continue;
                     const getVal = (idx) => (c[idx] && c[idx].v !== null && c[idx].v !== undefined) ? String(c[idx].v).trim() : '';
-                    const tripDate = getVal(0);
-                    const tripTime = getVal(1);
-                    const customerName = getVal(2);
-                    const customerPhone = getVal(3);
-                    const pickup = getVal(4);
-                    const dropoff = getVal(5);
-                    const passengers = getVal(6);
-                    const bags = getVal(7);
-                    const car = getVal(8);
-                    const carType = getVal(9);
-                    const cost = getVal(10);
-                    const notes = getVal(11);
-                    const payment = getVal(12);
-                    const employee = getVal(13);
-                    const sqlId = getVal(14) || `gs_${i}`;
+                    const tripDate = getVal(1);
+                    const tripTime = getVal(2);
+                    const customerName = getVal(3);
+                    const customerPhone = getVal(4);
+                    const whatsappNum = getVal(5);
+                    const pickup = getVal(6);
+                    const dropoff = getVal(7);
+                    const passengers = getVal(8);
+                    const bags = getVal(9);
+                    const carType = getVal(10);
+                    const cost = getVal(12);
+                    const notes = getVal(14);
+                    const tripType = getVal(15);
+                    const sqlId = getVal(16) || `gs_${i+2}`;
+                    const employee = getVal(17);
+                    const status = getVal(19) || 'pending';
+                    const driverName = getVal(21);
+                    const driverPhone = getVal(22);
+                    const driverMsg = getVal(24);
+                    const confirmMsg = getVal(26);
+                    const clientDec = getVal(27);
+                    const tripStatus = getVal(34);
+                    
                     if (!customerName && !customerPhone && !pickup) continue;
                     mapped.push({
                         id: sqlId,
                         google_res_id: sqlId,
+                        sheet_row: i + 2,
                         trip_date: tripDate,
                         trip_time: tripTime,
                         customer_name: customerName,
                         manual_client_name: customerName,
                         customer_phone: customerPhone,
+                        client_phone: customerPhone,
+                        whatsapp_num: whatsappNum,
                         pickup_address: pickup,
                         dropoff_address: dropoff,
-                        passengers: passengers,
-                        bags: bags,
-                        car_type: carType,
-                        trip_type: carType,
-                        cost: cost,
-                        estimated_price: cost,
+                        pickup_location: pickup,
+                        dropoff_location: dropoff,
+                        passengers: passengers || 1,
+                        bags: bags || 0,
+                        car_type: carType || 'سيدان',
+                        trip_type: tripType || 'ذهاب فقط',
+                        cost: cost || 0,
+                        estimated_price: cost || 0,
                         booking_employee: employee,
-                        status: 'approved',
+                        status: status,
                         admin_notes: notes,
-                        payment_status: payment
+                        modified_driver_name: driverName,
+                        modified_driver_phone: driverPhone,
+                        driver_msg_status: driverMsg,
+                        confirm_msg_status: confirmMsg,
+                        client_decision: clientDec,
+                        trip_status: tripStatus
                     });
                 }
                 return mapped;
@@ -4460,6 +4489,19 @@
 
             if (reservations.length === 0) {
                 try {
+                    // Try Backend API (reads from Neon Postgres - high speed)
+                    const apiResp = await fetch(`${getApiBaseUrl()}/api/reservations?date=${encodeURIComponent(dateStr)}`);
+                    if (apiResp.ok) {
+                        const json = await apiResp.json();
+                        if (json && json.data && json.data.length > 0) {
+                            reservations = json.data;
+                        }
+                    }
+                } catch(eApi) { console.warn("Backend API date fetch error:", eApi); }
+            }
+
+            if (reservations.length === 0) {
+                try {
                     const allSheetRes = await fetchDirectSheetReservations();
                     if (allSheetRes && allSheetRes.length > 0) {
                         reservations = allSheetRes.filter(r => {
@@ -4850,8 +4892,20 @@
                     .limit(100)
             ]);
 
-            const reservations = reservationsResult.data || [];
+            let reservations = reservationsResult.data || [];
             const trips = tripsResult.data || [];
+
+            if (reservations.length === 0) {
+                try {
+                    const apiResp = await fetch(`${getApiBaseUrl()}/api/reservations?query=${encodeURIComponent(query)}`);
+                    if (apiResp.ok) {
+                        const json = await apiResp.json();
+                        if (json && json.data && json.data.length > 0) {
+                            reservations = json.data;
+                        }
+                    }
+                } catch(eApi) { console.warn("Backend API search error:", eApi); }
+            }
 
             // جلب الحجوزات الناقصة والمرتبطة بهذه الرحلات للحصول على قرارات العملاء الخاصة بها
             const missingResIds = [];

@@ -1,3 +1,8 @@
+import sys
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 from fastapi import FastAPI, Depends, Request, Query
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -1266,123 +1271,188 @@ def _get_google_auth_token():
         print("Google auth token error:", e)
     return None
 
+@app.get("/api/reservations")
 @app.get("/api/reservations/fallback")
-async def get_reservations_fallback():
+async def get_reservations_api(date: str = None, query: str = None, limit: int = 300):
     """
-    Fallback endpoint to serve reservations directly from Google Sheet
-    when Supabase is restricted or quota is exceeded.
+    High-performance API endpoint to fetch reservations directly from Neon Postgres (Vercel)
+    with automatic fallback to Google Sheets.
     """
-    now = time.time()
-    if _fallback_reservations_cache["data"] and (now - _fallback_reservations_cache["time"] < 30):
-        return {"status": "ok", "source": "cache", "data": _fallback_reservations_cache["data"]}
-    
     try:
-        token = _get_google_auth_token()
-        if token:
-            sheet_id = "1-YglRYU8RZ6fl8xoWBNgxiV5IRna4KgE8ynpjsjtCD4"
-            encoded_range = urllib.parse.quote("'قاعدة بيانات الحجوزات'!A1:Q300")
-            url = f"https://sheets.googleapis.com/v4/spreadsheets/{sheet_id}/values/{encoded_range}"
-            req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
-            
-            with urllib.request.urlopen(req) as resp:
-                result = json.loads(resp.read().decode('utf-8'))
-                all_vals = result.get('values', [])
-                if all_vals and len(all_vals) > 1:
-                    headers = all_vals[0]
-                    mapped_list = []
-                    recent_rows = all_vals[1:][-300:]
-                    for idx, r in enumerate(reversed(recent_rows)):
-                        if not any(r): continue
-                        row_dict = {}
-                        for h_idx, h_name in enumerate(headers):
-                            if h_idx < len(r):
-                                row_dict[h_name] = r[h_idx]
-                        
-                        mapped_list.append({
-                            "id": row_dict.get('SQL_ID') or f"gs_{idx}",
-                            "google_res_id": row_dict.get('SQL_ID') or f"gs_{idx}",
-                            "trip_date": row_dict.get('التاريخ') or '',
-                            "trip_time": row_dict.get('الوقت') or '',
-                            "customer_name": row_dict.get('العميل') or '',
-                            "manual_client_name": row_dict.get('العميل') or '',
-                            "customer_phone": row_dict.get('هاتف العميل') or '',
-                            "pickup_address": row_dict.get('من') or '',
-                            "dropoff_address": row_dict.get('إلى') or '',
-                            "cost": row_dict.get('السعر') or 0,
-                            "estimated_price": row_dict.get('السعر') or 0,
-                            "booking_employee": row_dict.get('الموظف') or '',
-                            "trip_type": row_dict.get('النوع') or 'سيارة',
-                            "car_type": row_dict.get('النوع') or 'سيارة',
-                            "status": "approved",
-                            "admin_notes": row_dict.get('ملاحظات') or '',
-                            "payment_status": row_dict.get('الدفع') or ''
-                        })
-                    
-                    _fallback_reservations_cache["data"] = mapped_list
-                    _fallback_reservations_cache["time"] = now
-                    return {"status": "ok", "source": "sheet", "data": mapped_list}
-    except Exception as e:
-        print("Fallback reservations error:", e)
-    
-    return {"status": "ok", "source": "cache_fallback", "data": _fallback_reservations_cache["data"]}
-
-
-@app.get("/api/omnichannel/fallback")
-async def get_omnichannel_fallback():
-    """
-    Fallback endpoint to serve omnichannel messages/chats directly from Google Sheet
-    when Supabase is restricted.
-    """
-    now = time.time()
-    if _fallback_chats_cache["data"] and (now - _fallback_chats_cache["time"] < 30):
-        return {"status": "ok", "source": "cache", "data": _fallback_chats_cache["data"]}
-    
-    try:
-        token = _get_google_auth_token()
-        if token:
-            sheet_id = "1-YglRYU8RZ6fl8xoWBNgxiV5IRna4KgE8ynpjsjtCD4"
-            encoded_range = urllib.parse.quote("Chat_Logs!A1:D300")
-            url = f"https://sheets.googleapis.com/v4/spreadsheets/{sheet_id}/values/{encoded_range}"
-            req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
-            
-            with urllib.request.urlopen(req) as resp:
-                result = json.loads(resp.read().decode('utf-8'))
-                all_vals = result.get('values', [])
-                if all_vals and len(all_vals) > 1:
-                    headers = all_vals[0]
-                    mapped_list = []
-                    recent_rows = all_vals[1:][-200:]
-                    for idx, r in enumerate(reversed(recent_rows)):
-                        if not any(r): continue
-                        row_dict = {}
-                        for h_idx, h_name in enumerate(headers):
-                            if h_idx < len(r):
-                                row_dict[h_name] = r[h_idx]
-                        
-                        sender_id = row_dict.get('رقم الهاتف') or row_dict.get('Sender_ID') or f"user_{idx}"
-                        sender_name = row_dict.get('المرسل') or row_dict.get('Sender_Name') or sender_id
-                        msg_text = row_dict.get('الرسالة') or row_dict.get('Message') or ''
-                        created_at = row_dict.get('التوقيت') or row_dict.get('Timestamp') or ''
-                        is_admin = str(sender_name).lower() in ['admin', 'bot', 'الموظف', 'الإدارة', 'إدارة']
-                        
-                        mapped_list.append({
-                            "id": f"gs_msg_{idx}",
-                            "sender_id": sender_id,
-                            "sender_name": sender_name,
-                            "channel": "whatsapp",
-                            "message_text": msg_text,
-                            "message_type": "text",
-                            "is_from_admin": is_admin,
-                            "created_at": created_at
-                        })
-                    
-                    _fallback_chats_cache["data"] = mapped_list
-                    _fallback_chats_cache["time"] = now
-                    return {"status": "ok", "source": "sheet", "data": mapped_list}
-    except Exception as e:
-        print("Fallback chats error:", e)
+        import pg8000.native
+        import ssl
         
-    return {"status": "ok", "source": "cache_fallback", "data": _fallback_chats_cache["data"]}
+        NEON_USER = os.getenv("PGUSER", "neondb_owner")
+        NEON_PASSWORD = os.getenv("PGPASSWORD", "npg_VM4tSBwN5PGd")
+        NEON_HOST = os.getenv("PGHOST", "ep-plain-rice-auzortld-pooler.c-10.us-east-1.aws.neon.tech")
+        NEON_DB = os.getenv("PGDATABASE", "neondb")
+        
+        con = pg8000.native.Connection(
+            user=NEON_USER,
+            password=NEON_PASSWORD,
+            host=NEON_HOST,
+            port=5432,
+            database=NEON_DB,
+            ssl_context=ssl.create_default_context(),
+            timeout=8
+        )
+        
+        sql = """
+            SELECT id, sheet_row, trip_date, trip_time, customer_name, customer_phone,
+                   whatsapp_num, pickup_address, dropoff_address, passengers, bags, car_type,
+                   cost, email, notes, trip_type, booking_employee, status, sql_server_id,
+                   modified_driver_name, modified_driver_phone, driver_msg_status,
+                   confirm_msg_status, client_decision, location_link, rating_stars,
+                   trip_status, created_at
+            FROM google_reservations
+            WHERE 1=1
+        """
+        params = {}
+        if date:
+            d_clean = date.replace('/', '-').strip()
+            d_slash = date.replace('-', '/').strip()
+            sql += " AND (trip_date = :d1 OR trip_date = :d2 OR trip_date LIKE :d3)"
+            params["d1"] = d_clean
+            params["d2"] = d_slash
+            params["d3"] = f"%{d_clean}%"
+            
+        if query:
+            q_clean = query.strip()
+            sql += " AND (customer_name ILIKE :q OR customer_phone ILIKE :q OR pickup_address ILIKE :q OR dropoff_address ILIKE :q)"
+            params["q"] = f"%{q_clean}%"
+            
+        sql += " ORDER BY trip_time ASC, id DESC LIMIT :lim;"
+        params["lim"] = limit
+        
+        rows = con.run(sql, **params)
+        cols = [
+            "id", "sheet_row", "trip_date", "trip_time", "customer_name", "customer_phone",
+            "whatsapp_num", "pickup_address", "dropoff_address", "passengers", "bags", "car_type",
+            "cost", "email", "notes", "trip_type", "booking_employee", "status", "sql_server_id",
+            "modified_driver_name", "modified_driver_phone", "driver_msg_status",
+            "confirm_msg_status", "client_decision", "location_link", "rating_stars",
+            "trip_status", "created_at"
+        ]
+        
+        results = []
+        for r in rows:
+            d = dict(zip(cols, r))
+            d["estimated_price"] = d["cost"]
+            d["manual_client_name"] = d["customer_name"]
+            d["client_phone"] = d["customer_phone"]
+            d["pickup_location"] = d["pickup_address"]
+            d["dropoff_location"] = d["dropoff_address"]
+            if d.get("created_at"):
+                d["created_at"] = str(d["created_at"])
+            results.append(d)
+            
+        con.close()
+        return {"status": "ok", "source": "neon_postgres", "data": results}
+    except Exception as e:
+        print("Neon query error, attempting Google Sheet fallback:", e)
+        
+    # Fallback to Google Sheets
+    try:
+        token = _get_google_auth_token()
+        if token:
+            sheet_id = "1-YglRYU8RZ6fl8xoWBNgxiV5IRna4KgE8ynpjsjtCD4"
+            encoded_range = urllib.parse.quote("'امر حجز عميل'!A1:AJ300")
+            url = f"https://sheets.googleapis.com/v4/spreadsheets/{sheet_id}/values/{encoded_range}"
+            req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+            with urllib.request.urlopen(req) as resp:
+                result = json.loads(resp.read().decode('utf-8'))
+                all_vals = result.get('values', [])
+                if all_vals and len(all_vals) > 1:
+                    mapped_list = []
+                    for idx, r in enumerate(reversed(all_vals[1:][-300:])):
+                        while len(r) < 35: r.append('')
+                        if not any(r): continue
+                        mapped_list.append({
+                            "id": r[16] or f"gs_{idx}",
+                            "sheet_row": idx + 2,
+                            "trip_date": r[1],
+                            "trip_time": r[2],
+                            "customer_name": r[3],
+                            "manual_client_name": r[3],
+                            "customer_phone": r[4],
+                            "client_phone": r[4],
+                            "whatsapp_num": r[5],
+                            "pickup_address": r[6],
+                            "dropoff_address": r[7],
+                            "pickup_location": r[6],
+                            "dropoff_location": r[7],
+                            "passengers": r[8] or 1,
+                            "bags": r[9] or 0,
+                            "car_type": r[10] or 'سيدان',
+                            "cost": r[12] or 0,
+                            "estimated_price": r[12] or 0,
+                            "booking_employee": r[17],
+                            "status": r[19] or 'pending',
+                            "modified_driver_name": r[21],
+                            "modified_driver_phone": r[22],
+                            "driver_msg_status": r[24],
+                            "confirm_msg_status": r[26],
+                            "client_decision": r[27],
+                            "trip_status": r[34]
+                        })
+                    return {"status": "ok", "source": "sheet", "data": mapped_list}
+    except Exception as es:
+        print("Sheet fallback error:", es)
+        
+    return {"status": "ok", "source": "cache_fallback", "data": _fallback_reservations_cache.get("data", [])}
+
+
+@app.get("/api/omnichannel_messages")
+@app.get("/api/omnichannel/fallback")
+async def get_omnichannel_api(sender_id: str = None, channel: str = None, limit: int = 200):
+    """
+    Fetch omnichannel chat messages directly from Neon Postgres.
+    """
+    try:
+        import pg8000.native
+        import ssl
+        
+        NEON_USER = os.getenv("PGUSER", "neondb_owner")
+        NEON_PASSWORD = os.getenv("PGPASSWORD", "npg_VM4tSBwN5PGd")
+        NEON_HOST = os.getenv("PGHOST", "ep-plain-rice-auzortld-pooler.c-10.us-east-1.aws.neon.tech")
+        NEON_DB = os.getenv("PGDATABASE", "neondb")
+        
+        con = pg8000.native.Connection(
+            user=NEON_USER,
+            password=NEON_PASSWORD,
+            host=NEON_HOST,
+            port=5432,
+            database=NEON_DB,
+            ssl_context=ssl.create_default_context(),
+            timeout=8
+        )
+        
+        sql = "SELECT id, channel, sender_id, sender_name, message_text, is_from_admin, read_by_admin, created_at FROM omnichannel_messages WHERE 1=1"
+        params = {}
+        if sender_id:
+            sql += " AND sender_id = :sid"
+            params["sid"] = str(sender_id).strip()
+        if channel:
+            sql += " AND channel = :ch"
+            params["ch"] = str(channel).strip()
+            
+        sql += " ORDER BY created_at DESC LIMIT :lim;"
+        params["lim"] = limit
+        
+        rows = con.run(sql, **params)
+        cols = ["id", "channel", "sender_id", "sender_name", "message_text", "is_from_admin", "read_by_admin", "created_at"]
+        results = []
+        for r in rows:
+            d = dict(zip(cols, r))
+            if d.get("created_at"):
+                d["created_at"] = str(d["created_at"])
+            results.append(d)
+            
+        con.close()
+        return {"status": "ok", "source": "neon_postgres", "data": results}
+    except Exception as e:
+        print("Neon chat query error:", e)
+        return {"status": "ok", "source": "empty", "data": []}
 
 if __name__ == "__main__":
     import uvicorn
