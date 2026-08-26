@@ -117,29 +117,106 @@ def upsert_to_supabase(records):
                 print_log(f"   ⚠️ خطأ استدعاء (ID) {i//batch_size + 1}: {e_post}")
                 errors += len(batch)
                 
-    # 2. رفع السجلات بدون id (on_conflict=sheet_row)
-    if records_without_id:
-        print_log(f"🔄 رفع {len(records_without_id)} سجل جديد بواسطة sheet_row...")
-        url_row = f"{SUPABASE_URL}/rest/v1/google_reservations?on_conflict=sheet_row"
-        for i in range(0, len(records_without_id), batch_size):
-            batch = records_without_id[i:i+batch_size]
-            try:
-                r = requests.post(url_row, headers=SUPABASE_HEADERS, json=batch, timeout=15)
-                if r.status_code in [200, 201]:
-                    success += len(batch)
-                elif _is_blocked(r):
-                    print_log(f"⛔ [402] Supabase حظرت المشروع. توقيف المزامنة لمدة 30 دقيقة تلقائياً...")
-                    SUPABASE_BLOCKED_UNTIL = time.time() + 1800
-                    errors += len(records)
-                    return success, errors
-                else:
-                    print_log(f"   ⚠️ خطأ في الدفعة (sheet_row) {i//batch_size + 1}: {r.status_code} - {r.text[:150]}")
-                    errors += len(batch)
-            except Exception as e_post:
-                print_log(f"   ⚠️ خطأ استدعاء (sheet_row) {i//batch_size + 1}: {e_post}")
-                errors += len(batch)
+def upsert_to_neon(records):
+    """رفع السجلات مباشرة إلى قاعدة بيانات Neon Postgres (Vercel) بدون أي قيود أو حظر"""
+    if not records:
+        return 0, 0
+    try:
+        import pg8000.native
+        import ssl
+        
+        NEON_USER = "neondb_owner"
+        NEON_PASSWORD = "npg_VM4tSBwN5PGd"
+        NEON_HOST = "ep-plain-rice-auzortld-pooler.c-10.us-east-1.aws.neon.tech"
+        NEON_DB = "neondb"
+        
+        con = pg8000.native.Connection(
+            user=NEON_USER,
+            password=NEON_PASSWORD,
+            host=NEON_HOST,
+            port=5432,
+            database=NEON_DB,
+            ssl_context=ssl.create_default_context()
+        )
+        
+        BATCH_SIZE = 100
+        success = 0
+        
+        for b_start in range(0, len(records), BATCH_SIZE):
+            batch = records[b_start:b_start+BATCH_SIZE]
+            placeholders = []
+            kwargs = {}
+            
+            for idx, r in enumerate(batch):
+                row_fields = []
+                keys = [
+                    "sheet_row", "sheet_timestamp", "trip_date", "trip_time", "customer_name", "customer_phone",
+                    "whatsapp_num", "pickup_address", "dropoff_address", "passengers", "bags", "car_type",
+                    "client_status", "cost", "email", "notes", "trip_type", "booking_employee",
+                    "status", "sql_server_id", "modified_driver_name", "modified_driver_phone",
+                    "driver_msg_status", "review_msg_status", "confirm_msg_status", "client_decision",
+                    "location_link", "rating_stars", "car_cleanliness", "driver_behavior",
+                    "recommend_us", "suggestions", "trip_status"
+                ]
+                for k in keys:
+                    param_k = f"{k}_{idx}"
+                    row_fields.append(f":{param_k}")
+                    kwargs[param_k] = r.get(k, "")
+                placeholders.append(f"({', '.join(row_fields)}, NOW())")
                 
-    return success, errors
+            sql = f"""
+            INSERT INTO google_reservations (
+                sheet_row, sheet_timestamp, trip_date, trip_time, customer_name, customer_phone,
+                whatsapp_num, pickup_address, dropoff_address, passengers, bags, car_type,
+                client_status, cost, email, notes, trip_type, booking_employee,
+                status, sql_server_id, modified_driver_name, modified_driver_phone,
+                driver_msg_status, review_msg_status, confirm_msg_status, client_decision,
+                location_link, rating_stars, car_cleanliness, driver_behavior,
+                recommend_us, suggestions, trip_status, updated_at
+            ) VALUES {', '.join(placeholders)}
+            ON CONFLICT (sheet_row) DO UPDATE SET
+                sheet_timestamp = EXCLUDED.sheet_timestamp,
+                trip_date = EXCLUDED.trip_date,
+                trip_time = EXCLUDED.trip_time,
+                customer_name = EXCLUDED.customer_name,
+                customer_phone = EXCLUDED.customer_phone,
+                whatsapp_num = EXCLUDED.whatsapp_num,
+                pickup_address = EXCLUDED.pickup_address,
+                dropoff_address = EXCLUDED.dropoff_address,
+                passengers = EXCLUDED.passengers,
+                bags = EXCLUDED.bags,
+                car_type = EXCLUDED.car_type,
+                client_status = EXCLUDED.client_status,
+                cost = EXCLUDED.cost,
+                email = EXCLUDED.email,
+                notes = EXCLUDED.notes,
+                trip_type = EXCLUDED.trip_type,
+                booking_employee = EXCLUDED.booking_employee,
+                status = EXCLUDED.status,
+                sql_server_id = EXCLUDED.sql_server_id,
+                modified_driver_name = EXCLUDED.modified_driver_name,
+                modified_driver_phone = EXCLUDED.modified_driver_phone,
+                driver_msg_status = EXCLUDED.driver_msg_status,
+                review_msg_status = EXCLUDED.review_msg_status,
+                confirm_msg_status = EXCLUDED.confirm_msg_status,
+                client_decision = EXCLUDED.client_decision,
+                location_link = EXCLUDED.location_link,
+                rating_stars = EXCLUDED.rating_stars,
+                car_cleanliness = EXCLUDED.car_cleanliness,
+                driver_behavior = EXCLUDED.driver_behavior,
+                recommend_us = EXCLUDED.recommend_us,
+                suggestions = EXCLUDED.suggestions,
+                trip_status = EXCLUDED.trip_status,
+                updated_at = NOW();
+            """
+            con.run(sql, **kwargs)
+            success += len(batch)
+            
+        con.close()
+        return success, 0
+    except Exception as e_neon:
+        print_log(f"⚠️ خطأ في مزامنة Neon Postgres: {e_neon}")
+        return 0, len(records)
 
 
 
@@ -448,6 +525,11 @@ while True:
                 print_log(f"✅ لا توجد تغييرات — تخطي الرفع لـ Supabase (توفير Bandwidth)")
             else:
                 print_log(f"📤 {len(changed_records)} سجل تغير من أصل {len(records)} — رفع المتغير فقط...")
+                # 1. رفع لـ Neon Postgres (Vercel)
+                neon_s, neon_e = upsert_to_neon(changed_records)
+                if neon_s > 0:
+                    print_log(f"✅ تم تحديث {neon_s} سجل في Neon Postgres (Vercel)")
+                # 2. رفع لـ Supabase
                 success, errors = upsert_to_supabase(changed_records)
                 if errors == 0:
                     print_log(f"✅ تمت المزامنة التدريجية بنجاح ({success} سجل)")
@@ -460,6 +542,11 @@ while True:
                 key = rec.get('sheet_row')
                 fp = f"{rec.get('trip_status')}|{rec.get('modified_driver_name')}|{rec.get('client_decision')}|{rec.get('cost')}|{rec.get('confirm_msg_status')}"
                 _last_sync_fingerprints[key] = fp
+            # 1. رفع لـ Neon Postgres (Vercel)
+            neon_s, neon_e = upsert_to_neon(records)
+            if neon_s > 0:
+                print_log(f"✅ تمت المزامنة الكاملة لـ Neon Postgres بنجاح ({neon_s} سجل)")
+            # 2. رفع لـ Supabase
             success, errors = upsert_to_supabase(records)
             if errors == 0:
                 print_log(f"✅ تمت المزامنة الكاملة بنجاح ({success} سجل)")
