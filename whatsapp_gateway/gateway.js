@@ -166,7 +166,9 @@ async function initSession(id, forceReconnect = false) {
     sock.ev.on('messages.upsert', async (m) => {
         // console.log(`[Gateway Debug] messages.upsert: type=${m.type}, count=${m.messages?.length}`);
         
-        if (m.type === 'notify' || m.type === 'append') {
+        // 🛡️ 'notify' = رسائل جديدة فعلاً
+        // 'append' = رسائل أرسلناها نحن (echo) — نتجاهلها لمنع التكرار
+        if (m.type === 'notify') {
             for (const msg of m.messages) {
                 // console.log(`[Gateway Debug] Processing message: fromMe=${msg.key?.fromMe}, remoteJid=${msg.key?.remoteJid}, hasMessage=${!!msg.message}`);
                 
@@ -382,6 +384,31 @@ async function initSession(id, forceReconnect = false) {
                                 console.error(`[Webhook Error] Failed to forward group message to Python:`, err.message);
                             }
                         } else {
+                            // 🛡️ تخطي الرسائل الصادرة منا (fromMe) لكيلا تدخل دورة الأتمتة التلقائية
+                            if (msg.key.fromMe) {
+                                // نحفظها فقط للداشبورد بدون إرسال لـ Python كيلا تشغّل الأتمتة التلقائية (تأكيد/إلغاء)
+                                try {
+                                    await axios.post(`${SUPABASE_URL}/rest/v1/omnichannel_messages`, {
+                                        channel: 'whatsapp',
+                                        sender_id: senderPhone,
+                                        sender_name: 'Admin',
+                                        message_text: text,
+                                        is_from_admin: true,
+                                        read_by_admin: true,
+                                        whatsapp_instance_id: id
+                                    }, {
+                                        headers: {
+                                            'apikey': SUPABASE_KEY,
+                                            'Authorization': `Bearer ${SUPABASE_KEY}`,
+                                            'Content-Type': 'application/json',
+                                            'Prefer': 'return=minimal'
+                                        }
+                                    });
+                                } catch (echoErr) {
+                                    // silent
+                                }
+                                continue;  // ⛔ لا ترسل لـ Python - هذا منع Echo Loop
+                            }
                             console.log(`[Gateway] Incoming msg from ${senderPhone} (Session ${id}): ${text}`);
                             let pythonSuccess = false;
                             try {

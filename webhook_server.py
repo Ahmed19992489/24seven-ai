@@ -538,6 +538,13 @@ def find_active_session(sheet, sender_phone, message_text=""):
             is_future_or_today = (trip_date is None) or (trip_date >= today)
             
             if is_future_or_today:
+                # ✅ تحقق من client_decision (AB = index 27) — لو أكد أو رفض، لا نعيد التأكيد
+                decision = str(row[27]).strip() if len(row) > 27 else ""
+                already_decided = decision in ["وافق", "مؤكد", "تأكيد", "رفض", "ملغي", "إلغاء", "الغاء"]
+                if already_decided:
+                    print(f"[Debug-Session] Row {i+1}: client already decided ('{decision}') — NOT a confirm session")
+                    continue  # تخطي هذه الرحلة لأن العميل حسم قراره
+                    
                 print(f"[Debug-Session] Found upcoming confirmation session on row {i+1} for sender {sender_phone}")
                 return i + 1, "confirm"
                     
