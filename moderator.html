@@ -6040,25 +6040,43 @@
             ).join('\n');
 
             try {
-                const apiBase = getApiBaseUrl() || 'https://24seven-ai.com';
-                const proxyUrl = `${apiBase}/api/ai_chat`;
+                // Ensure AI endpoint always calls the cloud HTTPS API
+                const proxyUrl = (window.location.protocol === 'file:' || window.location.origin.includes('localhost:3000'))
+                    ? 'https://24seven-ai.com/api/ai_chat' 
+                    : `${window.location.origin}/api/ai_chat`;
+
                 const res = await fetch(proxyUrl, {
                     method: 'POST',
                     headers: { 
-                        'Content-Type': 'application/json',
-                        'ngrok-skip-browser-warning': 'true'
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ 
                         messages: [{ role: 'user', content: clientQuery }],
                         recent_context: recentContext,
-                        max_tokens: 300 
+                        max_tokens: 400 
                     })
                 });
                 const data = await res.json();
                 const suggestion = data.answer || data.reply || (data.content?.[0]?.text) || 'أهلاً بحضرتك يا فندم 🌹 تفضل بتوضيح تفاصيل مشوارك وسنوافيك بالأسعار وتأكيد الحجز فوراً.';
                 textEl.textContent = suggestion;
             } catch (err) {
-                console.log('[Moderator] AI suggestion fallback:', err);
+                console.log('[Moderator] Primary AI fetch error, retrying direct cloud endpoint:', err);
+                try {
+                    const fallbackRes = await fetch('https://24seven-ai.com/api/ai_chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            messages: [{ role: 'user', content: clientQuery }],
+                            recent_context: recentContext,
+                            max_tokens: 400 
+                        })
+                    });
+                    const fbData = await fallbackRes.json();
+                    if (fbData && (fbData.answer || fbData.reply)) {
+                        textEl.textContent = fbData.answer || fbData.reply;
+                        return;
+                    }
+                } catch(e) {}
                 textEl.textContent = 'أهلاً بحضرتك يا فندم 🌹 تفضل بتوضيح تفاصيل مشوارك وسنوافيك بالأسعار وتأكيد الحجز فوراً.';
             }
         }
