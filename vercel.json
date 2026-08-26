@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/api/reservations", "destination": "/api/reservations.py" },
+    { "source": "/api/reservations/fallback", "destination": "/api/reservations.py" },
+    { "source": "/api/omnichannel_messages", "destination": "/api/omnichannel_messages.py" },
+    { "source": "/api/omnichannel/fallback", "destination": "/api/omnichannel_messages.py" },
+    { "source": "/api/health", "destination": "/api/health.py" },
+    { "source": "/api/ai_chat", "destination": "/api/ai_chat.py" },
+    { "source": "/api/send_reply", "destination": "/api/send_reply.py" },
+    { "source": "/api/messenger", "destination": "/api/messenger.py" },
+    { "source": "/api/whatsapp", "destination": "/api/whatsapp.py" },
+    { "source": "/api/instagram", "destination": "/api/instagram.py" }
+  ]
+}
