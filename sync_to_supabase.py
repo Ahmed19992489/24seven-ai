@@ -266,7 +266,20 @@ while True:
                         m_emp = m_res.get('booking_employee') or 'موقع الويب'
                         m_ts = datetime.now().strftime('%Y/%m/%d %H:%M:%S')
 
-                        new_row = [m_ts, m_date, m_time, m_name, m_phone, m_whatsapp, m_pickup, m_dropoff, m_pax, m_bags, m_car, m_status, m_cost, m_email, m_notes, m_type, m_web_id, m_emp]
+                        # 🔒 تنظيف أرقام الهاتف: إزالة + والمسافات لمنع #ERROR! في Google Sheets
+                        # Google Sheets يفسر +20... كـ formula فيعطي #ERROR!
+                        def safe_phone(p):
+                            p = str(p).strip()
+                            # إزالة + من البداية فقط
+                            p = re.sub(r'^\+', '', p)
+                            # إزالة المسافات
+                            p = p.replace(' ', '')
+                            return p
+                        
+                        m_phone_safe = safe_phone(m_phone)
+                        m_whatsapp_safe = safe_phone(m_whatsapp)
+
+                        new_row = [m_ts, m_date, m_time, m_name, m_phone_safe, m_whatsapp_safe, m_pickup, m_dropoff, m_pax, m_bags, m_car, m_status, m_cost, m_email, m_notes, m_type, m_web_id, m_emp]
                         worksheet.append_row(new_row, value_input_option='USER_ENTERED')
                         current_last_row = len(worksheet.get_all_values())
                         
