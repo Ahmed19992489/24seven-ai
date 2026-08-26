@@ -6126,6 +6126,78 @@
         window.addEventListener('DOMContentLoaded', initChatInputAutoGrow);
         setTimeout(initChatInputAutoGrow, 1000);
 
+        // ============================================================
+        // 🔁 Auto-Reconnect: يستعيد الرسائل تلقائياً لما الشاشة تفتح
+        // أو لما الإنترنت يرجع — بدون حاجة لريفرش يدوي
+        // ============================================================
+        let _lastHiddenAt = null;
+        let _reconnectDebounce = null;
+
+        async function _reconnectAndSync() {
+            console.log('[24Seven] 🔁 Screen/network back — resyncing messages...');
+            try {
+                // 1. جلب أي رسائل جديدة من وقت اختفاء الشاشة حتى الآن
+                const since = _lastHiddenAt
+                    ? new Date(_lastHiddenAt - 5000).toISOString()
+                    : new Date(Date.now() - 120000).toISOString(); // آخر 2 دقيقة كحد أقصى احتياطي
+
+                if (sbClient) {
+                    const { data: missed } = await sbClient
+                        .from('omnichannel_messages')
+                        .select('id, sender_id, sender_name, channel, message_text, is_from_admin, created_at, read_by_admin, whatsapp_instance_id')
+                        .gte('created_at', since)
+                        .order('created_at', { ascending: true });
+
+                    if (missed && missed.length > 0) {
+                        let hasNew = false;
+                        missed.forEach(m => {
+                            if (!allMessages.some(existing => existing.id === m.id)) {
+                                allMessages.push(m);
+                                hasNew = true;
+                            }
+                        });
+                        if (hasNew) {
+                            console.log(`[24Seven] ✅ Synced ${missed.length} missed message(s)`);
+                            regroupChatsOnly();
+                            renderChatList();
+                            if (activeChatId) renderMessages();
+                            playNotify();
+                        }
+                    }
+                }
+
+                // 2. إعادة الاشتراك في Supabase Realtime إذا انقطع
+                if (chatSubscription) {
+                    const state = chatSubscription.state;
+                    if (state === 'closed' || state === 'errored' || state === 'leaving') {
+                        console.log('[24Seven] 🔌 Realtime channel disconnected — resubscribing...');
+                        chatSubscription = null;
+                        loadChats();
+                    }
+                }
+            } catch(e) {
+                console.warn('[24Seven] Reconnect sync error:', e);
+            }
+        }
+
+        // حدث: رجوع الشاشة (فتح اللاب توب، إلغاء القفل، تبديل التبويبات)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                _lastHiddenAt = Date.now();
+            } else {
+                // الشاشة رجعت — نستنى ثانية واحدة للتأكد من استقرار الاتصال
+                clearTimeout(_reconnectDebounce);
+                _reconnectDebounce = setTimeout(_reconnectAndSync, 1000);
+            }
+        });
+
+        // حدث: رجوع الإنترنت بعد انقطاع
+        window.addEventListener('online', () => {
+            console.log('[24Seven] 🌐 Network restored — resyncing...');
+            clearTimeout(_reconnectDebounce);
+            _reconnectDebounce = setTimeout(_reconnectAndSync, 1500);
+        });
+
         //  💬 Feature 4: Admin AI Assistant Tab
         // ============================================================
         let aiChatHistory = [];
