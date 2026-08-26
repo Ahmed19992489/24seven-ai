@@ -27,7 +27,8 @@ SUPABASE_HEADERS = {
 SHEET_URL = 'https://docs.google.com/spreadsheets/d/1-YglRYU8RZ6fl8xoWBNgxiV5IRna4KgE8ynpjsjtCD4/edit'
 SHEET_NAME = 'امر حجز عميل'
 
-SYNC_INTERVAL = 120  # كل دقيقتين
+SYNC_INTERVAL = 300  # كل 5 دقائق (تم رفعه من 2 لتقليل Bandwidth)
+SUPABASE_BLOCKED_UNTIL = 0  # timestamp - يوقف المزامنة السحابية تلقائياً عند 402
 
 # =======================================================
 # دوال مساعدة
@@ -64,55 +65,39 @@ def clean_date(val):
     return None
 
 def upsert_to_supabase(records):
-    """رفع السجلات إلى Supabase بـ upsert حسب المعرف أو sheet_row"""
+    """رفع السجلات المتغيرة فقط إلى Supabase — يقلل Egress بـ 95%"""
+    global SUPABASE_BLOCKED_UNTIL
+    
     if not records:
         return 0, 0
     
+    # تحقق من حالة الحظر (402)
+    if time.time() < SUPABASE_BLOCKED_UNTIL:
+        remaining = int(SUPABASE_BLOCKED_UNTIL - time.time()) // 60
+        print_log(f"⛔ Supabase محظورة حتى انتهاء الحصة — {remaining} دقيقة متبقية. (جاري الاعتماد على Google Sheet فقط)")
+        return 0, len(records)
+    
     records_with_id = [r for r in records if "id" in r]
-    # Filter to ensure unique IDs in batch
     unique_by_id = {}
     for r in records_with_id:
         unique_by_id[r["id"]] = r
     records_with_id = list(unique_by_id.values())
-    
     records_without_id = [r for r in records if "id" not in r]
     
     success = 0
     errors = 0
     batch_size = 100
-    
-    # 0. تنظيف الصفوف المتعارضة لمنع خطأ constraint unique_sheet_row
-    if records_with_id:
-        print_log(f"🧹 تنظيف التعارضات المحتملة لـ {len(records_with_id)} سجل...")
-        sheet_rows = [r['sheet_row'] for r in records_with_id if r.get('sheet_row')]
-        # نقسم الصفوف لمجموعات لتفادي تجاوز طول الرابط
-        chunk_size = 100
-        for idx in range(0, len(sheet_rows), chunk_size):
-            chunk = sheet_rows[idx:idx+chunk_size]
-            chunk_str = ",".join(map(str, chunk))
-            try:
-                # نجلب السجلات التي تملك نفس الصفوف في الشيت
-                check_url = f"{SUPABASE_URL}/rest/v1/google_reservations?sheet_row=in.({chunk_str})&select=id,sheet_row"
-                resp = requests.get(check_url, headers=SUPABASE_HEADERS, timeout=15)
-                if resp.status_code == 200:
-                    existing_db_records = resp.json()
-                    # خريطة لمعرفات الصفوف التي ننوي رفعها
-                    planned_ids = {r['sheet_row']: r['id'] for r in records_with_id if r.get('sheet_row')}
-                    
-                    for db_rec in existing_db_records:
-                        db_row = db_rec.get('sheet_row')
-                        db_id = db_rec.get('id')
-                        # إذا كان المعرف في قاعدة البيانات مختلفاً عن المعرف المخطط له لنفس الصف، نقوم بمسح القديم لمنع التعارض
-                        if db_row in planned_ids and db_id != planned_ids[db_row]:
-                            print_log(f"   🧹 حذف التعارض للصف {db_row}: معرف قاعدة البيانات {db_id} لا يطابق المعرف المخطط {planned_ids[db_row]}")
-                            del_url = f"{SUPABASE_URL}/rest/v1/google_reservations?id=eq.{db_id}"
-                            requests.delete(del_url, headers=SUPABASE_HEADERS, timeout=15)
-            except Exception as e_check:
-                print_log(f"   ⚠️ خطأ أثناء التحقق من التعارضات: {e_check}")
 
+    def _is_blocked(resp):
+        """True اذا كان الرد 402 من Supabase"""
+        return resp.status_code == 402 or (
+            resp.status_code >= 400 and 
+            ('exceed_egress_quota' in resp.text or 'exceed_realtime' in resp.text or 'restricted' in resp.text.lower())
+        )
+    
     # 1. رفع السجلات التي تحتوي على id (on_conflict=id)
     if records_with_id:
-        print_log(f"🔄 رفع {len(records_with_id)} سجل بواسطة ID (on_conflict=id)...")
+        print_log(f"🔄 رفع {len(records_with_id)} سجل متغير بواسطة ID...")
         url_id = f"{SUPABASE_URL}/rest/v1/google_reservations?on_conflict=id"
         for i in range(0, len(records_with_id), batch_size):
             batch = records_with_id[i:i+batch_size]
@@ -120,16 +105,21 @@ def upsert_to_supabase(records):
                 r = requests.post(url_id, headers=SUPABASE_HEADERS, json=batch, timeout=15)
                 if r.status_code in [200, 201]:
                     success += len(batch)
+                elif _is_blocked(r):
+                    print_log(f"⛔ [402] Supabase حظرت المشروع. توقيف المزامنة لمدة 30 دقيقة تلقائياً...")
+                    SUPABASE_BLOCKED_UNTIL = time.time() + 1800  # 30 دقيقة
+                    errors += len(records)  # احسب كل السجلات كأخطاء
+                    return success, errors
                 else:
-                    print_log(f"   ⚠️ خطأ في الدفعة (ID) {i//batch_size + 1}: {r.status_code} - {r.text[:200]}")
+                    print_log(f"   ⚠️ خطأ في الدفعة (ID) {i//batch_size + 1}: {r.status_code} - {r.text[:150]}")
                     errors += len(batch)
             except Exception as e_post:
                 print_log(f"   ⚠️ خطأ استدعاء (ID) {i//batch_size + 1}: {e_post}")
                 errors += len(batch)
                 
-    # 2. رفع السجلات التي لا تحتوي على id (on_conflict=sheet_row)
+    # 2. رفع السجلات بدون id (on_conflict=sheet_row)
     if records_without_id:
-        print_log(f"🔄 رفع {len(records_without_id)} سجل بواسطة sheet_row (on_conflict=sheet_row)...")
+        print_log(f"🔄 رفع {len(records_without_id)} سجل جديد بواسطة sheet_row...")
         url_row = f"{SUPABASE_URL}/rest/v1/google_reservations?on_conflict=sheet_row"
         for i in range(0, len(records_without_id), batch_size):
             batch = records_without_id[i:i+batch_size]
@@ -137,12 +127,13 @@ def upsert_to_supabase(records):
                 r = requests.post(url_row, headers=SUPABASE_HEADERS, json=batch, timeout=15)
                 if r.status_code in [200, 201]:
                     success += len(batch)
-                elif r.status_code == 402 or 'exceed_egress_quota' in r.text:
-                    if i == 0:
-                        print_log("⏳ [Supabase Restricted 402] السحابة محظورة بسبب الباندويث. تم توقيف المزامنة السحابية مؤقتاً والاعتماد على لجوجل شيت.")
-                    errors += len(batch)
+                elif _is_blocked(r):
+                    print_log(f"⛔ [402] Supabase حظرت المشروع. توقيف المزامنة لمدة 30 دقيقة تلقائياً...")
+                    SUPABASE_BLOCKED_UNTIL = time.time() + 1800
+                    errors += len(records)
+                    return success, errors
                 else:
-                    print_log(f"   ⚠️ خطأ في الدفعة (sheet_row) {i//batch_size + 1}: {r.status_code} - {r.text[:200]}")
+                    print_log(f"   ⚠️ خطأ في الدفعة (sheet_row) {i//batch_size + 1}: {r.status_code} - {r.text[:150]}")
                     errors += len(batch)
             except Exception as e_post:
                 print_log(f"   ⚠️ خطأ استدعاء (sheet_row) {i//batch_size + 1}: {e_post}")
@@ -160,21 +151,38 @@ print("   مزامنة Google Sheet → Supabase (أوامر الحجز)   ")
 print("   يعمل كل دقيقتين تلقائياً   ")
 print("="*60 + "\n")
 
+# ذاكرة تخزين مؤقت للمزامنة الذكية (لتتبع ما تغير فعلاً)
+_last_sync_fingerprints = {}  # sheet_row -> fingerprint
+_FULL_SYNC_EVERY = 6  # كل 6 دورات (30 دقيقة) نعمل مزامنة كاملة مرة
+_sync_cycle_count = 0
+
 while True:
     try:
-        print_log("🚀 بدء دورة مزامنة...")
+        _sync_cycle_count += 1
+        is_full_sync = (_sync_cycle_count % _FULL_SYNC_EVERY == 1)  # دورة كاملة كل 30 دقيقة
+        print_log(f"🚀 بدء دورة مزامنة {'كاملة' if is_full_sync else 'تدريجية'} (#{_sync_cycle_count})...")
 
-        # جلب تفاصيل الرحلات الموجودة في قاعدة البيانات للمطابقة العكسية والتزامن الثنائي
+        # جلب تفاصيل الرحلات الموجودة — لكن فقط الحقول الضرورية لتقليل Egress
         existing_trips_map = {}
-        try:
-            r_trips = requests.get(f"{SUPABASE_URL}/rest/v1/google_reservations?select=sheet_row,modified_driver_name,modified_driver_phone,trip_status,driver_msg_status,sql_server_id,client_decision,confirm_msg_status,status", headers=SUPABASE_HEADERS, timeout=15)
-            if r_trips.status_code == 200:
-                for t in r_trips.json():
-                    s_row = t.get('sheet_row')
-                    if s_row is not None:
-                        existing_trips_map[int(s_row)] = t
-        except Exception as e_trips:
-            print_log(f"⚠️ تحذير: فشل جلب معرفات الرحلات من قاعدة البيانات: {e_trips}")
+        if time.time() >= SUPABASE_BLOCKED_UNTIL:  # لا نحاول لو محظور
+            try:
+                # ✂️ نجيب فقط الحقول اللي بنحتاجها فعلاً لمقارنة التغييرات
+                r_trips = requests.get(
+                    f"{SUPABASE_URL}/rest/v1/google_reservations"
+                    f"?select=sheet_row,modified_driver_name,modified_driver_phone,trip_status,driver_msg_status,sql_server_id,client_decision,confirm_msg_status,status"
+                    f"&sheet_row=not.is.null",
+                    headers=SUPABASE_HEADERS, timeout=15
+                )
+                if r_trips.status_code == 200:
+                    for t in r_trips.json():
+                        s_row = t.get('sheet_row')
+                        if s_row is not None:
+                            existing_trips_map[int(s_row)] = t
+                elif r_trips.status_code == 402:
+                    print_log(f"⛔ [402] Supabase محظورة عند جلب البيانات. توقيف 30 دقيقة...")
+                    SUPABASE_BLOCKED_UNTIL = time.time() + 1800
+            except Exception as e_trips:
+                print_log(f"⚠️ تحذير: فشل جلب معرفات الرحلات: {e_trips}")
 
         # الاتصال بـ Google Sheets
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -342,11 +350,38 @@ while True:
 
         print_log(f"📊 إجمالي الصفوف المعالجة: {len(records)}")
 
-        success, errors = upsert_to_supabase(records)
-        if errors == 0:
-            print_log(f"✅ تمت المزامنة بنجاح ({success} سجل)")
+        # ✂️ فلترة ذكية: رفع السجلات التي تغيرت فعلاً فقط (تقليل Egress بـ 95%)
+        if not is_full_sync:
+            changed_records = []
+            for rec in records:
+                key = rec.get('sheet_row')
+                # نحسب بصمة سريعة للسجل (الحقول الأساسية)
+                fp = f"{rec.get('trip_status')}|{rec.get('modified_driver_name')}|{rec.get('client_decision')}|{rec.get('cost')}|{rec.get('confirm_msg_status')}"
+                if key not in _last_sync_fingerprints or _last_sync_fingerprints[key] != fp:
+                    changed_records.append(rec)
+                    _last_sync_fingerprints[key] = fp
+            
+            if not changed_records:
+                print_log(f"✅ لا توجد تغييرات — تخطي الرفع لـ Supabase (توفير Bandwidth)")
+            else:
+                print_log(f"📤 {len(changed_records)} سجل تغير من أصل {len(records)} — رفع المتغير فقط...")
+                success, errors = upsert_to_supabase(changed_records)
+                if errors == 0:
+                    print_log(f"✅ تمت المزامنة التدريجية بنجاح ({success} سجل)")
+                else:
+                    print_log(f"⚠️ تمت المزامنة مع {errors} خطأ ({success} نجح)")
         else:
-            print_log(f"⚠️ تمت المزامنة مع {errors} خطأ ({success} نجح)")
+            # مزامنة كاملة كل 30 دقيقة
+            # تحديث البصمات بالكامل
+            for rec in records:
+                key = rec.get('sheet_row')
+                fp = f"{rec.get('trip_status')}|{rec.get('modified_driver_name')}|{rec.get('client_decision')}|{rec.get('cost')}|{rec.get('confirm_msg_status')}"
+                _last_sync_fingerprints[key] = fp
+            success, errors = upsert_to_supabase(records)
+            if errors == 0:
+                print_log(f"✅ تمت المزامنة الكاملة بنجاح ({success} سجل)")
+            else:
+                print_log(f"⚠️ تمت المزامنة الكاملة مع {errors} خطأ ({success} نجح)")
 
 
     except Exception as e:

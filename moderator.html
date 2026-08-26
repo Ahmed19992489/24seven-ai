@@ -1936,7 +1936,7 @@
                 })
                 .subscribe();
 
-            // 🔄 Polling فائق السرعة كل 3 ثواني كنسخة احتياطية لضمان ظهور الرسائل فوراً بدون ريفرش
+            // 🔄 Polling احتياطي كل 30 ثانية (تم رفعه من 3 ثواني لتوفير Realtime Quota)
             if (!window.omniFastPoller) {
                 window.omniFastPoller = setInterval(async () => {
                     if (!sbClient) return;
@@ -1966,7 +1966,7 @@
                             }
                         }
                     } catch (e) {}
-                }, 3000);
+                }, 30000);  // 30 ثانية (كان 3 ثواني) — تقليل Realtime Quota بـ 90%
             }
         }
 
