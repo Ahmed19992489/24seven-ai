@@ -193,38 +193,108 @@ while True:
 
         # فحص الحجوزات السحابية الجديدة وغير الموجودة بالشيت لدفعها فوراً
         try:
-            r_missing = requests.get(f"{SUPABASE_URL}/rest/v1/google_reservations?sheet_row=is.null&order=created_at.asc&limit=15", headers=SUPABASE_HEADERS, timeout=10)
-            if r_missing.status_code == 200:
-                missing_res = r_missing.json()
-                for m_res in missing_res:
-                    res_id = m_res.get('id')
-                    m_name = (m_res.get('customer_name') or '').strip()
-                    m_phone = str(m_res.get('customer_phone') or '').strip()
-                    if not m_name or m_name == 'عميل' or not m_phone or len(clean_phone(m_phone)) < 8:
-                        # تجاهل الصفوف الفارغة أو الوهمية
-                        continue
-                    m_date = (m_res.get('trip_date') or '').replace('-', '/')
-                    m_time = m_res.get('trip_time') or ''
-                    m_whatsapp = str(m_res.get('whatsapp_num') or m_phone)
-                    m_pickup = m_res.get('pickup_address') or ''
-                    m_dropoff = m_res.get('dropoff_address') or ''
-                    m_pax = str(m_res.get('passengers') or '1')
-                    m_bags = str(m_res.get('bags') or '0')
-                    m_car = m_res.get('car_type') or 'سيدان'
-                    m_status = m_res.get('client_status') or 'عميل ويب'
-                    m_cost = str(m_res.get('cost') or '0')
-                    m_email = m_res.get('email') or ''
-                    m_notes = m_res.get('notes') or ''
-                    m_type = m_res.get('trip_type') or 'ذهاب فقط'
-                    m_web_id = str(res_id)
-                    m_emp = m_res.get('booking_employee') or 'موقع الويب'
-                    m_ts = datetime.now().strftime('%Y/%m/%d %H:%M:%S')
+            if time.time() >= SUPABASE_BLOCKED_UNTIL:  # لا نحاول لو محظور
+                r_missing = requests.get(
+                    f"{SUPABASE_URL}/rest/v1/google_reservations?sheet_row=is.null&order=created_at.asc&limit=15",
+                    headers=SUPABASE_HEADERS, timeout=10
+                )
+                if r_missing.status_code == 200:
+                    missing_res = r_missing.json()
+                    
+                    # نجلب بيانات الشيت الحالية للتحقق من التكرار مسبقاً
+                    all_sheet_vals = worksheet.get_all_values()
+                    
+                    for m_res in missing_res:
+                        res_id = m_res.get('id')
+                        m_name = (m_res.get('customer_name') or '').strip()
+                        m_phone = str(m_res.get('customer_phone') or '').strip()
+                        if not m_name or m_name == 'عميل' or not m_phone or len(clean_phone(m_phone)) < 8:
+                            continue
+                        m_date = (m_res.get('trip_date') or '').replace('-', '/')
+                        m_time = m_res.get('trip_time') or ''
+                        
+                        # ✅ فحص 1: هل يوجد نفس الحجز بالفعل في الشيت (نفس الهاتف + التاريخ + الوقت)؟
+                        clean_m_phone = clean_phone(m_phone)
+                        duplicate_in_sheet = False
+                        duplicate_row_num = -1
+                        for si, srow in enumerate(all_sheet_vals[1:], start=2):
+                            while len(srow) < 17: srow.append('')
+                            sheet_phone = clean_phone(str(srow[4]))  # عمود E
+                            sheet_date = str(srow[1]).strip()        # عمود B
+                            sheet_time = str(srow[2]).strip()        # عمود C
+                            sheet_web_id = str(srow[16]).strip()     # عمود Q (web_id)
+                            
+                            # تطابق بـ web_id (الأدق)
+                            if sheet_web_id == str(res_id):
+                                duplicate_in_sheet = True
+                                duplicate_row_num = si
+                                break
+                            # أو تطابق بهاتف + تاريخ + وقت
+                            if (len(clean_m_phone) >= 8 and clean_m_phone[-8:] == sheet_phone[-8:] and
+                                m_date and sheet_date and m_date.replace('/', '-').split('T')[0] == sheet_date.replace('/', '-').split('T')[0] and
+                                m_time.strip()[:5] == sheet_time.strip()[:5]):
+                                duplicate_in_sheet = True
+                                duplicate_row_num = si
+                                break
+                        
+                        if duplicate_in_sheet:
+                            # الصف موجود في الشيت لكن sheet_row غير محدث في Supabase — نصلحه فقط
+                            if duplicate_row_num > 0:
+                                patch_r = requests.patch(
+                                    f"{SUPABASE_URL}/rest/v1/google_reservations?id=eq.{res_id}",
+                                    headers=SUPABASE_HEADERS, json={'sheet_row': duplicate_row_num}, timeout=5
+                                )
+                                if patch_r.status_code in [200, 204]:
+                                    print_log(f"🔗 ربط حجز موجود ({m_name} - {m_phone}) بسطر الشيت {duplicate_row_num} (لم يكن مرتبطاً)")
+                                else:
+                                    print_log(f"⚠️ فشل ربط الحجز الموجود ({m_name}): {patch_r.status_code}")
+                            continue  # ⛔ لا تضيف مجدداً
+                        
+                        # ✅ الحجز جديد فعلاً — أضفه للشيت
+                        m_whatsapp = str(m_res.get('whatsapp_num') or m_phone)
+                        m_pickup = m_res.get('pickup_address') or ''
+                        m_dropoff = m_res.get('dropoff_address') or ''
+                        m_pax = str(m_res.get('passengers') or '1')
+                        m_bags = str(m_res.get('bags') or '0')
+                        m_car = m_res.get('car_type') or 'سيدان'
+                        m_status = m_res.get('client_status') or 'عميل ويب'
+                        m_cost = str(m_res.get('cost') or '0')
+                        m_email = m_res.get('email') or ''
+                        m_notes = m_res.get('notes') or ''
+                        m_type = m_res.get('trip_type') or 'ذهاب فقط'
+                        m_web_id = str(res_id)
+                        m_emp = m_res.get('booking_employee') or 'موقع الويب'
+                        m_ts = datetime.now().strftime('%Y/%m/%d %H:%M:%S')
 
-                    new_row = [m_ts, m_date, m_time, m_name, m_phone, m_whatsapp, m_pickup, m_dropoff, m_pax, m_bags, m_car, m_status, m_cost, m_email, m_notes, m_type, m_web_id, m_emp]
-                    worksheet.append_row(new_row, value_input_option='USER_ENTERED')
-                    current_last_row = len(worksheet.get_all_values())
-                    requests.patch(f"{SUPABASE_URL}/rest/v1/google_reservations?id=eq.{res_id}", headers=SUPABASE_HEADERS, json={'sheet_row': current_last_row})
-                    print_log(f"📥 تم ترحيل حجز جديد من الويب ({m_name} - {m_phone}) إلى الشيت في السطر {current_last_row}")
+                        new_row = [m_ts, m_date, m_time, m_name, m_phone, m_whatsapp, m_pickup, m_dropoff, m_pax, m_bags, m_car, m_status, m_cost, m_email, m_notes, m_type, m_web_id, m_emp]
+                        worksheet.append_row(new_row, value_input_option='USER_ENTERED')
+                        current_last_row = len(worksheet.get_all_values())
+                        
+                        # محاولة PATCH بإعادة المحاولة 3 مرات لضمان تحديث sheet_row
+                        patch_success = False
+                        for attempt in range(3):
+                            try:
+                                patch_r = requests.patch(
+                                    f"{SUPABASE_URL}/rest/v1/google_reservations?id=eq.{res_id}",
+                                    headers=SUPABASE_HEADERS, json={'sheet_row': current_last_row}, timeout=8
+                                )
+                                if patch_r.status_code in [200, 204]:
+                                    patch_success = True
+                                    break
+                                elif patch_r.status_code == 402:
+                                    SUPABASE_BLOCKED_UNTIL = time.time() + 1800
+                                    break
+                                time.sleep(1)
+                            except Exception:
+                                time.sleep(2)
+                        
+                        if patch_success:
+                            print_log(f"📥 تم ترحيل حجز جديد ({m_name} - {m_phone}) إلى الشيت سطر {current_last_row}")
+                        else:
+                            print_log(f"⚠️ تم إضافة الحجز ({m_name}) للشيت سطر {current_last_row} لكن فشل تحديث sheet_row في Supabase")
+                elif r_missing.status_code == 402:
+                    SUPABASE_BLOCKED_UNTIL = time.time() + 1800
+                    print_log("⛔ [402] Supabase محظورة عند فحص الحجوزات الجديدة. توقيف 30 دقيقة...")
         except Exception as e_push:
             print_log(f"⚠️ تحذير: خطأ أثناء فحص الحجوزات السحابية الجديدة: {e_push}")
 
