@@ -1329,9 +1329,18 @@
         function getApiBaseUrl() {
             const loc = window.location;
             
-            // 1. تحقق من الرابط المحفوظ في localStorage أولاً (مع التصحيح التلقائي للأخطاء مثل ps://)
+            // 1. إذا كان الموقع مفتوحاً على الدومين الحقيقي، نستخدم دومين الموقع مباشرة ونتجاهل أي تانل قديم
+            if (loc.hostname.includes('24seven-ai.com') || loc.hostname.includes('onrender.com') || loc.hostname.includes('vercel.app')) {
+                const saved = localStorage.getItem('mod_api_url');
+                if (saved && (saved.includes('loca.lt') || saved.includes('ngrok') || saved.includes('trycloudflare'))) {
+                    localStorage.removeItem('mod_api_url');
+                }
+                return `${loc.protocol}//${loc.hostname}${loc.port ? ':' + loc.port : ''}`;
+            }
+            
+            // 2. التحقق من الرابط المحفوظ في التخزين المحلي
             const saved = localStorage.getItem('mod_api_url');
-            if (saved && saved.trim() !== '') {
+            if (saved && saved.trim() !== '' && !saved.includes('loca.lt')) {
                 let s = saved.trim().replace(/\/$/, '').replace(/\/moderator$/, '').replace(/\/dashboard$/, '');
                 if (s.startsWith('ps://')) s = 'https://' + s.substring(5);
                 else if (s.startsWith('p://')) s = 'http://' + s.substring(4);
@@ -1343,20 +1352,7 @@
                 return 'http://localhost:3000';
             }
             
-            // 2. إذا لم يكن هناك رابط محفوظ، استخدم origin الحالي
-            if (loc.hostname.includes('24seven-ai.com') || loc.hostname.includes('onrender.com')) {
-                return `${loc.protocol}//${loc.hostname}`;
-            }
-
-            if (loc.port === '3000' || loc.pathname.startsWith('/moderator') || loc.pathname.startsWith('/dashboard')) {
-                return loc.origin;
-            }
-
-            if (loc.hostname === 'localhost' || loc.hostname === '127.0.0.1') {
-                return 'http://localhost:3000';
-            } else {
-                return `${loc.protocol}//${loc.hostname}${loc.port ? ':' + loc.port : ''}`;
-            }
+            return `${loc.protocol}//${loc.hostname}${loc.port ? ':' + loc.port : ''}`;
         }
 
         async function testConnection() {
