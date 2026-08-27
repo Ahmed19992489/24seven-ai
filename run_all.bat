@@ -16,7 +16,7 @@ for /f "tokens=5" %%a in ('netstat -aon ^| findstr :3000') do taskkill /f /pid %
 start "import_reservations" cmd /k "python -u import_reservations.py"
 timeout /t 1 > nul
 
-start "sync_to_supabase" cmd /k "python -u sync_to_supabase.py"
+start "sync_to_neon" cmd /k "python -u sync_to_neon.py"
 timeout /t 1 > nul
 
 start "sync_full_data" cmd /k "python -u sync_full_data.py"
