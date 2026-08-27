@@ -1,6 +1,7 @@
 {
   "version": 2,
   "rewrites": [
+    { "source": "/api/db", "destination": "/api/db.py" },
     { "source": "/api/reservations", "destination": "/api/reservations.py" },
     { "source": "/api/reservations/fallback", "destination": "/api/reservations.py" },
     { "source": "/api/omnichannel_messages", "destination": "/api/omnichannel_messages.py" },
