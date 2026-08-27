@@ -2,7 +2,10 @@ from http.server import BaseHTTPRequestHandler
 import urllib.parse
 import json
 import os
-import ssl
+import requests
+
+NEON_CONN_STR = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL") or "postgresql://neondb_owner:npg_VM4tSBwN5PGd@ep-plain-rice-auzortld-pooler.c-10.us-east-1.aws.neon.tech/neondb?sslmode=require"
+NEON_HTTP_URL = "https://ep-plain-rice-auzortld-pooler.c-10.us-east-1.aws.neon.tech/sql"
 
 class handler(BaseHTTPRequestHandler):
     def _send_cors_headers(self):
@@ -29,27 +32,9 @@ class handler(BaseHTTPRequestHandler):
         limit_val = int(query_components.get("limit", [300])[0])
 
         results = []
-        source = "neon_postgres"
-        debug_err = None
+        source = "neon_http_api"
 
         try:
-            import pg8000.native
-            
-            NEON_USER = os.getenv("PGUSER") or "neondb_owner"
-            NEON_PASSWORD = os.getenv("PGPASSWORD") or "npg_VM4tSBwN5PGd"
-            NEON_HOST = os.getenv("PGHOST") or "ep-plain-rice-auzortld-pooler.c-10.us-east-1.aws.neon.tech"
-            NEON_DB = os.getenv("PGDATABASE") or "neondb"
-
-            con = pg8000.native.Connection(
-                user=NEON_USER,
-                password=NEON_PASSWORD,
-                host=NEON_HOST,
-                port=5432,
-                database=NEON_DB,
-                ssl_context=ssl.create_default_context(),
-                timeout=10
-            )
-
             sql = """
                 SELECT id, sheet_row, trip_date, trip_time, customer_name, customer_phone,
                        whatsapp_num, pickup_address, dropoff_address, passengers, bags, car_type,
@@ -60,48 +45,47 @@ class handler(BaseHTTPRequestHandler):
                 FROM google_reservations
                 WHERE 1=1
             """
-            params = {}
+            params = []
             if date_val:
                 d_clean = date_val.replace('/', '-').strip()
                 d_slash = date_val.replace('-', '/').strip()
-                sql += " AND (trip_date = :d1 OR trip_date = :d2 OR trip_date LIKE :d3)"
-                params["d1"] = d_clean
-                params["d2"] = d_slash
-                params["d3"] = f"%{d_clean}%"
+                idx1 = len(params) + 1
+                idx2 = len(params) + 2
+                idx3 = len(params) + 3
+                sql += f" AND (trip_date = ${idx1} OR trip_date = ${idx2} OR trip_date LIKE ${idx3})"
+                params.extend([d_clean, d_slash, f"%{d_clean}%"])
 
             if query_val:
                 q_clean = query_val.strip()
-                sql += " AND (customer_name ILIKE :q OR customer_phone ILIKE :q OR pickup_address ILIKE :q OR dropoff_address ILIKE :q)"
-                params["q"] = f"%{q_clean}%"
+                idx_q = len(params) + 1
+                sql += f" AND (customer_name ILIKE ${idx_q} OR customer_phone ILIKE ${idx_q} OR pickup_address ILIKE ${idx_q} OR dropoff_address ILIKE ${idx_q})"
+                params.append(f"%{q_clean}%")
 
-            sql += " ORDER BY trip_time ASC, id DESC LIMIT :lim;"
-            params["lim"] = limit_val
+            idx_lim = len(params) + 1
+            sql += f" ORDER BY trip_time ASC, id DESC LIMIT ${idx_lim};"
+            params.append(limit_val)
 
-            rows = con.run(sql, **params)
-            cols = [
-                "id", "sheet_row", "trip_date", "trip_time", "customer_name", "customer_phone",
-                "whatsapp_num", "pickup_address", "dropoff_address", "passengers", "bags", "car_type",
-                "cost", "email", "notes", "trip_type", "booking_employee", "status", "sql_server_id",
-                "modified_driver_name", "modified_driver_phone", "driver_msg_status",
-                "confirm_msg_status", "client_decision", "location_link", "rating_stars",
-                "trip_status", "created_at"
-            ]
+            r = requests.post(
+                NEON_HTTP_URL,
+                headers={"Neon-Connection-String": NEON_CONN_STR},
+                json={"query": sql, "params": params},
+                timeout=10
+            )
 
-            for r in rows:
-                d = dict(zip(cols, r))
-                d["estimated_price"] = d["cost"]
-                d["manual_client_name"] = d["customer_name"]
-                d["client_phone"] = d["customer_phone"]
-                d["pickup_location"] = d["pickup_address"]
-                d["dropoff_location"] = d["dropoff_address"]
-                if d.get("created_at"):
-                    d["created_at"] = str(d["created_at"])
-                results.append(d)
+            if r.status_code == 200:
+                rows = r.json().get("rows", [])
+                for d in rows:
+                    d["estimated_price"] = d.get("cost") or 0
+                    d["manual_client_name"] = d.get("customer_name") or ""
+                    d["client_phone"] = d.get("customer_phone") or ""
+                    d["pickup_location"] = d.get("pickup_address") or ""
+                    d["dropoff_location"] = d.get("dropoff_address") or ""
+                    results.append(d)
+            else:
+                source = f"neon_error_{r.status_code}"
 
-            con.close()
         except Exception as e_neon:
-            debug_err = str(e_neon)
-            source = f"error: {debug_err}"
+            source = f"error: {e_neon}"
 
         payload = json.dumps({
             "status": "ok",
