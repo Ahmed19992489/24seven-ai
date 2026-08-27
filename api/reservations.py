@@ -8,7 +8,7 @@ class handler(BaseHTTPRequestHandler):
     def _send_cors_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, ngrok-skip-browser-warning")
 
     def do_OPTIONS(self):
         self.send_response(200)
@@ -18,8 +18,11 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         query_components = {}
         if "?" in self.path:
-            query_str = self.path.split("?", 1)[1]
-            query_components = urllib.parse.parse_qs(query_str)
+            try:
+                query_str = self.path.split("?", 1)[1]
+                query_components = urllib.parse.parse_qs(query_str)
+            except Exception:
+                pass
 
         date_val = query_components.get("date", [None])[0]
         query_val = query_components.get("query", [None])[0]
@@ -27,15 +30,15 @@ class handler(BaseHTTPRequestHandler):
 
         results = []
         source = "neon_postgres"
+        debug_err = None
 
-        # 1. Try Neon Postgres
         try:
             import pg8000.native
             
-            NEON_USER = os.getenv("PGUSER", "neondb_owner")
-            NEON_PASSWORD = os.getenv("PGPASSWORD", "npg_VM4tSBwN5PGd")
-            NEON_HOST = os.getenv("PGHOST", "ep-plain-rice-auzortld-pooler.c-10.us-east-1.aws.neon.tech")
-            NEON_DB = os.getenv("PGDATABASE", "neondb")
+            NEON_USER = os.getenv("PGUSER") or "neondb_owner"
+            NEON_PASSWORD = os.getenv("PGPASSWORD") or "npg_VM4tSBwN5PGd"
+            NEON_HOST = os.getenv("PGHOST") or "ep-plain-rice-auzortld-pooler.c-10.us-east-1.aws.neon.tech"
+            NEON_DB = os.getenv("PGDATABASE") or "neondb"
 
             con = pg8000.native.Connection(
                 user=NEON_USER,
@@ -44,7 +47,7 @@ class handler(BaseHTTPRequestHandler):
                 port=5432,
                 database=NEON_DB,
                 ssl_context=ssl.create_default_context(),
-                timeout=8
+                timeout=10
             )
 
             sql = """
@@ -97,16 +100,19 @@ class handler(BaseHTTPRequestHandler):
 
             con.close()
         except Exception as e_neon:
-            print("Neon error in Vercel function:", e_neon)
-            source = "error_fallback"
+            debug_err = str(e_neon)
+            source = f"error: {debug_err}"
 
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
-        self._send_cors_headers()
-        self.end_headers()
-        self.wfile.write(json.dumps({
+        payload = json.dumps({
             "status": "ok",
             "source": source,
             "count": len(results),
             "data": results
-        }, ensure_ascii=False).encode('utf-8'))
+        }, ensure_ascii=False).encode('utf-8')
+
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(payload)))
+        self._send_cors_headers()
+        self.end_headers()
+        self.wfile.write(payload)
