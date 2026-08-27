@@ -1024,31 +1024,52 @@
         async function loadDashboardData(silent = false) {
             if (!currentVendor) return;
 
-            loadTrips(silent);
-            loadLedger(silent);
+            await loadTrips(silent);
+            await loadLedger(silent);
 
-            // حساب الإحصائيات
+            // حساب الإحصائيات المالية
             try {
                 const { data: txs } = await sb.from('vendor_transactions').select('*').eq('vendor_id', currentVendor.id);
                 
-                let credit = 0; // مستحقاتنا
-                let debit = 0;  // مديونيتنا (عمولات)
-                if (txs) {
+                let credit = 0; // مستحقات المكتب (أوردرات آجل)
+                let debit = 0;  // عمولات مستحقة للمنصة (كاش)
+                
+                if (txs && txs.length > 0) {
                     txs.forEach(t => {
-                        const amt = Number(t.amount);
-                        if (amt > 0) credit += amt;
-                        else debit += Math.abs(amt);
+                        const amt = Number(t.amount) || 0;
+                        if (t.transaction_type === 'commission_deduction' || amt < 0) {
+                            debit += Math.abs(amt);
+                        } else {
+                            credit += amt;
+                        }
+                    });
+                } else if (cachedTrips && cachedTrips.length > 0) {
+                    // إذا لم تكن هناك قيود مسجلة بعد، نقوم بحساب تقديري بناءً على الرحلات والأوردرات المحملة
+                    cachedTrips.forEach(t => {
+                        const price = Number(t.estimated_price || t.cost) || 0;
+                        const notes = (t.admin_notes || '').toLowerCase();
+                        const isPostpaid = notes.includes('أجل') || notes.includes('اجل') || notes.includes('postpaid');
+                        
+                        if (isPostpaid) {
+                            // آجل: مستحق للمكتب
+                            credit += price;
+                        } else {
+                            // كاش: عمولة مستحقة للمنصة طرف المكتب (15% تقريبية أو العمولة المحددة)
+                            const comm = t.our_commission ? Number(t.our_commission) : Math.round(price * 0.15);
+                            debit += comm;
+                        }
                     });
                 }
+                
                 const net = credit - debit;
 
-                document.getElementById('kpi-credit').innerHTML = `${credit} <span class="text-xs font-normal">EGP</span>`;
-                document.getElementById('kpi-debit').innerHTML = `${debit} <span class="text-xs font-normal">EGP</span>`;
+                document.getElementById('kpi-credit').innerHTML = `${credit.toLocaleString()} <span class="text-xs font-normal">EGP</span>`;
+                document.getElementById('kpi-debit').innerHTML = `${debit.toLocaleString()} <span class="text-xs font-normal">EGP</span>`;
                 
                 const netEl = document.getElementById('kpi-net');
                 const netDescEl = document.getElementById('kpi-net-desc');
                 
-                netEl.innerHTML = `${net} <span class="text-xs font-normal">EGP</span>`;
+                netEl.innerHTML = `${Math.abs(net).toLocaleString()} <span class="text-xs font-normal">EGP</span>`;
                 
                 if (net > 0) {
                     netEl.className = 'text-2xl font-black mt-1 text-green-400 font-num';
@@ -3012,8 +3033,9 @@
 
                 const txs = txsRes.data || [];
                 const trips = tripsRes.data || [];
+                const allLedgerTrips = (cachedTrips && cachedTrips.length > 0) ? cachedTrips : trips;
 
-                renderLedgerTable(trips, txs);
+                renderLedgerTable(allLedgerTrips, txs);
 
                 if (txs.length === 0) {
                     list.innerHTML = '<p class="text-center text-slate-500 py-8 text-xs">لا توجد حركات مالية مسجلة في كشف حسابكم بعد.</p>';
