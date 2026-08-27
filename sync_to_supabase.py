@@ -10,6 +10,7 @@ import os
 import re
 import requests
 import json
+import hashlib
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 creds_path = os.path.join(current_dir, 'credentials.json')
@@ -23,6 +24,7 @@ NEON_CONN_STR = os.getenv("DATABASE_URL") or "postgresql://neondb_owner:npg_VM4t
 NEON_HTTP_URL = "https://ep-plain-rice-auzortld-pooler.c-10.us-east-1.aws.neon.tech/sql"
 
 SYNC_INTERVAL = 60  # ثانية
+FULL_SYNC_EVERY = 30  # مزامنة كاملة كل 30 دورة (30 دقيقة)
 
 def print_log(msg):
     timestamp = datetime.now().strftime('%H:%M:%S')
@@ -155,11 +157,14 @@ def main_loop():
     print("="*60 + "\n", flush=True)
 
     _sync_cycle_count = 0
+    _row_fingerprints = {}
 
     while True:
         try:
             _sync_cycle_count += 1
-            print_log(f"🚀 بدء دورة مزامنة Neon Postgres (#{_sync_cycle_count})...")
+            is_full = (_sync_cycle_count % FULL_SYNC_EVERY == 1)
+            cycle_label = "كاملة" if is_full else "ذكية (التغييرات الجديدة)"
+            print_log(f"🚀 بدء دورة مزامنة {cycle_label} (#{_sync_cycle_count})...")
 
             worksheet = get_gspread_client()
             if not worksheet:
@@ -220,6 +225,15 @@ def main_loop():
                 if not customer_name and not customer_phone and not pickup_address:
                     continue
 
+                # حساب بصمة التغيير لتسريع الدورات المتتالية
+                row_raw_str = f"{trip_date}|{trip_time}|{customer_name}|{customer_phone}|{pickup_address}|{dropoff_address}|{cost}|{status}|{modified_driver_name}|{modified_driver_phone}|{driver_msg_status}|{confirm_msg_status}|{client_decision}|{trip_status}"
+                row_hash = hashlib.md5(row_raw_str.encode('utf-8')).hexdigest()
+
+                if not is_full and _row_fingerprints.get(real_row_index) == row_hash:
+                    continue  # لم يتغير الصف — تخطيه لتوفير الموارد والوقت
+
+                _row_fingerprints[real_row_index] = row_hash
+
                 records_to_upsert.append({
                     "sheet_row": real_row_index,
                     "trip_date": trip_date,
@@ -250,8 +264,11 @@ def main_loop():
                 })
 
             t0 = time.time()
-            upserted_count = upsert_records_to_neon(records_to_upsert, batch_size=50)
-            print_log(f"✅ تم مزامنة {upserted_count} حجز بنجاح في Neon Postgres (استغرق {time.time()-t0:.2f} ثانية)!")
+            if records_to_upsert:
+                upserted_count = upsert_records_to_neon(records_to_upsert, batch_size=50)
+                print_log(f"✅ تم مزامنة {upserted_count} حجز بنجاح في Neon Postgres (استغرق {time.time()-t0:.2f} ثانية)!")
+            else:
+                print_log("⚡ لا توجد تعديلات جديدة في الشيت — البيانات متزامنة بنسبة 100% (0.00 ثانية).")
 
         except Exception as e_main:
             print_log(f"❌ خطأ غير متوقع: {e_main}")
