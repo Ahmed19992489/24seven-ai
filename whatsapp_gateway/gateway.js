@@ -49,17 +49,18 @@ if (!fs.existsSync(UPLOADS_DIR)) {
 const activeSessions = {};
 const groupNamesCache = {};
 
-// Helper to update Supabase status
+// Helper to update instance status in database
 async function updateSupabaseInstance(id, payload) {
     try {
-        await axios.patch(`${SUPABASE_URL}/rest/v1/whatsapp_instances?id=eq.${id}`, payload, {
-            headers: SUPABASE_HEADERS
-        });
-        console.log(`[Supabase] Updated instance ${id} status:`, payload);
+        await axios.post(`https://24seven-ai.com/api/db`, {
+            action: 'update',
+            table: 'whatsapp_instances',
+            values: payload,
+            filters: [{ op: 'eq', col: 'id', val: id }]
+        }, { timeout: 5000 });
+        console.log(`[Database] Updated instance ${id} status:`, payload);
     } catch (err) {
-        if (err.response?.status !== 402 && !err.message?.includes('402')) {
-            console.error(`[Supabase Error] Failed to update instance ${id}:`, err.message);
-        }
+        // Silently catch offline/network hiccups
     }
 }
 
@@ -672,20 +673,21 @@ app.delete(['/api/whatsapp/instances/:id', '/instance/:id'], async (req, res) =>
 });
 
 
-// Startup hook: load all local instances from Supabase, or fallback to disk sessions if Supabase fails (e.g. 402 Egress limit)
+// Startup hook: load all local instances from Neon DB, or fallback to disk sessions if offline
 async function loadLocalInstances() {
     console.log('[Gateway] Loading local instances...');
     let loadedFromCloud = false;
     try {
-        const res = await axios.get(`${SUPABASE_URL}/rest/v1/whatsapp_instances?provider=eq.local`, {
-            headers: SUPABASE_HEADERS,
-            timeout: 5000
-        });
+        const res = await axios.post(`https://24seven-ai.com/api/db`, {
+            action: 'select',
+            table: 'whatsapp_instances',
+            select: '*',
+            filters: [{ op: 'eq', col: 'provider', val: 'local' }]
+        }, { timeout: 6000 });
         
-        if (res.status === 200 && Array.isArray(res.data) && res.data.length > 0) {
-            console.log(`[Gateway] Found ${res.data.length} local instances in Supabase.`);
-            for (const inst of res.data) {
-                // Only auto-initialize instances that were already connected to prevent infinite background QR loops
+        if (res.status === 200 && Array.isArray(res.data?.data) && res.data.data.length > 0) {
+            console.log(`[Gateway] Found ${res.data.data.length} local instances in database.`);
+            for (const inst of res.data.data) {
                 if (inst.status === 'connected') {
                     console.log(`[Gateway Auto-Start] Initializing connected instance ${inst.id}...`);
                     initSession(inst.id);
@@ -696,20 +698,22 @@ async function loadLocalInstances() {
             loadedFromCloud = true;
         }
     } catch (err) {
-        console.warn(`[Gateway Notice] Supabase cloud lookup unavailable (${err.message}). Switching to local session storage fallback...`);
+        console.warn(`[Gateway Notice] Cloud lookup unavailable. Switching to local session storage fallback...`);
     }
 
-    // Fallback: Scan disk sessions folder ONLY if cloud lookup failed completely
+    // Fallback: Scan disk sessions folder ONLY for sessions with valid creds.json
     if (!loadedFromCloud) {
         try {
             if (fs.existsSync(SESSIONS_DIR)) {
                 const files = fs.readdirSync(SESSIONS_DIR);
-                const sessionIds = files
-                    .filter(f => f.startsWith('session_'))
-                    .map(f => f.replace('session_', ''));
+                const authenticatedSessions = files.filter(f => {
+                    if (!f.startsWith('session_')) return false;
+                    const credsPath = path.join(SESSIONS_DIR, f, 'creds.json');
+                    return fs.existsSync(credsPath) && fs.statSync(credsPath).size > 100;
+                }).map(f => f.replace('session_', ''));
                 
-                console.log(`[Gateway Disk Fallback] Found ${sessionIds.length} sessions on local disk. Initializing...`);
-                for (const sid of sessionIds) {
+                console.log(`[Gateway Disk Fallback] Found ${authenticatedSessions.length} active paired sessions on local disk. Initializing...`);
+                for (const sid of authenticatedSessions) {
                     if (!activeSessions[sid]) {
                         initSession(sid);
                     }
@@ -718,7 +722,6 @@ async function loadLocalInstances() {
         } catch (diskErr) {
             console.error('[Gateway Disk Error] Failed to load local disk sessions:', diskErr.message);
         }
-
     }
 }
 
