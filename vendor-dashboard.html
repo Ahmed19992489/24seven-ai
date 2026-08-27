@@ -1170,51 +1170,52 @@
             }
 
             try {
-                // جلب الرحلات المسندة للمكتب
-                const { data: trips, error } = await sb.from('trips')
+                // 1. جلب الرحلات المسندة للمكتب من جدول trips
+                let { data: trips, error } = await sb.from('trips')
                     .select('*, drivers:drivers!fk_trips_driver(name, phone), cars:cars!fk_trips_car(brand, plate_number, car_image_url)')
                     .eq('vendor_id', currentVendor.id)
-                    .order('created_at', { ascending: false });
+                    .order('id', { ascending: false });
 
-                if (error) throw error;
+                let vendorTrips = trips || [];
 
-                cachedTrips = trips || [];
+                // 2. جلب الحجوزات المسندة لاسم المكتب من google_reservations
+                const vendorName = currentVendor.name || 'الفهد';
+                const { data: resData } = await sb.from('google_reservations')
+                    .select('*')
+                    .or(`modified_driver_name.ilike.%${vendorName}%,notes.ilike.%${vendorName}%`)
+                    .order('sheet_row', { ascending: false })
+                    .limit(50);
+
                 cachedReservationsMap = {};
+                
+                if (resData && resData.length > 0) {
+                    resData.forEach(r => {
+                        if (r.sql_server_id) cachedReservationsMap[r.sql_server_id] = r;
+                        if (r.sheet_row) cachedReservationsMap[`row_${r.sheet_row}`] = r;
 
-                if (cachedTrips.length > 0) {
-                    // جلب تفاصيل الحجوزات المطابقة
-                    const tripIdsStr = cachedTrips.map(t => String(t.id));
-                    const sheetRows = [];
-                    cachedTrips.forEach(t => {
-                        const notes = t.admin_notes || '';
-                        const match = notes.match(/\[sheet_row:(\d+)\]/) || notes.match(/حجز شيت صف\s*(\d+)/);
-                        if (match) {
-                            sheetRows.push(parseInt(match[1]));
+                        // إذا لم تكن الرحلة موجودة بالفعل في قائمة trips، نقوم بإضافتها كأوردر تشغيل
+                        const alreadyExists = vendorTrips.some(t => String(t.id) === String(r.sql_server_id) || String(t.id) === `gr_${r.id}`);
+                        if (!alreadyExists) {
+                            vendorTrips.push({
+                                id: 'gr_' + r.id,
+                                google_res_id: r.id,
+                                manual_client_name: r.customer_name,
+                                client_phone: r.customer_phone,
+                                pickup_location: r.pickup_address,
+                                dropoff_location: r.dropoff_address,
+                                estimated_price: Number(r.cost) || 0,
+                                status: (r.trip_status === 'مكتملة' || r.trip_status === 'تمت') ? 'completed' : 'approved',
+                                admin_notes: `📝 حجز من الشيت\n👥 ركاب: ${r.passengers || '-'} | شنط: ${r.bags || '-'}\n📅 التاريخ: ${r.trip_date} | الوقت: ${r.trip_time}\n🚗 السيارة: ${r.car_type || '-'}\n💡 ملاحظات: ${r.notes || '-'}`,
+                                trip_date: r.trip_date,
+                                trip_time: r.trip_time,
+                                created_at: r.created_at || r.sheet_timestamp,
+                                vendor_id: currentVendor.id
+                            });
                         }
                     });
-
-                    let query = sb.from('google_reservations')
-                        .select('id, sheet_row, sql_server_id, customer_name, passengers, bags, car_type, trip_type, pickup_address, dropoff_address, trip_date, trip_time, ticket_image, notes');
-
-                    if (sheetRows.length > 0) {
-                        query = query.or(`sql_server_id.in.(${tripIdsStr.join(',')}),sheet_row.in.(${sheetRows.join(',')})`);
-                    } else {
-                        query = query.in('sql_server_id', tripIdsStr);
-                    }
-
-                    const { data: resData, error: resErr } = await query;
-
-                    if (resData) {
-                        resData.forEach(r => {
-                            if (r.sql_server_id) {
-                                cachedReservationsMap[r.sql_server_id] = r;
-                            }
-                            if (r.sheet_row) {
-                                cachedReservationsMap[`row_${r.sheet_row}`] = r;
-                            }
-                        });
-                    }
                 }
+
+                cachedTrips = vendorTrips;
 
                 // عرض الرحلات بناءً على الفلتر الحالي
                 renderFilteredTrips();

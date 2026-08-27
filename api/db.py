@@ -46,61 +46,79 @@ class handler(BaseHTTPRequestHandler):
 
             if action == "select":
                 select_cols = req.get("select", "*")
-                if "(" in select_cols or ":" in select_cols:
-                    select_cols = "*"
+                
+                is_trips_query = (table == "trips")
+                if is_trips_query:
+                    sql = """
+                        SELECT 
+                            t.*,
+                            d.name AS driver_name, d.phone AS driver_phone,
+                            c.brand AS car_brand, c.model AS car_model, c.plate_number AS car_plate_number, c.car_image_url AS car_image_url
+                        FROM trips t
+                        LEFT JOIN drivers d ON t.driver_id = d.id
+                        LEFT JOIN cars c ON t.car_id = c.id
+                        WHERE 1=1
+                    """
+                else:
+                    if "(" in select_cols or ":" in select_cols:
+                        select_cols = "*"
+                    sql = f"SELECT {select_cols} FROM {table} WHERE 1=1"
 
-                sql = f"SELECT {select_cols} FROM {table} WHERE 1=1"
                 params = []
 
                 filters = req.get("filters", [])
                 for f in filters:
                     op = f.get("op", "eq")
                     col = f.get("col")
+                    # Prefix column with table alias if trips
+                    db_col = f"t.{col}" if (is_trips_query and not col.startswith("t.")) else col
                     val = f.get("val")
                     idx = len(params) + 1
 
                     if op == "eq":
-                        sql += f" AND {col} = ${idx}"
+                        sql += f" AND {db_col} = ${idx}"
                         params.append(val)
                     elif op == "neq":
-                        sql += f" AND {col} != ${idx}"
+                        sql += f" AND {db_col} != ${idx}"
                         params.append(val)
                     elif op == "gt":
-                        sql += f" AND {col} > ${idx}"
+                        sql += f" AND {db_col} > ${idx}"
                         params.append(val)
                     elif op == "gte":
-                        sql += f" AND {col} >= ${idx}"
+                        sql += f" AND {db_col} >= ${idx}"
                         params.append(val)
                     elif op == "lt":
-                        sql += f" AND {col} < ${idx}"
+                        sql += f" AND {db_col} < ${idx}"
                         params.append(val)
                     elif op == "lte":
-                        sql += f" AND {col} <= ${idx}"
+                        sql += f" AND {db_col} <= ${idx}"
                         params.append(val)
                     elif op == "like" or op == "ilike":
-                        sql += f" AND {col} ILIKE ${idx}"
+                        sql += f" AND {db_col} ILIKE ${idx}"
                         params.append(f"%{val}%")
                     elif op == "in":
                         if isinstance(val, list) and len(val) > 0:
                             placeholders = [f"${len(params)+i+1}" for i in range(len(val))]
-                            sql += f" AND {col} IN ({','.join(placeholders)})"
+                            sql += f" AND {db_col} IN ({','.join(placeholders)})"
                             params.extend(val)
                     elif op == "is":
                         if val is None or val == "null":
-                            sql += f" AND {col} IS NULL"
+                            sql += f" AND {db_col} IS NULL"
                         else:
-                            sql += f" AND {col} IS NOT NULL"
+                            sql += f" AND {db_col} IS NOT NULL"
                     elif op == "or":
                         or_parts = str(val).split(",")
                         sub_clauses = []
                         for op_part in or_parts:
                             if ".eq." in op_part:
                                 c, v = op_part.split(".eq.", 1)
-                                sub_clauses.append(f"{c.strip()} = ${len(params)+1}")
+                                c_name = f"t.{c.strip()}" if (is_trips_query and not c.strip().startswith("t.")) else c.strip()
+                                sub_clauses.append(f"{c_name} = ${len(params)+1}")
                                 params.append(v.strip())
                             elif ".ilike." in op_part:
                                 c, v = op_part.split(".ilike.", 1)
-                                sub_clauses.append(f"{c.strip()} ILIKE ${len(params)+1}")
+                                c_name = f"t.{c.strip()}" if (is_trips_query and not c.strip().startswith("t.")) else c.strip()
+                                sub_clauses.append(f"{c_name} ILIKE ${len(params)+1}")
                                 params.append(v.strip().replace('%', ''))
                         if sub_clauses:
                             sql += f" AND ({' OR '.join(sub_clauses)})"
@@ -108,10 +126,11 @@ class handler(BaseHTTPRequestHandler):
                 order = req.get("order")
                 if order:
                     col = order.get("col", "id")
+                    order_col = f"t.{col}" if (is_trips_query and not col.startswith("t.")) else col
                     asc = "ASC" if order.get("ascending", False) else "DESC"
-                    sql += f" ORDER BY {col} {asc}"
+                    sql += f" ORDER BY {order_col} {asc}"
                 else:
-                    sql += " ORDER BY id DESC"
+                    sql += f" ORDER BY {'t.id' if is_trips_query else 'id'} DESC"
 
                 limit = req.get("limit")
                 if limit:
@@ -125,6 +144,31 @@ class handler(BaseHTTPRequestHandler):
                     timeout=12
                 )
                 rows = r.json().get("rows", []) if r.status_code == 200 else []
+                
+                # Format nested objects for trips
+                if is_trips_query:
+                    for row in rows:
+                        d_name = row.pop("driver_name", None)
+                        d_phone = row.pop("driver_phone", None)
+                        if row.get("driver_id") or d_name:
+                            row["drivers"] = {"name": d_name or "", "phone": d_phone or ""}
+                        else:
+                            row["drivers"] = None
+
+                        c_brand = row.pop("car_brand", None)
+                        c_model = row.pop("car_model", None)
+                        c_plate = row.pop("car_plate_number", None)
+                        c_img = row.pop("car_image_url", None)
+                        if row.get("car_id") or c_brand:
+                            row["cars"] = {
+                                "brand": c_brand or "",
+                                "model": c_model or "",
+                                "plate_number": c_plate or "",
+                                "car_image_url": c_img or ""
+                            }
+                        else:
+                            row["cars"] = None
+
                 self._respond(200, {"status": "ok", "data": rows, "count": len(rows)})
 
             elif action == "insert":

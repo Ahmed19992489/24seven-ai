@@ -2664,9 +2664,10 @@
         }
 
         function clearOpsFilter() {
+            const todayStr = new Date().toISOString().split('T')[0];
             if(document.getElementById('ops-search')) document.getElementById('ops-search').value = '';
-            if(document.getElementById('ops-date-from')) document.getElementById('ops-date-from').value = '';
-            if(document.getElementById('ops-date-to')) document.getElementById('ops-date-to').value = '';
+            if(document.getElementById('ops-date-from')) document.getElementById('ops-date-from').value = todayStr;
+            if(document.getElementById('ops-date-to')) document.getElementById('ops-date-to').value = todayStr;
             loadOperations();
         }
 
@@ -2674,23 +2675,34 @@
             const list = document.getElementById('ops-table');
             list.innerHTML = '<tr><td colspan="8" class="text-center p-4">جاري التحميل...</td></tr>';
             
-            const search = document.getElementById('ops-search')?.value.toLowerCase() || '';
-            const fDate = document.getElementById('ops-date-from')?.value || '';
-            const tDate = document.getElementById('ops-date-to')?.value || '';
+            const search = document.getElementById('ops-search')?.value.toLowerCase().trim() || '';
+            let fDate = document.getElementById('ops-date-from')?.value || '';
+            let tDate = document.getElementById('ops-date-to')?.value || '';
 
-            // 1. جلب الرحلات أولاً من Supabase - مع حد أقصى لمنع تجميد المتصفح
-            // ✅ إصلاح: تحديد آخر 60 يوم افتراضياً ما لم يختر المستخدم تصفية أخرى
-            const defaultFrom = fDate || (() => {
-                const d = new Date();
-                d.setDate(d.getDate() - 60);
-                return d.toISOString().split('T')[0];
-            })();
+            // افتراضياً: رحلات اليوم إذا لم يحدد المستخدم تاريخاً ولم يبحث
+            const todayStr = new Date().toISOString().split('T')[0];
+            if (!fDate && !tDate && !search) {
+                fDate = todayStr;
+                tDate = todayStr;
+                if(document.getElementById('ops-date-from')) document.getElementById('ops-date-from').value = todayStr;
+                if(document.getElementById('ops-date-to')) document.getElementById('ops-date-to').value = todayStr;
+            }
 
+            // 1. جلب الرحلات أولاً من قاعدة البيانات مع فلترة سريعة
             let tripsQuery = sbClient.from('trips')
-                .select(`*, cars:cars!fk_trips_car(brand, model, plate_number, car_image_url), drivers:drivers!fk_trips_driver(name, phone)`)
-                .gte('created_at', defaultFrom)
-                .order('created_at', { ascending: false })
-                .limit(200);
+                .select(`*, cars:cars!fk_trips_car(brand, model, plate_number, car_image_url), drivers:drivers!fk_trips_driver(name, phone)`);
+
+            if (fDate) {
+                tripsQuery = tripsQuery.gte('trip_date', fDate);
+            }
+            if (tDate) {
+                tripsQuery = tripsQuery.lte('trip_date', tDate);
+            }
+            if (search) {
+                tripsQuery = tripsQuery.or(`manual_client_name.ilike.%${search}%,client_phone.ilike.%${search}%,pickup_location.ilike.%${search}%,dropoff_location.ilike.%${search}%`);
+            }
+
+            tripsQuery = tripsQuery.order('id', { ascending: false }).limit(60);
 
             const tripsResult = await tripsQuery;
 
@@ -2701,82 +2713,35 @@
 
             const trips = tripsResult.data || [];
 
-            // 2. استخراج معرفات ومعلومات الرحلات لعمل جلب مستهدف للحجوزات
-            const tripIds = [];
-            const googleResIds = [];
-            const sheetRows = [];
-
-            trips.forEach(t => {
-                if (t.id) tripIds.push(t.id);
-                if (t.google_res_id) googleResIds.push(t.google_res_id);
-                if (t.admin_notes) {
-                    const rowMatch = t.admin_notes.match(/حجز شيت صف\s*(\d+)/);
-                    if (rowMatch) {
-                        sheetRows.push(parseInt(rowMatch[1]));
-                    }
-                }
-            });
-
-            // 3. جلب الحجوزات المستهدفة فقط من جدول google_reservations لمنع سحب آلاف السجلات غير الضرورية
-            // أ. جلب الحجوزات المرتبطة بالرحلات الحالية المجلوبة
-            let linkedReservations = [];
-            if (googleResIds.length > 0 || tripIds.length > 0 || sheetRows.length > 0) {
-                let orParts = [];
-                if (googleResIds.length > 0) orParts.push(`id.in.(${googleResIds.join(',')})`);
-                if (tripIds.length > 0) orParts.push(`sql_server_id.in.(${tripIds.join(',')})`);
-                if (sheetRows.length > 0) orParts.push(`sheet_row.in.(${sheetRows.join(',')})`);
-                
-                const { data, error } = await sbClient.from('google_reservations')
-                    .select('*')
-                    .or(orParts.join(','));
-                
-                if (!error && data) {
-                    linkedReservations = data;
-                }
-            }
-
-            // ب. جلب الحجوزات النشطة وغير المسندة من الشيت (لإظهارها كحجوزات جديدة معلقة)
-            let activeQuery = sbClient.from('google_reservations')
-                .select('*')
-                .or('modified_driver_name.is.null,modified_driver_name.eq.,modified_driver_name.eq.--')
-                .not('trip_status', 'in', '("مكتملة","ملغاة")');
-
-            if (fDate) {
-                activeQuery = activeQuery.gte('trip_date', fDate);
-            }
-            if (tDate) {
-                activeQuery = activeQuery.lte('trip_date', tDate);
-            }
-
-            // نقوم بترتيبها وتحديد الحد الأقصى بـ 300 سجل لتفادي إثقال المتصفح
-            let activeReservations = null;
+            // 2. جلب الحجوزات النشطة وغير المسندة لنفس التاريخ والبحث
+            let activeReservations = [];
             try {
+                let activeQuery = sbClient.from('google_reservations')
+                    .select('*')
+                    .or('modified_driver_name.is.null,modified_driver_name.eq.,modified_driver_name.eq.--');
+
+                if (fDate) {
+                    activeQuery = activeQuery.gte('trip_date', fDate);
+                }
+                if (tDate) {
+                    activeQuery = activeQuery.lte('trip_date', tDate);
+                }
+                if (search) {
+                    activeQuery = activeQuery.or(`customer_name.ilike.%${search}%,customer_phone.ilike.%${search}%,pickup_address.ilike.%${search}%,dropoff_address.ilike.%${search}%`);
+                }
+
                 const res = await activeQuery
-                    .order('created_at', { ascending: false })
-                    .limit(300);
+                    .order('sheet_row', { ascending: false })
+                    .limit(60);
+
                 if (!res.error && res.data && res.data.length > 0) {
                     activeReservations = res.data;
                 }
-            } catch(e) { console.warn("Supabase activeReservations error, fallback active:", e); }
-
-            if (!activeReservations || activeReservations.length === 0) {
-                try {
-                    const baseUrl = (typeof getApiBaseUrl === 'function') ? getApiBaseUrl() : '';
-                    const fbResp = await fetch(`${baseUrl}/api/reservations/fallback`);
-                    const fbJson = await fbResp.json();
-                    if (fbJson && fbJson.data && fbJson.data.length > 0) {
-                        activeReservations = fbJson.data;
-                    }
-                } catch(e) { console.error("Fallback activeReservations error:", e); }
+            } catch(e) { 
+                console.warn("Reservations query error:", e); 
             }
 
-            // ج. دمج القائمتين وحذف التكرار
-            const reservationsMap = new Map();
-            linkedReservations.forEach(r => reservationsMap.set(r.id, r));
-            if (activeReservations) {
-                activeReservations.forEach(r => reservationsMap.set(r.id, r));
-            }
-            const reservations = Array.from(reservationsMap.values());
+            const reservations = activeReservations;
 
             // تجميع معرفات الرحلات المسجلة بالفعل لمنع التكرار
             const existingTripIds = new Set(trips.map(t => String(t.id)));
