@@ -62,6 +62,23 @@ def send_fb_reply(recipient_id, text):
 
 def save_to_supabase(sender_id, sender_name, text, is_admin=False, channel="messenger"):
     try:
+        # Prevent duplicate inserts (especially Meta Webhook Echoes)
+        check_sql = """
+            SELECT id FROM omnichannel_messages 
+            WHERE channel = $1 AND sender_id = $2 AND message_text = $3 AND is_from_admin = $4 
+            AND created_at >= NOW() - INTERVAL '3 minutes'
+            LIMIT 1
+        """
+        check_params = [channel, str(sender_id), str(text), bool(is_admin)]
+        r_chk = requests.post(
+            NEON_HTTP_URL,
+            headers={"Neon-Connection-String": NEON_CONN_STR},
+            json={"query": check_sql, "params": check_params},
+            timeout=5
+        )
+        if r_chk.status_code == 200 and len(r_chk.json().get("rows", [])) > 0:
+            return
+
         sql = "INSERT INTO omnichannel_messages (channel, sender_id, sender_name, message_text, is_from_admin, read_by_admin) VALUES ($1, $2, $3, $4, $5, $6)"
         params = [channel, str(sender_id), str(sender_name), str(text), bool(is_admin), bool(is_admin)]
         requests.post(

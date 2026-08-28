@@ -2093,7 +2093,28 @@
                     };
                 }
                 groupedChats[groupKey].originalIds.add(m.sender_id);
-                groupedChats[groupKey].messages.push(m);
+                
+                // منع تكرار الرسائل المتطابقة لنفس المحادثة (Deduplication)
+                const isDup = groupedChats[groupKey].messages.some(existing => {
+                    if (existing.id && m.id && String(existing.id) === String(m.id)) return true;
+                    const sameTxt = (existing.message_text || '').trim() === (m.message_text || '').trim();
+                    const sameRole = (Boolean(existing.is_from_admin) === Boolean(m.is_from_admin));
+                    if (sameTxt && sameRole) {
+                        const tDiff = Math.abs(new Date(existing.created_at || 0) - new Date(m.created_at || 0));
+                        if (tDiff < 180000) { // خلال 3 دقائق
+                            // تفضيل اسم المودريتور الفعلي بدلاً من generic "Admin" أو "فريق 24Seven"
+                            if (m.sender_name && !['Admin', 'فريق 24Seven', 'ش'].includes(m.sender_name)) {
+                                existing.sender_name = m.sender_name;
+                            }
+                            return true;
+                        }
+                    }
+                    return false;
+                });
+
+                if (!isDup) {
+                    groupedChats[groupKey].messages.push(m);
+                }
                 groupedChats[groupKey].last = m;
                 if (m.whatsapp_instance_id && !m.is_from_admin) {
                     groupedChats[groupKey].whatsapp_instance_id = m.whatsapp_instance_id;
