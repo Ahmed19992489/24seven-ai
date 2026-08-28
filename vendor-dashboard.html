@@ -1043,22 +1043,6 @@
                             credit += amt;
                         }
                     });
-                } else if (cachedTrips && cachedTrips.length > 0) {
-                    // إذا لم تكن هناك قيود مسجلة بعد، نقوم بحساب تقديري بناءً على الرحلات والأوردرات المحملة
-                    cachedTrips.forEach(t => {
-                        const price = Number(t.estimated_price || t.cost) || 0;
-                        const notes = (t.admin_notes || '').toLowerCase();
-                        const isPostpaid = notes.includes('أجل') || notes.includes('اجل') || notes.includes('postpaid');
-                        
-                        if (isPostpaid) {
-                            // آجل: مستحق للمكتب
-                            credit += price;
-                        } else {
-                            // كاش: عمولة مستحقة للمنصة طرف المكتب (15% تقريبية أو العمولة المحددة)
-                            const comm = t.our_commission ? Number(t.our_commission) : Math.round(price * 0.15);
-                            debit += comm;
-                        }
-                    });
                 }
                 
                 const net = credit - debit;
