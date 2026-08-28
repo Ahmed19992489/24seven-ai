@@ -176,6 +176,55 @@
         .action-btn:hover { transform: scale(1.1); }
         body.en .floating-actions { right: auto; left: 30px; }
 
+        /* === 7. استبيان الجودة الذكي (Smart Feedback Modal) === */
+        .feedback-modal {
+            position: fixed; inset: 0; z-index: 9999;
+            background: rgba(2, 6, 23, 0.9);
+            backdrop-filter: blur(12px);
+            display: none; align-items: center; justify-content: center;
+            padding: 1rem; overflow-y: auto;
+        }
+        .feedback-modal.active { display: flex; }
+        
+        .modal-box {
+            background: #0f172a;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 40px rgba(37, 99, 235, 0.15);
+            border-radius: 24px; width: 100%; max-width: 600px;
+            padding: 2rem; position: relative; max-height: 92vh; overflow-y: auto;
+            transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .feedback-modal.active .modal-box { transform: scale(1); }
+
+        .star-item {
+            font-size: 2.3rem; color: #334155; cursor: pointer;
+            transition: all 0.2s ease; transform-origin: center;
+        }
+        .star-item:hover, .star-item.active {
+            color: #fbbf24; transform: scale(1.15);
+            text-shadow: 0 0 15px rgba(251, 191, 36, 0.5);
+        }
+
+        .chip-option {
+            background: #1e293b; border: 1px solid rgba(255,255,255,0.08);
+            color: #cbd5e1; padding: 8px 14px; border-radius: 12px;
+            font-size: 0.85rem; font-weight: 600; cursor: pointer;
+            transition: all 0.2s ease; user-select: none;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .chip-option:hover {
+            background: rgba(59, 130, 246, 0.15); border-color: var(--brand-blue); color: white;
+        }
+        .chip-option.selected {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            border-color: #60a5fa; color: white;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+        }
+        .chip-option.selected-negative {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            border-color: #f87171; color: white;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
+        }
     </style>
 </head>
 <body class="ar">
@@ -244,6 +293,18 @@
                         <i class="fab fa-whatsapp text-[#25D366] text-xl group-hover:text-white"></i>
                     </div>
                     <span class="text-xs text-slate-500 group-hover:text-[#25D366]">WhatsApp</span>
+                </a>
+            </div>
+
+            <!-- زر إضافة تقييم تفاعلي بارز -->
+            <div class="mb-10 flex flex-wrap justify-center items-center gap-4">
+                <button onclick="openFeedbackModal()" class="bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black px-8 py-4 rounded-2xl shadow-xl shadow-blue-600/30 transition transform hover:-translate-y-1 flex items-center gap-3 border border-blue-400/40 text-base cursor-pointer glow-effect">
+                    <i class="fas fa-star text-amber-300 text-lg"></i>
+                    <span data-key="btn_add_review">شاركنا تقييم رحلتك (Feedback)</span>
+                </button>
+                <a href="https://g.page/r/CWKEa3_fWWkWEAI/review" target="_blank" class="bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white font-bold px-6 py-4 rounded-2xl border border-slate-700/80 transition flex items-center gap-2 text-sm shadow-md">
+                    <i class="fab fa-google text-red-400 text-base"></i>
+                    <span data-key="btn_google_review">تقييمنا على خرائط Google</span>
                 </a>
             </div>
         </div>
@@ -382,6 +443,171 @@
         </div>
     </footer>
 
+    <div id="feedbackModal" class="feedback-modal" onclick="closeFeedbackModalOnBackdrop(event)">
+        <div class="modal-box text-right rtl:text-right ltr:text-left animate-fade-up" id="modalBox">
+            <button onclick="closeFeedbackModal()" class="absolute top-5 left-5 rtl:left-5 rtl:right-auto ltr:right-5 ltr:left-auto text-slate-400 hover:text-white text-2xl transition cursor-pointer" aria-label="Close">
+                <i class="fas fa-times"></i>
+            </button>
+            <div id="surveyFormSection">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 text-xl shadow-lg">
+                        <i class="fas fa-award"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-black text-white" data-key="fb_modal_title">استبيان جودة الرحلة</h3>
+                        <p class="text-xs text-slate-400" data-key="fb_modal_desc">رأيك يهمنا لتطوير أسطول وخدمات 24Seven</p>
+                    </div>
+                </div>
+                <form id="qualityReviewForm" onsubmit="submitQualityFeedback(event)">
+                    <div class="mb-6 bg-slate-900/60 p-4 rounded-2xl border border-slate-800 text-center">
+                        <label class="block text-sm font-bold text-slate-300 mb-2" data-key="fb_q_overall">1. ما هو تقييمك العام لتجربة الرحلة؟</label>
+                        <div class="flex justify-center gap-3 my-2" id="starContainer">
+                            <span class="star-item" data-value="1" onclick="setOverallRating(1)"><i class="fas fa-star"></i></span>
+                            <span class="star-item" data-value="2" onclick="setOverallRating(2)"><i class="fas fa-star"></i></span>
+                            <span class="star-item" data-value="3" onclick="setOverallRating(3)"><i class="fas fa-star"></i></span>
+                            <span class="star-item" data-value="4" onclick="setOverallRating(4)"><i class="fas fa-star"></i></span>
+                            <span class="star-item active" data-value="5" onclick="setOverallRating(5)"><i class="fas fa-star"></i></span>
+                        </div>
+                        <input type="hidden" id="overallRatingInput" value="5">
+                        <p id="starFeedbackText" class="text-xs font-bold text-amber-400 mt-1">تجربة ممتازة استثنائية 🌟</p>
+                    </div>
+                    <div class="space-y-4 mb-6">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 mb-1.5 flex items-center gap-2">
+                                <i class="fas fa-car-side text-blue-400"></i>
+                                <span data-key="fb_q_car">نظافة السيارة وكفاءة التكييف:</span>
+                            </label>
+                            <div class="flex flex-wrap gap-2" id="cleanlinessChips">
+                                <div class="chip-option selected" onclick="selectChip('cleanliness', this, 'excellent')">
+                                    <i class="fas fa-sparkles text-amber-300"></i> <span data-key="opt_excellent">ممتازة ونظيفة</span>
+                                </div>
+                                <div class="chip-option" onclick="selectChip('cleanliness', this, 'good')">
+                                    <i class="fas fa-thumbs-up text-blue-400"></i> <span data-key="opt_good">جيدة</span>
+                                </div>
+                                <div class="chip-option" onclick="selectChip('cleanliness', this, 'needs_improvement', true)">
+                                    <i class="fas fa-exclamation-triangle text-red-400"></i> <span data-key="opt_needs_work">تحتاج تحسين</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 mb-1.5 flex items-center gap-2">
+                                <i class="fas fa-user-tie text-blue-400"></i>
+                                <span data-key="fb_q_driver">التزام الكابتن بالموعد وأسلوب القيادة:</span>
+                            </label>
+                            <div class="flex flex-wrap gap-2" id="driverChips">
+                                <div class="chip-option selected" onclick="selectChip('driver', this, 'excellent')">
+                                    <i class="fas fa-clock text-green-400"></i> <span data-key="opt_driver_pro">محترف وملتزم بالوقت</span>
+                                </div>
+                                <div class="chip-option" onclick="selectChip('driver', this, 'good')">
+                                    <i class="fas fa-check text-blue-400"></i> <span data-key="opt_driver_acceptable">مقبول</span>
+                                </div>
+                                <div class="chip-option" onclick="selectChip('driver', this, 'late', true)">
+                                    <i class="fas fa-user-times text-red-400"></i> <span data-key="opt_driver_late">تأخير / غير مرضٍ</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 mb-1.5 flex items-center gap-2">
+                                <i class="fas fa-headset text-blue-400"></i>
+                                <span data-key="fb_q_support">سرعة ودقة خدمة العملاء وسهولة الحجز:</span>
+                            </label>
+                            <div class="flex flex-wrap gap-2" id="supportChips">
+                                <div class="chip-option selected" onclick="selectChip('support', this, 'fast')">
+                                    <i class="fas fa-bolt text-amber-300"></i> <span data-key="opt_fast">سريعة وممتازة</span>
+                                </div>
+                                <div class="chip-option" onclick="selectChip('support', this, 'normal')">
+                                    <i class="fas fa-check text-blue-400"></i> <span data-key="opt_normal">عادية</span>
+                                </div>
+                                <div class="chip-option" onclick="selectChip('support', this, 'slow', true)">
+                                    <i class="fas fa-hourglass-end text-red-400"></i> <span data-key="opt_slow">بطيئة</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 mb-1.5 flex items-center gap-2">
+                                <i class="fas fa-heart text-pink-400"></i>
+                                <span data-key="fb_q_recommend">هل ترشح 24Seven لأصدقائك وزملائك؟</span>
+                            </label>
+                            <div class="flex flex-wrap gap-2" id="recommendChips">
+                                <div class="chip-option selected" onclick="selectChip('recommend', this, 'yes')">
+                                    <i class="fas fa-check-circle text-green-400"></i> <span data-key="opt_yes">نعم بكل تأكيد</span>
+                                </div>
+                                <div class="chip-option" onclick="selectChip('recommend', this, 'maybe')">
+                                    <i class="fas fa-question-circle text-yellow-400"></i> <span data-key="opt_maybe">ربما</span>
+                                </div>
+                                <div class="chip-option" onclick="selectChip('recommend', this, 'no', true)">
+                                    <i class="fas fa-times-circle text-red-400"></i> <span data-key="opt_no">لا</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-5">
+                        <label class="block text-xs font-bold text-slate-300 mb-1.5" data-key="fb_q_notes">أي ملاحظات أو اقتراحات لتطوير الخدمة؟ (اختياري)</label>
+                        <textarea id="feedbackNotes" rows="2" placeholder="اكتب ملاحظاتك هنا..." class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"></textarea>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                        <div>
+                            <input type="text" id="clientName" placeholder="الاسم (اختياري)" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <input type="tel" id="clientPhone" placeholder="رقم الهاتف أو الرحلة (اختياري)" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-600/30 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2 text-base cursor-pointer">
+                        <i class="fas fa-paper-plane"></i>
+                        <span data-key="fb_btn_submit">إرسال التقييم</span>
+                    </button>
+                </form>
+            </div>
+            <div id="surveySuccessHappy" class="hidden text-center py-6">
+                <div class="w-20 h-20 rounded-full bg-green-500/20 border border-green-500/40 text-green-400 flex items-center justify-center text-3xl mx-auto mb-6 shadow-xl animate-bounce">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h3 class="text-2xl font-black text-white mb-2" data-key="fb_happy_t">شكراً لتقييمك الرائع! 🎉</h3>
+                <p class="text-slate-300 text-sm max-w-md mx-auto mb-6 leading-relaxed" data-key="fb_happy_d">
+                    تم تسجيل تقييمك في سجلات الجودة لدينا. يسعدنا جداً أن رحلتك كانت مريحة وممتعة!
+                </p>
+                <div class="bg-gradient-to-br from-blue-900/40 via-slate-900 to-indigo-900/40 border border-blue-500/40 p-6 rounded-2xl mb-6 shadow-2xl">
+                    <div class="flex items-center justify-center gap-2 text-amber-400 text-lg mb-2">
+                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                    </div>
+                    <h4 class="font-bold text-white text-base mb-2" data-key="fb_google_cta_t">خطوة أخيرة تسعدنا جداً:</h4>
+                    <p class="text-xs text-slate-300 mb-5 leading-relaxed" data-key="fb_google_cta_d">
+                        شارك رأيك الإيجابي بضغطة واحدة على خرائط Google لمساعدة الآخرين في التعرف على خدماتنا الفاخرة!
+                    </p>
+                    <a href="https://g.page/r/CWKEa3_fWWkWEAI/review" target="_blank" class="w-full bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-black py-3.5 px-6 rounded-xl shadow-lg shadow-yellow-500/30 transition transform hover:scale-105 flex items-center justify-center gap-2 text-sm inline-flex">
+                        <i class="fab fa-google text-red-600 text-lg"></i>
+                        <span data-key="fb_google_btn">كتابة تقييمك على Google Maps ⭐</span>
+                    </a>
+                </div>
+                <button onclick="closeFeedbackModal()" class="text-slate-400 hover:text-white text-xs font-bold underline transition" data-key="fb_btn_done">
+                    إغلاق والعودة للموقع
+                </button>
+            </div>
+            <div id="surveySuccessComplaint" class="hidden text-center py-6">
+                <div class="w-20 h-20 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center text-3xl mx-auto mb-6 shadow-xl">
+                    <i class="fas fa-headset"></i>
+                </div>
+                <h3 class="text-2xl font-black text-white mb-2" data-key="fb_comp_t">شكراً لصراحتك معنا 🙏</h3>
+                <p class="text-slate-300 text-sm max-w-md mx-auto mb-6 leading-relaxed" data-key="fb_comp_d">
+                    نعتذر بشدة عن أي تقصير لم يرتقِ لتوقعاتك. تم تحويل ملاحظاتك وشكواك فوراً إلى مدير الجودة والعمليات لمتابعتها مع السائق وتصحيحها.
+                </p>
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl mb-6">
+                    <p class="text-xs text-slate-400 mb-4" data-key="fb_comp_wa_d">
+                        إذا كنت ترغب في متابعة الشكوى مباشرة مع الإدارة، يمكنك التواصل فوراً عبر الواتساب:
+                    </p>
+                    <a href="https://wa.me/201121748885?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D8%8C+%D8%A3%D8%B1%D8%BA%D8%A8+%D9%81%D9%8A+%D9%85%D8%AA%D8%A7%D8%A8%D8%B9%D8%A9+%D9%85%D9%84%D8%A7%D8%AD%D8%B8%D8%A9+%D8%A8%D8%AE%D8%B5%D9%88%D8%B5+%D8%AA%D9%82%D9%8A%D9%8A%D9%85+%D8%B1%D8%AD%D9%84%D8%AA%D9%8A" target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm inline-flex">
+                        <i class="fab fa-whatsapp text-lg"></i>
+                        <span data-key="fb_comp_wa_btn">محادثة مباشرة مع مدير الجودة</span>
+                    </a>
+                </div>
+                <button onclick="closeFeedbackModal()" class="text-slate-400 hover:text-white text-xs font-bold underline transition" data-key="fb_btn_done">
+                    إغلاق والعودة للموقع
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="lightbox" class="lightbox" onclick="closeLightbox()">
         <span class="close-lightbox">&times;</span>
         <img class="lightbox-img" id="lightbox-img" src="" onclick="event.stopPropagation()">
@@ -400,21 +626,15 @@
     </div>
 
     <script>
-        // --- 1. فلترة الصور (Filter Logic) ---
         function filterReviews(category) {
-            // تحديث شكل الأزرار
             document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
+            if(event && event.target) event.target.classList.add('active');
 
-            // تصفية العناصر (الصور)
             const items = document.querySelectorAll('.filter-item');
             items.forEach(item => {
                 const itemCategory = item.getAttribute('data-category');
-                
-                // إذا كان الفلتر "الكل" أو مطابق لفئة الصورة
                 if (category === 'all' || itemCategory === category) {
                     item.style.display = 'block';
-                    // إعادة تشغيل حركة الظهور
                     item.style.opacity = '0';
                     item.style.transform = 'translateY(20px)';
                     setTimeout(() => {
@@ -427,26 +647,139 @@
             });
         }
 
-        // --- 2. عارض الصور (Lightbox) ---
         function openLightbox(img) {
             const lightbox = document.getElementById('lightbox');
             const lightboxImg = document.getElementById('lightbox-img');
             lightboxImg.src = img.src;
             lightbox.classList.add('active');
-            document.body.style.overflow = 'hidden'; // منع التمرير في الخلفية
+            document.body.style.overflow = 'hidden';
         }
 
         function closeLightbox() {
             document.getElementById('lightbox').classList.remove('active');
-            document.body.style.overflow = 'auto'; // إعادة التمرير
+            document.body.style.overflow = 'auto';
         }
 
-        // إغلاق عند الضغط على ESC
         document.addEventListener('keydown', function(event) {
-            if (event.key === "Escape") closeLightbox();
+            if (event.key === "Escape") {
+                closeLightbox();
+                closeFeedbackModal();
+            }
         });
 
-        // --- 3. تغيير اللغة (Translation) ---
+        const reviewData = {
+            overall: 5,
+            cleanliness: 'excellent',
+            driver: 'excellent',
+            support: 'fast',
+            recommend: 'yes'
+        };
+
+        function openFeedbackModal() {
+            const modal = document.getElementById('feedbackModal');
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            document.getElementById('surveyFormSection').classList.remove('hidden');
+            document.getElementById('surveySuccessHappy').classList.add('hidden');
+            document.getElementById('surveySuccessComplaint').classList.add('hidden');
+        }
+
+        function closeFeedbackModal() {
+            document.getElementById('feedbackModal').classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+
+        function closeFeedbackModalOnBackdrop(e) {
+            if (e.target.id === 'feedbackModal') {
+                closeFeedbackModal();
+            }
+        }
+
+        const starLabels = {
+            1: "تجربة سيئة جداً 😡",
+            2: "تجربة غير مرضية 👎",
+            3: "تجربة مقبولة مع ملاحظات 😐",
+            4: "تجربة جيدة جداً ومريحة 👍",
+            5: "تجربة ممتازة استثنائية 🌟"
+        };
+
+        function setOverallRating(rating) {
+            reviewData.overall = rating;
+            document.getElementById('overallRatingInput').value = rating;
+            document.getElementById('starFeedbackText').innerText = starLabels[rating] || '';
+
+            const stars = document.querySelectorAll('.star-item');
+            stars.forEach(s => {
+                const val = parseInt(s.getAttribute('data-value'));
+                if (val <= rating) {
+                    s.classList.add('active');
+                } else {
+                    s.classList.remove('active');
+                }
+            });
+        }
+
+        function selectChip(category, element, value, isNegative = false) {
+            reviewData[category] = value;
+            const parent = element.parentElement;
+            parent.querySelectorAll('.chip-option').forEach(c => {
+                c.classList.remove('selected');
+                c.classList.remove('selected-negative');
+            });
+
+            if (isNegative) {
+                element.classList.add('selected-negative');
+            } else {
+                element.classList.add('selected');
+            }
+        }
+
+        function submitQualityFeedback(e) {
+            e.preventDefault();
+
+            const notes = document.getElementById('feedbackNotes').value.trim();
+            const name = document.getElementById('clientName').value.trim();
+            const phone = document.getElementById('clientPhone').value.trim();
+
+            const payload = {
+                timestamp: new Date().toISOString(),
+                overallRating: reviewData.overall,
+                cleanliness: reviewData.cleanliness,
+                driver: reviewData.driver,
+                support: reviewData.support,
+                recommend: reviewData.recommend,
+                notes: notes,
+                clientName: name,
+                clientPhone: phone
+            };
+
+            try {
+                const existing = JSON.parse(localStorage.getItem('24seven_client_reviews') || '[]');
+                existing.push(payload);
+                localStorage.setItem('24seven_client_reviews', JSON.stringify(existing));
+            } catch(err) {}
+
+            document.getElementById('surveyFormSection').classList.add('hidden');
+
+            const hasNegativeAspect = reviewData.overall <= 3 || 
+                                     reviewData.cleanliness === 'needs_improvement' || 
+                                     reviewData.driver === 'late' || 
+                                     reviewData.support === 'slow' || 
+                                     reviewData.recommend === 'no';
+
+            if (!hasNegativeAspect && reviewData.overall >= 4) {
+                document.getElementById('surveySuccessHappy').classList.remove('hidden');
+            } else {
+                document.getElementById('surveySuccessComplaint').classList.remove('hidden');
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.location.hash === '#rate' || window.location.search.includes('rate') || window.location.search.includes('feedback')) {
+                setTimeout(openFeedbackModal, 400);
+            }
+        });
+
         const translations = {
             ar: {
                 nav_back: "الرئيسية",
@@ -454,12 +787,37 @@
                 header_1: "شركاء",
                 header_2: "النجاح",
                 header_desc: "من الشركات العالمية الكبرى إلى العرسان في ليلة العمر. هذه القصص ليست مجرد كلمات، بل هي توثيق لالتزامنا بالجودة، الأمان، والرفاهية.",
+                btn_add_review: "شاركنا تقييم رحلتك (Feedback)",
+                btn_google_review: "تقييمنا على خرائط Google",
                 filter_all: "الكل", filter_corp: "شركات", filter_wedding: "زفاف", filter_airport: "مطار",
                 img_title: "من محادثات العملاء",
                 cta_title: "لا تكتفِ بالمشاهدة فقط",
                 cta_desc: "انضم إلى نخبة عملائنا واستمتع بتجربة تنقل تليق بمكانتك. نحن هنا لخدمتك 24 ساعة في اليوم، 7 أيام في الأسبوع.",
                 btn_book_now: "احجز رحلتك الآن", btn_whatsapp: "تحدث معنا",
-                cta_note: "حجز فوري بدون مصاريف خفية"
+                cta_note: "حجز فوري بدون مصاريف خفية",
+                fb_modal_title: "استبيان جودة الرحلة",
+                fb_modal_desc: "رأيك يهمنا لتطوير أسطول وخدمات 24Seven",
+                fb_q_overall: "1. ما هو تقييمك العام لتجربة الرحلة؟",
+                fb_q_car: "نظافة السيارة وكفاءة التكييف:",
+                opt_excellent: "ممتازة ونظيفة", opt_good: "جيدة", opt_needs_work: "تحتاج تحسين",
+                fb_q_driver: "التزام الكابتن بالموعد وأسلوب القيادة:",
+                opt_driver_pro: "محترف وملتزم بالوقت", opt_driver_acceptable: "مقبول", opt_driver_late: "تأخير / غير مرضٍ",
+                fb_q_support: "سرعة ودقة خدمة العملاء وسهولة الحجز:",
+                opt_fast: "سريعة وممتازة", opt_normal: "عادية", opt_slow: "بطيئة",
+                fb_q_recommend: "هل ترشح 24Seven لأصدقائك وزملائك؟",
+                opt_yes: "نعم بكل تأكيد", opt_maybe: "ربما", opt_no: "لا",
+                fb_q_notes: "أي ملاحظات أو اقتراحات لتطوير الخدمة؟ (اختياري)",
+                fb_btn_submit: "إرسال التقييم",
+                fb_happy_t: "شكراً لتقييمك الرائع! 🎉",
+                fb_happy_d: "تم تسجيل تقييمك في سجلات الجودة لدينا. يسعدنا جداً أن رحلتك كانت مريحة وممتعة!",
+                fb_google_cta_t: "خطوة أخيرة تسعدنا جداً:",
+                fb_google_cta_d: "شارك رأيك الإيجابي بضغطة واحدة على خرائط Google لمساعدة الآخرين في التعرف على خدماتنا الفاخرة!",
+                fb_google_btn: "كتابة تقييمك على Google Maps ⭐",
+                fb_comp_t: "شكراً لصراحتك معنا 🙏",
+                fb_comp_d: "نعتذر بشدة عن أي تقصير لم يرتقِ لتوقعاتك. تم تحويل ملاحظاتك وشكواك فوراً إلى مدير الجودة والعمليات لمتابعتها وتصحيحها.",
+                fb_comp_wa_d: "إذا كنت ترغب في متابعة الشكوى مباشرة مع الإدارة، يمكنك التواصل فوراً عبر الواتساب:",
+                fb_comp_wa_btn: "محادثة مباشرة مع مدير الجودة",
+                fb_btn_done: "إغلاق والعودة للموقع"
             },
             en: {
                 nav_back: "Home",
@@ -467,12 +825,37 @@
                 header_1: "Partners of",
                 header_2: "Success",
                 header_desc: "From global corporations to newlyweds. These stories are not just words, but a documentation of our commitment to quality, safety, and luxury.",
+                btn_add_review: "Share Your Trip Feedback",
+                btn_google_review: "Review Us on Google Maps",
                 filter_all: "All", filter_corp: "Corporate", filter_wedding: "Wedding", filter_airport: "Airport",
                 img_title: "Client Feedback",
                 cta_title: "Don't Just Watch",
                 cta_desc: "Join our elite clients and enjoy a transport experience that suits your status. We are here to serve you 24/7.",
                 btn_book_now: "Book Trip Now", btn_whatsapp: "Chat With Us",
-                cta_note: "Instant booking, no hidden fees"
+                cta_note: "Instant booking, no hidden fees",
+                fb_modal_title: "Trip Quality Survey",
+                fb_modal_desc: "Your feedback helps us refine 24Seven services",
+                fb_q_overall: "1. What is your overall trip rating?",
+                fb_q_car: "Vehicle Cleanliness & AC Performance:",
+                opt_excellent: "Spotless & Clean", opt_good: "Good", opt_needs_work: "Needs Improvement",
+                fb_q_driver: "Driver Punctuality & Driving Style:",
+                opt_driver_pro: "Professional & On-Time", opt_driver_acceptable: "Acceptable", opt_driver_late: "Delayed / Unsatisfactory",
+                fb_q_support: "Customer Support Speed & Booking Ease:",
+                opt_fast: "Fast & Excellent", opt_normal: "Normal", opt_slow: "Slow",
+                fb_q_recommend: "Would you recommend 24Seven to friends & colleagues?",
+                opt_yes: "Yes Definitely", opt_maybe: "Maybe", opt_no: "No",
+                fb_q_notes: "Any suggestions or remarks? (Optional)",
+                fb_btn_submit: "Submit Feedback",
+                fb_happy_t: "Thank You for Your Great Rating! 🎉",
+                fb_happy_d: "Your feedback has been recorded in our quality system. We are delighted that you enjoyed your ride!",
+                fb_google_cta_t: "One Final Quick Step:",
+                fb_google_cta_d: "Share your positive experience on Google Maps with 1 click to help others discover our luxury mobility!",
+                fb_google_btn: "Post Your Review on Google Maps ⭐",
+                fb_comp_t: "Thank You for Your Honest Feedback 🙏",
+                fb_comp_d: "We sincerely apologize for any shortcomings. Your notes have been escalated directly to our Operations & Quality Manager.",
+                fb_comp_wa_d: "If you would like to follow up directly with management, feel free to chat with us on WhatsApp:",
+                fb_comp_wa_btn: "Direct Chat with Quality Manager",
+                fb_btn_done: "Close and Return to Site"
             }
         };
 
