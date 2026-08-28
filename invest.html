@@ -3,101 +3,1290 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>استثمر مع 24Seven | شريك نجاح</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
+    <title>استثمار وتشغيل السيارات | 24Seven Limousine</title>
+    <meta name="description" content="انضم لأسطول 24Seven وحقق دخلاً شهرياً ثابتاً ومضموناً من تشغيل سيارتك مع كبرى الشركات بعقد رسمي وتأمين شامل ومتابعة GPS لحظية.">
+    <meta name="keywords" content="استثمار سيارات, تشغيل سيارات, دخل شهري سيارات, ايجار سيارات شركات, ليموزين مصر, 24Seven limousine">
+    <meta name="author" content="24Seven Limousine">
+
+    <meta property="og:title" content="استثمر سيارتك مع 24Seven Limousine">
+    <meta property="og:description" content="تشغيل احترافي لسيارتك بدخل شهري مضمون، صيانة معتمدة، وتأمين شامل وفق عقد قانوني منظم.">
+    <meta property="og:image" content="images/logos/logo.png">
+    <meta property="og:type" content="website">
+
+    <link rel="icon" href="images/logos/logo.png" type="image/png">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
     
     <style>
-        body { font-family: 'Cairo', sans-serif; background-color: #0f172a; color: white; }
-        /* تنسيق الحقول */
-        .input-field { 
-            background: #1e293b; 
-            border: 1px solid #334155; 
-            border-radius: 8px; 
-            padding: 12px; 
-            width: 100%; 
-            color: white; 
-            outline: none; 
-            margin-bottom: 0; /* تم إلغاء الهامش السفلي لأننا نستخدم Grid */
-            transition: all 0.3s;
+        :root { 
+            --font-ar: 'Cairo', sans-serif; 
+            --font-en: 'Outfit', sans-serif;
+            --brand-dark: #020617; 
+            --brand-card: #0f172a;
+            --brand-border: rgba(59, 130, 246, 0.2);
+            --brand-blue: #2563eb; 
+            --brand-cyan: #06b6d4;
+            --brand-gold: #f59e0b; 
         }
-        .input-field:focus { 
-            border-color: #f59e0b; 
-            box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+        
+        body { 
+            background-color: var(--brand-dark); 
+            color: #f8fafc; 
+            overflow-x: hidden; 
+            font-family: var(--font-ar); 
+            transition: all 0.3s ease; 
+        }
+        
+        body.en-mode { 
+            font-family: var(--font-en); 
+            direction: ltr; 
+        }
+        body.en-mode .rtl-flip { transform: scaleX(-1); }
+
+        .glass-card {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1.25rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card:hover {
+            border-color: rgba(59, 130, 246, 0.4);
+            box-shadow: 0 12px 35px -10px rgba(37, 99, 235, 0.25);
+        }
+
+        .gold-glow {
+            box-shadow: 0 0 30px -5px rgba(245, 158, 11, 0.3);
+        }
+        .blue-glow {
+            box-shadow: 0 0 35px -5px rgba(37, 99, 235, 0.35);
+        }
+
+        .input-box {
+            background: #0b1329;
+            border: 1px solid #1e293b;
+            border-radius: 0.75rem;
+            padding: 0.85rem 1rem;
+            width: 100%;
+            color: white;
+            outline: none;
+            transition: all 0.25s ease;
+        }
+        .input-box:focus {
+            border-color: #3b82f6;
+            background: #0f1c3f;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #60a5fa 0%, #38bdf8 50%, #ffffff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .gold-text {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-mesh {
+            background-image: 
+                radial-gradient(at 10% 20%, rgba(37, 99, 235, 0.18) 0px, transparent 50%),
+                radial-gradient(at 90% 80%, rgba(245, 158, 11, 0.12) 0px, transparent 50%),
+                radial-gradient(at 50% 50%, rgba(15, 23, 42, 0.95) 0px, transparent 100%);
+        }
+
+        .mobile-menu {
+            position: fixed; top: 0; right: -100%; width: 85%; max-width: 320px; height: 100%;
+            background: rgba(2, 6, 23, 0.98);
+            backdrop-filter: blur(20px);
+            z-index: 3000; transition: right 0.4s cubic-bezier(0.77, 0, 0.175, 1);
+            border-left: 1px solid rgba(255,255,255,0.1);
+            display: flex; flex-direction: column; padding: 2rem;
+            box-shadow: -10px 0 30px rgba(0,0,0,0.6);
+        }
+        .mobile-menu.active { right: 0; }
+        body.en-mode .mobile-menu { right: auto; left: -100%; border-left: none; border-right: 1px solid rgba(255,255,255,0.1); }
+        body.en-mode .mobile-menu.active { left: 0; }
+
+        .overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.75); z-index: 2999;
+            opacity: 0; visibility: hidden; transition: 0.3s;
+        }
+        .overlay.active { opacity: 1; visibility: visible; }
+
+        .floating-actions { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column-reverse; gap: 12px; z-index: 2500; }
+        .action-btn { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 22px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); transition: 0.3s; cursor: pointer; text-decoration: none; border: 2px solid rgba(255,255,255,0.1); background-color: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px); }
+        .action-btn:hover { transform: scale(1.1); }
+        .action-btn.whatsapp { background-color: #25D366; border: none; }
+        body.en-mode .floating-actions { right: auto; left: 20px; }
+
+        .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.35s ease-out; }
+        .faq-item.active .faq-answer { max-height: 300px; }
+        .faq-item.active .faq-chevron { transform: rotate(180deg); }
+
+        @media print {
+            body * { visibility: hidden; }
+            #printableGuide, #printableGuide * { visibility: visible; }
+            #printableGuide { position: absolute; left: 0; top: 0; width: 100%; color: black !important; background: white !important; }
         }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4 bg-[url('https://images.unsplash.com/photo-1562511993-9c4c7c22c5f9?q=80&w=1920')] bg-cover bg-center relative">
-    
-    <div class="absolute inset-0 bg-slate-900/90"></div>
+<body class="ar-mode hero-mesh min-h-screen selection:bg-blue-600 selection:text-white">
 
-    <div class="relative z-10 w-full max-w-2xl bg-slate-800/80 backdrop-blur-xl p-8 rounded-2xl border border-slate-700 shadow-2xl animate-fade-in-up">
-        
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-bold mb-2 text-white">انضم لأسطول 24Seven</h1>
-            <p class="text-slate-400 text-sm">استثمر سيارتك معنا وحقق عائداً شهرياً مضموناً</p>
+    <!-- 1. Header & Navigation -->
+    <nav class="fixed w-full z-50 bg-[#020617]/90 backdrop-blur-xl border-b border-slate-800/80 transition-all duration-300">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            
+            <div class="flex items-center gap-4">
+                <button class="md:hidden text-white text-2xl focus:outline-none" onclick="toggleMenu()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <a href="home.html" class="flex items-center gap-3">
+                    <img src="images/logos/logo.png" onerror="this.src='https://placehold.co/150x50/0f172a/3b82f6?text=24Seven'" alt="24Seven Logo" class="h-10 md:h-11 drop-shadow-md">
+                </a>
+            </div>
+
+            <div class="hidden md:flex items-center gap-8 text-sm font-bold text-slate-300">
+                <a href="home.html" class="hover:text-blue-400 transition" data-key="nav_home">الرئيسية</a>
+                <a href="home.html#services" class="hover:text-blue-400 transition" data-key="nav_services">خدمات الليموزين</a>
+                <a href="about.html" class="hover:text-blue-400 transition" data-key="nav_about">من نحن</a>
+                <a href="reviews.html" class="hover:text-blue-400 transition" data-key="nav_reviews">آراء العملاء</a>
+                <a href="#calculator" class="text-amber-400 hover:text-amber-300 transition flex items-center gap-1.5 font-bold">
+                    <i class="fas fa-calculator text-xs"></i> <span data-key="nav_calc">حاسبة العائد</span>
+                </a>
+                <a href="#guide" class="hover:text-blue-400 transition" data-key="nav_guide">دليل التعاقد</a>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button onclick="toggleLang()" class="text-xs font-bold border border-slate-700 px-3.5 py-1.5 rounded-full text-slate-300 hover:bg-slate-800 hover:text-white transition flex items-center gap-2 cursor-pointer bg-slate-900/60">
+                    <i class="fas fa-globe text-blue-400"></i> <span id="lang-text">EN</span>
+                </button>
+                <a href="#apply" class="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 px-5 py-2 rounded-full font-black text-xs md:text-sm shadow-lg shadow-amber-500/20 transition transform hover:-translate-y-0.5 flex items-center gap-2">
+                    <i class="fas fa-car-side"></i> <span data-key="btn_join_top">انضم لأسطولنا</span>
+                </a>
+            </div>
         </div>
+    </nav>
 
-        <form action="https://formspree.io/f/xzddpdga" method="POST" class="space-y-4">
+    <!-- Mobile Drawer Menu -->
+    <div class="overlay" onclick="toggleMenu()"></div>
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="flex justify-between items-center mb-8 pb-4 border-b border-slate-800">
+            <img src="images/logos/logo.png" class="h-8" alt="Logo" onerror="this.style.display='none'">
+            <span class="text-sm font-bold text-amber-500">24Seven Investment</span>
+            <button onclick="toggleMenu()" class="text-slate-400 text-2xl hover:text-white"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="flex flex-col gap-4 text-base font-bold text-slate-300">
+            <a href="home.html" onclick="toggleMenu()" class="py-2 hover:text-blue-400 flex justify-between items-center"><span data-key="nav_home">الرئيسية</span> <i class="fas fa-chevron-left text-xs text-slate-600 rtl-flip"></i></a>
+            <a href="home.html#services" onclick="toggleMenu()" class="py-2 hover:text-blue-400 flex justify-between items-center"><span data-key="nav_services">خدمات الليموزين</span> <i class="fas fa-chevron-left text-xs text-slate-600 rtl-flip"></i></a>
+            <a href="#calculator" onclick="toggleMenu()" class="py-2 text-amber-400 flex justify-between items-center"><span data-key="nav_calc">حاسبة العائد الشهري</span> <i class="fas fa-calculator text-xs"></i></a>
+            <a href="#cases" onclick="toggleMenu()" class="py-2 hover:text-blue-400 flex justify-between items-center"><span data-key="nav_cases">حالات تشغيل فعلية</span> <i class="fas fa-chevron-left text-xs text-slate-600 rtl-flip"></i></a>
+            <a href="#guide" onclick="toggleMenu()" class="py-2 hover:text-blue-400 flex justify-between items-center"><span data-key="nav_guide">دليل التعاقد</span> <i class="fas fa-chevron-left text-xs text-slate-600 rtl-flip"></i></a>
+            <a href="#faq" onclick="toggleMenu()" class="py-2 hover:text-blue-400 flex justify-between items-center"><span data-key="nav_faq">الأسئلة الشائعة</span> <i class="fas fa-chevron-left text-xs text-slate-600 rtl-flip"></i></a>
+            <a href="about.html" onclick="toggleMenu()" class="py-2 hover:text-blue-400 flex justify-between items-center"><span data-key="nav_about">من نحن</span> <i class="fas fa-chevron-left text-xs text-slate-600 rtl-flip"></i></a>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input type="text" name="الاسم_بالكامل" placeholder="الاسم بالكامل" class="input-field" required>
-                <input type="tel" name="رقم_الهاتف" placeholder="رقم الهاتف / واتساب" class="input-field" required>
-            </div>
-
-            <h3 class="text-sm font-bold text-amber-500 mb-2 mt-4 flex items-center gap-2">
-                <i class="fas fa-car"></i> بيانات السيارة
-            </h3>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <input type="text" name="نوع_السيارة" placeholder="الماركة (مثال: تويوتا)" class="input-field" required>
-                <input type="text" name="الموديل" placeholder="الموديل (مثال: كورولا)" class="input-field" required>
-                <input type="number" name="سنة_الصنع" placeholder="سنة الصنع" class="input-field" required>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input type="text" name="المحافظة" placeholder="المحافظة" class="input-field" required>
-                <input type="number" name="الايجار_المتوقع" placeholder="الإيجار الشهري المتوقع (EGP)" class="input-field">
-            </div>
-
-            <div class="flex items-center gap-3 mt-2 bg-slate-700/50 p-3 rounded-lg border border-slate-600 hover:border-slate-500 transition">
-                <input type="checkbox" name="متوفر_سائق" value="نعم" id="has-driver" class="w-5 h-5 accent-amber-500 cursor-pointer">
-                <label for="has-driver" class="cursor-pointer select-none text-slate-300 text-sm">هل السيارة متوفرة بسائق؟</label>
-            </div>
-
-            <input type="hidden" name="_next" value="https://24seven-ai.com/invest.html?status=success">
-            <input type="hidden" name="_subject" value="🔔 طلب استثمار سيارة جديد - 24Seven">
-            <input type="hidden" name="_captcha" value="false">
-
-            <button type="submit" class="w-full bg-gradient-to-r from-amber-500 to-orange-600 text-slate-900 font-bold py-3.5 rounded-xl hover:shadow-lg hover:shadow-amber-500/20 transform hover:-translate-y-1 transition duration-300 mt-6">
-                إرسال طلب الانضمام
-            </button>
-        </form>
-        
-        <div class="mt-6 text-center pt-4 border-t border-slate-700">
-            <a href="home.html" class="text-slate-500 text-sm hover:text-white transition flex items-center justify-center gap-2">
-                <i class="fas fa-arrow-right"></i> العودة للرئيسية
-            </a>
+            <a href="#apply" onclick="toggleMenu()" class="bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 text-center py-3 rounded-xl mt-4 font-black shadow-lg" data-key="btn_join_top">طلب مراجعة السيارة</a>
         </div>
     </div>
 
+    <!-- 2. Hero Section -->
+    <header class="pt-32 md:pt-40 pb-20 relative overflow-hidden">
+        <div class="container mx-auto px-6 relative z-10">
+            <div class="max-w-4xl mx-auto text-center">
+                
+                <!-- Badge -->
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-950/80 border border-blue-500/30 text-blue-300 text-xs md:text-sm font-bold mb-6 backdrop-blur-md">
+                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+                    <i class="fas fa-shield-alt text-amber-400"></i>
+                    <span data-key="hero_badge">تشغيل معتمد لسيارتك مع 24Seven Limousine</span>
+                </div>
+
+                <!-- Main Title -->
+                <h1 class="text-4xl md:text-6xl lg:text-7xl font-black mb-6 leading-tight tracking-tight">
+                    <span data-key="hero_title_1">سيارتك أصل حقيقي..</span> <br>
+                    <span class="gradient-text" data-key="hero_title_2">شغّلها بدخل شهري مضمون</span>
+                </h1>
+
+                <!-- Subtitle -->
+                <p class="text-base md:text-xl text-slate-300 mb-10 max-w-2xl mx-auto leading-relaxed opacity-90" data-key="hero_desc">
+                    نستقبل سيارات موديل 2020 فأحدث للتشغيل في الشركات والرحلات الرسمية والمواقع، مع متابعة لحظية عبر GPS، صيانة معتمدة، وتأمين شامل وفق عقد قانوني ملزم.
+                </p>
+
+                <!-- CTA Buttons -->
+                <div class="flex flex-wrap justify-center items-center gap-4 mb-12">
+                    <a href="#calculator" class="bg-gradient-to-r from-amber-500 via-amber-400 to-orange-500 text-slate-950 px-8 py-4 rounded-xl font-black text-base shadow-xl shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-105 transition duration-300 flex items-center gap-3">
+                        <i class="fas fa-calculator text-lg"></i>
+                        <span data-key="btn_calc_hero">احسب راتب سيارتك فوراً</span>
+                    </a>
+                    <a href="#apply" class="glass-card text-white px-8 py-4 rounded-xl font-bold text-base hover:bg-slate-800 transition duration-300 border border-slate-700 flex items-center gap-2">
+                        <i class="fas fa-file-signature text-blue-400"></i>
+                        <span data-key="btn_review_hero">طلب مراجعة السيارة</span>
+                    </a>
+                </div>
+
+                <!-- Proof Badges -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs md:text-sm text-slate-400 max-w-3xl mx-auto pt-6 border-t border-slate-800/80">
+                    <div class="flex items-center justify-center gap-2">
+                        <i class="fas fa-check-circle text-emerald-400"></i>
+                        <span data-key="proof_1">تعاقد رسمي من الإسكندرية وجميع المحافظات</span>
+                    </div>
+                    <div class="flex items-center justify-center gap-2">
+                        <i class="fas fa-check-circle text-emerald-400"></i>
+                        <span data-key="proof_2">صيانة دورية وتأمين شامل وفق العقد</span>
+                    </div>
+                    <div class="flex items-center justify-center gap-2">
+                        <i class="fas fa-check-circle text-emerald-400"></i>
+                        <span data-key="proof_3">تقييم نهائي عادل بعد المعاينة الفنية</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </header>
+
+    <!-- 3. Pillars / What We Cover (ضمانات التشغيل) -->
+    <section class="py-16 bg-slate-950/60 border-y border-slate-900">
+        <div class="container mx-auto px-6">
+            
+            <div class="text-center max-w-2xl mx-auto mb-14">
+                <span class="text-blue-400 text-xs md:text-sm font-bold uppercase tracking-wider block mb-2" data-key="sec_pillars_kicker">نظام تشغيل متكامل</span>
+                <h2 class="text-3xl md:text-4xl font-extrabold text-white" data-key="sec_pillars_title">ما الذي يتحمله النظام التشغيلي لـ 24Seven؟</h2>
+                <p class="text-slate-400 text-sm mt-3" data-key="sec_pillars_desc">ندير سيارتك بأعلى معايير الاحترافية لترتاح تماماً من تفاصيل التشغيل اليومي</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                
+                <div class="glass-card p-6 rounded-2xl relative overflow-hidden group">
+                    <div class="w-14 h-14 rounded-xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-2xl text-blue-400 mb-5 group-hover:bg-blue-600 group-hover:text-white transition duration-300">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2" data-key="pillar_1_t">سائقون محترفون</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed" data-key="pillar_1_d">سائقون مؤهلون يخضعون لفحص أمني وطبي، وتدريب احترافي مع عقود وضمانات تشغيل ملزمة.</p>
+                </div>
+
+                <div class="glass-card p-6 rounded-2xl relative overflow-hidden group">
+                    <div class="w-14 h-14 rounded-xl bg-cyan-600/10 border border-cyan-500/20 flex items-center justify-center text-2xl text-cyan-400 mb-5 group-hover:bg-cyan-600 group-hover:text-white transition duration-300">
+                        <i class="fas fa-satellite-dish"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2" data-key="pillar_2_t">تتبع GPS لحظي 24/7</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed" data-key="pillar_2_d">متابعة مستمرة ودقيقة لمسار السيارة، والسرعة، وساعات العمل مع سجلات تقارير رقمية متكاملة.</p>
+                </div>
+
+                <div class="glass-card p-6 rounded-2xl relative overflow-hidden group">
+                    <div class="w-14 h-14 rounded-xl bg-amber-600/10 border border-amber-500/20 flex items-center justify-center text-2xl text-amber-400 mb-5 group-hover:bg-amber-600 group-hover:text-white transition duration-300">
+                        <i class="fas fa-tools"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2" data-key="pillar_3_t">صيانة دورية معتمدة</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed" data-key="pillar_3_d">تغيير الزيوت والفلاتر والفحص الدوري في مراكز خدمة معتمدة مع الحفاظ على القيمة السوقية للسيارة.</p>
+                </div>
+
+                <div class="glass-card p-6 rounded-2xl relative overflow-hidden group">
+                    <div class="w-14 h-14 rounded-xl bg-emerald-600/10 border border-emerald-500/20 flex items-center justify-center text-2xl text-emerald-400 mb-5 group-hover:bg-emerald-600 group-hover:text-white transition duration-300">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2" data-key="pillar_4_t">إدارة التأمين والحوادث</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed" data-key="pillar_4_d">إدارة كاملة لملفات الإصلاح والتأمين مع بدل توقف متفق عليه وفق شروط العقد وبنسبة تصل لـ 50%.</p>
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- 4. Interactive Quick & Detailed Calculator (حاسبة الدخل والعائد) -->
+    <section id="calculator" class="py-24 relative">
+        <div class="container mx-auto px-6">
+            
+            <div class="text-center max-w-2xl mx-auto mb-16">
+                <span class="text-amber-400 text-xs md:text-sm font-bold uppercase tracking-wider block mb-2" data-key="sec_calc_kicker">الحاسبة التقديرية الفورية</span>
+                <h2 class="text-3xl md:text-5xl font-black text-white mb-4" data-key="sec_calc_title">اعرف الراتب الشهري التقديري لسيارتك</h2>
+                <p class="text-slate-400 text-sm md:text-base" data-key="sec_calc_desc">أدخل بيانات سيارتك لحساب العائد الشهري وصافي الدخل المتوقع على مدار فترة التشغيل</p>
+            </div>
+
+            <div class="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                
+                <!-- Calculator Inputs (Left/Right) -->
+                <div class="lg:col-span-7 glass-card p-6 md:p-8 rounded-3xl border border-slate-700/80 shadow-2xl">
+                    <h3 class="text-lg font-bold text-white mb-6 flex items-center gap-2 border-b border-slate-800 pb-3">
+                        <i class="fas fa-sliders-h text-blue-400"></i>
+                        <span data-key="calc_box_title">بيانات وفئة السيارة</span>
+                    </h3>
+
+                    <div class="space-y-5">
+                        
+                        <!-- Category Selector -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-2" data-key="lbl_category">فئة السيارة</label>
+                            <div class="grid grid-cols-3 gap-2.5" id="categoryTabs">
+                                <button type="button" onclick="setCategory('sedan')" id="btnCatSedan" class="cat-btn py-3 px-2 rounded-xl text-xs font-bold border border-blue-500 bg-blue-600/20 text-white flex flex-col items-center gap-1.5 transition">
+                                    <i class="fas fa-car text-base"></i>
+                                    <span data-key="cat_sedan">سيدان</span>
+                                </button>
+                                <button type="button" onclick="setCategory('minivan')" id="btnCatMinivan" class="cat-btn py-3 px-2 rounded-xl text-xs font-bold border border-slate-700 bg-slate-900/60 text-slate-400 flex flex-col items-center gap-1.5 transition hover:border-slate-500">
+                                    <i class="fas fa-shuttle-van text-base"></i>
+                                    <span data-key="cat_minivan">ميني فان (7 راكب)</span>
+                                </button>
+                                <button type="button" onclick="setCategory('van')" id="btnCatVan" class="cat-btn py-3 px-2 rounded-xl text-xs font-bold border border-slate-700 bg-slate-900/60 text-slate-400 flex flex-col items-center gap-1.5 transition hover:border-slate-500">
+                                    <i class="fas fa-van-shuttle text-base"></i>
+                                    <span data-key="cat_van">فان سياحي</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Brand & Model -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-300 mb-1.5" data-key="lbl_brand">الماركة</label>
+                                <input type="text" id="calcBrand" placeholder="مثال: تويوتا / نيسان" value="تويوتا" oninput="calculateEstimate()" class="input-box text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-300 mb-1.5" data-key="lbl_model">الموديل</label>
+                                <input type="text" id="calcModel" placeholder="مثال: كورولا / إكسباندر" value="كورولا" oninput="calculateEstimate()" class="input-box text-sm">
+                            </div>
+                        </div>
+
+                        <!-- Model Year -->
+                        <div>
+                            <div class="flex justify-between items-center mb-1.5">
+                                <label class="text-xs font-bold text-slate-300" data-key="lbl_year">سنة الصنع (الموديل)</label>
+                                <span id="yearDisplay" class="text-amber-400 font-bold text-xs bg-amber-400/10 px-2.5 py-0.5 rounded-full">2023</span>
+                            </div>
+                            <input type="range" id="calcYear" min="2020" max="2026" value="2023" step="1" oninput="updateYearSlider(this.value)" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500">
+                            <div class="flex justify-between text-[11px] text-slate-500 mt-1">
+                                <span>2020</span>
+                                <span>2021</span>
+                                <span>2022</span>
+                                <span>2023</span>
+                                <span>2024</span>
+                                <span>2025</span>
+                                <span>2026</span>
+                            </div>
+                        </div>
+
+                        <!-- Vehicle Value -->
+                        <div>
+                            <div class="flex justify-between items-center mb-1.5">
+                                <label class="text-xs font-bold text-slate-300" data-key="lbl_value">القيمة السوقية التقريبية للسيارة (ج.م)</label>
+                                <span id="valFormattedDisplay" class="text-blue-400 font-extrabold text-sm">1,000,000 ج.م</span>
+                            </div>
+                            <input type="number" id="calcValue" value="1000000" min="200000" max="10000000" step="50000" oninput="updateValueInput(this.value)" class="input-box text-base font-bold text-white">
+                        </div>
+
+                        <!-- Contract Duration Selector -->
+                        <div class="pt-2 border-t border-slate-800">
+                            <label class="block text-xs font-bold text-slate-300 mb-2" data-key="lbl_duration">مدة التشغيل التقديرية</label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button type="button" onclick="setDuration(1)" id="btnDur1" class="dur-btn py-2 px-3 rounded-lg text-xs font-bold border border-blue-500 bg-blue-600/20 text-white transition">
+                                    <span data-key="dur_1">سنة واحدة</span>
+                                </button>
+                                <button type="button" onclick="setDuration(2)" id="btnDur2" class="dur-btn py-2 px-3 rounded-lg text-xs font-bold border border-slate-700 bg-slate-900/60 text-slate-400 transition hover:border-slate-500">
+                                    <span data-key="dur_2">سنتان</span>
+                                </button>
+                                <button type="button" onclick="setDuration(3)" id="btnDur3" class="dur-btn py-2 px-3 rounded-lg text-xs font-bold border border-slate-700 bg-slate-900/60 text-slate-400 transition hover:border-slate-500">
+                                    <span data-key="dur_3">3 سنوات</span>
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Calculator Output / Result Card (Right/Left) -->
+                <div class="lg:col-span-5 space-y-6">
+                    
+                    <!-- Main Monthly Output -->
+                    <div class="glass-card p-6 md:p-8 rounded-3xl border-2 border-amber-500/40 gold-glow relative overflow-hidden bg-gradient-to-b from-slate-900 via-slate-900/90 to-slate-950">
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-xs font-bold px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1.5">
+                                <i class="fas fa-bolt text-amber-400"></i>
+                                <span id="eligibilityBadge" data-key="badge_eligible">مؤهلة للتشغيل الفوري</span>
+                            </span>
+                            <span class="text-xs text-slate-400" data-key="txt_indicative">تقدير أولي</span>
+                        </div>
+
+                        <div class="text-slate-400 text-xs font-bold mb-1" data-key="txt_estimated_income">الراتب الشهري التقديري</div>
+                        <div class="text-4xl md:text-5xl font-black text-amber-400 mb-4 tracking-tight" id="monthlyIncomeDisplay">
+                            20,000 <span class="text-lg font-bold text-white">ج.م</span>
+                        </div>
+
+                        <!-- Multi-Year Breakdown -->
+                        <div class="space-y-2.5 pt-4 border-t border-slate-800 text-xs">
+                            <div class="flex justify-between items-center text-slate-300">
+                                <span data-key="txt_total_cash">إجمالي الدخل النقدي (<span id="durTextSummary">سنة واحدة</span>):</span>
+                                <span class="font-bold text-white text-sm" id="totalCashDisplay">240,000 ج.م</span>
+                            </div>
+                            <div class="flex justify-between items-center text-slate-400">
+                                <span data-key="txt_market_after">القيمة التقديرية للسيارة بعد المدة:</span>
+                                <span class="font-bold text-slate-300" id="marketAfterDisplay">850,000 ج.م</span>
+                            </div>
+                            <div class="flex justify-between items-center text-emerald-400 pt-2 border-t border-slate-800/80">
+                                <span class="font-bold" data-key="txt_net_outcome">صافي النتيجة الشاملة:</span>
+                                <span class="font-black text-base" id="netOutcomeDisplay">1,090,000 ج.م</span>
+                            </div>
+                            <div class="flex justify-between items-center text-blue-400 text-[11px]">
+                                <span data-key="txt_roi">العائد الاستثماري السنوي:</span>
+                                <span class="font-bold text-xs" id="roiDisplay">9.0% سنوياً</span>
+                            </div>
+                        </div>
+
+                        <!-- Disclaimer -->
+                        <p class="text-[10px] text-slate-500 mt-4 leading-relaxed border-t border-slate-800/60 pt-3" data-key="calc_disclaimer">
+                            * هذه الأرقام استرشادية مبنية على متوسطات السوق ومعدل 2% شهرياً. يُثبت السعر والراتب النهائي بعد المعاينة الفنية واعتماد السيارة في العقد الرسمي.
+                        </p>
+
+                        <!-- Action Button inside calc -->
+                        <a href="#apply" onclick="prefillFormFromCalc()" class="w-full mt-5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-black py-3.5 px-4 rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition transform hover:-translate-y-0.5">
+                            <span data-key="btn_apply_with_data">تقديم طلب مراجعة بهذه البيانات</span>
+                            <i class="fas fa-arrow-left text-xs rtl-flip"></i>
+                        </a>
+
+                    </div>
+
+                    <!-- Fast WhatsApp Calculation Link -->
+                    <div class="glass-card p-4 rounded-2xl flex items-center justify-between gap-3 border border-emerald-500/20 bg-emerald-950/20">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl shrink-0">
+                                <i class="fab fa-whatsapp"></i>
+                            </div>
+                            <div class="text-xs">
+                                <div class="font-bold text-white" data-key="wa_calc_title">تريد استشارة فورية مع خبير الأسطول؟</div>
+                                <div class="text-slate-400" data-key="wa_calc_desc">أرسل نتيجة الحاسبة مباشرة على واتساب</div>
+                            </div>
+                        </div>
+                        <button type="button" onclick="sendCalcToWhatsapp()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2 px-3.5 rounded-lg shrink-0 transition flex items-center gap-1.5">
+                            <i class="fab fa-whatsapp"></i>
+                            <span data-key="btn_wa_send">إرسال</span>
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- 5. Live Operating Case Studies (حالات تشغيل فعلية) -->
+    <section id="cases" class="py-20 bg-slate-950/80 border-t border-slate-900">
+        <div class="container mx-auto px-6">
+            
+            <div class="text-center max-w-2xl mx-auto mb-14">
+                <span class="text-blue-400 text-xs md:text-sm font-bold uppercase tracking-wider block mb-2" data-key="sec_cases_kicker">أرقام من الواقع</span>
+                <h2 class="text-3xl md:text-4xl font-extrabold text-white" data-key="sec_cases_title">نماذج وحالات تشغيل فعلية من الأسطول</h2>
+                <p class="text-slate-400 text-sm mt-2" data-key="sec_cases_desc">نماذج تشغيل حقيقية توضح العوائد النقدية المحققة لملاك السيارات المتعاقدين معنا</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                
+                <!-- Case 1: Toyota Corolla -->
+                <div class="glass-card p-6 rounded-3xl border border-slate-800 relative overflow-hidden">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <span class="text-xs font-bold text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20" data-key="cat_sedan">سيدان</span>
+                            <h3 class="text-xl font-bold text-white mt-2">تويوتا كورولا 2023</h3>
+                        </div>
+                        <i class="fas fa-car text-3xl text-slate-700"></i>
+                    </div>
+
+                    <div class="space-y-3 py-4 border-y border-slate-800/80 text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-slate-400" data-key="case_entry_val">قيمة الدخول:</span>
+                            <span class="font-bold text-white">1,100,000 ج.م</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400" data-key="case_period">مدة التشغيل:</span>
+                            <span class="font-bold text-amber-400" data-key="dur_2">سنتان (24 شهر)</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400" data-key="case_monthly">الدخل الشهري:</span>
+                            <span class="font-bold text-emerald-400 text-sm">22,000 ج.م</span>
+                        </div>
+                        <div class="flex justify-between text-blue-300 font-bold pt-2 border-t border-slate-800/50">
+                            <span data-key="case_total_income">إجمالي الدخل المحقق:</span>
+                            <span class="text-sm font-black">528,000 ج.م</span>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-[11px] text-slate-500 flex items-center gap-1.5">
+                        <i class="fas fa-shield-alt text-blue-400"></i>
+                        <span data-key="case_note_1">تشغيل شركات بترول + صيانة دورية شاملة</span>
+                    </div>
+                </div>
+
+                <!-- Case 2: Mitsubishi Xpander -->
+                <div class="glass-card p-6 rounded-3xl border-2 border-blue-500/40 blue-glow relative overflow-hidden">
+                    <div class="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-wider" data-key="badge_popular">الأعلى طلباً</div>
+                    <div class="flex justify-between items-start mb-4 mt-2">
+                        <div>
+                            <span class="text-xs font-bold text-cyan-400 bg-cyan-500/10 px-3 py-1 rounded-full border border-cyan-500/20" data-key="cat_minivan">ميني فان 7 راكب</span>
+                            <h3 class="text-xl font-bold text-white mt-2">ميتسوبيشي إكسباندر 2024</h3>
+                        </div>
+                        <i class="fas fa-shuttle-van text-3xl text-blue-500/50"></i>
+                    </div>
+
+                    <div class="space-y-3 py-4 border-y border-slate-800/80 text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-slate-400" data-key="case_entry_val">قيمة الدخول:</span>
+                            <span class="font-bold text-white">1,350,000 ج.م</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400" data-key="case_period">مدة التشغيل:</span>
+                            <span class="font-bold text-amber-400" data-key="dur_1">سنة واحدة (12 شهر)</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400" data-key="case_monthly">الدخل الشهري:</span>
+                            <span class="font-bold text-emerald-400 text-sm">27,000 ج.م</span>
+                        </div>
+                        <div class="flex justify-between text-blue-300 font-bold pt-2 border-t border-slate-800/50">
+                            <span data-key="case_total_income">إجمالي الدخل المحقق:</span>
+                            <span class="text-sm font-black">324,000 ج.م</span>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-[11px] text-slate-500 flex items-center gap-1.5">
+                        <i class="fas fa-shield-alt text-blue-400"></i>
+                        <span data-key="case_note_2">تشغيل عقود سياحة ومطارات VIP</span>
+                    </div>
+                </div>
+
+                <!-- Case 3: Toyota Hiace -->
+                <div class="glass-card p-6 rounded-3xl border border-slate-800 relative overflow-hidden">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <span class="text-xs font-bold text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20" data-key="cat_van">فان سياحي</span>
+                            <h3 class="text-xl font-bold text-white mt-2">تويوتا هايس 2023</h3>
+                        </div>
+                        <i class="fas fa-van-shuttle text-3xl text-slate-700"></i>
+                    </div>
+
+                    <div class="space-y-3 py-4 border-y border-slate-800/80 text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-slate-400" data-key="case_entry_val">قيمة الدخول:</span>
+                            <span class="font-bold text-white">1,800,000 ج.م</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400" data-key="case_period">مدة التشغيل:</span>
+                            <span class="font-bold text-amber-400" data-key="dur_3">3 سنوات (36 شهر)</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400" data-key="case_monthly">الدخل الشهري:</span>
+                            <span class="font-bold text-emerald-400 text-sm">36,000 ج.م</span>
+                        </div>
+                        <div class="flex justify-between text-blue-300 font-bold pt-2 border-t border-slate-800/50">
+                            <span data-key="case_total_income">إجمالي الدخل المحقق:</span>
+                            <span class="text-sm font-black">1,296,000 ج.م</span>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-[11px] text-slate-500 flex items-center gap-1.5">
+                        <i class="fas fa-shield-alt text-blue-400"></i>
+                        <span data-key="case_note_3">تشغيل وفود ومؤتمرات وسفارات</span>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- 6. Pre-Contract Guide & Requirements (دليل وبنود التعاقد) -->
+    <section id="guide" class="py-20 relative">
+        <div class="container mx-auto px-6">
+            
+            <div class="glass-card p-8 md:p-12 rounded-3xl max-w-5xl mx-auto border border-blue-900/40 bg-gradient-to-br from-slate-900/90 via-slate-900/70 to-blue-950/30">
+                
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pb-8 border-b border-slate-800">
+                    <div>
+                        <span class="text-blue-400 text-xs font-bold uppercase tracking-wider block mb-1" data-key="guide_kicker">دليل ما قبل التعاقد الرسمي</span>
+                        <h2 class="text-2xl md:text-3xl font-black text-white" data-key="guide_title">متطلبات وبنود التعاقد قبل تسليم السيارة</h2>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button onclick="downloadContractGuide()" class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/40 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2">
+                            <i class="fas fa-download"></i>
+                            <span data-key="btn_download_guide">تنزيل الدليل</span>
+                        </button>
+                        <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2">
+                            <i class="fas fa-print"></i>
+                            <span data-key="btn_print_guide">طباعة</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 4 Steps -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 py-8 border-b border-slate-800">
+                    <div class="space-y-2">
+                        <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-black text-sm flex items-center justify-center">1</div>
+                        <h4 class="font-bold text-white text-sm" data-key="step_1_t">مراجعة أولية</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed" data-key="step_1_d">إرسال بيانات وفئة وسنة صنع السيارة لحساب التقدير الأولي.</p>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-black text-sm flex items-center justify-center">2</div>
+                        <h4 class="font-bold text-white text-sm" data-key="step_2_t">معاينة فنية</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed" data-key="step_2_d">فحص الحالة الميكانيكية والدهان ومطابقة الأوراق الرسمية.</p>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-black text-sm flex items-center justify-center">3</div>
+                        <h4 class="font-bold text-white text-sm" data-key="step_3_t">تثبيت العرض</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed" data-key="step_3_d">تثبيت الراتب الشهري وتاريخ الاستحقاق وطريقة السداد في العقد.</p>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="w-8 h-8 rounded-full bg-amber-500 text-slate-950 font-black text-sm flex items-center justify-center">4</div>
+                        <h4 class="font-bold text-white text-sm" data-key="step_4_t">توقيع واستلام</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed" data-key="step_4_d">توقيع نسختي العقد ومحضر الاستلام الفني وبدء التشغيل الفعلي.</p>
+                    </div>
+                </div>
+
+                <!-- Terms Details Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-8 text-xs text-slate-300">
+                    <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-2">
+                        <h5 class="font-bold text-blue-400 text-sm flex items-center gap-2">
+                            <i class="fas fa-file-check"></i> <span data-key="req_docs_t">المستندات المطلوبة من المالك</span>
+                        </h5>
+                        <ul class="space-y-1.5 text-slate-400 list-disc list-inside">
+                            <li data-key="req_doc_1">أصل وصورة رخصة السيارة (سارية).</li>
+                            <li data-key="req_doc_2">بوليصة تأمين شامل سارية ومعتمدة.</li>
+                            <li data-key="req_doc_3">بطاقة الرقم القومي سارية لمالك السيارة.</li>
+                            <li data-key="req_doc_4">الموافقة على تركيب جهاز تتبع GPS المعتمد.</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-2">
+                        <h5 class="font-bold text-amber-400 text-sm flex items-center gap-2">
+                            <i class="fas fa-shield-alt"></i> <span data-key="req_commit_t">التزامات 24Seven في العقد</span>
+                        </h5>
+                        <ul class="space-y-1.5 text-slate-400 list-disc list-inside">
+                            <li data-key="req_commit_1">سداد الراتب في الموعد المحدد بإيصال موثق أو تحويل.</li>
+                            <li data-key="req_commit_2">تحمل الصيانة الدورية واستهلاك الإطارات والبطاريات.</li>
+                            <li data-key="req_commit_3">تحمل المخالفات المرورية التي تقع أثناء فترة التشغيل.</li>
+                            <li data-key="req_commit_4">إدارة ملفات الحوادث وبدل توقف يصل لـ 50% من الراتب.</li>
+                        </ul>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- 7. Application Submission Form (نموذج تقديم طلب المراجعة) -->
+    <section id="apply" class="py-20 bg-slate-950 border-t border-slate-900">
+        <div class="container mx-auto px-6">
+            
+            <div class="max-w-3xl mx-auto glass-card p-8 md:p-12 rounded-3xl border border-slate-700 shadow-2xl relative">
+                
+                <div class="text-center mb-10">
+                    <span class="text-amber-400 text-xs font-bold uppercase tracking-wider block mb-2" data-key="form_kicker">انضم لأسطولنا الآن</span>
+                    <h2 class="text-3xl font-black text-white mb-2" data-key="form_title">طلب مراجعة ومعاينة السيارة</h2>
+                    <p class="text-slate-400 text-sm" data-key="form_desc">املأ البيانات وسيقوم مسؤول التعاقدات بالتواصل معك خلال 24 ساعة لترتيب المعاينة</p>
+                </div>
+
+                <form id="investmentForm" onsubmit="handleFormSubmit(event)" class="space-y-5">
+                    
+                    <!-- Full Name & Phone -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1.5" data-key="form_name">الاسم بالكامل *</label>
+                            <input type="text" id="ownerName" name="الاسم" placeholder="اكتب اسمك الثلاثي" required class="input-box text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1.5" data-key="form_phone">رقم الهاتف / واتساب *</label>
+                            <input type="tel" id="ownerPhone" name="الهاتف" placeholder="01xxxxxxxxx" required class="input-box text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Governorate & Category -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1.5" data-key="form_gov">المحافظة *</label>
+                            <input type="text" id="ownerGov" name="المحافظة" placeholder="مثال: الإسكندرية / القاهرة / الجيزة..." required class="input-box text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1.5" data-key="form_cat_select">فئة السيارة *</label>
+                            <select id="formCategory" name="الفئة" class="input-box text-sm bg-slate-900">
+                                <option value="سيدان">سيدان (تويوتا كورولا / إلنترا / سيراتو / نيسان...)</option>
+                                <option value="ميني فان">ميني فان (إكسباندر / إرتيجا / كارنز...)</option>
+                                <option value="فان سياحي">فان سياحي (تويوتا هايس / باص...)</option>
+                                <option value="SUV / دفع رباعي">سيارة دفع رباعي SUV</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Make, Model & Year -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1.5" data-key="form_brand">الماركة (تويوتا / ميتسوبيشي...)</label>
+                            <input type="text" id="formBrand" name="الماركة" placeholder="الماركة" class="input-box text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1.5" data-key="form_model">الموديل (كورولا / إكسباندر...)</label>
+                            <input type="text" id="formModel" name="الموديل" placeholder="الموديل" class="input-box text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1.5" data-key="form_year">سنة الصنع *</label>
+                            <input type="number" id="formYear" name="سنة_الصنع" min="2018" max="2026" value="2023" required class="input-box text-sm font-bold">
+                        </div>
+                    </div>
+
+                    <!-- Mileage & Vehicle Value -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1.5" data-key="form_mileage">قراءة العداد الحالية (كم)</label>
+                            <input type="number" id="formMileage" name="العداد" placeholder="مثال: 35000" class="input-box text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1.5" data-key="form_exp_income">القيمة السوقية التقريبية (ج.م)</label>
+                            <input type="number" id="formValue" name="القيمة_السوقية" placeholder="مثال: 1000000" class="input-box text-sm font-bold">
+                        </div>
+                    </div>
+
+                    <!-- Driver status & Notes -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-1.5" data-key="form_notes">ملاحظات إضافية عن حالة السيارة أو التجهيزات</label>
+                        <textarea id="formNotes" name="ملاحظات" rows="2" placeholder="أي تفاصيل ترغب في إضافتها (نوع التأمين، حالة الصيانة، الموقع المفضل...)" class="input-box text-sm"></textarea>
+                    </div>
+
+                    <!-- Consent Checkbox -->
+                    <div class="flex items-start gap-3 bg-slate-900/80 p-4 rounded-xl border border-slate-800">
+                        <input type="checkbox" id="formConsent" required class="w-4 h-4 mt-0.5 accent-amber-500 cursor-pointer">
+                        <label for="formConsent" class="text-xs text-slate-300 cursor-pointer leading-relaxed" data-key="form_consent_txt">
+                            أوافق على التواصل معي بخصوص مراجعة ومعاينة السيارة، وعلى بنود الخصوصية ومطابقة البيانات الرسمية.
+                        </label>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" id="btnSubmitForm" class="w-full bg-gradient-to-r from-amber-500 via-amber-400 to-orange-500 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-black py-4 rounded-xl text-base shadow-xl shadow-amber-500/25 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer">
+                        <i class="fas fa-paper-plane"></i>
+                        <span data-key="btn_submit_lead">إرسال طلب المراجعة والانضمام</span>
+                    </button>
+
+                </form>
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- 8. FAQ Accordion (الأسئلة الشائعة) -->
+    <section id="faq" class="py-20">
+        <div class="container mx-auto px-6 max-w-4xl">
+            
+            <div class="text-center mb-14">
+                <span class="text-blue-400 text-xs md:text-sm font-bold uppercase tracking-wider block mb-2" data-key="sec_faq_kicker">إجابات واضحة</span>
+                <h2 class="text-3xl md:text-4xl font-extrabold text-white" data-key="sec_faq_title">الأسئلة الشائعة حول تشغيل السيارات</h2>
+            </div>
+
+            <div class="space-y-4" id="faqList">
+                
+                <div class="faq-item glass-card rounded-2xl border border-slate-800 overflow-hidden cursor-pointer" onclick="toggleFaq(this)">
+                    <div class="p-5 flex justify-between items-center">
+                        <h4 class="text-base font-bold text-white" data-key="faq_q1">ما هي موديلات وفئات السيارات المقبولة في 24Seven؟</h4>
+                        <i class="fas fa-chevron-down text-slate-400 text-sm faq-chevron transition duration-300"></i>
+                    </div>
+                    <div class="faq-answer px-5 pb-5 text-xs md:text-sm text-slate-400 leading-relaxed border-t border-slate-800/60 pt-3" data-key="faq_a1">
+                        نقبل سيارات موديل 2020 فأحدث من فئات السيدان (مثل كورولا، إلنترا، سيراتو)، الميني فان 7 راكب (مثل إكسباندر، إرتيجا)، والفان السياحي (مثل تويوتا هايس). يتم الاعتماد النهائي بعد الفحص والمعاينة الفنية.
+                    </div>
+                </div>
+
+                <div class="faq-item glass-card rounded-2xl border border-slate-800 overflow-hidden cursor-pointer" onclick="toggleFaq(this)">
+                    <div class="p-5 flex justify-between items-center">
+                        <h4 class="text-base font-bold text-white" data-key="faq_q2">هل الراتب الشهري ثابت وكيف يتم سداده؟</h4>
+                        <i class="fas fa-chevron-down text-slate-400 text-sm faq-chevron transition duration-300"></i>
+                    </div>
+                    <div class="faq-answer px-5 pb-5 text-xs md:text-sm text-slate-400 leading-relaxed border-t border-slate-800/60 pt-3" data-key="faq_a2">
+                        نعم، الراتب الشهري يُثبت برقم محدد في العقد القانوني بعد المعاينة، ويُسدد شهرياً في تاريخ استحقاق محدد عبر تحويل بنكي أو إيصال نقدية رسمي موثق.
+                    </div>
+                </div>
+
+                <div class="faq-item glass-card rounded-2xl border border-slate-800 overflow-hidden cursor-pointer" onclick="toggleFaq(this)">
+                    <div class="p-5 flex justify-between items-center">
+                        <h4 class="text-base font-bold text-white" data-key="faq_q3">ماذا يحدث في حالة وقوع حادث أو توقف السيارة للإصلاح؟</h4>
+                        <i class="fas fa-chevron-down text-slate-400 text-sm faq-chevron transition duration-300"></i>
+                    </div>
+                    <div class="faq-answer px-5 pb-5 text-xs md:text-sm text-slate-400 leading-relaxed border-t border-slate-800/60 pt-3" data-key="faq_a3">
+                        تتولى إدارة 24Seven متابعة كافة إجراءات المحضر والإصلاح والتأمين الشامل. كما يضمن العقد بدل توقف للمالك بنسبة تصل إلى 50% من الراتب الشهري أثناء فترة إصلاح السيارة وفق ضوابط وثيقة التأمين.
+                    </div>
+                </div>
+
+                <div class="faq-item glass-card rounded-2xl border border-slate-800 overflow-hidden cursor-pointer" onclick="toggleFaq(this)">
+                    <div class="p-5 flex justify-between items-center">
+                        <h4 class="text-base font-bold text-white" data-key="faq_q4">هل التعاقد متاح فقط لسكان الإسكندرية والقاهرة؟</h4>
+                        <i class="fas fa-chevron-down text-slate-400 text-sm faq-chevron transition duration-300"></i>
+                    </div>
+                    <div class="faq-answer px-5 pb-5 text-xs md:text-sm text-slate-400 leading-relaxed border-t border-slate-800/60 pt-3" data-key="faq_a4">
+                        التعاقد متاح لملاك السيارات من كافة محافظات الجمهورية. المقر الرئيسي في الإسكندرية مع فرع القاهرة وشرم الشيخ، ويمكن ترتيب المعاينة والاستلام عبر مندوب معتمد عند الحاجة.
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-card max-w-md w-full p-8 rounded-3xl text-center border-2 border-emerald-500/50 shadow-2xl relative animate-fade-in-up">
+            <div class="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-3xl mx-auto mb-4 border border-emerald-500/40">
+                <i class="fas fa-check"></i>
+            </div>
+            <h3 class="text-2xl font-black text-white mb-2" data-key="modal_success_t">تم استلام طلبك بنجاح!</h3>
+            <p class="text-slate-300 text-xs mb-4" data-key="modal_success_d">كود متابعة الطلب الخاص بك:</p>
+            
+            <div class="bg-slate-900 py-3 px-4 rounded-xl border border-slate-700 font-mono text-amber-400 font-black text-lg mb-6" id="requestCodeDisplay">
+                REQ-2026-XXXX
+            </div>
+
+            <div class="space-y-3">
+                <button type="button" id="btnModalWhatsapp" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg transition">
+                    <i class="fab fa-whatsapp text-lg"></i>
+                    <span data-key="btn_modal_wa">تأكيد المراجعة عبر واتساب الآن</span>
+                </button>
+                <button type="button" onclick="closeSuccessModal()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 px-4 rounded-xl text-xs transition">
+                    <span data-key="btn_close">إغلاق</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Printable Guide Container for printing/downloading -->
+    <div id="printableGuide" class="hidden"></div>
+
+    <!-- 9. Footer -->
+    <footer class="bg-slate-950 pt-16 pb-8 border-t border-slate-900 text-sm">
+        <div class="container mx-auto px-6 grid md:grid-cols-3 gap-12 text-center md:text-start">
+            <div>
+                <img src="images/logos/logo.png" onerror="this.style.display='none'" class="h-10 mb-4 mx-auto md:mx-0" alt="Logo">
+                <h3 class="text-white font-bold text-xl mb-2">24Seven Limousine</h3>
+                <p class="text-slate-400 text-xs mb-4 leading-relaxed" data-key="footer_desc">
+                    شركة مسجلة رسمياً لإدارة وتشغيل أساطيل النقل السياحي والليموزين للشركات ورجال الأعمال بأعلى معايير الأمان والشفافية.
+                </p>
+            </div>
+            <div>
+                <h4 class="text-white font-bold mb-4 text-base" data-key="footer_branches">مقرات وفروع التعاقد</h4>
+                <ul class="space-y-2.5 text-slate-400 text-xs">
+                    <li data-key="branch_alex"><i class="fas fa-map-marker-alt text-blue-500 me-1.5"></i> الإسكندرية: السيوف، أبراج اللوتس</li>
+                    <li data-key="branch_cairo"><i class="fas fa-map-marker-alt text-blue-500 me-1.5"></i> القاهرة: مساكن شيراتون / المطار</li>
+                    <li data-key="branch_sharm"><i class="fas fa-map-marker-alt text-blue-500 me-1.5"></i> شرم الشيخ: خليج نعمة</li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="text-white font-bold mb-4 text-base" data-key="footer_contact">تواصل مع إدارة الأسطول</h4>
+                <p class="text-xs text-slate-400 mb-3" data-key="footer_contact_sub">للاستفسارات والمعاينات المباشرة:</p>
+                <div class="flex justify-center md:justify-start gap-4 text-xl">
+                    <a href="https://wa.me/201121748885" target="_blank" class="w-10 h-10 rounded-full bg-emerald-600/20 text-emerald-400 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition"><i class="fab fa-whatsapp"></i></a>
+                    <a href="https://www.facebook.com/Sevenlimousin/" target="_blank" class="w-10 h-10 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center hover:bg-blue-600 hover:text-white transition"><i class="fab fa-facebook-f"></i></a>
+                    <a href="https://www.instagram.com/24sevenlimousine/" target="_blank" class="w-10 h-10 rounded-full bg-pink-600/20 text-pink-400 flex items-center justify-center hover:bg-pink-600 hover:text-white transition"><i class="fab fa-instagram"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="text-center text-slate-600 text-xs mt-10 border-t border-slate-900 pt-6">
+            &copy; 2026 24Seven Limousine. All rights reserved. | بوابة استثمار وتشغيل السيارات الرسمية
+        </div>
+    </footer>
+
+    <!-- Floating Actions -->
+    <div class="floating-actions">
+        <a href="https://wa.me/201121748885?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%D8%8C%20%D8%A3%D8%B1%D9%8A%D8%AF%20%D8%A7%D9%84%D8%A7%D8%B3%D8%AA%D9%81%D8%B3%D8%A7%D8%B1%20%D8%B9%D9%86%20%D8%AA%D8%B4%D8%BA%D9%8A%D9%84%20%D8%B3%D9%8A%D8%A7%D8%B1%D8%AA%D9%8A%20%D9%85%D8%B9%2024Seven" target="_blank" class="action-btn whatsapp" title="تواصل واتساب"><i class="fab fa-whatsapp"></i></a>
+        <a href="home.html" class="action-btn" title="الرئيسية"><i class="fas fa-home"></i></a>
+    </div>
+
+    <!-- Scripts and Logic -->
     <script>
-        // التحقق مما إذا كان الرابط يحتوي على "status=success" (يحدث بعد الإرسال)
-        if (window.location.search.includes('status=success')) {
-            // إنشاء عنصر رسالة منبثقة
-            const msgDiv = document.createElement('div');
-            msgDiv.className = 'fixed top-5 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-6 py-4 rounded-lg shadow-2xl z-50 flex items-center gap-3 animate-bounce';
-            msgDiv.innerHTML = '<i class="fas fa-check-circle text-xl"></i> <div><strong>تم الإرسال بنجاح!</strong><br><span class="text-xs">سيتواصل معك فريق إدارة الأسطول قريباً.</span></div>';
-            document.body.appendChild(msgDiv);
+        // === Bilingual Dictionaries ===
+        const i18n = {
+            ar: {
+                nav_home: "الرئيسية", nav_services: "خدمات الليموزين", nav_about: "من نحن", nav_reviews: "آراء العملاء",
+                nav_calc: "حاسبة العائد", nav_guide: "دليل التعاقد", nav_cases: "حالات فعلية", nav_faq: "الأسئلة الشائعة",
+                btn_join_top: "انضم لأسطولنا", hero_badge: "تشغيل معتمد لسيارتك مع 24Seven Limousine",
+                hero_title_1: "سيارتك أصل حقيقي..", hero_title_2: "شغّلها بدخل شهري مضمون",
+                hero_desc: "نستقبل سيارات موديل 2020 فأحدث للتشغيل في الشركات والرحلات الرسمية والمواقع، مع متابعة لحظية عبر GPS، صيانة معتمدة، وتأمين شامل وفق عقد قانوني ملزم.",
+                btn_calc_hero: "احسب راتب سيارتك فوراً", btn_review_hero: "طلب مراجعة السيارة",
+                proof_1: "تعاقد رسمي من الإسكندرية وجميع المحافظات", proof_2: "صيانة دورية وتأمين شامل وفق العقد", proof_3: "تقييم نهائي عادل بعد المعاينة الفنية",
+                sec_pillars_kicker: "نظام تشغيل متكامل", sec_pillars_title: "ما الذي يتحمله النظام التشغيلي لـ 24Seven؟",
+                sec_pillars_desc: "ندير سيارتك بأعلى معايير الاحترافية لترتاح تماماً من تفاصيل التشغيل اليومي",
+                pillar_1_t: "سائقون محترفون", pillar_1_d: "سائقون مؤهلون يخضعون لفحص أمني وطبي، وتدريب احترافي مع عقود وضمانات تشغيل ملزمة.",
+                pillar_2_t: "تتبع GPS لحظي 24/7", pillar_2_d: "متابعة مستمرة ودقيقة لمسار السيارة، والسرعة، وساعات العمل مع سجلات تقارير رقمية متكاملة.",
+                pillar_3_t: "صيانة دورية معتمدة", pillar_3_d: "تغيير الزيوت والفلاتر والفحص الدوري في مراكز خدمة معتمدة مع الحفاظ على القيمة السوقية للسيارة.",
+                pillar_4_t: "إدارة التأمين والحوادث", pillar_4_d: "إدارة كاملة لملفات الإصلاح والتأمين مع بدل توقف متفق عليه وفق شروط العقد وبنسبة تصل لـ 50%.",
+                sec_calc_kicker: "الحاسبة التقديرية الفورية", sec_calc_title: "اعرف الراتب الشهري التقديري لسيارتك",
+                sec_calc_desc: "أدخل بيانات سيارتك لحساب العائد الشهري وصافي الدخل المتوقع على مدار فترة التشغيل",
+                calc_box_title: "بيانات وفئة السيارة", lbl_category: "فئة السيارة", cat_sedan: "سيدان", cat_minivan: "ميني فان (7 راكب)", cat_van: "فان سياحي",
+                lbl_brand: "الماركة", lbl_model: "الموديل", lbl_year: "سنة الصنع (الموديل)", lbl_value: "القيمة السوقية التقريبية للسيارة (ج.م)",
+                lbl_duration: "مدة التشغيل التقديرية", dur_1: "سنة واحدة", dur_2: "سنتان", dur_3: "3 سنوات",
+                badge_eligible: "مؤهلة للتشغيل الفوري", txt_indicative: "تقدير أولي", txt_estimated_income: "الراتب الشهري التقديري",
+                txt_total_cash: "إجمالي الدخل النقدي", txt_market_after: "القيمة التقديرية للسيارة بعد المدة:",
+                txt_net_outcome: "صافي النتيجة الشاملة:", txt_roi: "العائد الاستثماري السنوي:",
+                calc_disclaimer: "* هذه الأرقام استرشادية مبنية على متوسطات السوق ومعدل 2% شهرياً. يُثبت السعر والراتب النهائي بعد المعاينة الفنية واعتماد السيارة في العقد الرسمي.",
+                btn_apply_with_data: "تقديم طلب مراجعة بهذه البيانات", wa_calc_title: "تريد استشارة فورية مع خبير الأسطول؟",
+                wa_calc_desc: "أرسل نتيجة الحاسبة مباشرة على واتساب", btn_wa_send: "إرسال",
+                sec_cases_kicker: "أرقام من الواقع", sec_cases_title: "نماذج وحالات تشغيل فعلية من الأسطول",
+                sec_cases_desc: "نماذج تشغيل حقيقية توضح العوائد النقدية المحققة لملاك السيارات المتعاقدين معنا",
+                case_entry_val: "قيمة الدخول:", case_period: "مدة التشغيل:", case_monthly: "الدخل الشهري:", case_total_income: "إجمالي الدخل المحقق:",
+                case_note_1: "تشغيل شركات بترول + صيانة دورية شاملة", case_note_2: "تشغيل عقود سياحة ومطارات VIP", case_note_3: "تشغيل وفود ومؤتمرات وسفارات",
+                badge_popular: "الأعلى طلباً", guide_kicker: "دليل ما قبل التعاقد الرسمي", guide_title: "متطلبات وبنود التعاقد قبل تسليم السيارة",
+                btn_download_guide: "تنزيل الدليل", btn_print_guide: "طباعة",
+                step_1_t: "مراجعة أولية", step_1_d: "إرسال بيانات وفئة وسنة صنع السيارة لحساب التقدير الأولي.",
+                step_2_t: "معاينة فنية", step_2_d: "فحص الحالة الميكانيكية والدهان ومطابقة الأوراق الرسمية.",
+                step_3_t: "تثبيت العرض", step_3_d: "تثبيت الراتب الشهري وتاريخ الاستحقاق وطريقة السداد في العقد.",
+                step_4_t: "توقيع واستلام", step_4_d: "توقيع نسختي العقد ومحضر الاستلام الفني وبدء التشغيل الفعلي.",
+                req_docs_t: "المستندات المطلوبة من المالك", req_doc_1: "أصل وصورة رخصة السيارة (سارية).", req_doc_2: "بوليصة تأمين شامل سارية ومعتمدة.", req_doc_3: "بطاقة الرقم القومي سارية لمالك السيارة.", req_doc_4: "الموافقة على تركيب جهاز تتبع GPS المعتمد.",
+                req_commit_t: "التزامات 24Seven في العقد", req_commit_1: "سداد الراتب في الموعد المحدد بإيصال موثق أو تحويل.", req_commit_2: "تحمل الصيانة الدورية واستهلاك الإطارات والبطاريات.", req_commit_3: "تحمل المخالفات المرورية التي تقع أثناء فترة التشغيل.", req_commit_4: "إدارة ملفات الحوادث وبدل توقف يصل لـ 50% من الراتب.",
+                form_kicker: "انضم لأسطولنا الآن", form_title: "طلب مراجعة ومعاينة السيارة",
+                form_desc: "املأ البيانات وسيقوم مسؤول التعاقدات بالتواصل معك خلال 24 ساعة لترتيب المعاينة",
+                form_name: "الاسم بالكامل *", form_phone: "رقم الهاتف / واتساب *", form_gov: "المحافظة *", form_cat_select: "فئة السيارة *",
+                form_brand: "الماركة", form_model: "الموديل", form_year: "سنة الصنع *", form_mileage: "قراءة العداد الحالية (كم)", form_exp_income: "القيمة السوقية التقريبية (ج.م)",
+                form_notes: "ملاحظات إضافية عن حالة السيارة أو التجهيزات", form_consent_txt: "أوافق على التواصل معي بخصوص مراجعة ومعاينة السيارة، وعلى بنود الخصوصية ومطابقة البيانات الرسمية.",
+                btn_submit_lead: "إرسال طلب المراجعة والانضمام", sec_faq_kicker: "إجابات واضحة", sec_faq_title: "الأسئلة الشائعة حول تشغيل السيارات",
+                faq_q1: "ما هي موديلات وفئات السيارات المقبولة في 24Seven؟", faq_a1: "نقبل سيارات موديل 2020 فأحدث من فئات السيدان (مثل كورولا، إلنترا، سيراتو)، الميني فان 7 راكب (مثل إكسباندر، إرتيجا)، والفان السياحي (مثل تويوتا هايس). يتم الاعتماد النهائي بعد الفحص والمعاينة الفنية.",
+                faq_q2: "هل الراتب الشهري ثابت وكيف يتم سداده؟", faq_a2: "نعم، الراتب الشهري يُثبت برقم محدد في العقد القانوني بعد المعاينة، ويُسدد شهرياً في تاريخ استحقاق محدد عبر تحويل بنكي أو إيصال نقدية رسمي موثق.",
+                faq_q3: "ماذا يحدث في حالة وقوع حادث أو توقف السيارة للإصلاح؟", faq_a3: "تتولى إدارة 24Seven متابعة كافة إجراءات المحضر والإصلاح والتأمين الشامل. كما يضمن العقد بدل توقف للمالك بنسبة تصل إلى 50% من الراتب الشهري أثناء فترة إصلاح السيارة وفق ضوابط وثيقة التأمين.",
+                faq_q4: "هل التعاقد متاح فقط لسكان الإسكندرية والقاهرة؟", faq_a4: "التعاقد متاح لملاك السيارات من كافة محافظات الجمهورية. المقر الرئيسي في الإسكندرية مع فرع القاهرة وشرم الشيخ، ويمكن ترتيب المعاينة والاستلام عبر مندوب معتمد عند الحاجة.",
+                modal_success_t: "تم استلام طلبك بنجاح!", modal_success_d: "كود متابعة الطلب الخاص بك:",
+                btn_modal_wa: "تأكيد المراجعة عبر واتساب الآن", btn_close: "إغلاق",
+                footer_desc: "شركة مسجلة رسمياً لإدارة وتشغيل أساطيل النقل السياحي والليموزين للشركات ورجال الأعمال بأعلى معايير الأمان والشفافية.",
+                footer_branches: "مقرات وفروع التعاقد", branch_alex: "الإسكندرية: السيوف، أبراج اللوتس", branch_cairo: "القاهرة: مساكن شيراتون / المطار", branch_sharm: "شرم الشيخ: خليج نعمة",
+                footer_contact: "تواصل مع إدارة الأسطول", footer_contact_sub: "للاستفسارات والمعاينات المباشرة:"
+            },
+            en: {
+                nav_home: "Home", nav_services: "Limousine Services", nav_about: "About Us", nav_reviews: "Reviews",
+                nav_calc: "Calculator", nav_guide: "Contract Guide", nav_cases: "Live Cases", nav_faq: "FAQ",
+                btn_join_top: "Join Our Fleet", hero_badge: "Authorized Vehicle Fleet Management with 24Seven",
+                hero_title_1: "Your Car is a True Asset..", hero_title_2: "Earn Guaranteed Monthly Income",
+                hero_desc: "We onboard 2020+ vehicle models for corporate, site, and VIP operations with 24/7 live GPS tracking, certified periodic maintenance, and comprehensive insurance under a binding legal agreement.",
+                btn_calc_hero: "Calculate Income Now", btn_review_hero: "Request Vehicle Review",
+                proof_1: "Official contracts in Alexandria, Cairo & all governorates", proof_2: "Periodic servicing & full insurance under contract", proof_3: "Fair final valuation after physical inspection",
+                sec_pillars_kicker: "Integrated Operations", sec_pillars_title: "What Does 24Seven's System Cover?",
+                sec_pillars_desc: "We manage your vehicle with elite professionalism so you enjoy passive monthly returns completely stress-free.",
+                pillar_1_t: "Trained Chauffeurs", pillar_1_d: "Vetted, medically certified, and professionally trained drivers with strict operational safeguards.",
+                pillar_2_t: "24/7 Live GPS Tracking", pillar_2_d: "Real-time route, speed, and mileage monitoring with digital telematics reporting.",
+                pillar_3_t: "Certified Maintenance", pillar_3_d: "Scheduled oil, filter, and periodic checkups at authorized service centers to preserve asset resale value.",
+                pillar_4_t: "Insurance & Accident Handling", pillar_4_d: "Full management of insurance repair claims plus an agreed downtime compensation of up to 50%.",
+                sec_calc_kicker: "Indicative Calculator", sec_calc_title: "Estimate Your Vehicle's Monthly Income",
+                sec_calc_desc: "Enter your car details to estimate expected monthly payout and multi-year net financial returns.",
+                calc_box_title: "Vehicle Specifications", lbl_category: "Vehicle Category", cat_sedan: "Sedan", cat_minivan: "Minivan (7-Seater)", cat_van: "Tourist Van",
+                lbl_brand: "Make", lbl_model: "Model", lbl_year: "Model Year", lbl_value: "Estimated Market Value (EGP)",
+                lbl_duration: "Operating Term", dur_1: "1 Year", dur_2: "2 Years", dur_3: "3 Years",
+                badge_eligible: "Eligible for Instant Onboarding", txt_indicative: "Preliminary Estimate", txt_estimated_income: "Estimated Monthly Payout",
+                txt_total_cash: "Total Cash Income", txt_market_after: "Est. Resale Value After Term:",
+                txt_net_outcome: "Total Net Financial Outcome:", txt_roi: "Estimated Annual ROI:",
+                calc_disclaimer: "* Figures are indicative based on market averages (approx. 2% monthly). Final payout is locked in the formal contract following physical inspection.",
+                btn_apply_with_data: "Apply for Review with These Specs", wa_calc_title: "Need Instant Consultation with Fleet Manager?",
+                wa_calc_desc: "Send calculator results directly to WhatsApp", btn_wa_send: "Send",
+                sec_cases_kicker: "Real Numbers", sec_cases_title: "Live Operational Case Studies",
+                sec_cases_desc: "Actual operating examples demonstrating real cash returns earned by our partner vehicle owners.",
+                case_entry_val: "Entry Value:", case_period: "Operating Term:", case_monthly: "Monthly Payout:", case_total_income: "Total Cash Realized:",
+                case_note_1: "Petroleum corporate contracts + full maintenance", case_note_2: "VIP airport transfers & tourism operations", case_note_3: "Embassy, delegation & conference transport",
+                badge_popular: "Most Requested", guide_kicker: "Pre-Contract Official Guide", guide_title: "Contract Requirements & Terms Before Handover",
+                btn_download_guide: "Download Guide", btn_print_guide: "Print",
+                step_1_t: "Initial Review", step_1_d: "Submit vehicle specifications for preliminary eligibility and calculator estimation.",
+                step_2_t: "Physical Inspection", step_2_d: "Mechanical, electrical, and body inspection alongside official document verification.",
+                step_3_t: "Lock Offer", step_3_d: "Final monthly payout, payment due date, and contract duration fixed in writing.",
+                step_4_t: "Sign & Handover", step_4_d: "Both parties sign the contract and technical handover checklist before starting operations.",
+                req_docs_t: "Owner Document Checklist", req_doc_1: "Original valid vehicle license.", req_doc_2: "Active comprehensive insurance policy.", req_doc_3: "Valid National ID of the vehicle owner.", req_doc_4: "Agreement to certified GPS device installation.",
+                req_commit_t: "24Seven Contract Commitments", req_commit_1: "Timely monthly payout via bank transfer or documented receipt.", req_commit_2: "Coverage of periodic maintenance, tire, and battery wear.", req_commit_3: "Full responsibility for traffic fines incurred during operations.", req_commit_4: "Accident file handling with up to 50% downtime allowance.",
+                form_kicker: "Join Our Fleet Today", form_title: "Vehicle Review & Inspection Request",
+                form_desc: "Fill in the details and our fleet operations manager will contact you within 24 hours to arrange inspection.",
+                form_name: "Full Name *", form_phone: "Phone Number / WhatsApp *", form_gov: "Governorate *", form_cat_select: "Vehicle Category *",
+                form_brand: "Make", form_model: "Model", form_year: "Model Year *", form_mileage: "Current Mileage (KM)", form_exp_income: "Approx. Market Value (EGP)",
+                form_notes: "Additional Notes on Vehicle Condition or Equipment", form_consent_txt: "I consent to be contacted regarding vehicle inspection and agree to privacy and official data verification terms.",
+                btn_submit_lead: "Submit Inspection Request", sec_faq_kicker: "Clear Answers", sec_faq_title: "Frequently Asked Questions",
+                faq_q1: "Which vehicle models and categories does 24Seven accept?", faq_a1: "We accept 2020+ sedans (e.g. Corolla, Elantra, Cerato), 7-seater minivans (e.g. Xpander, Ertiga), and tourist vans (e.g. Toyota Hiace). Final onboarding follows technical inspection.",
+                faq_q2: "Is the monthly payout fixed and how is it paid?", faq_a2: "Yes, the monthly rate is legally locked in the contract following inspection and paid monthly on an agreed due date via bank transfer or documented receipt.",
+                faq_q3: "What happens in case of an accident or repair downtime?", faq_a3: "24Seven manages all insurance and repair procedures. The contract also guarantees a downtime allowance of up to 50% of the monthly payout during repair periods under insurance policy guidelines.",
+                faq_q4: "Is contracting limited to Alexandria and Cairo residents?", faq_a4: "No, vehicle owners from all Egyptian governorates can partner with us. Our main headquarters is in Alexandria with branches in Cairo and Sharm El-Sheikh, and representative handovers can be arranged.",
+                modal_success_t: "Application Received Successfully!", modal_success_d: "Your Request Tracking Code:",
+                btn_modal_wa: "Confirm on WhatsApp Now", btn_close: "Close",
+                footer_desc: "Officially registered luxury transport and corporate fleet management company operating with top-tier safety and transparency standards.",
+                footer_branches: "Contracting Hubs & Branches", branch_alex: "Alexandria: El-Seyouf, Lotus Towers", branch_cairo: "Cairo: Sheraton Residences / Airport", branch_sharm: "Sharm El-Sheikh: Naama Bay",
+                footer_contact: "Fleet Operations Contact", footer_contact_sub: "For direct inquiries & inspections:"
+            }
+        };
 
-            // إخفاء الرسالة بعد 4 ثواني
-            setTimeout(() => msgDiv.remove(), 4000);
+        // State variables
+        let currentLang = localStorage.getItem('24seven_lang') || 'ar';
+        let currentCategory = 'sedan';
+        let currentDuration = 1; // years
+        let lastGeneratedRequestCode = '';
+        let lastFormData = null;
 
-            // تنظيف الرابط من كلمة success حتى لا تظهر الرسالة عند تحديث الصفحة
-            window.history.replaceState({}, document.title, window.location.pathname);
+        // Apply translations
+        function applyTranslations() {
+            const t = i18n[currentLang];
+            document.querySelectorAll('[data-key]').forEach(el => {
+                const key = el.getAttribute('data-key');
+                if (t[key]) {
+                    el.innerText = t[key];
+                }
+            });
+
+            document.getElementById('lang-text').innerText = currentLang === 'ar' ? 'EN' : 'عربي';
+            if (currentLang === 'en') {
+                document.body.classList.add('en-mode');
+                document.documentElement.lang = 'en';
+                document.documentElement.dir = 'ltr';
+            } else {
+                document.body.classList.remove('en-mode');
+                document.documentElement.lang = 'ar';
+                document.documentElement.dir = 'rtl';
+            }
+            calculateEstimate();
         }
+
+        function toggleLang() {
+            currentLang = currentLang === 'ar' ? 'en' : 'ar';
+            localStorage.setItem('24seven_lang', currentLang);
+            applyTranslations();
+        }
+
+        // Toggle Mobile Menu
+        function toggleMenu() {
+            document.getElementById('mobileMenu').classList.toggle('active');
+            document.querySelector('.overlay').classList.toggle('active');
+        }
+
+        // FAQ Toggle
+        function toggleFaq(item) {
+            const isActive = item.classList.contains('active');
+            document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('active'));
+            if (!isActive) item.classList.add('active');
+        }
+
+        // Category selection in calculator
+        function setCategory(cat) {
+            currentCategory = cat;
+            document.querySelectorAll('.cat-btn').forEach(b => {
+                b.classList.remove('border-blue-500', 'bg-blue-600/20', 'text-white');
+                b.classList.add('border-slate-700', 'bg-slate-900/60', 'text-slate-400');
+            });
+            if (cat === 'sedan') {
+                document.getElementById('btnCatSedan').classList.add('border-blue-500', 'bg-blue-600/20', 'text-white');
+                document.getElementById('calcBrand').value = currentLang === 'ar' ? 'تويوتا' : 'Toyota';
+                document.getElementById('calcModel').value = currentLang === 'ar' ? 'كورولا' : 'Corolla';
+                if (document.getElementById('calcValue').value == 1350000 || document.getElementById('calcValue').value == 1800000) {
+                    updateValueInput(1000000);
+                }
+            } else if (cat === 'minivan') {
+                document.getElementById('btnCatMinivan').classList.add('border-blue-500', 'bg-blue-600/20', 'text-white');
+                document.getElementById('calcBrand').value = currentLang === 'ar' ? 'ميتسوبيشي' : 'Mitsubishi';
+                document.getElementById('calcModel').value = currentLang === 'ar' ? 'إكسباندر' : 'Xpander';
+                if (document.getElementById('calcValue').value == 1000000) updateValueInput(1350000);
+            } else if (cat === 'van') {
+                document.getElementById('btnCatVan').classList.add('border-blue-500', 'bg-blue-600/20', 'text-white');
+                document.getElementById('calcBrand').value = currentLang === 'ar' ? 'تويوتا' : 'Toyota';
+                document.getElementById('calcModel').value = currentLang === 'ar' ? 'هايس' : 'Hiace';
+                if (document.getElementById('calcValue').value == 1000000) updateValueInput(1800000);
+            }
+            calculateEstimate();
+        }
+
+        // Duration selection
+        function setDuration(dur) {
+            currentDuration = dur;
+            document.querySelectorAll('.dur-btn').forEach(b => {
+                b.classList.remove('border-blue-500', 'bg-blue-600/20', 'text-white');
+                b.classList.add('border-slate-700', 'bg-slate-900/60', 'text-slate-400');
+            });
+            const btn = document.getElementById('btnDur' + dur);
+            if (btn) {
+                btn.classList.remove('border-slate-700', 'bg-slate-900/60', 'text-slate-400');
+                btn.classList.add('border-blue-500', 'bg-blue-600/20', 'text-white');
+            }
+            calculateEstimate();
+        }
+
+        function updateYearSlider(val) {
+            document.getElementById('yearDisplay').innerText = val;
+            calculateEstimate();
+        }
+
+        function updateValueInput(val) {
+            const num = Math.max(100000, Number(val) || 100000);
+            document.getElementById('calcValue').value = num;
+            document.getElementById('valFormattedDisplay').innerText = num.toLocaleString('en-US') + (currentLang === 'ar' ? ' ج.م' : ' EGP');
+            calculateEstimate();
+        }
+
+        // Core Calculation Engine
+        function calculateEstimate() {
+            const rawVal = Number(document.getElementById('calcValue').value) || 1000000;
+            const year = Number(document.getElementById('calcYear').value) || 2023;
+            const years = currentDuration || 1;
+
+            // Monthly Income = 2% of vehicle market value
+            const monthlyRatePct = 2.0;
+            const monthlyIncome = Math.round((rawVal * monthlyRatePct) / 100);
+
+            // Multi-Year Calculations
+            const cashIncome = monthlyIncome * 12 * years;
+            const depreciationRate = 0.15; // 15% annual depreciation
+            const estimatedMarketValue = Math.round(rawVal * Math.pow(1 - depreciationRate, years));
+            const netOutcome = cashIncome + estimatedMarketValue;
+            const annualReturnPct = rawVal > 0 ? (((cashIncome + (estimatedMarketValue - rawVal)) / rawVal) / years) * 100 : 0;
+
+            // Update UI
+            document.getElementById('valFormattedDisplay').innerText = rawVal.toLocaleString('en-US') + (currentLang === 'ar' ? ' ج.م' : ' EGP');
+            document.getElementById('monthlyIncomeDisplay').innerHTML = `${monthlyIncome.toLocaleString('en-US')} <span class="text-lg font-bold text-white">${currentLang === 'ar' ? 'ج.م' : 'EGP'}</span>`;
+            
+            const durLabels = {
+                ar: { 1: 'سنة واحدة', 2: 'سنتان', 3: '3 سنوات' },
+                en: { 1: '1 Year', 2: '2 Years', 3: '3 Years' }
+            };
+            document.getElementById('durTextSummary').innerText = durLabels[currentLang][years];
+            document.getElementById('totalCashDisplay').innerText = cashIncome.toLocaleString('en-US') + (currentLang === 'ar' ? ' ج.م' : ' EGP');
+            document.getElementById('marketAfterDisplay').innerText = estimatedMarketValue.toLocaleString('en-US') + (currentLang === 'ar' ? ' ج.م' : ' EGP');
+            document.getElementById('netOutcomeDisplay').innerText = netOutcome.toLocaleString('en-US') + (currentLang === 'ar' ? ' ج.م' : ' EGP');
+            document.getElementById('roiDisplay').innerText = annualReturnPct.toFixed(1) + '%' + (currentLang === 'ar' ? ' سنوياً' : ' / year');
+
+            // Eligibility Badge
+            const badge = document.getElementById('eligibilityBadge');
+            if (year >= 2023) {
+                badge.innerText = currentLang === 'ar' ? 'مؤهلة للتشغيل الفوري' : 'Eligible for Immediate Onboarding';
+                badge.className = 'text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+            } else if (year >= 2020) {
+                badge.innerText = currentLang === 'ar' ? 'تخضع للمعاينة الفنية' : 'Subject to Technical Inspection';
+                badge.className = 'text-xs font-bold px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30';
+            } else {
+                badge.innerText = currentLang === 'ar' ? 'مراجعة خاصة من الإدارة' : 'Special Fleet Review Required';
+                badge.className = 'text-xs font-bold px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30';
+            }
+        }
+
+        // Prefill form from calculator
+        function prefillFormFromCalc() {
+            document.getElementById('formBrand').value = document.getElementById('calcBrand').value;
+            document.getElementById('formModel').value = document.getElementById('calcModel').value;
+            document.getElementById('formYear').value = document.getElementById('calcYear').value;
+            document.getElementById('formValue').value = document.getElementById('calcValue').value;
+            
+            const catMap = { 'sedan': 'سيدان', 'minivan': 'ميني فان', 'van': 'فان سياحي' };
+            document.getElementById('formCategory').value = catMap[currentCategory] || 'سيدان';
+            
+            document.getElementById('apply').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Send Calculator to WhatsApp
+        function sendCalcToWhatsapp() {
+            const brand = document.getElementById('calcBrand').value || 'سيارة';
+            const model = document.getElementById('calcModel').value || '';
+            const year = document.getElementById('calcYear').value;
+            const val = Number(document.getElementById('calcValue').value).toLocaleString('en-US');
+            const monthly = Math.round(Number(document.getElementById('calcValue').value) * 0.02).toLocaleString('en-US');
+
+            const text = currentLang === 'ar' 
+                ? `مرحباً 24Seven، أرغب في الاستفسار عن تشغيل سيارتي:\n- الماركة والموديل: ${brand} ${model}\n- سنة الصنع: ${year}\n- القيمة التقريبية: ${val} ج.م\n- الراتب التقديري بالحاسبة: ${monthly} ج.م شهرياً\nأرجو إفادتي بخطوات المعاينة والتعاقد.`
+                : `Hello 24Seven, I would like to inquire about fleet onboarding for my vehicle:\n- Make & Model: ${brand} ${model}\n- Year: ${year}\n- Approx. Value: ${val} EGP\n- Estimated Calculator Income: ${monthly} EGP/month\nPlease inform me of inspection & contracting steps.`;
+
+            window.open(`https://wa.me/201121748885?text=${encodeURIComponent(text)}`, '_blank');
+        }
+
+        // Handle Lead Submission
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('ownerName').value;
+            const phone = document.getElementById('ownerPhone').value;
+            const gov = document.getElementById('ownerGov').value;
+            const cat = document.getElementById('formCategory').value;
+            const brand = document.getElementById('formBrand').value;
+            const model = document.getElementById('formModel').value;
+            const year = document.getElementById('formYear').value;
+            const mileage = document.getElementById('formMileage').value || 'غير محدد';
+            const value = document.getElementById('formValue').value || '1000000';
+            const notes = document.getElementById('formNotes').value || 'لا يوجد';
+
+            const requestCode = 'REQ-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random() * 9000);
+            lastGeneratedRequestCode = requestCode;
+            
+            lastFormData = { name, phone, gov, cat, brand, model, year, mileage, value, notes, requestCode };
+
+            // Save to localStorage for history
+            try {
+                const history = JSON.parse(localStorage.getItem('24seven_invest_leads') || '[]');
+                history.push({ ...lastFormData, timestamp: new Date().toISOString() });
+                localStorage.setItem('24seven_invest_leads', JSON.stringify(history));
+            } catch (err) {}
+
+            // Display success modal
+            document.getElementById('requestCodeDisplay').innerText = requestCode;
+            
+            // Build WhatsApp Button in Modal
+            const waText = currentLang === 'ar'
+                ? `طلب انضمام أسطول جديد (${requestCode}):\n- الاسم: ${name}\n- الهاتف: ${phone}\n- المحافظة: ${gov}\n- نوع السيارة: ${cat} - ${brand} ${model} (${year})\n- العداد: ${mileage} كم\n- القيمة التقديرية: ${Number(value).toLocaleString('en-US')} ج.م\n- ملاحظات: ${notes}`
+                : `New Fleet Onboarding Request (${requestCode}):\n- Name: ${name}\n- Phone: ${phone}\n- Governorate: ${gov}\n- Vehicle: ${cat} - ${brand} ${model} (${year})\n- Mileage: ${mileage} KM\n- Value: ${Number(value).toLocaleString('en-US')} EGP\n- Notes: ${notes}`;
+
+            document.getElementById('btnModalWhatsapp').onclick = function() {
+                window.open(`https://wa.me/201121748885?text=${encodeURIComponent(waText)}`, '_blank');
+            };
+
+            document.getElementById('successModal').classList.remove('hidden');
+        }
+
+        function closeSuccessModal() {
+            document.getElementById('successModal').classList.add('hidden');
+            document.getElementById('investmentForm').reset();
+        }
+
+        // Contract Guide Download Function
+        function downloadContractGuide() {
+            const isAr = currentLang === 'ar';
+            const docTitle = isAr ? "دليل بنود وتعاقد تشغيل السيارات - 24Seven Limousine" : "24Seven Vehicle Fleet Contracting Guide";
+            const docHtml = `<!doctype html>
+<html dir="${isAr ? 'rtl' : 'ltr'}" lang="${currentLang}">
+<head>
+<meta charset="utf-8">
+<title>${docTitle}</title>
+<style>
+body { font-family: Arial, sans-serif; max-width: 850px; margin: 40px auto; line-height: 1.8; color: #0f172a; padding: 0 24px; }
+h1 { color: #1e3a8a; border-bottom: 2px solid #3b82f6; padding-bottom: 12px; }
+h2 { margin-top: 24px; font-size: 18px; color: #1e40af; }
+li { margin: 8px 0; }
+.box { padding: 16px; background: #f0f9ff; border-${isAr ? 'right' : 'left'}: 4px solid #0284c7; border-radius: 8px; margin: 16px 0; }
+.footer { margin-top: 40px; font-size: 12px; color: #64748b; border-top: 1px solid #cbd5e1; padding-top: 12px; }
+</style>
+</head>
+<body>
+<h1>24Seven Limousine</h1>
+<h2>${docTitle}</h2>
+<p class="box">${isAr ? 'هذا الدليل استرشادي لتوضيح خطوات وضمانات التعاقد ومسؤوليات الطرفين قبل توقيع العقد النهائي وتسليم السيارة.' : 'This guide explains the onboarding steps, guarantees, and contractual responsibilities before formal handover.'}</p>
+<h2>${isAr ? '1. المستندات المطلوبة' : '1. Required Documents'}</h2>
+<ul>
+<li>${isAr ? 'رخصة سيارة سارية.' : 'Valid vehicle license.'}</li>
+<li>${isAr ? 'بوليصة تأمين شامل سارية ومعتمدة.' : 'Active comprehensive insurance policy.'}</li>
+<li>${isAr ? 'بطاقة الرقم القومي لمالك السيارة.' : 'National ID of the vehicle owner.'}</li>
+<li>${isAr ? 'الموافقة على جهاز GPS والمتابعة التشغيلية.' : 'Consent to GPS installation and telemetry tracking.'}</li>
+</ul>
+<h2>${isAr ? '2. التزامات الشركة والصيانة والتأمين' : '2. Company Commitments & Maintenance'}</h2>
+<ul>
+<li>${isAr ? 'تتحمل الشركة الصيانة الدورية واستهلاك الإطارات والبطاريات ضمن الاستهلاك الطبيعي.' : 'Company covers periodic maintenance, tire, and battery operational wear.'}</li>
+<li>${isAr ? 'سداد الراتب الشهري في موعد استحقاق محدد بإيصال رسمي موثق.' : 'Fixed monthly payout issued on due date via official receipt/transfer.'}</li>
+<li>${isAr ? 'إدارة كاملة لملفات التأمين وبدل توقف يصل إلى 50% أثناء الإصلاح.' : 'Comprehensive insurance claim handling + up to 50% downtime allowance.'}</li>
+</ul>
+<div class="footer">
+&copy; 2026 24Seven Limousine - Alexandria / Cairo / Sharm El-Sheikh | Tel: +201121748885
+</div>
+</body>
+</html>`;
+
+            const blob = new Blob([docHtml], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = isAr ? 'دليل-تعاقد-24seven.html' : '24seven-contract-guide.html';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
+        }
+
+        // Initialize on Load
+        window.addEventListener('DOMContentLoaded', () => {
+            applyTranslations();
+            calculateEstimate();
+        });
     </script>
+
 </body>
 </html>
