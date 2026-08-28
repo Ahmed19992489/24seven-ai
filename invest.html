@@ -376,7 +376,15 @@
                                 <label class="text-xs font-bold text-slate-300" data-key="lbl_value">القيمة السوقية التقريبية للسيارة (ج.م)</label>
                                 <span id="valFormattedDisplay" class="text-blue-400 font-extrabold text-sm">1,000,000 ج.م</span>
                             </div>
-                            <input type="number" id="calcValue" value="1000000" min="200000" max="10000000" step="50000" oninput="updateValueInput(this.value)" class="input-box text-base font-bold text-white">
+                            <input type="number" id="calcValue" value="1000000" placeholder="أدخل القيمة بالجنيه" oninput="updateValueInput(this.value)" class="input-box text-base font-bold text-white">
+                            <div class="flex flex-wrap gap-1.5 mt-2.5">
+                                <button type="button" onclick="setValPreset(500000)" class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition border border-slate-700">500 ألف</button>
+                                <button type="button" onclick="setValPreset(800000)" class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition border border-slate-700">800 ألف</button>
+                                <button type="button" onclick="setValPreset(1000000)" class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition border border-slate-700">1 مليون</button>
+                                <button type="button" onclick="setValPreset(1500000)" class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition border border-slate-700">1.5 مليون</button>
+                                <button type="button" onclick="setValPreset(2000000)" class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition border border-slate-700">2 مليون</button>
+                                <button type="button" onclick="setValPreset(3000000)" class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition border border-slate-700">3 مليون</button>
+                            </div>
                         </div>
 
                         <!-- Contract Duration Selector -->
@@ -1097,21 +1105,25 @@
             calculateEstimate();
         }
 
+        function setValPreset(val) {
+            document.getElementById('calcValue').value = val;
+            updateValueInput(val);
+        }
+
         function updateYearSlider(val) {
             document.getElementById('yearDisplay').innerText = val;
             calculateEstimate();
         }
 
         function updateValueInput(val) {
-            const num = Math.max(100000, Number(val) || 100000);
-            document.getElementById('calcValue').value = num;
-            document.getElementById('valFormattedDisplay').innerText = num.toLocaleString('en-US') + (currentLang === 'ar' ? ' ج.م' : ' EGP');
+            const num = Math.max(0, Number(val) || 0);
+            document.getElementById('valFormattedDisplay').innerText = num > 0 ? num.toLocaleString('en-US') + (currentLang === 'ar' ? ' ج.م' : ' EGP') : (currentLang === 'ar' ? '0 ج.م' : '0 EGP');
             calculateEstimate();
         }
 
         // Core Calculation Engine
         function calculateEstimate() {
-            const rawVal = Number(document.getElementById('calcValue').value) || 1000000;
+            const rawVal = Number(document.getElementById('calcValue').value) || 0;
             const year = Number(document.getElementById('calcYear').value) || 2023;
             const years = currentDuration || 1;
 
@@ -1127,7 +1139,7 @@
             const annualReturnPct = rawVal > 0 ? (((cashIncome + (estimatedMarketValue - rawVal)) / rawVal) / years) * 100 : 0;
 
             // Update UI
-            document.getElementById('valFormattedDisplay').innerText = rawVal.toLocaleString('en-US') + (currentLang === 'ar' ? ' ج.م' : ' EGP');
+            document.getElementById('valFormattedDisplay').innerText = rawVal > 0 ? rawVal.toLocaleString('en-US') + (currentLang === 'ar' ? ' ج.م' : ' EGP') : (currentLang === 'ar' ? '0 ج.م' : '0 EGP');
             document.getElementById('monthlyIncomeDisplay').innerHTML = `${monthlyIncome.toLocaleString('en-US')} <span class="text-lg font-bold text-white">${currentLang === 'ar' ? 'ج.م' : 'EGP'}</span>`;
             
             const durLabels = {
@@ -1138,7 +1150,7 @@
             document.getElementById('totalCashDisplay').innerText = cashIncome.toLocaleString('en-US') + (currentLang === 'ar' ? ' ج.م' : ' EGP');
             document.getElementById('marketAfterDisplay').innerText = estimatedMarketValue.toLocaleString('en-US') + (currentLang === 'ar' ? ' ج.م' : ' EGP');
             document.getElementById('netOutcomeDisplay').innerText = netOutcome.toLocaleString('en-US') + (currentLang === 'ar' ? ' ج.م' : ' EGP');
-            document.getElementById('roiDisplay').innerText = annualReturnPct.toFixed(1) + '%' + (currentLang === 'ar' ? ' سنوياً' : ' / year');
+            document.getElementById('roiDisplay').innerText = (rawVal > 0 ? annualReturnPct.toFixed(1) : '0.0') + '%' + (currentLang === 'ar' ? ' سنوياً' : ' / year');
 
             // Eligibility Badge
             const badge = document.getElementById('eligibilityBadge');
