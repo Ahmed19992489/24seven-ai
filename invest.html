@@ -601,6 +601,57 @@
         </div>
     </section>
 
+    <!-- 5.5 Fleet Showcase Gallery (معرض أسطول التشغيل) -->
+    <section class="py-16 bg-slate-950/90 border-t border-slate-900">
+        <div class="container mx-auto px-6">
+            <div class="text-center max-w-2xl mx-auto mb-12">
+                <span class="text-amber-400 text-xs md:text-sm font-bold uppercase tracking-wider block mb-2" data-key="gallery_kicker">من التشغيل الفعلي</span>
+                <h2 class="text-3xl md:text-4xl font-extrabold text-white" data-key="gallery_title">صور من أسطول 24Seven Limousine</h2>
+                <p class="text-slate-400 text-xs md:text-sm mt-2 flex items-center justify-center gap-2" data-key="gallery_desc">
+                    <i class="fas fa-shield-alt text-amber-400"></i> لقطات من سيارات الأسطول المخصصة للتشغيل، مع إخفاء لوحات المركبات احتراماً لخصوصية وسرية الملاك.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+                <div class="glass-card rounded-2xl overflow-hidden border border-slate-800 group">
+                    <div class="relative h-56 overflow-hidden">
+                        <img src="images/fleet/sedan-group.jpg" onerror="this.src='https://placehold.co/600x400/0f172a/3b82f6?text=Luxury+Sedans'" alt="Sedan Fleet" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                        <div class="absolute top-3 right-3 bg-slate-950/80 backdrop-blur-md border border-slate-700 text-blue-400 text-[11px] font-bold px-3 py-1 rounded-full" data-key="gal_cat_sedan">
+                            فئة السيدان الفاخر
+                        </div>
+                        <div class="absolute bottom-3 left-3 right-3 bg-slate-950/85 backdrop-blur-md p-2.5 rounded-xl border border-slate-800 text-center">
+                            <span class="text-xs font-bold text-white">تويوتا كورولا / هيونداي إلنترا / نيسان</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-2xl overflow-hidden border border-slate-800 group">
+                    <div class="relative h-56 overflow-hidden">
+                        <img src="images/fleet/suv-group.jpg" onerror="this.src='https://placehold.co/600x400/0f172a/3b82f6?text=Family+Minivans'" alt="Minivan Fleet" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                        <div class="absolute top-3 right-3 bg-slate-950/80 backdrop-blur-md border border-slate-700 text-cyan-400 text-[11px] font-bold px-3 py-1 rounded-full" data-key="gal_cat_minivan">
+                            فئة الميني فان 7 راكب
+                        </div>
+                        <div class="absolute bottom-3 left-3 right-3 bg-slate-950/85 backdrop-blur-md p-2.5 rounded-xl border border-slate-800 text-center">
+                            <span class="text-xs font-bold text-white">ميتسوبيشي إكسباندر / سوزوكي إرتيجا</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-2xl overflow-hidden border border-slate-800 group">
+                    <div class="relative h-56 overflow-hidden">
+                        <img src="images/fleet/van-group.jpg" onerror="this.src='https://placehold.co/600x400/0f172a/3b82f6?text=Tourist+Vans'" alt="Tourist Van Fleet" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                        <div class="absolute top-3 right-3 bg-slate-950/80 backdrop-blur-md border border-slate-700 text-amber-400 text-[11px] font-bold px-3 py-1 rounded-full" data-key="gal_cat_van">
+                            فئة الفان السياحي
+                        </div>
+                        <div class="absolute bottom-3 left-3 right-3 bg-slate-950/85 backdrop-blur-md p-2.5 rounded-xl border border-slate-800 text-center">
+                            <span class="text-xs font-bold text-white">تويوتا هايس سقف عالي / رحلات VIP</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- 6. Pre-Contract Guide & Requirements (دليل وبنود التعاقد) -->
     <section id="guide" class="py-20 relative">
         <div class="container mx-auto px-6">
@@ -611,11 +662,14 @@
                     <div>
                         <span class="text-blue-400 text-xs font-bold uppercase tracking-wider block mb-1" data-key="guide_kicker">دليل ما قبل التعاقد الرسمي</span>
                         <h2 class="text-2xl md:text-3xl font-black text-white" data-key="guide_title">متطلبات وبنود التعاقد قبل تسليم السيارة</h2>
+                        <p class="text-slate-400 text-xs mt-1.5" data-key="guide_location_note">
+                            <i class="fas fa-map-marker-alt text-amber-400 me-1"></i> نستقبل سيارات من جميع المحافظات، وتتم المعاينة الفنية والتعاقد الرسمي في <strong>مقر الشركة بالإسكندرية فقط</strong> بموعد مسبق.
+                        </p>
                     </div>
                     <div class="flex items-center gap-3">
                         <button onclick="downloadContractGuide()" class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/40 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2">
                             <i class="fas fa-download"></i>
-                            <span data-key="btn_download_guide">تنزيل الدليل</span>
+                            <span data-key="btn_download_guide">تحميل العقد ودليل البنود الكامل</span>
                         </button>
                         <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2">
                             <i class="fas fa-print"></i>
@@ -633,8 +687,8 @@
                     </div>
                     <div class="space-y-2">
                         <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-black text-sm flex items-center justify-center">2</div>
-                        <h4 class="font-bold text-white text-sm" data-key="step_2_t">معاينة فنية</h4>
-                        <p class="text-xs text-slate-400 leading-relaxed" data-key="step_2_d">فحص الحالة الميكانيكية والدهان ومطابقة الأوراق الرسمية.</p>
+                        <h4 class="font-bold text-white text-sm" data-key="step_2_t">معاينة بمقر الإسكندرية</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed" data-key="step_2_d">فحص الحالة الميكانيكية والدهان ومطابقة الأوراق الرسمية بمقرنا بالإسكندرية.</p>
                     </div>
                     <div class="space-y-2">
                         <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-black text-sm flex items-center justify-center">3</div>
@@ -650,28 +704,74 @@
 
                 <!-- Terms Details Grid -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-8 text-xs text-slate-300">
-                    <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-2">
-                        <h5 class="font-bold text-blue-400 text-sm flex items-center gap-2">
+                    <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-800 space-y-2">
+                        <h5 class="font-bold text-blue-400 text-sm flex items-center gap-2 mb-3">
                             <i class="fas fa-file-check"></i> <span data-key="req_docs_t">المستندات المطلوبة من المالك</span>
                         </h5>
-                        <ul class="space-y-1.5 text-slate-400 list-disc list-inside">
-                            <li data-key="req_doc_1">أصل وصورة رخصة السيارة (سارية).</li>
-                            <li data-key="req_doc_2">بوليصة تأمين شامل سارية ومعتمدة.</li>
+                        <ul class="space-y-2 text-slate-400 list-disc list-inside">
+                            <li data-key="req_doc_1">أصل وصورة رخصة السيارة (سارية وبيانات مطابقة).</li>
+                            <li data-key="req_doc_2">بوليصة تأمين شامل سارية من شركة معتمدة.</li>
                             <li data-key="req_doc_3">بطاقة الرقم القومي سارية لمالك السيارة.</li>
-                            <li data-key="req_doc_4">الموافقة على تركيب جهاز تتبع GPS المعتمد.</li>
+                            <li data-key="req_doc_4">الموافقة على تركيب جهاز تتبع GPS والمتابعة التشغيلية.</li>
                         </ul>
                     </div>
 
-                    <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-2">
-                        <h5 class="font-bold text-amber-400 text-sm flex items-center gap-2">
+                    <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-800 space-y-2">
+                        <h5 class="font-bold text-amber-400 text-sm flex items-center gap-2 mb-3">
                             <i class="fas fa-shield-alt"></i> <span data-key="req_commit_t">التزامات 24Seven في العقد</span>
                         </h5>
-                        <ul class="space-y-1.5 text-slate-400 list-disc list-inside">
-                            <li data-key="req_commit_1">سداد الراتب في الموعد المحدد بإيصال موثق أو تحويل.</li>
-                            <li data-key="req_commit_2">تحمل الصيانة الدورية واستهلاك الإطارات والبطاريات.</li>
+                        <ul class="space-y-2 text-slate-400 list-disc list-inside">
+                            <li data-key="req_commit_1">سداد الراتب الشهري في موعد محدد بإيصال موثق أو تحويل.</li>
+                            <li data-key="req_commit_2">تحمل الصيانة الدورية واستهلاك الإطارات والبطارية دورياً.</li>
                             <li data-key="req_commit_3">تحمل المخالفات المرورية التي تقع أثناء فترة التشغيل.</li>
                             <li data-key="req_commit_4">إدارة ملفات الحوادث وبدل توقف يصل لـ 50% من الراتب.</li>
                         </ul>
+                    </div>
+                </div>
+
+                <!-- Complete 8 Legal Contract Articles Accordion / Viewer -->
+                <div class="mt-8 pt-6 border-t border-slate-800">
+                    <button type="button" onclick="toggleFullContractTerms()" id="btnToggleTerms" class="w-full bg-slate-900/90 hover:bg-slate-800/90 border border-blue-500/30 text-blue-300 font-bold p-4 rounded-xl text-xs flex justify-between items-center transition">
+                        <span class="flex items-center gap-2">
+                            <i class="fas fa-gavel text-amber-400"></i>
+                            <span data-key="btn_view_8_articles">عرض البنود القانونية الـ 8 الكاملة لنموذج التعاقد</span>
+                        </span>
+                        <i class="fas fa-chevron-down transition transform" id="termsChevron"></i>
+                    </button>
+
+                    <div id="fullContractArticles" class="hidden mt-4 space-y-3 text-xs text-slate-300">
+                        <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
+                            <h6 class="font-bold text-blue-400 mb-1">1. موضوع التعاقد وبيانات السيارة</h6>
+                            <p class="text-slate-400 leading-relaxed">يستكمل العقد النهائي ببيانات السيارة المعتمدة ومدة التعاقد وتاريخ البداية والنهاية بعد المعاينة بمقر الإسكندرية. وتُشغّل السيارة في نشاط الشركة المتفق عليه (شركات، مطارات، مؤتمرات)، ولا تستخدم في الجر أو السباقات أو أي استخدام يخالف القانون.</p>
+                        </div>
+                        <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
+                            <h6 class="font-bold text-blue-400 mb-1">2. التزامات مالك السيارة</h6>
+                            <p class="text-slate-400 leading-relaxed">يُقر المالك بأن السيارة بحالة جيدة فنية وميكانيكية وقت الاستلام، ويلتزم بتقديم بوليصة تأمين شامل سارية، والموافقة على جهاز GPS، مع التزام بإخطار لا يقل عن 90 يوماً عند طلب إنهاء التعاقد.</p>
+                        </div>
+                        <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
+                            <h6 class="font-bold text-blue-400 mb-1">3. التزامات الشركة أثناء التشغيل</h6>
+                            <p class="text-slate-400 leading-relaxed">تلتزم الشركة بتشغيل السيارة وإدارتها باحترافية، ورد السيارة بحالة فنية جيدة مع مراعاة معدل الاستهلاك الطبيعي، والالتزام بمسؤوليات التشغيل المحددة بالعقد.</p>
+                        </div>
+                        <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
+                            <h6 class="font-bold text-blue-400 mb-1">4. الصيانة والاستهلاك والمخالفات</h6>
+                            <p class="text-slate-400 leading-relaxed">تتحمل الشركة الصيانة الدورية واستهلاك الإطارات والبطارية ضمن الاستهلاك الطبيعي كل سنة أو 10,000 كم أيهما أقرب، كما تتحمل قيمة المخالفات المرورية الواقعة أثناء التشغيل.</p>
+                        </div>
+                        <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
+                            <h6 class="font-bold text-blue-400 mb-1">5. التأمين والحوادث والضمان</h6>
+                            <p class="text-slate-400 leading-relaxed">تُراجع وثيقة التأمين وملف الحادث وتتولى الشركة إدارة الإصلاح والتسوية، مع صرف بدل توقف بنسبة 50% من الراتب أثناء فترة الإصلاح وفق شروط العقد.</p>
+                        </div>
+                        <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
+                            <h6 class="font-bold text-blue-400 mb-1">6. الراتب وطريقة السداد</h6>
+                            <p class="text-slate-400 leading-relaxed">يحدد العقد الراتب الإيجاري الثابت وتاريخ الاستحقاق الشهري ووسيلة السداد الموثقة (إيصال نقدية موقع أو تحويل بنكي رسمي).</p>
+                        </div>
+                        <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
+                            <h6 class="font-bold text-blue-400 mb-1">7. الإنهاء والشرط الجزائي</h6>
+                            <p class="text-slate-400 leading-relaxed">فسخ العقد عند الإخلال بالاستخدام المتفق عليه أو التخلف عن السداد، مع إمكانية إدراج شرط جزائي عند مخالفة البنود.</p>
+                        </div>
+                        <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
+                            <h6 class="font-bold text-blue-400 mb-1">8. تسوية النزاع والاختصاص القضائي والنسخ</h6>
+                            <p class="text-slate-400 leading-relaxed">اختصاص محكمة الإسكندرية الابتدائية للنظر في أي نزاع، ويحرر العقد من نسختين أصليتين بيد كل طرف نسخة معتمدة.</p>
+                        </div>
                     </div>
                 </div>
 
@@ -910,9 +1010,9 @@
                 nav_calc: "حاسبة العائد", nav_guide: "دليل التعاقد", nav_cases: "حالات فعلية", nav_faq: "الأسئلة الشائعة",
                 btn_join_top: "انضم لأسطولنا", hero_badge: "تشغيل معتمد لسيارتك مع 24Seven Limousine",
                 hero_title_1: "سيارتك أصل حقيقي..", hero_title_2: "شغّلها بدخل شهري مضمون",
-                hero_desc: "نستقبل سيارات موديل 2020 فأحدث للتشغيل في الشركات والرحلات الرسمية والمواقع، مع متابعة لحظية عبر GPS، صيانة معتمدة، وتأمين شامل وفق عقد قانوني ملزم.",
+                hero_desc: "نستقبل سيارات موديل 2020 فأحدث للتشغيل في الشركات والرحلات الرسمية والمواقع، مع متابعة لحظية عبر GPS، صيانة معتمدة، وتأمين شامل وفق عقد قانوني ملزم. المعاينة والتعاقد بمقر الإسكندرية بموعد مسبق.",
                 btn_calc_hero: "احسب راتب سيارتك فوراً", btn_review_hero: "طلب مراجعة السيارة",
-                proof_1: "تعاقد رسمي من الإسكندرية وجميع المحافظات", proof_2: "صيانة دورية وتأمين شامل وفق العقد", proof_3: "تقييم نهائي عادل بعد المعاينة الفنية",
+                proof_1: "نستقبل سيارات من كل المحافظات · المعاينة بمقر الإسكندرية", proof_2: "صيانة دورية وتأمين شامل وفق العقد", proof_3: "تقييم نهائي عادل بعد المعاينة الفنية",
                 sec_pillars_kicker: "نظام تشغيل متكامل", sec_pillars_title: "ما الذي يتحمله النظام التشغيلي لـ 24Seven؟",
                 sec_pillars_desc: "ندير سيارتك بأعلى معايير الاحترافية لترتاح تماماً من تفاصيل التشغيل اليومي",
                 pillar_1_t: "سائقون محترفون", pillar_1_d: "سائقون مؤهلون يخضعون لفحص أمني وطبي، وتدريب احترافي مع عقود وضمانات تشغيل ملزمة.",
@@ -927,23 +1027,29 @@
                 badge_eligible: "مؤهلة للتشغيل الفوري", txt_indicative: "تقدير أولي", txt_estimated_income: "الراتب الشهري التقديري",
                 txt_total_cash: "إجمالي الدخل النقدي", txt_market_after: "القيمة التقديرية للسيارة بعد المدة:",
                 txt_net_outcome: "صافي النتيجة الشاملة:", txt_roi: "العائد الاستثماري السنوي:",
-                calc_disclaimer: "* هذه الأرقام استرشادية مبنية على متوسطات السوق ومعدل 2% شهرياً. يُثبت السعر والراتب النهائي بعد المعاينة الفنية واعتماد السيارة في العقد الرسمي.",
+                calc_disclaimer: "* هذه الأرقام استرشادية مبنية على متوسطات السوق ومعدل 2% شهرياً. يُثبت السعر والراتب النهائي بعد المعاينة الفنية بمقر الإسكندرية واعتماد السيارة في العقد الرسمي.",
                 btn_apply_with_data: "تقديم طلب مراجعة بهذه البيانات", wa_calc_title: "تريد استشارة فورية مع خبير الأسطول؟",
                 wa_calc_desc: "أرسل نتيجة الحاسبة مباشرة على واتساب", btn_wa_send: "إرسال",
                 sec_cases_kicker: "أرقام من الواقع", sec_cases_title: "نماذج وحالات تشغيل فعلية من الأسطول",
                 sec_cases_desc: "نماذج تشغيل حقيقية توضح العوائد النقدية المحققة لملاك السيارات المتعاقدين معنا",
                 case_entry_val: "قيمة الدخول:", case_period: "مدة التشغيل:", case_monthly: "الدخل الشهري:", case_total_income: "إجمالي الدخل المحقق:",
                 case_note_1: "تشغيل شركات بترول + صيانة دورية شاملة", case_note_2: "تشغيل عقود سياحة ومطارات VIP", case_note_3: "تشغيل وفود ومؤتمرات وسفارات",
-                badge_popular: "الأعلى طلباً", guide_kicker: "دليل ما قبل التعاقد الرسمي", guide_title: "متطلبات وبنود التعاقد قبل تسليم السيارة",
-                btn_download_guide: "تنزيل الدليل", btn_print_guide: "طباعة",
+                badge_popular: "الأعلى طلباً",
+                gallery_kicker: "من التشغيل الفعلي", gallery_title: "صور من أسطول 24Seven Limousine",
+                gallery_desc: "لقطات من سيارات الأسطول المخصصة للتشغيل، مع إخفاء لوحات المركبات احتراماً لخصوصية وسرية الملاك.",
+                gal_cat_sedan: "فئة السيدان الفاخر", gal_cat_minivan: "فئة الميني فان 7 راكب", gal_cat_van: "فئة الفان السياحي",
+                guide_kicker: "دليل ما قبل التعاقد الرسمي", guide_title: "متطلبات وبنود التعاقد قبل تسليم السيارة",
+                guide_location_note: "نستقبل سيارات من جميع المحافظات، وتتم المعاينة الفنية والتعاقد الرسمي في مقر الشركة بالإسكندرية فقط بموعد مسبق.",
+                btn_download_guide: "تحميل العقد ودليل البنود الكامل", btn_print_guide: "طباعة",
+                btn_view_8_articles: "عرض البنود القانونية الـ 8 الكاملة لنموذج التعاقد",
                 step_1_t: "مراجعة أولية", step_1_d: "إرسال بيانات وفئة وسنة صنع السيارة لحساب التقدير الأولي.",
-                step_2_t: "معاينة فنية", step_2_d: "فحص الحالة الميكانيكية والدهان ومطابقة الأوراق الرسمية.",
+                step_2_t: "معاينة بمقر الإسكندرية", step_2_d: "فحص الحالة الميكانيكية والدهان ومطابقة الأوراق الرسمية بمقرنا بالإسكندرية.",
                 step_3_t: "تثبيت العرض", step_3_d: "تثبيت الراتب الشهري وتاريخ الاستحقاق وطريقة السداد في العقد.",
                 step_4_t: "توقيع واستلام", step_4_d: "توقيع نسختي العقد ومحضر الاستلام الفني وبدء التشغيل الفعلي.",
-                req_docs_t: "المستندات المطلوبة من المالك", req_doc_1: "أصل وصورة رخصة السيارة (سارية).", req_doc_2: "بوليصة تأمين شامل سارية ومعتمدة.", req_doc_3: "بطاقة الرقم القومي سارية لمالك السيارة.", req_doc_4: "الموافقة على تركيب جهاز تتبع GPS المعتمد.",
+                req_docs_t: "المستندات المطلوبة من المالك", req_doc_1: "أصل وصورة رخصة السيارة (سارية وبيانات مطابقة).", req_doc_2: "بوليصة تأمين شامل سارية ومعتمدة.", req_doc_3: "بطاقة الرقم القومي سارية لمالك السيارة.", req_doc_4: "الموافقة على تركيب جهاز تتبع GPS المعتمد.",
                 req_commit_t: "التزامات 24Seven في العقد", req_commit_1: "سداد الراتب في الموعد المحدد بإيصال موثق أو تحويل.", req_commit_2: "تحمل الصيانة الدورية واستهلاك الإطارات والبطاريات.", req_commit_3: "تحمل المخالفات المرورية التي تقع أثناء فترة التشغيل.", req_commit_4: "إدارة ملفات الحوادث وبدل توقف يصل لـ 50% من الراتب.",
                 form_kicker: "انضم لأسطولنا الآن", form_title: "طلب مراجعة ومعاينة السيارة",
-                form_desc: "املأ البيانات وسيقوم مسؤول التعاقدات بالتواصل معك خلال 24 ساعة لترتيب المعاينة",
+                form_desc: "املأ البيانات وسيقوم مسؤول التعاقدات بالتواصل معك لترتيب موعد المعاينة بمقر الإسكندرية",
                 form_name: "الاسم بالكامل *", form_phone: "رقم الهاتف / واتساب *", form_gov: "المحافظة *", form_cat_select: "فئة السيارة *",
                 form_brand: "الماركة", form_model: "الموديل", form_year: "سنة الصنع *", form_mileage: "قراءة العداد الحالية (كم)", form_exp_income: "القيمة السوقية التقريبية (ج.م)",
                 form_notes: "ملاحظات إضافية عن حالة السيارة أو التجهيزات", form_consent_txt: "أوافق على التواصل معي بخصوص مراجعة ومعاينة السيارة، وعلى بنود الخصوصية ومطابقة البيانات الرسمية.",
@@ -951,21 +1057,21 @@
                 faq_q1: "ما هي موديلات وفئات السيارات المقبولة في 24Seven؟", faq_a1: "نقبل سيارات موديل 2020 فأحدث من فئات السيدان (مثل كورولا، إلنترا، سيراتو)، الميني فان 7 راكب (مثل إكسباندر، إرتيجا)، والفان السياحي (مثل تويوتا هايس). يتم الاعتماد النهائي بعد الفحص والمعاينة الفنية.",
                 faq_q2: "هل الراتب الشهري ثابت وكيف يتم سداده؟", faq_a2: "نعم، الراتب الشهري يُثبت برقم محدد في العقد القانوني بعد المعاينة، ويُسدد شهرياً في تاريخ استحقاق محدد عبر تحويل بنكي أو إيصال نقدية رسمي موثق.",
                 faq_q3: "ماذا يحدث في حالة وقوع حادث أو توقف السيارة للإصلاح؟", faq_a3: "تتولى إدارة 24Seven متابعة كافة إجراءات المحضر والإصلاح والتأمين الشامل. كما يضمن العقد بدل توقف للمالك بنسبة تصل إلى 50% من الراتب الشهري أثناء فترة إصلاح السيارة وفق ضوابط وثيقة التأمين.",
-                faq_q4: "هل التعاقد متاح فقط لسكان الإسكندرية والقاهرة؟", faq_a4: "التعاقد متاح لملاك السيارات من كافة محافظات الجمهورية. المقر الرئيسي في الإسكندرية مع فرع القاهرة وشرم الشيخ، ويمكن ترتيب المعاينة والاستلام عبر مندوب معتمد عند الحاجة.",
+                faq_q4: "أين تتم المعاينة والتعاقد الرسمي؟", faq_a4: "نستقبل طلبات الملاك من جميع محافظات مصر، وتتم المعاينة الفنية واعتماد السيارة وتوقيع العقد الرسمي حصرياً في مقر الشركة الرئيسي بالإسكندرية بموعد مسبق.",
                 modal_success_t: "تم استلام طلبك بنجاح!", modal_success_d: "كود متابعة الطلب الخاص بك:",
                 btn_modal_wa: "تأكيد المراجعة عبر واتساب الآن", btn_close: "إغلاق",
                 footer_desc: "شركة مسجلة رسمياً لإدارة وتشغيل أساطيل النقل السياحي والليموزين للشركات ورجال الأعمال بأعلى معايير الأمان والشفافية.",
-                footer_branches: "مقرات وفروع التعاقد", branch_alex: "الإسكندرية: السيوف، أبراج اللوتس", branch_cairo: "القاهرة: مساكن شيراتون / المطار", branch_sharm: "شرم الشيخ: خليج نعمة",
-                footer_contact: "تواصل مع إدارة الأسطول", footer_contact_sub: "للاستفسارات والمعاينات المباشرة:"
+                footer_branches: "المقر الرئيسي وفروع التشغيل", branch_alex: "المقر الرئيسي (المعاينة والتعاقد): الإسكندرية، السيوف، أبراج اللوتس", branch_cairo: "فرع التشغيل: القاهرة، مساكن شيراتون / المطار", branch_sharm: "فرع التشغيل: شرم الشيخ، خليج نعمة",
+                footer_contact: "تواصل مع إدارة الأسطول", footer_contact_sub: "للاستفسارات وحجز مواعيد المعاينة بالإسكندرية:"
             },
             en: {
                 nav_home: "Home", nav_services: "Limousine Services", nav_about: "About Us", nav_reviews: "Reviews",
                 nav_calc: "Calculator", nav_guide: "Contract Guide", nav_cases: "Live Cases", nav_faq: "FAQ",
                 btn_join_top: "Join Our Fleet", hero_badge: "Authorized Vehicle Fleet Management with 24Seven",
                 hero_title_1: "Your Car is a True Asset..", hero_title_2: "Earn Guaranteed Monthly Income",
-                hero_desc: "We onboard 2020+ vehicle models for corporate, site, and VIP operations with 24/7 live GPS tracking, certified periodic maintenance, and comprehensive insurance under a binding legal agreement.",
+                hero_desc: "We onboard 2020+ vehicle models for corporate, site, and VIP operations with 24/7 live GPS tracking, certified periodic maintenance, and comprehensive insurance under a binding legal agreement. Inspection & contracting strictly at Alexandria HQ by appointment.",
                 btn_calc_hero: "Calculate Income Now", btn_review_hero: "Request Vehicle Review",
-                proof_1: "Official contracts in Alexandria, Cairo & all governorates", proof_2: "Periodic servicing & full insurance under contract", proof_3: "Fair final valuation after physical inspection",
+                proof_1: "Vehicles accepted from all governorates · Inspection at Alexandria HQ", proof_2: "Periodic servicing & full insurance under contract", proof_3: "Fair final valuation after physical inspection",
                 sec_pillars_kicker: "Integrated Operations", sec_pillars_title: "What Does 24Seven's System Cover?",
                 sec_pillars_desc: "We manage your vehicle with elite professionalism so you enjoy passive monthly returns completely stress-free.",
                 pillar_1_t: "Trained Chauffeurs", pillar_1_d: "Vetted, medically certified, and professionally trained drivers with strict operational safeguards.",
@@ -980,24 +1086,44 @@
                 badge_eligible: "Eligible for Instant Onboarding", txt_indicative: "Preliminary Estimate", txt_estimated_income: "Estimated Monthly Payout",
                 txt_total_cash: "Total Cash Income", txt_market_after: "Est. Resale Value After Term:",
                 txt_net_outcome: "Total Net Financial Outcome:", txt_roi: "Estimated Annual ROI:",
-                calc_disclaimer: "* Figures are indicative based on market averages (approx. 2% monthly). Final payout is locked in the formal contract following physical inspection.",
+                calc_disclaimer: "* Figures are indicative based on market averages (approx. 2% monthly). Final payout is locked in the formal contract following physical inspection at Alexandria HQ.",
                 btn_apply_with_data: "Apply for Review with These Specs", wa_calc_title: "Need Instant Consultation with Fleet Manager?",
                 wa_calc_desc: "Send calculator results directly to WhatsApp", btn_wa_send: "Send",
                 sec_cases_kicker: "Real Numbers", sec_cases_title: "Live Operational Case Studies",
                 sec_cases_desc: "Actual operating examples demonstrating real cash returns earned by our partner vehicle owners.",
                 case_entry_val: "Entry Value:", case_period: "Operating Term:", case_monthly: "Monthly Payout:", case_total_income: "Total Cash Realized:",
                 case_note_1: "Petroleum corporate contracts + full maintenance", case_note_2: "VIP airport transfers & tourism operations", case_note_3: "Embassy, delegation & conference transport",
-                badge_popular: "Most Requested", guide_kicker: "Pre-Contract Official Guide", guide_title: "Contract Requirements & Terms Before Handover",
-                btn_download_guide: "Download Guide", btn_print_guide: "Print",
+                badge_popular: "Most Requested",
+                gallery_kicker: "Live Operational Fleet", gallery_title: "Photos from 24Seven Limousine Fleet",
+                gallery_desc: "Fleet operational captures with license plates obscured to ensure vehicle owner privacy and confidentiality.",
+                gal_cat_sedan: "Luxury Sedan Fleet", gal_cat_minivan: "7-Seater Family Minivan", gal_cat_van: "High-Roof Tourist Van",
+                guide_kicker: "Pre-Contract Official Guide", guide_title: "Contract Requirements & Terms Before Handover",
+                guide_location_note: "Vehicles welcomed from all governorates. Physical inspection and formal contract signing take place exclusively at our Alexandria HQ by prior appointment.",
+                btn_download_guide: "Download Full Agreement & Guide", btn_print_guide: "Print",
+                btn_view_8_articles: "View All 8 Legal Contract Articles",
                 step_1_t: "Initial Review", step_1_d: "Submit vehicle specifications for preliminary eligibility and calculator estimation.",
-                step_2_t: "Physical Inspection", step_2_d: "Mechanical, electrical, and body inspection alongside official document verification.",
+                step_2_t: "Alexandria HQ Inspection", step_2_d: "Mechanical, electrical, and body inspection at our Alexandria HQ by appointment.",
                 step_3_t: "Lock Offer", step_3_d: "Final monthly payout, payment due date, and contract duration fixed in writing.",
                 step_4_t: "Sign & Handover", step_4_d: "Both parties sign the contract and technical handover checklist before starting operations.",
-                req_docs_t: "Owner Document Checklist", req_doc_1: "Original valid vehicle license.", req_doc_2: "Active comprehensive insurance policy.", req_doc_3: "Valid National ID of the vehicle owner.", req_doc_4: "Agreement to certified GPS device installation.",
+                req_docs_t: "Owner Document Checklist", req_doc_1: "Original valid vehicle license with matching specs.", req_doc_2: "Active comprehensive insurance policy from an approved insurer.", req_doc_3: "Valid National ID of the vehicle owner.", req_doc_4: "Agreement to certified GPS device installation & telematics.",
                 req_commit_t: "24Seven Contract Commitments", req_commit_1: "Timely monthly payout via bank transfer or documented receipt.", req_commit_2: "Coverage of periodic maintenance, tire, and battery wear.", req_commit_3: "Full responsibility for traffic fines incurred during operations.", req_commit_4: "Accident file handling with up to 50% downtime allowance.",
                 form_kicker: "Join Our Fleet Today", form_title: "Vehicle Review & Inspection Request",
-                form_desc: "Fill in the details and our fleet operations manager will contact you within 24 hours to arrange inspection.",
+                form_desc: "Fill in the details and our fleet operations manager will contact you to schedule an inspection at Alexandria HQ.",
                 form_name: "Full Name *", form_phone: "Phone Number / WhatsApp *", form_gov: "Governorate *", form_cat_select: "Vehicle Category *",
+                form_brand: "Make", form_model: "Model", form_year: "Model Year *", form_mileage: "Current Mileage (KM)", form_exp_income: "Estimated Market Value (EGP)",
+                form_notes: "Additional Notes or Special Vehicle Equipment", form_consent_txt: "I agree to be contacted regarding vehicle inspection, and agree to privacy terms and official data matching.",
+                btn_submit_lead: "Submit Inspection Request", sec_faq_kicker: "Clear Answers", sec_faq_title: "Frequently Asked Questions",
+                faq_q1: "What vehicle models and categories are accepted?", faq_a1: "We accept 2020+ models of Sedans (Corolla, Elantra, Cerato), 7-seater Minivans (Xpander, Ertiga), and Tourist Vans (Toyota Hiace). Final approval occurs after technical inspection.",
+                faq_q2: "Is monthly payout fixed and how is it paid?", faq_a2: "Yes, monthly payout is legally locked in the signed contract after inspection, paid on a fixed due date via bank transfer or official receipt.",
+                faq_q3: "What happens in case of an accident or repair downtime?", faq_a3: "24Seven manages all police report, repair, and insurance procedures. The agreement provides an owner downtime compensation of up to 50% of monthly income during repair.",
+                faq_q4: "Where do inspection and contracting take place?", faq_a4: "We welcome car owners from all Egyptian governorates. Official technical inspection, vehicle onboarding approval, and contract signing take place exclusively at our Alexandria HQ by prior appointment.",
+                modal_success_t: "Application Received Successfully!", modal_success_d: "Your Request Tracking Code:",
+                btn_modal_wa: "Confirm on WhatsApp Now", btn_close: "Close",
+                footer_desc: "Officially registered luxury transport and corporate fleet management company operating with top-tier safety and transparency standards.",
+                footer_branches: "Headquarters & Operating Hubs", branch_alex: "Alexandria HQ (Inspection & Contracting): El-Seyouf, Lotus Towers", branch_cairo: "Operations Hub: Cairo, Sheraton Residences / Airport", branch_sharm: "Operations Hub: Sharm El-Sheikh, Naama Bay",
+                footer_contact: "Fleet Operations Contact", footer_contact_sub: "For direct inquiries & Alexandria inspection booking:"
+            }
+        };
                 form_brand: "Make", form_model: "Model", form_year: "Model Year *", form_mileage: "Current Mileage (KM)", form_exp_income: "Approx. Market Value (EGP)",
                 form_notes: "Additional Notes on Vehicle Condition or Equipment", form_consent_txt: "I consent to be contacted regarding vehicle inspection and agree to privacy and official data verification terms.",
                 btn_submit_lead: "Submit Inspection Request", sec_faq_kicker: "Clear Answers", sec_faq_title: "Frequently Asked Questions",
@@ -1241,43 +1367,83 @@
             document.getElementById('investmentForm').reset();
         }
 
-        // Contract Guide Download Function
+        function toggleFullContractTerms() {
+            const container = document.getElementById('fullContractArticles');
+            const chevron = document.getElementById('termsChevron');
+            if (container.classList.contains('hidden')) {
+                container.classList.remove('hidden');
+                chevron.classList.add('rotate-180');
+            } else {
+                container.classList.add('hidden');
+                chevron.classList.remove('rotate-180');
+            }
+        }
+
+        // Full Contract & Legal Guide Download Function
         function downloadContractGuide() {
             const isAr = currentLang === 'ar';
-            const docTitle = isAr ? "دليل بنود وتعاقد تشغيل السيارات - 24Seven Limousine" : "24Seven Vehicle Fleet Contracting Guide";
+            const docTitle = isAr ? "دليل وبنود تعاقد تشغيل السيارات - 24Seven Limousine" : "24Seven Vehicle Operating Agreement & Requirements Guide";
             const docHtml = `<!doctype html>
 <html dir="${isAr ? 'rtl' : 'ltr'}" lang="${currentLang}">
 <head>
 <meta charset="utf-8">
 <title>${docTitle}</title>
 <style>
-body { font-family: Arial, sans-serif; max-width: 850px; margin: 40px auto; line-height: 1.8; color: #0f172a; padding: 0 24px; }
-h1 { color: #1e3a8a; border-bottom: 2px solid #3b82f6; padding-bottom: 12px; }
-h2 { margin-top: 24px; font-size: 18px; color: #1e40af; }
+body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; max-width: 900px; margin: 40px auto; line-height: 1.9; color: #0f172a; padding: 0 24px; }
+h1 { color: #1e3a8a; border-bottom: 3px solid #3b82f6; padding-bottom: 12px; font-size: 26px; }
+h2 { margin-top: 28px; font-size: 19px; color: #1d4ed8; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; }
+h3 { margin-top: 20px; font-size: 16px; color: #0369a1; }
 li { margin: 8px 0; }
-.box { padding: 16px; background: #f0f9ff; border-${isAr ? 'right' : 'left'}: 4px solid #0284c7; border-radius: 8px; margin: 16px 0; }
-.footer { margin-top: 40px; font-size: 12px; color: #64748b; border-top: 1px solid #cbd5e1; padding-top: 12px; }
+.box { padding: 16px 20px; background: #f0f9ff; border-${isAr ? 'right' : 'left'}: 5px solid #0284c7; border-radius: 8px; margin: 20px 0; font-size: 14px; }
+.notice { padding: 14px 18px; background: #fefce8; border-${isAr ? 'right' : 'left'}: 5px solid #eab308; border-radius: 8px; margin: 20px 0; font-size: 13px; color: #713f12; }
+.location-badge { display: inline-block; padding: 6px 12px; background: #e0f2fe; color: #0369a1; font-weight: bold; border-radius: 6px; margin-bottom: 12px; font-size: 13px; }
+.footer { margin-top: 40px; font-size: 12px; color: #64748b; border-top: 2px solid #cbd5e1; padding-top: 16px; text-align: center; }
 </style>
 </head>
 <body>
-<h1>24Seven Limousine</h1>
+<h1>24Seven Limousine · ${isAr ? 'بوابة تشغيل السيارات' : 'Fleet Operations'}</h1>
+<div class="location-badge">${isAr ? 'المقر الرئيسي: الإسكندرية (المعاينة والتعاقد بموعد مسبق)' : 'HQ: Alexandria (Inspection & Contracting by Appointment)'}</div>
 <h2>${docTitle}</h2>
-<p class="box">${isAr ? 'هذا الدليل استرشادي لتوضيح خطوات وضمانات التعاقد ومسؤوليات الطرفين قبل توقيع العقد النهائي وتسليم السيارة.' : 'This guide explains the onboarding steps, guarantees, and contractual responsibilities before formal handover.'}</p>
-<h2>${isAr ? '1. المستندات المطلوبة' : '1. Required Documents'}</h2>
+<p class="box">${isAr ? 'يعرض هذا الدليل البنود الرسمية التي يناقشها فريق 24Seven Limousine مع مالك السيارة قبل توقيع العقد النهائي. تستكمل النسخة النهائية ببيانات السيارة ونتيجة المعاينة وتوقيع الطرفين.' : 'This guide outlines the official terms discussed with vehicle owners before signing the final agreement completed with inspection results and signatures.'}</p>
+
+<div class="notice">
+<strong>${isAr ? 'تنبيه قانوني:' : 'Legal Notice:'}</strong> ${isAr ? 'هذه نسخة معلوماتية استرشادية غير قابلة للتوقيع ولا تغني عن العقد النهائي الموقع بين الطرفين بمقر الشركة.' : 'This is an informational guide and does not replace the binding final contract signed at company headquarters.'}
+</div>
+
+<h2>${isAr ? 'أولاً: المستندات وخطوات التعاقد' : 'Section 1: Requirements & Contracting Steps'}</h2>
 <ul>
-<li>${isAr ? 'رخصة سيارة سارية.' : 'Valid vehicle license.'}</li>
-<li>${isAr ? 'بوليصة تأمين شامل سارية ومعتمدة.' : 'Active comprehensive insurance policy.'}</li>
-<li>${isAr ? 'بطاقة الرقم القومي لمالك السيارة.' : 'National ID of the vehicle owner.'}</li>
-<li>${isAr ? 'الموافقة على جهاز GPS والمتابعة التشغيلية.' : 'Consent to GPS installation and telemetry tracking.'}</li>
+<li><strong>${isAr ? 'المستندات المطلوبة:' : 'Required Documents:'}</strong> ${isAr ? 'رخصة سيارة سارية، بوليصة تأمين شامل معتمدة، بطاقة الرقم القومي لمالك السيارة، والموافقة على جهاز GPS.' : 'Valid vehicle license, active comprehensive insurance policy, owner National ID, and GPS consent.'}</li>
+<li><strong>${isAr ? 'مكان المعاينة:' : 'Inspection Location:'}</strong> ${isAr ? 'تتم المعاينة الفنية الميكانيكية للسيارة واعتمادها في مقر الشركة الرئيسي بالإسكندرية فقط بموعد مسبق.' : 'Technical physical inspection and onboarding approval take place exclusively at our Alexandria HQ by prior appointment.'}</li>
 </ul>
-<h2>${isAr ? '2. التزامات الشركة والصيانة والتأمين' : '2. Company Commitments & Maintenance'}</h2>
-<ul>
-<li>${isAr ? 'تتحمل الشركة الصيانة الدورية واستهلاك الإطارات والبطاريات ضمن الاستهلاك الطبيعي.' : 'Company covers periodic maintenance, tire, and battery operational wear.'}</li>
-<li>${isAr ? 'سداد الراتب الشهري في موعد استحقاق محدد بإيصال رسمي موثق.' : 'Fixed monthly payout issued on due date via official receipt/transfer.'}</li>
-<li>${isAr ? 'إدارة كاملة لملفات التأمين وبدل توقف يصل إلى 50% أثناء الإصلاح.' : 'Comprehensive insurance claim handling + up to 50% downtime allowance.'}</li>
-</ul>
+
+<h2>${isAr ? 'ثانياً: البنود القانونية الـ 8 لعقد التشغيل' : 'Section 2: The 8 Legal Operating Articles'}</h2>
+
+<h3>1. ${isAr ? 'موضوع التعاقد وبيانات السيارة' : 'Contract Scope & Vehicle Specs'}</h3>
+<p>${isAr ? 'يستكمل العقد ببيانات السيارة المعتمدة (الماركة، الموديل، سنة الصنع، الشاسيه، الموتور، اللوحات) ومدة التعاقد وتاريخ البداية والنهاية بعد المعاينة بمقر الإسكندرية. تُشغّل السيارة في نشاط نقل الركاب والشركات والمطارات المتفق عليه، وتتعهد الشركة بعدم استخدامها في أي أعمال غير قانونية أو مخالفة لقواعد المرور.' : 'The contract records the vehicle details, term, and start/end dates after Alexandria HQ inspection. Used exclusively for approved executive corporate/airport passenger transport.'}</p>
+
+<h3>2. ${isAr ? 'التزامات مالك السيارة' : 'Vehicle Owner Commitments'}</h3>
+<p>${isAr ? 'يُقر المالك بأن السيارة بحالة جيدة ميكانيكياً وفنياً وقت التسليم، ويلتزم بتقديم بوليصة تأمين شامل سارية من شركة معتمدة وتسليم نسخة منها، والموافقة على تركيب جهاز تتبع GPS. وفي حالة طلب إنهاء التعاقد، يلتزم المالك بإخطار كتابي لا يقل عن 90 يوماً.' : 'Owner confirms sound mechanical condition at handover, provides active comprehensive insurance, agrees to GPS installation, and gives 90 days notice for termination.'}</p>
+
+<h3>3. ${isAr ? 'التزامات الشركة أثناء فترة التشغيل' : 'Company Commitments During Operation'}</h3>
+<p>${isAr ? 'تلتزم الشركة بتشغيل السيارة وإدارتها باحترافية من خلال سائقين مؤهلين ومدربين، وتلتزم برد السيارة للمالك في نهاية مدة العقد بحالة فنية جيدة مع مراعاة معدل الاستهلاك الطبيعي للتشغيل.' : 'Company manages vehicle operations via vetted professional chauffeurs and returns the vehicle in good technical shape considering normal wear and tear.'}</p>
+
+<h3>4. ${isAr ? 'الصيانة والاستهلاك والمخالفات المرورية' : 'Maintenance, Wear & Traffic Violations'}</h3>
+<p>${isAr ? 'تتحمل الشركة الصيانة الدورية (تغيير الزيوت والفلاتر) وتتحمل استهلاك الإطارات والبطارية ضمن الاستهلاك الطبيعي كل سنة أو كل 10,000 كم أيهما أقرب. كما تتحمل الشركة سداد كافة المخالفات المرورية التي تقع خلال فترة التشغيل.' : 'Company covers routine maintenance, normal tire/battery replacement every 10k km/year, and all traffic fines incurred during operations.'}</p>
+
+<h3>5. ${isAr ? 'التأمين والحوادث وبدل التوقف' : 'Insurance, Accidents & Downtime Allowance'}</h3>
+<p>${isAr ? 'تتولى الشركة إدارة كافة إجراءات محاضر الحوادث وملفات الإصلاح وشركات التأمين. ويضمن العقد للمالك صرف بدل توقف بنسبة تصل إلى 50% من الراتب الشهري عن فترة توقف السيارة للإصلاح وفق شروط الملف ووثيقة التأمين.' : 'Company manages all accident repair and insurance claims, ensuring a downtime allowance of up to 50% of monthly income during repair.'}</p>
+
+<h3>6. ${isAr ? 'الراتب وموعد وطريقة السداد' : 'Monthly Income, Due Date & Payment Method'}</h3>
+<p>${isAr ? 'يحدد العقد الراتب الشهري الثابت وتاريخ الاستحقاق الشهري ووسيلة السداد الموثقة (تحويل بنكي أو إيصال نقدية رسمي موقع من المالك أو وكيله).' : 'Contract legally fixes the monthly payout, payment due date, and documented transfer/receipt method.'}</p>
+
+<h3>7. ${isAr ? 'الإنهاء والشرط الجزائي' : 'Termination & Penalty Clauses'}</h3>
+<p>${isAr ? 'يحق فسخ العقد عند الإخلال الجسيم بالبنود أو التخلف عن السداد أو سوء الاستخدام وفق ما يثبت بالعقد النهائي.' : 'Termination rights apply for material breach, non-payment, or misuse as detailed in the final agreement.'}</p>
+
+<h3>8. ${isAr ? 'تسوية النزاع والاختصاص القضائي والنسخ' : 'Jurisdiction, Dispute Resolution & Copies'}</h3>
+<p>${isAr ? 'تختص محكمة الإسكندرية الابتدائية بالنظر في أي نزاع ينشأ عن تنفيذ العقد. ويحرر العقد من نسختين أصليتين بيد كل طرف نسخة للعمل بموجبها.' : 'Alexandria Primary Court holds jurisdiction over disputes. Issued in two original signed copies.'}</p>
+
 <div class="footer">
-&copy; 2026 24Seven Limousine - Alexandria / Cairo / Sharm El-Sheikh | Tel: +201121748885
+&copy; 2026 24Seven Limousine · Alexandria HQ: El-Seyouf, Lotus Towers | WhatsApp: +201121748885
 </div>
 </body>
 </html>`;
@@ -1286,7 +1452,7 @@ li { margin: 8px 0; }
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = isAr ? 'دليل-تعاقد-24seven.html' : '24seven-contract-guide.html';
+            a.download = isAr ? 'عقد-ودليل-تشغيل-سيارات-24seven.html' : '24seven-fleet-operating-agreement.html';
             document.body.appendChild(a);
             a.click();
             a.remove();
