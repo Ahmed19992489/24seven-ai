@@ -53,7 +53,7 @@ class handler(BaseHTTPRequestHandler):
                         SELECT 
                             t.*,
                             d.name AS driver_name, d.phone AS driver_phone,
-                            c.brand AS car_brand, c.model AS car_model, c.plate_number AS car_plate_number, c.car_image_url AS car_image_url
+                            c.brand AS car_brand, c.car_model AS car_model, c.plate_number AS car_plate_number, c.car_image_url AS car_image_url
                         FROM trips t
                         LEFT JOIN drivers d ON t.driver_id = d.id
                         LEFT JOIN cars c ON t.car_id = c.id
