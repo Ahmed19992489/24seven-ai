@@ -5010,28 +5010,46 @@
                         matchedRes = resBySheetRowMap[parseInt(rowMatch[1])] || null;
                     }
                 }
+                if (!matchedRes) {
+                    const clientPhone = (t.client_phone || '').replace(/\D/g, '');
+                    const clientName = (parsed.tClientName || '').trim().toLowerCase();
+                    matchedRes = reservations.find(r => {
+                        const rPhone = (r.customer_phone || '').replace(/\D/g, '');
+                        const rName = (r.customer_name || '').trim().toLowerCase();
+                        const sameDate = (r.trip_date === parsed.tDate);
+                        if (sameDate && clientPhone && rPhone && (clientPhone.endsWith(rPhone.slice(-8)) || rPhone.endsWith(clientPhone.slice(-8)))) return true;
+                        if (sameDate && clientName && rName && (clientName === rName || (clientName.length >= 4 && rName.includes(clientName)) || (rName.length >= 4 && clientName.includes(rName)))) return true;
+                        return false;
+                    });
+                }
+
+                let clientDecision = matchedRes ? matchedRes.client_decision : null;
+                if (!clientDecision && t.admin_notes) {
+                    const dMatch = t.admin_notes.match(/قرار العميل:\s*([^\n\r]+)/);
+                    if (dMatch) clientDecision = dMatch[1].trim();
+                }
 
                 return {
                     id: t.id,
                     customer_name: parsed.tClientName,
-                    customer_phone: t.client_phone || '-',
+                    customer_phone: t.client_phone || (matchedRes ? matchedRes.customer_phone : '-'),
                     pickup_location: t.pickup_location,
                     dropoff_location: t.dropoff_location,
                     pickup_address: t.pickup_location || '',
                     dropoff_address: t.dropoff_location || '',
                     trip_date: parsed.tDate,
                     trip_time: parsed.tTime,
-                    trip_type: t.admin_notes?.includes('VIP') ? 'ذهاب فقط - VIP' : 'ذهاب فقط',
-                    cost: t.estimated_price || 0,
+                    trip_type: t.admin_notes?.includes('VIP') ? 'ذهاب فقط - VIP' : (t.trip_type || 'ذهاب فقط'),
+                    cost: t.estimated_price || (matchedRes ? matchedRes.cost : 0),
                     status: t.status,
                     car_type: t.car_type || 'سيدان',
                     passengers: parsed.tPassengers,
                     bags: parsed.tBags,
                     is_real_trip: true,
                     original_trip: t,
-                    google_res_id: matchedRes ? matchedRes.id : null,
+                    google_res_id: matchedRes ? matchedRes.id : (t.google_res_id || null),
                     sheet_row: matchedRes ? matchedRes.sheet_row : null,
-                    client_decision: matchedRes ? matchedRes.client_decision : null,
+                    client_decision: clientDecision,
                     driver_name: t.drivers?.name || null,
                     driver_phone: t.drivers?.phone || null,
                     car_brand: t.cars?.brand || null,
@@ -5039,18 +5057,37 @@
                     car_image_url: t.cars?.car_image_url || null,
                     stage_status: t.stage_status || null,
                     admin_notes: t.admin_notes || '',
-                    payment_method: t.payment_method || '',
+                    payment_method: t.payment_method || (matchedRes ? matchedRes.payment_method : ''),
                     notes: t.admin_notes || ''
                 };
             });
 
-            // استبعاد المكرر
+            // استبعاد المكرر بدقة
             const existingTripIds = new Set(trips.map(t => String(t.id)));
+            const matchedResIds = new Set(mappedTrips.map(mt => mt.google_res_id).filter(Boolean));
+
             const filteredReservations = reservations.filter(r => {
                 if (r.sql_server_id && existingTripIds.has(String(r.sql_server_id))) {
                     return false;
                 }
                 if (existingTripIds.has(String(r.id))) {
+                    return false;
+                }
+                if (matchedResIds.has(r.id)) {
+                    return false;
+                }
+                // Fuzzy duplicate check against mappedTrips (same client + same date)
+                const rPhone = (r.customer_phone || '').replace(/\D/g, '');
+                const rName = (r.customer_name || '').trim().toLowerCase();
+                const isDup = mappedTrips.some(mt => {
+                    const mtPhone = (mt.customer_phone || '').replace(/\D/g, '');
+                    const mtName = (mt.customer_name || '').trim().toLowerCase();
+                    const sameDate = (mt.trip_date === r.trip_date);
+                    if (sameDate && rPhone && mtPhone && (mtPhone.endsWith(rPhone.slice(-8)) || rPhone.endsWith(mtPhone.slice(-8)))) return true;
+                    if (sameDate && rName && mtName && (rName === mtName || (rName.length >= 4 && mtName.includes(rName)) || (mtName.length >= 4 && rName.includes(mtName)))) return true;
+                    return false;
+                });
+                if (isDup) {
                     return false;
                 }
                 if (r.modified_driver_name && r.modified_driver_name.trim() !== '' && r.modified_driver_name !== '--') {
@@ -5234,16 +5271,17 @@
                     `;
                 }
 
-                const resId = t.is_real_trip ? t.google_res_id : t.id;
-                const decisionHtml = resId ? `
+                const targetDecisionId = t.is_real_trip ? (t.google_res_id || t.id) : t.id;
+                const sheetRowVal = t.sheet_row || 'null';
+                const decisionHtml = `
                     <div class="mt-1 flex items-center gap-1.5 flex-wrap">
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${decisionClass} inline-flex items-center gap-1">
                             <i class="fas ${decisionIcon}"></i> ${decision}
                         </span>
-                        <button onclick="changeClientDecision('${resId}', '${decision}', '${t.id}', ${t.sheet_row || 'null'})" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold border border-blue-200 rounded px-1.5 py-0.5 bg-blue-50/50 hover:bg-blue-50 transition cursor-pointer" title="تعديل قرار العميل">تعديل القرار</button>
+                        <button onclick="changeClientDecision('${targetDecisionId}', '${decision}', '${t.id}', ${sheetRowVal})" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold border border-blue-200 rounded px-1.5 py-0.5 bg-blue-50/50 hover:bg-blue-50 transition cursor-pointer" title="تعديل قرار العميل">تعديل القرار</button>
                         ${payMethodBadge}
                     </div>
-                ` : '';
+                `;
 
                 // تمييز الصف بصرياً
                 let rowBgBorder = '';
