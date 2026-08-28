@@ -1181,46 +1181,10 @@
                     .eq('vendor_id', currentVendor.id)
                     .order('id', { ascending: false });
 
-                let vendorTrips = trips || [];
+                if (error) throw error;
 
-                // 2. جلب الحجوزات المسندة لاسم المكتب من google_reservations
-                const vendorName = currentVendor.name || 'الفهد';
-                const { data: resData } = await sb.from('google_reservations')
-                    .select('*')
-                    .or(`modified_driver_name.ilike.%${vendorName}%,notes.ilike.%${vendorName}%`)
-                    .order('sheet_row', { ascending: false })
-                    .limit(50);
-
+                cachedTrips = trips || [];
                 cachedReservationsMap = {};
-                
-                if (resData && resData.length > 0) {
-                    resData.forEach(r => {
-                        if (r.sql_server_id) cachedReservationsMap[r.sql_server_id] = r;
-                        if (r.sheet_row) cachedReservationsMap[`row_${r.sheet_row}`] = r;
-
-                        // إذا لم تكن الرحلة موجودة بالفعل في قائمة trips، نقوم بإضافتها كأوردر تشغيل
-                        const alreadyExists = vendorTrips.some(t => String(t.id) === String(r.sql_server_id) || String(t.id) === `gr_${r.id}`);
-                        if (!alreadyExists) {
-                            vendorTrips.push({
-                                id: 'gr_' + r.id,
-                                google_res_id: r.id,
-                                manual_client_name: r.customer_name,
-                                client_phone: r.customer_phone,
-                                pickup_location: r.pickup_address,
-                                dropoff_location: r.dropoff_address,
-                                estimated_price: Number(r.cost) || 0,
-                                status: (r.trip_status === 'مكتملة' || r.trip_status === 'تمت') ? 'completed' : 'approved',
-                                admin_notes: `📝 حجز من الشيت\n👥 ركاب: ${r.passengers || '-'} | شنط: ${r.bags || '-'}\n📅 التاريخ: ${r.trip_date} | الوقت: ${r.trip_time}\n🚗 السيارة: ${r.car_type || '-'}\n💡 ملاحظات: ${r.notes || '-'}`,
-                                trip_date: r.trip_date,
-                                trip_time: r.trip_time,
-                                created_at: r.created_at || r.sheet_timestamp,
-                                vendor_id: currentVendor.id
-                            });
-                        }
-                    });
-                }
-
-                cachedTrips = vendorTrips;
 
                 // عرض الرحلات بناءً على الفلتر الحالي
                 renderFilteredTrips();
