@@ -3,17 +3,9 @@ import json
 import os
 import requests
 
-FB_PAGE_TOKEN = os.environ.get("FB_PAGE_TOKEN", "")
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://khskudtxbypohvnreloi.supabase.co")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
-
-def get_headers():
-    return {
-        "apikey": SUPABASE_KEY,
-        "Authorization": f"Bearer {SUPABASE_KEY}",
-        "Content-Type": "application/json",
-        "Prefer": "return=minimal"
-    }
+FB_PAGE_TOKEN = os.environ.get("FB_PAGE_TOKEN") or "EAAPDbwUyvY0BQrm6ZB9qb62LU9hI50ZC9QOfZAO3VPA7ZCSnFSRMCb2kouBRkXu4LiVmRU2ydv1vLl00kKmgTFMN5ULJOpImor7i8oITjicjIjWiOLxTL7yltYrlF0RLxcdU6UNOaIdqo4Ouv0BnQ79OK2sgSLpHY9ZCQs4iRIxcpjnoxr8EWpV4FSgGTzgZDZD"
+NEON_CONN_STR = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL") or "postgresql://neondb_owner:npg_VM4tSBwN5PGd@ep-plain-rice-auzortld-pooler.c-10.us-east-1.aws.neon.tech/neondb?sslmode=require"
+NEON_HTTP_URL = "https://ep-plain-rice-auzortld-pooler.c-10.us-east-1.aws.neon.tech/sql"
 
 class handler(BaseHTTPRequestHandler):
     def _send_cors_headers(self):
@@ -35,7 +27,7 @@ class handler(BaseHTTPRequestHandler):
             channel = data.get("channel", "messenger")
             recipient_id = data.get("recipient_id") or data.get("sender_id") or data.get("to")
             message_text = data.get("message") or data.get("text")
-            sender_name = data.get("admin_name") or "Admin"
+            sender_name = data.get("admin_name") or data.get("mod_name") or "Admin"
 
             if not recipient_id or not message_text:
                 self.send_response(400)
@@ -63,17 +55,18 @@ class handler(BaseHTTPRequestHandler):
                 fb_res = r.json()
 
                 if r.status_code == 200:
-                    # Save to Supabase
-                    if SUPABASE_KEY:
-                        sb_payload = {
-                            "channel": channel,
-                            "sender_id": str(recipient_id),
-                            "sender_name": sender_name,
-                            "message_text": message_text,
-                            "is_from_admin": True,
-                            "read_by_admin": True
-                        }
-                        requests.post(f"{SUPABASE_URL}/rest/v1/omnichannel_messages", headers=get_headers(), json=sb_payload, timeout=5)
+                    # Save to Neon Database
+                    try:
+                        sql = "INSERT INTO omnichannel_messages (channel, sender_id, sender_name, message_text, is_from_admin, read_by_admin) VALUES ($1, $2, $3, $4, $5, $6)"
+                        params = [channel, str(recipient_id), str(sender_name), str(message_text), True, True]
+                        requests.post(
+                            NEON_HTTP_URL,
+                            headers={"Neon-Connection-String": NEON_CONN_STR},
+                            json={"query": sql, "params": params},
+                            timeout=8
+                        )
+                    except Exception as ne:
+                        print(f"Error saving sent reply to Neon: {ne}")
 
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")

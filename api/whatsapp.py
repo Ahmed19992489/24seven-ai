@@ -5,16 +5,8 @@ import urllib.parse
 import requests
 
 FB_VERIFY_TOKEN = os.environ.get("FB_VERIFY_TOKEN", "messenger_secret_24seven")
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://khskudtxbypohvnreloi.supabase.co")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
-
-def get_headers():
-    return {
-        "apikey": SUPABASE_KEY,
-        "Authorization": f"Bearer {SUPABASE_KEY}",
-        "Content-Type": "application/json",
-        "Prefer": "return=minimal"
-    }
+NEON_CONN_STR = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL") or "postgresql://neondb_owner:npg_VM4tSBwN5PGd@ep-plain-rice-auzortld-pooler.c-10.us-east-1.aws.neon.tech/neondb?sslmode=require"
+NEON_HTTP_URL = "https://ep-plain-rice-auzortld-pooler.c-10.us-east-1.aws.neon.tech/sql"
 
 class handler(BaseHTTPRequestHandler):
     def _send_cors_headers(self):
@@ -63,16 +55,15 @@ class handler(BaseHTTPRequestHandler):
                     for msg in messages:
                         sender_phone = msg.get('from', '')
                         msg_text = msg.get('text', {}).get('body', '')
-                        if sender_phone and msg_text and SUPABASE_KEY:
-                            payload = {
-                                "channel": "whatsapp",
-                                "sender_id": str(sender_phone),
-                                "sender_name": f"عميل واتساب (+{sender_phone})",
-                                "message_text": msg_text,
-                                "is_from_admin": False,
-                                "read_by_admin": False
-                            }
-                            requests.post(f"{SUPABASE_URL}/rest/v1/omnichannel_messages", headers=get_headers(), json=payload, timeout=5)
+                        if sender_phone and msg_text:
+                            sql = "INSERT INTO omnichannel_messages (channel, sender_id, sender_name, message_text, is_from_admin, read_by_admin) VALUES ($1, $2, $3, $4, $5, $6)"
+                            params = ["whatsapp", str(sender_phone), f"عميل واتساب (+{sender_phone})", str(msg_text), False, False]
+                            requests.post(
+                                NEON_HTTP_URL,
+                                headers={"Neon-Connection-String": NEON_CONN_STR},
+                                json={"query": sql, "params": params},
+                                timeout=8
+                            )
 
             self.send_response(200)
             self.send_header("Content-Type", "text/plain")

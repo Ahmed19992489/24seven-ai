@@ -5,35 +5,24 @@ import urllib.parse
 import requests
 
 # 🔑 Config & Credentials via Environment Variables
-FB_PAGE_TOKEN = os.environ.get("FB_PAGE_TOKEN", "")
+FB_PAGE_TOKEN = os.environ.get("FB_PAGE_TOKEN") or "EAAPDbwUyvY0BQrm6ZB9qb62LU9hI50ZC9QOfZAO3VPA7ZCSnFSRMCb2kouBRkXu4LiVmRU2ydv1vLl00kKmgTFMN5ULJOpImor7i8oITjicjIjWiOLxTL7yltYrlF0RLxcdU6UNOaIdqo4Ouv0BnQ79OK2sgSLpHY9ZCQs4iRIxcpjnoxr8EWpV4FSgGTzgZDZD"
 FB_VERIFY_TOKEN = os.environ.get("FB_VERIFY_TOKEN", "messenger_secret_24seven")
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://khskudtxbypohvnreloi.supabase.co")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
+NEON_CONN_STR = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL") or "postgresql://neondb_owner:npg_VM4tSBwN5PGd@ep-plain-rice-auzortld-pooler.c-10.us-east-1.aws.neon.tech/neondb?sslmode=require"
+NEON_HTTP_URL = "https://ep-plain-rice-auzortld-pooler.c-10.us-east-1.aws.neon.tech/sql"
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 
-def get_headers():
-    return {
-        "apikey": SUPABASE_KEY,
-        "Authorization": f"Bearer {SUPABASE_KEY}",
-        "Content-Type": "application/json",
-        "Prefer": "return=minimal"
-    }
-
 def save_to_supabase(sender_id, sender_name, text, is_admin=False):
-    if not SUPABASE_KEY:
-        return
     try:
-        payload = {
-            "channel": "instagram",
-            "sender_id": str(sender_id),
-            "sender_name": sender_name,
-            "message_text": text,
-            "is_from_admin": is_admin,
-            "read_by_admin": is_admin
-        }
-        requests.post(f"{SUPABASE_URL}/rest/v1/omnichannel_messages", headers=get_headers(), json=payload, timeout=5)
+        sql = "INSERT INTO omnichannel_messages (channel, sender_id, sender_name, message_text, is_from_admin, read_by_admin) VALUES ($1, $2, $3, $4, $5, $6)"
+        params = ["instagram", str(sender_id), str(sender_name), str(text), bool(is_admin), bool(is_admin)]
+        requests.post(
+            NEON_HTTP_URL,
+            headers={"Neon-Connection-String": NEON_CONN_STR},
+            json={"query": sql, "params": params},
+            timeout=8
+        )
     except Exception as e:
-        print(f"Error saving IG to Supabase: {e}")
+        print(f"Error saving IG to Neon: {e}")
 
 class handler(BaseHTTPRequestHandler):
     def _send_cors_headers(self):
