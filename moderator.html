@@ -1848,18 +1848,49 @@
         let globalModSupportSubUnified = null;
         let globalModTripChatSubUnified = null;
 
+        function updateUnifiedOmniChats() {
+            regroupChatsOnly();
+            const omniChatsMapped = Object.values(groupedChats).map(c => {
+                let preview = c.last.message_text || c.last.message || '';
+                if (preview.startsWith('MEDIA_IMAGE:')) {
+                    const parts = preview.substring(12).split('|CAPTION:');
+                    preview = parts[1] ? `📷 صورة: ${parts[1]}` : '📷 صورة';
+                } else if (preview.startsWith('MEDIA_AUDIO:')) {
+                    preview = '🎵 رسالة صوتية';
+                } else if (preview.startsWith('MEDIA_VIDEO:') || preview.includes('[فيديو') || preview.includes('[Video')) {
+                    preview = '🎬 مقطع فيديو';
+                }
+                return {
+                    id: c.id,
+                    type: 'omni',
+                    name: c.name || 'مراسلات سوشيال',
+                    lastMessage: preview,
+                    lastMessageTime: new Date(c.last.created_at),
+                    unreadCount: c.unrepliedCount || 0,
+                    avatar: c.channel === 'messenger' ? '💬' : (c.channel === 'instagram' ? '📸' : '🟢'),
+                    channel: c.channel
+                };
+            });
+            const nonOmni = unifiedChatsList.filter(c => c.type !== 'omni');
+            unifiedChatsList = [...omniChatsMapped, ...nonOmni];
+            unifiedChatsList.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
+            if (typeof renderUnifiedChatList === 'function') {
+                renderUnifiedChatList();
+            }
+        }
+
         async function loadChats() {
             // First ensure we have some trip data for name resolution
             if(allTrips.length === 0) await loadSummary();
 
-            // جلب أحدث 300 رسالة (آخر 7 أيام فقط) - تقليل Egress
-            const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+            // جلب أحدث الرسائل (آخر 30 يوماً) لدعم كافة قنوات الواتساب والماسنجر وإنستجرام
+            const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
             const { data, error } = await sbClient
                 .from('omnichannel_messages')
                 .select('id, sender_id, sender_name, channel, message_text, is_from_admin, created_at, read_by_admin, whatsapp_instance_id')
-                .gte('created_at', sevenDaysAgo)
+                .gte('created_at', thirtyDaysAgo)
                 .order('created_at', { ascending: false })
-                .limit(300);
+                .limit(500);
                 
             if (data) {
                 allMessages = data.reverse();
