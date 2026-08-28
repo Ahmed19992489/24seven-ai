@@ -1821,17 +1821,25 @@
 
         function renderRecentTrips(trips) {
             const tbody = document.getElementById('recent-trips-body');
-            tbody.innerHTML = trips.map(t => `
+            if (!tbody) return;
+            tbody.innerHTML = (trips || []).map(t => {
+                const clientName = t.customer_name || t.manual_client_name || t.client_name || 'عميل';
+                const pickup = (t.pickup_address || t.pickup_location || '').split(',')[0] || '-';
+                const dropoff = (t.dropoff_address || t.dropoff_location || '').split(',')[0] || '-';
+                const tripType = t.trip_type || 'نقل';
+                const tripDate = t.trip_date || (t.created_at ? new Date(t.created_at).toLocaleDateString('ar-EG') : '--');
+                const price = t.cost || t.fare_amount || t.price || t.estimated_price || 0;
+                return `
                 <tr class="border-b hover:bg-slate-50 transition">
-                    <td class="p-4 font-bold text-slate-700">${t.customer_name || '---'}</td>
-                    <td class="p-4 text-xs text-slate-500">${t.pickup_address?.split(',')[0]} ➝ ${t.dropoff_address?.split(',')[0]}</td>
+                    <td class="p-4 font-bold text-slate-700">${clientName}</td>
+                    <td class="p-4 text-xs text-slate-500">${pickup} ➝ ${dropoff}</td>
                     <td class="p-4 text-center">
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-black ${t.trip_type?.includes('VIP') ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}">${t.trip_type || 'نقل'}</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-black ${tripType.includes('VIP') ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}">${tripType}</span>
                     </td>
-                    <td class="p-4 text-center text-xs text-slate-500">${t.trip_date || '--'}</td>
-                    <td class="p-4 text-center font-bold text-teal-600">${t.cost || 0}</td>
-                </tr>
-            `).join('');
+                    <td class="p-4 text-center text-xs text-slate-500">${tripDate}</td>
+                    <td class="p-4 text-center font-bold text-teal-600">${price}</td>
+                </tr>`;
+            }).join('');
         }
 
         // --- Omnichannel Chat Logic ---
@@ -3525,12 +3533,16 @@
                         sbPayload.whatsapp_instance_id = whatsappInstanceId;
                     }
                     try {
-                        await fetch(`${SUPABASE_URL}/rest/v1/omnichannel_messages`, {
+                        await fetch(`https://24seven-ai.com/api/db`, {
                             method: 'POST',
-                            headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-                            body: JSON.stringify(sbPayload)
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                action: 'insert',
+                                table: 'omnichannel_messages',
+                                data: sbPayload
+                            })
                         });
-                    } catch(e) { console.error('Supabase save error:', e); }
+                    } catch(e) { console.error('Neon DB save error:', e); }
                 } else {
                     let friendlyErr = '';
                     if (apiError.includes('outside the allowed window') || apiError.includes('(#10)')) {
