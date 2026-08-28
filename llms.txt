@@ -1,6 +1,6 @@
-# 24Seven Limousine - Sales & Fleet Intelligence Platform
+# 24Seven Limousine & Tech Solutions - Sales & Mobility Intelligence Platform
 
-> 24Seven Limousine is Egypt's leading luxury transportation, airport transfer, corporate mobility, and automotive investment management company.
+> 24Seven is a hybrid technology and smart mobility platform headquartered in Egypt, operating premier executive limousine services, automotive investment management, alongside an enterprise AI automation and software engineering division.
 
 ## Overview
 - **Website:** https://24seven-ai.com
@@ -10,9 +10,9 @@
 - **Phone / WhatsApp:** +201121748885
 - **Email:** info@24seven-ai.com
 
-## Core Services
+## Core Divisions & Services
 
-### 1. Luxury Airport Transfers & Tourism (نقل المطار والسياحة)
+### 1. Smart Mobility & Luxury Airport Transfers (نقل المطار والسياحة)
 - **Coverage:** Cairo International Airport (CAI), Borg El Arab Airport (HBE), Sharm El Sheikh Airport (SSH), Hurghada Airport (HRG).
 - **Fleet:** 2025 Luxury Sedans (Mercedes E-Class, Toyota Corolla, Hyundai Elantra), Family SUVs, and Tourist HiAce Vans.
 - **Features:** Meet & Greet inside terminal, luggage handling, flight monitoring, toll/parking fee included.
@@ -22,19 +22,24 @@
 - Dedicated executive chauffeuring, daily/monthly business transport, tax-compliant invoicing, official billing accounts.
 - Corporate booking portal: https://24seven-ai.com/limousine.html
 
-### 3. Vehicle Investment Program (استثمار وتشغيل السيارات)
-- **Program:** Private car owners can onboard vehicles (2020+ models) into the corporate fleet for guaranteed monthly payouts.
+### 3. Vehicle Fleet Investment Program (استثمار وتشغيل السيارات)
+- **Program:** Private car owners onboard vehicles (2020+ models) into corporate fleet for guaranteed monthly payouts.
 - **Guarantees:** Legally binding contract, comprehensive insurance handling, certified maintenance & wear coverage, 24/7 live GPS telematics.
 - **Details & Return Calculator:** https://24seven-ai.com/invest.html
 
-### 4. Weddings & Special VIP Events (الزفاف والمناسبات)
-- Premium and classic wedding car packages with decorated chauffeurs.
-- Details: https://24seven-ai.com/home.html
+### 4. Enterprise Software House & AI Automation (الحلول البرمجية والذكاء الاصطناعي)
+- Custom ERP systems, web design packages, CRM platforms, and AI chatbot automation bots.
+- **Tech Portal:** https://24seven-ai.com/tech.html
+- **Web Design:** https://24seven-ai.com/web_design.html
+- **Portfolio:** https://24seven-ai.com/projects.html
 
 ## Key Pages & Navigation
-- **Home:** https://24seven-ai.com/home.html - General overview and services
+- **Home (Limousine & Mobility):** https://24seven-ai.com/ - General overview and booking
 - **Limousine Booking:** https://24seven-ai.com/limousine.html - Instant ride calculator and reservation
 - **Investment Portal:** https://24seven-ai.com/invest.html - Vehicle investment calculator and onboarding
+- **Software & AI Solutions:** https://24seven-ai.com/tech.html - Software development and AI bots
+- **Web Design:** https://24seven-ai.com/web_design.html - Web development packages
+- **Projects / Portfolio:** https://24seven-ai.com/projects.html - Portfolio of digital works
 - **Customer Reviews:** https://24seven-ai.com/reviews.html - Testimonials and customer feedback
 - **About Us:** https://24seven-ai.com/about.html - Company credentials and branches
 - **Sitemap:** https://24seven-ai.com/sitemap.xml

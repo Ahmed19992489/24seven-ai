@@ -2,14 +2,16 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
 
+  <!-- Main Landing (Limousine & Smart Mobility) -->
   <url>
-    <loc>https://24seven-ai.com/home.html</loc>
+    <loc>https://24seven-ai.com/</loc>
     <lastmod>2026-08-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://24seven-ai.com/home.html"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://24seven-ai.com/"/>
   </url>
 
+  <!-- Limousine & Airport Transfers -->
   <url>
     <loc>https://24seven-ai.com/limousine.html</loc>
     <lastmod>2026-08-28</lastmod>
@@ -18,6 +20,7 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://24seven-ai.com/limousine.html"/>
   </url>
 
+  <!-- Vehicle Investment Portal -->
   <url>
     <loc>https://24seven-ai.com/invest.html</loc>
     <lastmod>2026-08-28</lastmod>
@@ -26,6 +29,34 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://24seven-ai.com/invest.html"/>
   </url>
 
+  <!-- Software & AI Tech Solutions -->
+  <url>
+    <loc>https://24seven-ai.com/tech.html</loc>
+    <lastmod>2026-08-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://24seven-ai.com/tech.html"/>
+  </url>
+
+  <!-- Web Design Packages -->
+  <url>
+    <loc>https://24seven-ai.com/web_design.html</loc>
+    <lastmod>2026-08-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://24seven-ai.com/web_design.html"/>
+  </url>
+
+  <!-- Portfolio / Projects -->
+  <url>
+    <loc>https://24seven-ai.com/projects.html</loc>
+    <lastmod>2026-08-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://24seven-ai.com/projects.html"/>
+  </url>
+
+  <!-- Customer Reviews -->
   <url>
     <loc>https://24seven-ai.com/reviews.html</loc>
     <lastmod>2026-08-28</lastmod>
@@ -34,6 +65,7 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://24seven-ai.com/reviews.html"/>
   </url>
 
+  <!-- About Us -->
   <url>
     <loc>https://24seven-ai.com/about.html</loc>
     <lastmod>2026-08-28</lastmod>
