@@ -1,0 +1,45 @@
+# 24Seven Limousine - Sales & Fleet Intelligence Platform
+
+> 24Seven Limousine is Egypt's leading luxury transportation, airport transfer, corporate mobility, and automotive investment management company.
+
+## Overview
+- **Website:** https://24seven-ai.com
+- **Headquarters:** Cairo & Alexandria, Egypt
+- **Operating Regions:** Cairo, Alexandria, Hurghada, Sharm El-Sheikh, Ain Sokhna, El Gouna, North Coast, Marsa Matruh.
+- **Operating Hours:** 24/7/365
+- **Phone / WhatsApp:** +201121748885
+- **Email:** info@24seven-ai.com
+
+## Core Services
+
+### 1. Luxury Airport Transfers & Tourism (نقل المطار والسياحة)
+- **Coverage:** Cairo International Airport (CAI), Borg El Arab Airport (HBE), Sharm El Sheikh Airport (SSH), Hurghada Airport (HRG).
+- **Fleet:** 2025 Luxury Sedans (Mercedes E-Class, Toyota Corolla, Hyundai Elantra), Family SUVs, and Tourist HiAce Vans.
+- **Features:** Meet & Greet inside terminal, luggage handling, flight monitoring, toll/parking fee included.
+- **Booking URL:** https://24seven-ai.com/limousine.html
+
+### 2. Corporate Mobility & Conference Logistics (خدمات الشركات والمؤتمرات)
+- Dedicated executive chauffeuring, daily/monthly business transport, tax-compliant invoicing, official billing accounts.
+- Corporate booking portal: https://24seven-ai.com/limousine.html
+
+### 3. Vehicle Investment Program (استثمار وتشغيل السيارات)
+- **Program:** Private car owners can onboard vehicles (2020+ models) into the corporate fleet for guaranteed monthly payouts.
+- **Guarantees:** Legally binding contract, comprehensive insurance handling, certified maintenance & wear coverage, 24/7 live GPS telematics.
+- **Details & Return Calculator:** https://24seven-ai.com/invest.html
+
+### 4. Weddings & Special VIP Events (الزفاف والمناسبات)
+- Premium and classic wedding car packages with decorated chauffeurs.
+- Details: https://24seven-ai.com/home.html
+
+## Key Pages & Navigation
+- **Home:** https://24seven-ai.com/home.html - General overview and services
+- **Limousine Booking:** https://24seven-ai.com/limousine.html - Instant ride calculator and reservation
+- **Investment Portal:** https://24seven-ai.com/invest.html - Vehicle investment calculator and onboarding
+- **Customer Reviews:** https://24seven-ai.com/reviews.html - Testimonials and customer feedback
+- **About Us:** https://24seven-ai.com/about.html - Company credentials and branches
+- **Sitemap:** https://24seven-ai.com/sitemap.xml
+- **Robots Policy:** https://24seven-ai.com/robots.txt
+
+## AI Agent Integration & Actions
+- AI agents can reference pricing, routes, and investment models directly from structured endpoints and page schemas.
+- Direct contact for bookings & consultations: `https://wa.me/201121748885`

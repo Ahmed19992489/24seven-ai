@@ -1,0 +1,36 @@
+{
+  "name": "24seven-limousine-services",
+  "description": "Book luxury limousine transfers and check car investment programs in Egypt",
+  "version": "1.0.0",
+  "homepage": "https://24seven-ai.com",
+  "skills": [
+    {
+      "id": "book_limousine",
+      "name": "Book Limousine Transfer",
+      "description": "Calculate rates and book airport or inter-city limousine transfers in Egypt",
+      "url": "https://24seven-ai.com/limousine.html",
+      "parameters": {
+        "pickup": "Location or Airport in Egypt",
+        "dropoff": "Destination city or hotel",
+        "carType": "sedan | suv | van",
+        "date": "YYYY-MM-DD"
+      }
+    },
+    {
+      "id": "calculate_car_investment",
+      "name": "Vehicle Investment Calculator",
+      "description": "Calculate expected monthly return on car investment with 24Seven fleet",
+      "url": "https://24seven-ai.com/invest.html",
+      "parameters": {
+        "carValue": "Numeric value in EGP",
+        "carModel": "Year 2020 or newer",
+        "category": "sedan | minivan | hiace"
+      }
+    }
+  ],
+  "contact": {
+    "phone": "+201121748885",
+    "whatsapp": "https://wa.me/201121748885",
+    "email": "info@24seven-ai.com"
+  }
+}
