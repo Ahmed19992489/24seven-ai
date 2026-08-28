@@ -577,6 +577,32 @@ def find_active_session(sheet, sender_phone, message_text=""):
                 return i + 1, "feedback"
                 
         # ----------------------------------------------------
+        # أولوية 3: حل أرقام الخصوصية (WhatsApp LIDs)
+        # إذا كان المعرف طويلاً (LID >= 14 خانة) أو لم يتطابق بالرقم الصريح
+        # ----------------------------------------------------
+        if len(clean_sender) >= 14 or not any(_phones_match(str(r[4]), clean_sender) for r in all_rows[1:] if len(r) > 4):
+            try:
+                url_out = f"{SUPABASE_URL}/rest/v1/omnichannel_messages?is_from_admin=eq.true&channel=eq.whatsapp&order=created_at.desc&limit=10"
+                r_out = requests.get(url_out, headers=SUPABASE_SERVICE_HEADERS, timeout=3)
+                if r_out.status_code == 200:
+                    out_list = r_out.json()
+                    for om in out_list:
+                        target_p = str(om.get('sender_id', '')).replace("+", "").replace("0020", "20")
+                        if target_p and len(target_p) < 14:
+                            for i in range(len(all_rows)-1, 0, -1):
+                                row = list(all_rows[i])
+                                while len(row) < 35: row.append("")
+                                if _phones_match(str(row[4]), target_p):
+                                    trip_d = _parse_trip_date(row[1])
+                                    if trip_d is None or trip_d >= today:
+                                        dec = str(row[27]).strip() if len(row) > 27 else ""
+                                        if dec not in ["وافق", "مؤكد", "تأكيد", "رفض", "ملغي", "إلغاء", "الغاء"]:
+                                            print(f"[LID-Match] Matched LID {sender_phone} to active pending reservation on row {i+1} for phone {target_p}")
+                                            return i + 1, "confirm"
+            except Exception as lid_err:
+                print(f"[LID-Match Error]: {lid_err}")
+
+        # ----------------------------------------------------
         # fallback: أي رحلة قادمة أو عامة للمستخدم
         # ----------------------------------------------------
         for i in range(len(all_rows)-1, 0, -1):
@@ -762,6 +788,25 @@ def handle_confirmation(sender, text, row=None):
                     print(f"[Supabase-Decision-Sync Error]: {sb_err}")
 
                 send_whatsapp_message(sender, "تم إلغاء الطلب بناءً على رغبتك. نتمنى أن نتشرف بخدمتكم في رحلات أخرى قادمة 🌸")
+                
+                # إشعار الأدمن بإلغاء الرحلة
+                try:
+                    c_name = str(sheet.cell(row, 6).value or 'عميل')
+                    c_pickup = str(sheet.cell(row, 7).value or '')
+                    c_dropoff = str(sheet.cell(row, 8).value or '')
+                    c_date = str(sheet.cell(row, 2).value or '')
+                    admin_cancel_alert = (
+                        f"🚨 *تنبيه: العميل قام بإلغاء رحلته!*\n"
+                        f"👤 العميل: {c_name}\n"
+                        f"📱 الهاتف: {sender}\n"
+                        f"📅 موعد الرحلة: {c_date}\n"
+                        f"📍 خط السير: {c_pickup} ➝ {c_dropoff}\n"
+                        f"💬 رسالة العميل: \"{text}\"\n"
+                        f"❌ تم تحويل حالة الرحلة إلى (ملغي / رفض)."
+                    )
+                    send_whatsapp_message(ADMIN_WA_NUMBER, admin_cancel_alert)
+                except Exception as alert_err:
+                    print(f"[Admin-Cancel-Alert Error]: {alert_err}")
             except Exception as e:
                 print(f"[ERROR] Write failed: {e}")
         else:

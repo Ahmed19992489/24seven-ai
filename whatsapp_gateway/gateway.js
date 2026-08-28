@@ -48,6 +48,8 @@ if (!fs.existsSync(UPLOADS_DIR)) {
 // Structure: { [id]: { sock, status: 'init'|'connected'|'disconnected', qr: '', phone: '' } }
 const activeSessions = {};
 const groupNamesCache = {};
+const lidToPhoneCache = {};
+const lastOutboundRecipientBySession = {};
 
 // Helper to update instance status in database
 async function updateSupabaseInstance(id, payload) {
@@ -200,22 +202,56 @@ async function initSession(id, forceReconnect = false) {
                                 }
                             }
                         } else if (senderJid.endsWith('@lid')) {
-                            // Try metadata extraction first
-                            const possiblePn = msg.senderPn || (msg.key && (msg.key.participantAlt || msg.key.remoteJidAlt));
-                            if (possiblePn) {
-                                resolvedJid = possiblePn;
-                                senderPhone = resolvedJid.split('@')[0];
-                                console.log(`[Gateway] Resolved LID ${senderJid} to phone JID ${resolvedJid} via metadata (Phone: ${senderPhone})`);
+                            const rawLid = senderJid.split('@')[0];
+                            // 1. فحص الكاش المحلي المباشر
+                            if (lidToPhoneCache[rawLid]) {
+                                senderPhone = lidToPhoneCache[rawLid];
+                                resolvedJid = `${senderPhone}@s.whatsapp.net`;
+                                console.log(`[Gateway] Resolved LID ${senderJid} via lidToPhoneCache (Phone: ${senderPhone})`);
                             } else {
+                                // 2. فحص Baileys Signal Repository LID mapping
                                 try {
-                                    const [result] = await sock.onWhatsApp(senderJid);
-                                    if (result && result.exists && result.jid) {
-                                        resolvedJid = result.jid;
-                                        senderPhone = resolvedJid.split('@')[0];
-                                        console.log(`[Gateway] Resolved LID ${senderJid} to phone JID ${resolvedJid} via onWhatsApp (Phone: ${senderPhone})`);
+                                    if (sock.signalRepository && sock.signalRepository.lidMapping && typeof sock.signalRepository.lidMapping.getPNForLID === 'function') {
+                                        const pn = await sock.signalRepository.lidMapping.getPNForLID(senderJid);
+                                        if (pn) {
+                                            resolvedJid = pn.includes('@') ? pn : `${pn}@s.whatsapp.net`;
+                                            senderPhone = resolvedJid.split('@')[0];
+                                            lidToPhoneCache[rawLid] = senderPhone;
+                                            console.log(`[Gateway] Resolved LID ${senderJid} via SignalRepository (Phone: ${senderPhone})`);
+                                        }
                                     }
-                                } catch (lidErr) {
-                                    console.warn(`[Gateway Warning] Failed to resolve LID JID ${senderJid} via onWhatsApp:`, lidErr.message);
+                                } catch (sigErr) {}
+
+                                // 3. فحص Metadata من الرسالة
+                                if (!senderPhone || senderPhone === rawLid) {
+                                    const possiblePn = msg.senderPn || (msg.key && (msg.key.participantAlt || msg.key.remoteJidAlt));
+                                    if (possiblePn) {
+                                        resolvedJid = possiblePn;
+                                        senderPhone = resolvedJid.split('@')[0];
+                                        lidToPhoneCache[rawLid] = senderPhone;
+                                        console.log(`[Gateway] Resolved LID ${senderJid} to phone JID ${resolvedJid} via metadata (Phone: ${senderPhone})`);
+                                    } else {
+                                        // 4. Fallback: فحص أحدث رقم تم إرسال رسالة إليه من هذا الحساب خلال آخر 15 دقيقة
+                                        const lastOut = lastOutboundRecipientBySession[id];
+                                        if (lastOut && (Date.now() - lastOut.timestamp < 15 * 60 * 1000)) {
+                                            senderPhone = lastOut.phone;
+                                            resolvedJid = `${senderPhone}@s.whatsapp.net`;
+                                            lidToPhoneCache[rawLid] = senderPhone;
+                                            console.log(`[Gateway] Resolved LID ${senderJid} via recent outbound session match (Phone: ${senderPhone})`);
+                                        } else {
+                                            try {
+                                                const [result] = await sock.onWhatsApp(senderJid);
+                                                if (result && result.exists && result.jid) {
+                                                    resolvedJid = result.jid;
+                                                    senderPhone = resolvedJid.split('@')[0];
+                                                    lidToPhoneCache[rawLid] = senderPhone;
+                                                    console.log(`[Gateway] Resolved LID ${senderJid} to phone JID ${resolvedJid} via onWhatsApp (Phone: ${senderPhone})`);
+                                                }
+                                            } catch (lidErr) {
+                                                console.warn(`[Gateway Warning] Failed to resolve LID JID ${senderJid}:`, lidErr.message);
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -579,6 +615,7 @@ app.post('/instance/:id/send', async (req, res) => {
             }
         }
         
+        lastOutboundRecipientBySession[id] = { phone: phone.replace(/\D/g, ''), timestamp: Date.now() };
         console.log(`[Gateway] Sending to JID: ${jid}`);
         
         // إرسال ميديا عبر media_url منفصل (من الموديتور)
