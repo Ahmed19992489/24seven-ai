@@ -5996,15 +5996,112 @@
         async function loadRatings() {
             const filter = document.getElementById('ratings-filter').value;
             const list = document.getElementById('ratings-list');
-            list.innerHTML = '<p class="text-center text-gray-400 py-6"><i class="fas fa-spinner fa-spin ml-2"></i>جاري التحميل...</p>';
+            list.innerHTML = '<p class="text-center text-gray-400 py-6"><i class="fas fa-spinner fa-spin ml-2"></i>جاري تحميل التقييمات...</p>';
 
-            let query = sbClient.from('trip_ratings').select('*').order('created_at', { ascending: false });
-            if (filter === 'negative') query = query.lt('driver_rating', 3);
-            if (filter === 'positive') query = query.gte('driver_rating', 4);
-            const { data: ratings } = await query;
+            function parseNumericRating(str) {
+                if (!str) return 0;
+                str = String(str).trim();
+                if (str.includes('5')) return 5;
+                if (str.includes('4')) return 4;
+                if (str.includes('3')) return 3;
+                if (str.includes('2')) return 2;
+                if (str.includes('1')) return 1;
+                if (str.includes('ممتاز') || str.includes('روعة') || str.includes('تحفة')) return 5;
+                if (str.includes('جيد') || str.includes('كويس')) return 4;
+                if (str.includes('مقبول') || str.includes('عادي')) return 3;
+                if (str.includes('سيء') || str.includes('زفت') || str.includes('متهور') || str.includes('تأخير')) return 1;
+                return 0;
+            }
 
-            if (!ratings || ratings.length === 0) {
-                list.innerHTML = '<p class="text-center text-gray-400 py-8">لا توجد تقييمات</p>';
+            let allEvaluations = [];
+
+            // 1. جلب التقييمات المسجلة من الموقع (Local/Live)
+            try {
+                const liveReviews = JSON.parse(localStorage.getItem('24seven_client_reviews') || '[]');
+                liveReviews.forEach(lr => {
+                    allEvaluations.push({
+                        clientName: lr.clientName || 'عميل الموقع',
+                        phone: lr.clientPhone || '',
+                        driverName: 'أسطول 24Seven',
+                        route: 'حجز مباشر عبر الموقع',
+                        dateStr: lr.timestamp ? new Date(lr.timestamp).toLocaleDateString('ar-EG') : 'اليوم',
+                        driver_rating: lr.overallRating || 5,
+                        car_rating: lr.cleanliness === 'excellent' ? 5 : lr.cleanliness === 'good' ? 4 : 2,
+                        service_rating: lr.overallRating || 5,
+                        would_recommend: lr.recommend === 'yes',
+                        feedback_notes: lr.notes || '',
+                        source: 'موقع 24Seven'
+                    });
+                });
+            } catch(e){}
+
+            // 2. جلب التقييمات من جدول الحجوزات (google_reservations)
+            try {
+                const { data: grList } = await sbClient.from('google_reservations')
+                    .select('id, customer_name, customer_phone, rating_stars, car_cleanliness, driver_behavior, recommend_us, suggestions, trip_date, pickup_address, dropoff_address, modified_driver_name')
+                    .order('id', { ascending: false })
+                    .limit(200);
+
+                if (grList && grList.length > 0) {
+                    grList.forEach(r => {
+                        const hasContent = (r.rating_stars && !['', '0', 'تأكيد الرحلة'].includes(r.rating_stars.trim())) ||
+                                           (r.suggestions && !['', 'لا', 'لا يوجد'].includes(r.suggestions.trim())) ||
+                                           (r.driver_behavior && r.driver_behavior.trim() !== '') ||
+                                           (r.car_cleanliness && r.car_cleanliness.trim() !== '');
+
+                        if (hasContent) {
+                            const dRate = parseNumericRating(r.driver_behavior) || parseNumericRating(r.rating_stars) || 5;
+                            const cRate = (r.car_cleanliness && (r.car_cleanliness.includes('نعم') || r.car_cleanliness.includes('نظيف'))) ? 5 : (parseNumericRating(r.car_cleanliness) || dRate);
+                            const sRate = parseNumericRating(r.rating_stars) || dRate;
+                            const isRec = r.recommend_us ? (!r.recommend_us.includes('لا') || r.recommend_us.includes('نعم') || r.recommend_us.includes('اكيد')) : true;
+                            
+                            const notesArr = [r.rating_stars, r.car_cleanliness, r.driver_behavior, r.suggestions]
+                                .filter(t => t && !['0', 'نعم', 'لا', 'لا يوجد', '[رسالة وسائط]', 'تأكيد الحجز', 'تأكيد الرحلة'].includes(t.trim()) && !t.startsWith('MEDIA_'));
+
+                            allEvaluations.push({
+                                clientName: r.customer_name || 'عميل',
+                                phone: r.customer_phone || '',
+                                driverName: r.modified_driver_name || 'كابتن',
+                                route: ((r.pickup_address || '').split('،')[0] || (r.pickup_address || '').split(',')[0] || '-') + ' ➝ ' + ((r.dropoff_address || '').split('،')[0] || (r.dropoff_address || '').split(',')[0] || '-'),
+                                dateStr: r.trip_date || '--',
+                                driver_rating: dRate,
+                                car_rating: cRate,
+                                service_rating: sRate,
+                                would_recommend: isRec,
+                                feedback_notes: notesArr.join(' | '),
+                                source: 'واتساب / شيت العمليات'
+                            });
+                        }
+                    });
+                }
+            } catch(e) {
+                console.error("Error loading google_reservations ratings:", e);
+            }
+
+            // 3. Fallback لجدول trip_ratings لو وُجد
+            try {
+                const { data: trList } = await sbClient.from('trip_ratings').select('*').limit(50);
+                if (trList && trList.length > 0) {
+                    trList.forEach(tr => {
+                        allEvaluations.push({
+                            clientName: 'عميل رحلة',
+                            phone: '',
+                            driverName: 'كابتن',
+                            route: 'رحلة داخلية',
+                            dateStr: tr.created_at ? new Date(tr.created_at).toLocaleDateString('ar-EG') : '--',
+                            driver_rating: tr.driver_rating || 5,
+                            car_rating: tr.car_rating || 5,
+                            service_rating: tr.service_rating || 5,
+                            would_recommend: tr.would_recommend === true,
+                            feedback_notes: tr.feedback_notes || '',
+                            source: 'السيستم الداخلي'
+                        });
+                    });
+                }
+            } catch(e){}
+
+            if (allEvaluations.length === 0) {
+                list.innerHTML = '<p class="text-center text-gray-400 py-8">لا توجد تقييمات مسجلة بعد</p>';
                 document.getElementById('avg-driver-rating').textContent = '--';
                 document.getElementById('avg-car-rating').textContent = '--';
                 document.getElementById('recommend-pct').textContent = '--';
@@ -6012,73 +6109,62 @@
             }
 
             // حساب المتوسطات
-            const { data: allRatings } = await sbClient.from('trip_ratings').select('driver_rating, car_rating, service_rating, would_recommend');
-            if (allRatings && allRatings.length > 0) {
-                const avgD = (allRatings.reduce((s, r) => s + (r.driver_rating || 0), 0) / allRatings.length).toFixed(1);
-                const avgC = (allRatings.reduce((s, r) => s + (r.car_rating || 0), 0) / allRatings.length).toFixed(1);
-                const recCount = allRatings.filter(r => r.would_recommend === true).length;
-                const recPct = Math.round((recCount / allRatings.length) * 100);
-                document.getElementById('avg-driver-rating').textContent = avgD;
-                document.getElementById('avg-car-rating').textContent = avgC;
-                document.getElementById('recommend-pct').textContent = recPct + '%';
-            }
+            const avgD = (allEvaluations.reduce((s, r) => s + (r.driver_rating || 0), 0) / allEvaluations.length).toFixed(1);
+            const avgC = (allEvaluations.reduce((s, r) => s + (r.car_rating || 0), 0) / allEvaluations.length).toFixed(1);
+            const recCount = allEvaluations.filter(r => r.would_recommend === true).length;
+            const recPct = Math.round((recCount / allEvaluations.length) * 100);
 
-            // جلب بيانات الرحلات والعملاء
-            const tripIds = [...new Set(ratings.map(r => r.trip_id))];
-            let tripsMap = {}, profilesMap = {};
-            if (tripIds.length > 0) {
-                const { data: trips } = await sbClient.from('trips').select('id, pickup_location, dropoff_location, user_id, driver_id, manual_client_name, client_phone, admin_notes').in('id', tripIds);
-                if (trips) {
-                    trips.forEach(t => tripsMap[t.id] = t);
-                    const userIds = trips.map(t => t.user_id).filter(Boolean);
-                    if (userIds.length > 0) {
-                        const { data: profiles } = await sbClient.from('profiles').select('id, full_name, phone').in('id', userIds);
-                        if (profiles) profiles.forEach(p => profilesMap[p.id] = p);
-                    }
-                    const driverIds = trips.map(t => t.driver_id).filter(Boolean);
-                    if (driverIds.length > 0) {
-                        const { data: drivers } = await sbClient.from('drivers').select('id, name').in('id', driverIds);
-                        if (drivers) drivers.forEach(d => profilesMap['d_' + d.id] = d);
-                    }
-                }
-            }
+            document.getElementById('avg-driver-rating').textContent = avgD;
+            document.getElementById('avg-car-rating').textContent = avgC;
+            document.getElementById('recommend-pct').textContent = recPct + '%';
 
-            list.innerHTML = ratings.map(r => {
-                const trip = tripsMap[r.trip_id] || {};
-                const profile = profilesMap[trip.user_id] || {};
-                const driver = profilesMap['d_' + trip.driver_id] || {};
-                let clientName = profile.full_name || trip.manual_client_name || 'عميل';
-                let driverName = driver.name || 'كابتن';
-                const isNeg = r.driver_rating < 3;
-                const borderColor = isNeg ? 'border-red-400 bg-red-50' : 'border-slate-200';
-                const starsHTML = (val) => '⭐'.repeat(val || 0) + '☆'.repeat(5 - (val || 0));
-                const route = ((trip.pickup_location || '').split(',')[0] || '-') + ' ➝ ' + ((trip.dropoff_location || '').split(',')[0] || '-');
-                const dateStr = new Date(r.created_at).toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' });
+            // تصفية حسب الفلتر
+            let filteredList = allEvaluations;
+            if (filter === 'negative') filteredList = allEvaluations.filter(r => r.driver_rating < 3 || r.service_rating < 3 || r.would_recommend === false);
+            if (filter === 'positive') filteredList = allEvaluations.filter(r => r.driver_rating >= 4 && r.service_rating >= 4);
+
+            const starsHTML = (val) => '⭐'.repeat(Math.min(5, Math.max(0, Math.round(val)))) + '☆'.repeat(Math.max(0, 5 - Math.min(5, Math.max(0, Math.round(val)))));
+
+            list.innerHTML = filteredList.map(r => {
+                const isNeg = r.driver_rating < 3 || r.service_rating < 3 || r.would_recommend === false;
+                const borderColor = isNeg ? 'border-red-400 bg-red-50/70 text-slate-800' : 'border-slate-200 bg-white/80';
+                const cleanPhone = (r.phone || '').replace(/[^0-9]/g, '');
+                const waLink = cleanPhone ? `https://wa.me/${cleanPhone.startsWith('0') ? '2' + cleanPhone : cleanPhone.startsWith('2') ? cleanPhone : '20' + cleanPhone}` : '';
+
                 return `
-                <div class="border rounded-xl p-4 ${borderColor}">
+                <div class="border rounded-2xl p-4 shadow-sm transition hover:shadow-md ${borderColor}">
                     <div class="flex justify-between items-start mb-2">
                         <div>
-                            <p class="font-bold text-sm">👤 ${clientName}</p>
-                            <p class="text-[11px] text-gray-400">${route}</p>
+                            <p class="font-bold text-sm text-slate-900 flex items-center gap-2">
+                                <span>👤 ${r.clientName}</span>
+                                <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold">${r.source}</span>
+                            </p>
+                            <p class="text-xs text-slate-500 mt-0.5"><i class="fas fa-route text-blue-500 ml-1"></i>${r.route}</p>
                         </div>
                         <div class="text-left">
-                            <p class="text-[10px] text-gray-400">${dateStr}</p>
-                            <p class="text-[11px] text-gray-500">🚗 كابتن: ${driverName}</p>
+                            <p class="text-[11px] font-bold text-slate-400">${r.dateStr}</p>
+                            <p class="text-xs font-semibold text-slate-700 mt-0.5">🚗 كابتن: <span class="text-blue-700">${r.driverName}</span></p>
                         </div>
                     </div>
-                    <div class="grid grid-cols-3 gap-2 text-center text-xs mb-2">
-                        <div><p class="text-gray-400">الكابتن</p><p>${starsHTML(r.driver_rating)}</p></div>
-                        <div><p class="text-gray-400">السيارة</p><p>${starsHTML(r.car_rating)}</p></div>
-                        <div><p class="text-gray-400">الخدمة</p><p>${starsHTML(r.service_rating)}</p></div>
+                    
+                    <div class="grid grid-cols-3 gap-2 text-center text-xs my-3 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                        <div><p class="text-slate-400 text-[10px] font-bold">تقييم الكابتن</p><p class="text-amber-500 font-bold">${starsHTML(r.driver_rating)}</p></div>
+                        <div><p class="text-slate-400 text-[10px] font-bold">تقييم السيارة</p><p class="text-blue-500 font-bold">${starsHTML(r.car_rating)}</p></div>
+                        <div><p class="text-slate-400 text-[10px] font-bold">تقييم الخدمة</p><p class="text-emerald-500 font-bold">${starsHTML(r.service_rating)}</p></div>
                     </div>
-                    <div class="flex items-center justify-between">
+
+                    <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
                         <div class="flex items-center gap-3">
-                            <span class="text-xs ${r.would_recommend ? 'text-green-600' : 'text-red-500'}">
-                                ${r.would_recommend === true ? '👍 يرشحنا' : r.would_recommend === false ? '👎 لا يرشحنا' : '—'}
+                            <span class="text-xs font-bold ${r.would_recommend ? 'text-green-600' : 'text-red-500'}">
+                                ${r.would_recommend === true ? '👍 يرشح الشركة' : '👎 لا يرشح الشركة'}
                             </span>
-                            ${r.feedback_notes ? `<span class="text-xs text-gray-500">📝 ${r.feedback_notes}</span>` : ''}
+                            ${r.feedback_notes ? `<span class="text-xs text-slate-600 font-medium">💬 ${r.feedback_notes}</span>` : ''}
                         </div>
-                        ${isNeg ? `<button onclick="showPage('chat'); setTimeout(() => openAdminChatForTrip('${r.trip_id}'), 500)" class="bg-red-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold hover:bg-red-700"><i class="fas fa-comment-dots ml-1"></i>تواصل مع العميل</button>` : ''}
+                        ${waLink ? `
+                            <a href="${waLink}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-100/80 hover:bg-emerald-200 transition">
+                                <i class="fab fa-whatsapp"></i> تواصل مع العميل
+                            </a>
+                        ` : ''}
                     </div>
                 </div>`;
             }).join('');
