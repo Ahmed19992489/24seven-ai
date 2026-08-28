@@ -423,27 +423,22 @@ async function initSession(id, forceReconnect = false) {
                         } else {
                             // 🛡️ تخطي الرسائل الصادرة منا (fromMe) لكيلا تدخل دورة الأتمتة التلقائية
                             if (msg.key.fromMe) {
-                                // نحفظها فقط للداشبورد بدون إرسال لـ Python كيلا تشغّل الأتمتة التلقائية (تأكيد/إلغاء)
+                                // نحفظها للداشبورد الموحد
                                 try {
-                                    await axios.post(`${SUPABASE_URL}/rest/v1/omnichannel_messages`, {
-                                        channel: 'whatsapp',
-                                        sender_id: senderPhone,
-                                        sender_name: 'Admin',
-                                        message_text: text,
-                                        is_from_admin: true,
-                                        read_by_admin: true,
-                                        whatsapp_instance_id: id
-                                    }, {
-                                        headers: {
-                                            'apikey': SUPABASE_KEY,
-                                            'Authorization': `Bearer ${SUPABASE_KEY}`,
-                                            'Content-Type': 'application/json',
-                                            'Prefer': 'return=minimal'
+                                    await axios.post(`https://24seven-ai.com/api/db`, {
+                                        action: 'insert',
+                                        table: 'omnichannel_messages',
+                                        data: {
+                                            channel: 'whatsapp',
+                                            sender_id: senderPhone,
+                                            sender_name: 'Admin',
+                                            message_text: text,
+                                            is_from_admin: true,
+                                            read_by_admin: true,
+                                            whatsapp_instance_id: id
                                         }
-                                    });
-                                } catch (echoErr) {
-                                    // silent
-                                }
+                                    }, { timeout: 4000 });
+                                } catch (echoErr) {}
                                 continue;  // ⛔ لا ترسل لـ Python - هذا منع Echo Loop
                             }
                             console.log(`[Gateway] Incoming msg from ${senderPhone} (Session ${id}): ${text}`);
@@ -463,28 +458,25 @@ async function initSession(id, forceReconnect = false) {
                                 console.error(`[Webhook Error] Failed to forward message to Python:`, err.message);
                             }
 
-                            // 🛡️ Fallback: إذا تعذر الوصول لـ Python (مثلاً السيرفر متوقف أو يعيد التشغيل)، ندخل الرسالة مباشرة لـ Supabase لمنع ضياعها!
+                            // 🛡️ Fallback: حفظ الرسالة في Neon Postgres
                             if (!pythonSuccess) {
                                 try {
-                                    await axios.post(`${SUPABASE_URL}/rest/v1/omnichannel_messages`, {
-                                        channel: 'whatsapp',
-                                        sender_id: senderPhone,
-                                        sender_name: msg.key.fromMe ? 'Admin' : senderName,
-                                        message_text: text,
-                                        is_from_admin: msg.key.fromMe ? true : false,
-                                        read_by_admin: msg.key.fromMe ? true : false,
-                                        whatsapp_instance_id: id
-                                    }, {
-                                        headers: {
-                                            'apikey': SUPABASE_KEY,
-                                            'Authorization': `Bearer ${SUPABASE_KEY}`,
-                                            'Content-Type': 'application/json',
-                                            'Prefer': 'return=minimal'
+                                    await axios.post(`https://24seven-ai.com/api/db`, {
+                                        action: 'insert',
+                                        table: 'omnichannel_messages',
+                                        data: {
+                                            channel: 'whatsapp',
+                                            sender_id: senderPhone,
+                                            sender_name: msg.key.fromMe ? 'Admin' : senderName,
+                                            message_text: text,
+                                            is_from_admin: msg.key.fromMe ? true : false,
+                                            read_by_admin: msg.key.fromMe ? true : false,
+                                            whatsapp_instance_id: id
                                         }
-                                    });
-                                    console.log(`[Gateway Fallback] Direct insert into Supabase succeeded for msg from ${senderPhone}`);
-                                } catch (supaErr) {
-                                    console.error(`[Gateway Direct Supabase Error]:`, supaErr.message);
+                                    }, { timeout: 4000 });
+                                    console.log(`[Gateway Fallback] Direct insert into Neon DB succeeded for msg from ${senderPhone}`);
+                                } catch (dbErr) {
+                                    console.error(`[Gateway Direct DB Error]:`, dbErr.message);
                                 }
                             }
                         }

@@ -194,30 +194,40 @@ def resolve_sender_name(channel, sender_id, current_name=None):
 
 
 def insert_message_to_supabase(channel, sender_id, sender_name, message_text, is_from_admin=False, whatsapp_instance_id=None):
-    """إدراج الرسالة في صندوق الوارد الموحد في Supabase"""
-    # تأكد من أن لدينا الاسم الحقيقي قبل الحفظ (إذا لم تكن الرسالة من الأدمن)
+    """إدراج الرسالة في صندوق الوارد الموحد في Neon Postgres وقاعدة البيانات"""
     if not is_from_admin:
         sender_name = resolve_sender_name(channel, sender_id, sender_name)
 
-    url = f"{SUPABASE_URL}/rest/v1/omnichannel_messages"
     data = {
         "channel": channel,
         "sender_id": str(sender_id),
-        "sender_name": sender_name,
+        "sender_name": sender_name or ("Admin" if is_from_admin else "عميل"),
         "message_text": message_text,
-        "is_from_admin": is_from_admin
+        "is_from_admin": bool(is_from_admin),
+        "read_by_admin": bool(is_from_admin)
     }
     if channel == "whatsapp" and whatsapp_instance_id:
-        data["whatsapp_instance_id"] = whatsapp_instance_id
+        data["whatsapp_instance_id"] = str(whatsapp_instance_id)
         
+    # 1. الحفظ المباشر في قاعدة بيانات Neon Postgres
     try:
-        response = requests.post(url, headers=SUPABASE_HEADERS, json=data)
-        if response.status_code in [200, 201]:
-            print(f"[INFO] {channel} message saved to Supabase successfully!")
+        r_neon = requests.post("https://24seven-ai.com/api/db", json={
+            "action": "insert",
+            "table": "omnichannel_messages",
+            "data": data
+        }, timeout=5)
+        if r_neon.status_code == 200:
+            print(f"[INFO] {channel} message saved to Neon Database successfully!")
         else:
-            print(f"[ERROR] Error saving to Supabase: {response.text}")
+            print(f"[Neon-DB Warning] {r_neon.status_code}: {r_neon.text}")
     except Exception as e:
-        print(f"[ERROR] Exception saving to Supabase: {e}")
+        print(f"[Neon-DB Error]: {e}")
+
+    # 2. إرسال لـ Supabase (Fallback اختياري)
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/omnichannel_messages"
+        requests.post(url, headers=SUPABASE_HEADERS, json=data, timeout=3)
+    except: pass
 
 # = [HELPERS] Helper Functions مساعدات
 # =====================================================

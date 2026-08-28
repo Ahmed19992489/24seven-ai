@@ -2218,7 +2218,7 @@
                 try { await loadSummary(); } catch(err) { console.warn("loadSummary skip:", err); }
             }
 
-            let omniData = null;
+            let omniData = [];
             try {
                 const res = await sbClient
                     .from('omnichannel_messages')
@@ -2230,22 +2230,21 @@
                 }
             } catch(e) { console.warn("Supabase omni fetch error, fallback active:", e); }
 
-            if (!omniData || omniData.length === 0) {
-                try {
-                    const fbResp = await fetch(`${getApiBaseUrl()}/api/omnichannel/fallback`, {
-                        headers: { 'ngrok-skip-browser-warning': 'true' }
+            // دمج رسائل شيت الواتساب مع رسائل الماسنجر وقاعدة البيانات
+            try {
+                const sheetChats = await fetchDirectSheetChats();
+                if (sheetChats && sheetChats.length > 0) {
+                    sheetChats.forEach(sc => {
+                        const exists = omniData.some(od => 
+                            od.sender_id === sc.sender_id && 
+                            (od.message_text || '').trim() === (sc.message_text || '').trim()
+                        );
+                        if (!exists) {
+                            omniData.push(sc);
+                        }
                     });
-                    const fbJson = await fbResp.json();
-                    if (fbJson && fbJson.data && fbJson.data.length > 0) {
-                        omniData = fbJson.data;
-                    }
-                } catch(e) { console.error("Fallback omnichannel error:", e); }
-            }
-
-            if (!omniData || omniData.length === 0) {
-                console.log("⚡ Fetching direct Google Sheet chats fallback...");
-                omniData = await fetchDirectSheetChats();
-            }
+                }
+            } catch(e) { console.warn("Sheet chats merge error:", e); }
 
             if (omniData && omniData.length > 0) {
                 allMessages = omniData.reverse();
