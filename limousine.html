@@ -1346,8 +1346,275 @@
             window.location.hash = window.location.hash.substring(1);
         }
 
-        // تعريف العميل
-        const sb = supabase.createClient('https://khskudtxbypohvnreloi.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtoc2t1ZHR4Ynlwb2h2bnJlbG9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTIwMjksImV4cCI6MjEwMTg4ODAyOX0.jrK8y5zpDncgFkmdD4hkFRd5-kW1gWdVSRIb0jh7o2I');
+        // ==========================================
+        // 🛡️ Vercel Serverless Database Client (Neon Postgres)
+        // ==========================================
+        const VERCEL_API = '/api/db';
+
+        class SupabaseQueryBuilder {
+            constructor(table) {
+                this._table = table;
+                this._action = 'select';
+                this._select = '*';
+                this._filters = [];
+                this._order = null;
+                this._limit = null;
+                this._data = null;
+                this._eq = null;
+            }
+
+            select(cols = '*') {
+                this._action = 'select';
+                this._select = cols;
+                return this;
+            }
+
+            insert(data) {
+                this._action = 'insert';
+                this._data = data;
+                return this;
+            }
+
+            update(data) {
+                this._action = 'update';
+                this._data = data;
+                return this;
+            }
+
+            upsert(data) {
+                this._action = 'upsert';
+                this._data = data;
+                return this;
+            }
+
+            delete() {
+                this._action = 'delete';
+                return this;
+            }
+
+            eq(col, val) {
+                this._filters.push({ col, op: 'eq', val });
+                if (this._action === 'update' || this._action === 'delete') {
+                    if (!this._eq) this._eq = {};
+                    this._eq[col] = val;
+                }
+                return this;
+            }
+
+            neq(col, val) {
+                this._filters.push({ col, op: 'neq', val });
+                return this;
+            }
+
+            gt(col, val) {
+                this._filters.push({ col, op: 'gt', val });
+                return this;
+            }
+
+            gte(col, val) {
+                this._filters.push({ col, op: 'gte', val });
+                return this;
+            }
+
+            lt(col, val) {
+                this._filters.push({ col, op: 'lt', val });
+                return this;
+            }
+
+            lte(col, val) {
+                this._filters.push({ col, op: 'lte', val });
+                return this;
+            }
+
+            ilike(col, val) {
+                this._filters.push({ col, op: 'ilike', val });
+                return this;
+            }
+
+            like(col, val) {
+                this._filters.push({ col, op: 'like', val });
+                return this;
+            }
+
+            in(col, val) {
+                this._filters.push({ col, op: 'in', val });
+                return this;
+            }
+
+            is(col, val) {
+                this._filters.push({ col, op: 'is', val });
+                return this;
+            }
+
+            or(filterStr) {
+                this._filters.push({ col: '', op: 'or', val: filterStr });
+                return this;
+            }
+
+            order(col, options = {}) {
+                this._order = { col, ascending: options.ascending !== false };
+                return this;
+            }
+
+            limit(n) {
+                this._limit = n;
+                return this;
+            }
+
+            async single() {
+                const res = await this._execute();
+                const first = (res.data && res.data.length > 0) ? res.data[0] : null;
+                return { data: first, error: res.error || (first ? null : { message: 'Not found' }) };
+            }
+
+            async maybeSingle() {
+                const res = await this._execute();
+                const first = (res.data && res.data.length > 0) ? res.data[0] : null;
+                return { data: first, error: null };
+            }
+
+            then(resolve, reject) {
+                return this._execute().then(resolve, reject);
+            }
+
+            async _execute() {
+                try {
+                    const payload = {
+                        action: this._action,
+                        table: this._table,
+                        select: this._select,
+                        filters: this._filters,
+                        order: this._order,
+                        limit: this._limit,
+                        data: this._data,
+                        eq: this._eq
+                    };
+
+                    const response = await fetch(VERCEL_API, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const text = await response.text();
+                        return { data: null, error: { message: text || `HTTP ${response.status}` } };
+                    }
+
+                    const json = await response.json();
+                    return { data: json.data || [], error: null, count: json.count };
+                } catch (err) {
+                    console.error('[DB] Execution error:', err);
+                    return { data: null, error: { message: err.message || 'Network error' } };
+                }
+            }
+        }
+
+        // Supabase Auth Emulator
+        const authEmulator = {
+            async getSession() {
+                const raw = localStorage.getItem('24seven_client_session');
+                if (raw) {
+                    try {
+                        const session = JSON.parse(raw);
+                        return { data: { session }, error: null };
+                    } catch(e) {}
+                }
+                return { data: { session: null }, error: null };
+            },
+            async getUser() {
+                const { data: { session } } = await this.getSession();
+                return { data: { user: session ? session.user : null }, error: null };
+            },
+            async signInWithPassword({ email, password }) {
+                try {
+                    const phone = email ? email.split('@')[0].replace(/\D/g, '') : '';
+                    const res = await new SupabaseQueryBuilder('profiles')
+                        .select('*')
+                        .eq('phone', phone)
+                        .maybeSingle();
+
+                    if (res.data) {
+                        const session = {
+                            user: {
+                                id: res.data.id,
+                                email: email,
+                                phone: res.data.phone,
+                                user_metadata: {
+                                    full_name: res.data.full_name,
+                                    phone: res.data.phone
+                                }
+                            }
+                        };
+                        localStorage.setItem('24seven_client_session', JSON.stringify(session));
+                        return { data: { session, user: session.user }, error: null };
+                    } else {
+                        return { data: null, error: { message: 'Invalid login credentials' } };
+                    }
+                } catch (e) {
+                    return { data: null, error: { message: e.message } };
+                }
+            },
+            async signUp({ email, password, options = {} }) {
+                try {
+                    const phone = options.data?.phone || (email ? email.split('@')[0].replace(/\D/g, '') : '');
+                    const fullName = options.data?.full_name || ('عميل ' + phone.slice(-4));
+                    const newId = 'client_' + (phone || Date.now());
+
+                    await new SupabaseQueryBuilder('profiles').upsert({
+                        id: newId,
+                        full_name: fullName,
+                        phone: phone,
+                        wallet_balance: 0,
+                        role: 'client'
+                    });
+
+                    const session = {
+                        user: {
+                            id: newId,
+                            email: email,
+                            phone: phone,
+                            user_metadata: { full_name: fullName, phone: phone }
+                        }
+                    };
+                    localStorage.setItem('24seven_client_session', JSON.stringify(session));
+                    return { data: { user: session.user, session }, error: null };
+                } catch (e) {
+                    return { data: null, error: { message: e.message } };
+                }
+            },
+            async signOut() {
+                localStorage.removeItem('24seven_client_session');
+                return { error: null };
+            },
+            onAuthStateChange(cb) {
+                this.getSession().then(({ data: { session } }) => {
+                    if (session) cb('SIGNED_IN', session);
+                    else cb('SIGNED_OUT', null);
+                });
+                return { data: { subscription: { unsubscribe() {} } } };
+            },
+            async signInWithOAuth({ provider }) {
+                alert('تسجيل الدخول بجوجل جاري ربطه بالسيرفر الجديد، يرجى الدخول برقم الهاتف فوراً.');
+            }
+        };
+
+        const sb = {
+            from(table) {
+                return new SupabaseQueryBuilder(table);
+            },
+            auth: authEmulator,
+            channel(name) {
+                return {
+                    on(event, filter, callback) {
+                        return this;
+                    },
+                    subscribe() { return this; },
+                    unsubscribe() {}
+                };
+            },
+            removeChannel() {}
+        };
 
         let user = null;
         let activeClientTripIds = new Set();

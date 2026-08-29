@@ -224,6 +224,37 @@ class handler(BaseHTTPRequestHandler):
                 updated = r.json().get("rows", []) if r.status_code == 200 else []
                 self._respond(200, {"status": "ok", "data": updated})
 
+            elif action == "upsert":
+                records = req.get("data", [])
+                if isinstance(records, dict):
+                    records = [records]
+                if not records:
+                    self._respond(200, {"status": "ok", "data": []})
+                    return
+
+                on_conflict_col = req.get("on_conflict", "id")
+                inserted_rows = []
+                for rec in records:
+                    cols = list(rec.keys())
+                    vals = list(rec.values())
+                    placeholders = [f"${i+1}" for i in range(len(vals))]
+                    update_set = [f"{c} = EXCLUDED.{c}" for c in cols if c != on_conflict_col]
+                    if update_set:
+                        sql = f"INSERT INTO {table} ({','.join(cols)}) VALUES ({','.join(placeholders)}) ON CONFLICT ({on_conflict_col}) DO UPDATE SET {', '.join(update_set)} RETURNING *;"
+                    else:
+                        sql = f"INSERT INTO {table} ({','.join(cols)}) VALUES ({','.join(placeholders)}) ON CONFLICT ({on_conflict_col}) DO NOTHING RETURNING *;"
+
+                    r = requests.post(
+                        NEON_HTTP_URL,
+                        headers={"Neon-Connection-String": NEON_CONN_STR},
+                        json={"query": sql, "params": vals},
+                        timeout=12
+                    )
+                    if r.status_code == 200:
+                        inserted_rows.extend(r.json().get("rows", []))
+
+                self._respond(200, {"status": "ok", "data": inserted_rows})
+
             elif action == "delete":
                 eq_dict = req.get("eq", {})
                 where_clauses = []
