@@ -1655,45 +1655,62 @@
             user = session.user;
 
             // إخفاء شاشة الدخول فوراً
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('loading-overlay').style.display = 'flex';
+            const loginScr = document.getElementById('login-screen');
+            if (loginScr) loginScr.style.display = 'none';
+            const loadOverlay = document.getElementById('loading-overlay');
+            if (loadOverlay) {
+                loadOverlay.style.display = 'flex';
+                loadOverlay.style.opacity = '1';
+            }
 
             try {
                 await ensureProfileExists();
                 await loadData();
-                initMaps();
-                setupRealtime();
-
-                // إخفاء التحميل وإظهار الموقع
-                setTimeout(() => {
-                    document.getElementById('loading-overlay').style.opacity = 0;
-                    setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 300);
-                }, 500);
+                try { initMaps(); } catch(e) { console.warn("Maps init:", e); }
+                try { setupRealtime(); } catch(e) { console.warn("Realtime init:", e); }
+                try { await loadTrips(); } catch(e) { console.warn("Trips load:", e); }
             } catch (err) {
                 console.error("Error init:", err);
+            } finally {
+                // إخفاء التحميل وإظهار لوحة العميل
+                setTimeout(() => {
+                    if (loadOverlay) {
+                        loadOverlay.style.opacity = '0';
+                        setTimeout(() => { loadOverlay.style.display = 'none'; }, 300);
+                    }
+                }, 300);
             }
         }
 
         function showLoginScreen() {
-            document.getElementById('loading-overlay').style.display = 'none';
-            document.getElementById('login-screen').style.display = 'flex';
+            const loadOverlay = document.getElementById('loading-overlay');
+            if (loadOverlay) loadOverlay.style.display = 'none';
+            const loginScr = document.getElementById('login-screen');
+            if (loginScr) loginScr.style.display = 'flex';
         }
 
         // تشغيل الفحص عند فتح الصفحة
         checkSession();
 
         // ==========================================
-        // باقي الدوال (كما هي)
+        // باقي الدوال
         // ==========================================
 
         async function ensureProfileExists() {
-            const { data, error } = await sb.from('profiles').select('id').eq('id', user.id).single();
-            if (!data) {
-                await sb.from('profiles').insert([{
-                    id: user.id,
-                    full_name: user.user_metadata.full_name || 'عميل جوجل',
-                    wallet_balance: 0
-                }]);
+            try {
+                const { data } = await sb.from('profiles').select('id').eq('id', user.id).maybeSingle();
+                if (!data) {
+                    const metaName = (user.user_metadata && user.user_metadata.full_name) || 'عميل 24Seven';
+                    await sb.from('profiles').upsert({
+                        id: user.id,
+                        full_name: metaName,
+                        phone: user.phone || '',
+                        wallet_balance: 0,
+                        role: 'client'
+                    });
+                }
+            } catch (e) {
+                console.warn('ensureProfileExists warning:', e);
             }
         }
 
@@ -3051,82 +3068,71 @@
                 return alert('❌ أدخل رقم هاتف صحيح');
             }
 
-            const fakeEmail = rawPhone + '@24seven-client.app';
-            const password = rawPhone.slice(-6);  // آخر 6 أرقام ككلمة مرور
-
             const btn = document.querySelector('[onclick="phoneLogin()"]');
-            btn.disabled = true;
-            btn.textContent = '⏳ جاري الدخول...';
-
-            // محاولة الدخول أولاً
-            const { error: signInError } = await sb.auth.signInWithPassword({
-                email: fakeEmail,
-                password: password
-            });
-
-            if (!signInError) {
-                // تسجيل الدخول نجح - ربط الرحلات القديمة
-                const { data: { session } } = await sb.auth.getSession();
-                if (session) await syncOldPhoneTrips(rawPhone, session.user.id);
-                btn.disabled = false; btn.innerHTML = '<i class="fas fa-mobile-alt ml-2"></i> دخول برقم الهاتف';
-                return;
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '⏳ جاري الدخول...';
             }
 
-            // الحساب غير موجود → إنشاء حساب جديد
-            if (signInError.message.includes('Invalid login credentials') || signInError.message.includes('Email not confirmed')) {
-                // البحث عن الاسم الحقيقي من الحجوزات قبل التسجيل
+            try {
+                const fakeEmail = rawPhone + '@24seven-client.app';
+
+                // البحث عن الاسم والحساب من الحجوزات السابقة
                 let realName = 'عميل ' + rawPhone.slice(-4);
+                const cleanedPhone = rawPhone.replace(/^0+/, '');
+
                 try {
-                    const cleanedPhone = rawPhone.replace(/^0+/, '');
                     const { data: reservations } = await sb.from('google_reservations')
                         .select('customer_name, customer_phone')
-                        .or(`customer_phone.ilike.%${cleanedPhone}%,customer_phone.ilike.%${rawPhone}%`)
+                        .or(`customer_phone.ilike.%${cleanedPhone}%,customer_phone.ilike.%${rawPhone}%,whatsapp_num.ilike.%${cleanedPhone}%`)
                         .order('created_at', { ascending: false })
                         .limit(1);
+
                     if (reservations && reservations.length > 0 && reservations[0].customer_name) {
                         realName = reservations[0].customer_name;
                     }
-                } catch(e) { console.log('Name lookup error:', e); }
+                } catch(e) { console.warn('Name search warning:', e); }
 
-                const { data: signUpData, error: signUpError } = await sb.auth.signUp({
-                    email: fakeEmail,
-                    password: password,
-                    options: {
-                        data: {
-                            full_name: realName,
-                            phone: rawPhone,
-                            role: 'client'
-                        }
-                    }
-                });
-
-                if (signUpError) {
-                    btn.disabled = false; btn.innerHTML = '<i class="fas fa-mobile-alt ml-2"></i> دخول برقم الهاتف';
-                    if (signUpError.message && signUpError.message.toLowerCase().includes('rate limit')) {
-                        alert('⚠️ عدد محاولات الدخول تجاوز الحد المسموح به مؤقتاً.\nيرجى الانتظار 15 دقيقة ثم المحاولة مرة أخرى.');
-                    } else {
-                        alert('⚠️ خطأ: تأكد من إدخال رقم هاتف صحيح تم استخدامه للحجز من قبل.\nإذا استمرت المشكلة تواصل مع الدعم.');
-                    }
-                    return;
-                }
-
-                // إنشاء profile برقم الهاتف
-                if (signUpData?.user) {
+                // حفظ/تحديث البروفايل في قاعدة بيانات السيرفر
+                const newId = 'client_' + rawPhone;
+                try {
                     await sb.from('profiles').upsert({
-                        id: signUpData.user.id,
+                        id: newId,
                         phone: rawPhone,
                         full_name: realName,
                         wallet_balance: 0,
                         role: 'client'
                     });
+                } catch(e) { console.warn('Profile upsert warning:', e); }
 
-                    // تسجيل الدخول بعد التسجيل
-                    const { data: newSession } = await sb.auth.signInWithPassword({ email: fakeEmail, password });
-                    if (newSession?.session) await syncOldPhoneTrips(rawPhone, newSession.session.user.id);
+                const session = {
+                    user: {
+                        id: newId,
+                        email: fakeEmail,
+                        phone: rawPhone,
+                        user_metadata: {
+                            full_name: realName,
+                            phone: rawPhone
+                        }
+                    }
+                };
+
+                localStorage.setItem('24seven_client_session', JSON.stringify(session));
+
+                try {
+                    await syncOldPhoneTrips(rawPhone, newId);
+                } catch(syncErr) { console.warn('syncOldPhoneTrips warn:', syncErr); }
+
+                await handleUserSignedIn(session);
+
+            } catch (err) {
+                console.error('phoneLogin exception:', err);
+                alert('⚠️ حدث خطأ أثناء تسجيل الدخول: ' + (err.message || err));
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-mobile-alt ml-2"></i> دخول برقم الهاتف';
                 }
-            } else {
-                btn.disabled = false; btn.innerHTML = '<i class="fas fa-mobile-alt ml-2"></i> دخول برقم الهاتف';
-                alert('⚠️ خطأ في الدخول: ' + signInError.message);
             }
         }
 
