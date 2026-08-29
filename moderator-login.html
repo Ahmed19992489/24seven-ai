@@ -3,7 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>24Seven | دخول الموظفين</title>
+    <title>24Seven | بوابة دخول فريق العمل والمشرفين</title>
+    
+    <!-- Open Graph / Favicons -->
+    <meta property="og:title" content="24Seven | دخول فريق العمل">
+    <meta property="og:image" content="https://24seven-ai.com/images/logos/og-preview.png">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/images/logos/logo-512.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/images/logos/logo.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -47,8 +57,8 @@
     </div>
 
     <script>
-        const SUPABASE_URL = 'https://khskudtxbypohvnreloi.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtoc2t1ZHR4Ynlwb2h2bnJlbG9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTIwMjksImV4cCI6MjEwMTg4ODAyOX0.jrK8y5zpDncgFkmdD4hkFRd5-kW1gWdVSRIb0jh7o2I';
+        const SUPABASE_URL = 'https://wtjwzqvmwnbvjxnmweqq.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY';
         const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         // =====================================================
@@ -62,49 +72,49 @@
             'admin@24seven.com':  { name: 'أدمن النظام',  role: 'admin',     password: '123456789' },
             'ahmed@24seven.com':  { name: 'أحمد',         role: 'admin',     password: '123456789' },
         };
-
-        // =====================================================
-        // التحقق المحلي (بدون إنترنت أو عند توقف Supabase)
-        // =====================================================
-        function localLogin(email, password) {
-            const staff = LOCAL_STAFF[email];
-            if (staff && staff.password === password) {
-                return {
-                    full_name: staff.name,
-                    role: staff.role,
-                    id: 'mod_' + email.replace('@', '_').replace(/\./g, '_')
-                };
-            }
-            return null;
-        }
-
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const rawEmail = document.getElementById('email').value || '';
-            const email = rawEmail.trim().toLowerCase();
-            const password = (document.getElementById('password').value || '').trim();
-            const btn = document.getElementById('login-btn');
-            const errorEl = document.getElementById('error-msg');
-
-            btn.disabled = true;
-            btn.textContent = 'جاري التحقق...';
-            errorEl.classList.add('hidden');
-
             try {
                 let loggedIn = false;
-
-                // ── المحاولة الأولى: Supabase Auth ──
                 try {
                     const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
                     if (!error && data?.user) {
-                        const { data: profile } = await sbClient.from('profiles')
-                            .select('full_name, role')
-                            .eq('id', data.user.id)
-                            .single();
+                        const { data: profile } = await sbClient.from('profiles').select('full_name, role').eq('id', data.user.id).single();
                         if (profile) {
                             localStorage.setItem('mod_name', profile.full_name);
                             localStorage.setItem('mod_role', profile.role || 'moderator');
                             localStorage.setItem('mod_id', data.user.id);
+                            loggedIn = true;
+                            window.location.href = 'moderator.html';
+                        }
+                    }
+                } catch(sbErr) {
+                    console.log('Supabase Auth restricted/failed, trying server fallback...');
+                }
+
+                if (!loggedIn) {
+                    // Fallback to local server authentication
+                    const apiBaseUrl = window.location.origin;
+                    const res = await fetch(`${apiBaseUrl}/api/mod_login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password })
+                    });
+                    const resJson = await res.json().catch(() => ({}));
+                    if (res.ok && resJson.status === 'success' && resJson.profile) {
+                        localStorage.setItem('mod_name', resJson.profile.full_name);
+                        localStorage.setItem('mod_role', resJson.profile.role || 'moderator');
+                        localStorage.setItem('mod_id', resJson.profile.id);
+                        window.location.href = 'moderator.html';
+                    } else {
+                        throw new Error(resJson.message || 'خطأ في اسم المستخدم أو كلمة المرور');
+                    }
+                }
+            } catch (err) {
+                errorEl.textContent = '❌ ' + err.message;
+                errorEl.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'تسجيل الدخول';
+            }
                             loggedIn = true;
                             window.location.href = 'moderator.html';
                             return;
