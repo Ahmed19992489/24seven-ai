@@ -1435,6 +1435,29 @@
                         }
                     })
                 });
+
+                // Broadcast for 0ms instant sync if admin dashboard is open
+                try {
+                    const syncChannel = new BroadcastChannel('24seven_sync');
+                    syncChannel.postMessage({
+                        type: 'NEW_INVESTMENT_LEAD',
+                        lead: {
+                            request_code: requestCode,
+                            customer_name: name,
+                            customer_phone: phone,
+                            governorate: gov,
+                            car_category: cat,
+                            brand: brand,
+                            model: model,
+                            year: year,
+                            mileage: mileage,
+                            estimated_value: valueNum,
+                            expected_income: expectedIncome,
+                            notes: notes,
+                            status: 'جديد'
+                        }
+                    });
+                } catch (bcErr) {}
             } catch (apiErr) {
                 console.warn('API lead save warning:', apiErr);
             }

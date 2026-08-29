@@ -11418,6 +11418,131 @@ ${data.webhook_url}`);
     window.saveInvLeadChanges = saveInvLeadChanges;
     window.deleteInvestmentLead = deleteInvestmentLead;
     window.exportInvestmentLeadsToCSV = exportInvestmentLeadsToCSV;
+    window.showInvestmentToast = showInvestmentToast;
+    window.checkInvestmentRealtimeSync = checkInvestmentRealtimeSync;
+    window.startInvestmentRealtimeSync = startInvestmentRealtimeSync;
+
+    // ==========================================
+    // 🔔 REALTIME NOTIFICATIONS & AUTO SYNC
+    // ==========================================
+    let lastKnownMaxInvestmentId = 0;
+    let isInvestmentSyncInitialized = false;
+
+    function showInvestmentToast(lead) {
+        try {
+            playNotificationSound();
+        } catch (e) {}
+
+        let toastContainer = document.getElementById('investment-toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'investment-toast-container';
+            toastContainer.className = 'fixed top-5 left-5 z-[99999] flex flex-col gap-3 max-w-sm w-full pointer-events-none';
+            document.body.appendChild(toastContainer);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = 'pointer-events-auto bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-2 border-amber-500 text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between gap-3 transform transition-all duration-300 translate-y-[-20px] opacity-0';
+        
+        toast.innerHTML = `
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-slate-900 text-lg font-black shadow-lg shrink-0">
+                    <i class="fas fa-coins"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500 text-slate-900">طلب استثمار جديد</span>
+                        <span class="text-[10px] text-slate-400 font-mono">${lead.request_code || ''}</span>
+                    </div>
+                    <div class="font-bold text-xs text-white mt-1">${lead.customer_name || 'عميل جديد'} (${lead.governorate || '-'})</div>
+                    <div class="text-[11px] text-amber-300 font-bold">${lead.brand || ''} ${lead.model || ''} (${lead.year || ''})</div>
+                </div>
+            </div>
+            <div class="flex flex-col gap-1 shrink-0">
+                <button onclick="showPage('investment-leads'); this.closest('div[class*=\\'pointer-events-auto\\']').remove();" class="bg-amber-500 text-slate-900 font-black px-3 py-1.5 rounded-xl text-[11px] hover:bg-amber-400 transition shadow">
+                    عرض
+                </button>
+            </div>
+        `;
+
+        toastContainer.appendChild(toast);
+
+        setTimeout(() => {
+            toast.classList.remove('translate-y-[-20px]', 'opacity-0');
+        }, 50);
+
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-y-[-20px]');
+            setTimeout(() => toast.remove(), 300);
+        }, 9000);
+    }
+
+    async function checkInvestmentRealtimeSync() {
+        try {
+            const resp = await fetch('/api/db', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'select',
+                    table: 'investment_leads',
+                    order: { column: 'id', ascending: false },
+                    limit: 200
+                })
+            });
+            const resData = await resp.json();
+            const leads = resData.data || [];
+            
+            if (leads.length > 0) {
+                const maxId = Math.max(...leads.map(l => l.id || 0));
+
+                if (isInvestmentSyncInitialized && maxId > lastKnownMaxInvestmentId) {
+                    const newLeads = leads.filter(l => (l.id || 0) > lastKnownMaxInvestmentId);
+                    newLeads.forEach(l => showInvestmentToast(l));
+                }
+
+                lastKnownMaxInvestmentId = maxId;
+                isInvestmentSyncInitialized = true;
+            }
+
+            currentInvestmentLeads = leads;
+            updateInvestmentKPICounters(currentInvestmentLeads);
+
+            const activePage = document.querySelector('.page-section:not(.hidden)');
+            if (activePage && activePage.id === 'page-investment-leads') {
+                filterInvestmentLeads();
+            }
+        } catch (err) {
+            console.warn('[Investment Realtime Sync Error]:', err);
+        }
+    }
+
+    function startInvestmentRealtimeSync() {
+        checkInvestmentRealtimeSync();
+        if (window.investmentRealtimeInterval) clearInterval(window.investmentRealtimeInterval);
+        // Poll every 5 seconds for instant synchronization
+        window.investmentRealtimeInterval = setInterval(checkInvestmentRealtimeSync, 5000);
+    }
+
+    // Cross-tab broadcast listener for 0ms instant sync
+    try {
+        const syncChannel = new BroadcastChannel('24seven_sync');
+        syncChannel.onmessage = (ev) => {
+            if (ev && ev.data && ev.data.type === 'NEW_INVESTMENT_LEAD') {
+                checkInvestmentRealtimeSync();
+                if (ev.data.lead) showInvestmentToast(ev.data.lead);
+            }
+        };
+    } catch (e) {}
+
+    window.addEventListener('visibilitychange', () => {
+        if (!document.hidden) checkInvestmentRealtimeSync();
+    });
+    window.addEventListener('focus', () => {
+        checkInvestmentRealtimeSync();
+    });
+
+    // Start auto sync immediately on load
+    startInvestmentRealtimeSync();
     </script>
 </body>
 </html>
