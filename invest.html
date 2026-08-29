@@ -1384,39 +1384,80 @@
         }
 
         // Handle Lead Submission
-        function handleFormSubmit(e) {
+        async function handleFormSubmit(e) {
             e.preventDefault();
             
-            const name = document.getElementById('ownerName').value;
-            const phone = document.getElementById('ownerPhone').value;
+            const name = document.getElementById('ownerName').value.trim();
+            const phone = document.getElementById('ownerPhone').value.trim();
             const gov = document.getElementById('ownerGov').value;
             const cat = document.getElementById('formCategory').value;
-            const brand = document.getElementById('formBrand').value;
-            const model = document.getElementById('formModel').value;
-            const year = document.getElementById('formYear').value;
-            const mileage = document.getElementById('formMileage').value || 'غير محدد';
-            const value = document.getElementById('formValue').value || '1000000';
-            const notes = document.getElementById('formNotes').value || 'لا يوجد';
+            const brand = document.getElementById('formBrand').value.trim();
+            const model = document.getElementById('formModel').value.trim();
+            const year = Number(document.getElementById('formYear').value) || 2024;
+            const mileage = document.getElementById('formMileage').value.trim() || 'غير محدد';
+            const valueNum = Number(document.getElementById('formValue').value) || 1000000;
+            const expectedIncome = Math.round((valueNum * 0.02));
+            const notes = document.getElementById('formNotes').value.trim() || 'لا يوجد';
+
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري حفظ الطلب...';
+            }
 
             const requestCode = 'REQ-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random() * 9000);
             lastGeneratedRequestCode = requestCode;
             
-            lastFormData = { name, phone, gov, cat, brand, model, year, mileage, value, notes, requestCode };
+            lastFormData = { name, phone, gov, cat, brand, model, year, mileage, value: valueNum, expectedIncome, notes, requestCode };
 
-            // Save to localStorage for history
+            // 1. Save to Database via Vercel Serverless API
+            try {
+                await fetch('/api/db', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'insert',
+                        table: 'investment_leads',
+                        data: {
+                            request_code: requestCode,
+                            customer_name: name,
+                            customer_phone: phone,
+                            governorate: gov,
+                            car_category: cat,
+                            brand: brand,
+                            model: model,
+                            year: year,
+                            mileage: mileage,
+                            estimated_value: valueNum,
+                            expected_income: expectedIncome,
+                            notes: notes,
+                            status: 'جديد'
+                        }
+                    })
+                });
+            } catch (apiErr) {
+                console.warn('API lead save warning:', apiErr);
+            }
+
+            // 2. Save to localStorage
             try {
                 const history = JSON.parse(localStorage.getItem('24seven_invest_leads') || '[]');
                 history.push({ ...lastFormData, timestamp: new Date().toISOString() });
                 localStorage.setItem('24seven_invest_leads', JSON.stringify(history));
             } catch (err) {}
 
-            // Display success modal
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane ml-2"></i> ' + (currentLang === 'ar' ? 'إرسال طلب المراجعة والانضمام' : 'Submit Inspection Request');
+            }
+
+            // 3. Display success modal
             document.getElementById('requestCodeDisplay').innerText = requestCode;
             
             // Build WhatsApp Button in Modal
             const waText = currentLang === 'ar'
-                ? `طلب انضمام أسطول جديد (${requestCode}):\n- الاسم: ${name}\n- الهاتف: ${phone}\n- المحافظة: ${gov}\n- نوع السيارة: ${cat} - ${brand} ${model} (${year})\n- العداد: ${mileage} كم\n- القيمة التقديرية: ${Number(value).toLocaleString('en-US')} ج.م\n- ملاحظات: ${notes}`
-                : `New Fleet Onboarding Request (${requestCode}):\n- Name: ${name}\n- Phone: ${phone}\n- Governorate: ${gov}\n- Vehicle: ${cat} - ${brand} ${model} (${year})\n- Mileage: ${mileage} KM\n- Value: ${Number(value).toLocaleString('en-US')} EGP\n- Notes: ${notes}`;
+                ? `طلب انضمام أسطول جديد (${requestCode}):\n- الاسم: ${name}\n- الهاتف: ${phone}\n- المحافظة: ${gov}\n- نوع السيارة: ${cat} - ${brand} ${model} (${year})\n- العداد: ${mileage} كم\n- القيمة التقديرية: ${valueNum.toLocaleString('en-US')} ج.م\n- الدخل الشهري التقديري: ${expectedIncome.toLocaleString('en-US')} ج.م\n- ملاحظات: ${notes}`
+                : `New Fleet Onboarding Request (${requestCode}):\n- Name: ${name}\n- Phone: ${phone}\n- Governorate: ${gov}\n- Vehicle: ${cat} - ${brand} ${model} (${year})\n- Mileage: ${mileage} KM\n- Value: ${valueNum.toLocaleString('en-US')} EGP\n- Expected Monthly Income: ${expectedIncome.toLocaleString('en-US')} EGP\n- Notes: ${notes}`;
 
             document.getElementById('btnModalWhatsapp').onclick = function() {
                 window.open(`https://wa.me/201121748885?text=${encodeURIComponent(waText)}`, '_blank');

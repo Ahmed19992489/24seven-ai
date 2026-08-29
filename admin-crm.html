@@ -48,6 +48,8 @@
             if (pageId === 'partners' && typeof window.loadPartners === 'function') setTimeout(window.loadPartners, 50);
             if (pageId === 'pricing' && typeof window.loadPricing === 'function') setTimeout(window.loadPricing, 50);
             if (pageId === 'chat' && typeof window.loadAdminChats === 'function') setTimeout(window.loadAdminChats, 50);
+            if (pageId === 'investment-leads' && typeof window.loadInvestmentLeads === 'function') setTimeout(window.loadInvestmentLeads, 50);
+            if (pageId === 'b2b-corporate' && typeof window.loadB2BLeads === 'function') setTimeout(window.loadB2BLeads, 50);
             if (pageId === 'ratings' && typeof window.loadRatings === 'function') setTimeout(window.loadRatings, 50);
             if (pageId === 'coupons' && typeof window.loadCouponsPage === 'function') setTimeout(window.loadCouponsPage, 50);
             if (pageId === 'staff' && typeof window.loadStaff === 'function') {
@@ -304,7 +306,14 @@
             </div>
 
             <p class="text-[10px] font-bold text-slate-400 mt-4 mb-1 px-3">التواصل والتعاقدات</p>
-            <!-- 💼 قسم تعاقدات وتوليد داتا الشركات B2B (جديد) -->
+            <!-- 🚗 قسم طلبات استثمار وتشغيل السيارات (جديد) -->
+            <div onclick="showPage('investment-leads')" id="nav-investment-leads"
+                class="sidebar-item p-3 rounded-lg flex items-center gap-3 bg-gradient-to-r from-amber-50 to-orange-50 border-r-4 border-amber-500 group">
+                <i class="fas fa-coins w-5 text-center text-amber-600 group-hover:scale-110 transition"></i>
+                <span class="font-bold text-slate-900">طلبات استثمار السيارات</span>
+                <span id="investment-leads-badge" class="hidden mr-auto bg-amber-500 text-slate-900 font-black text-[10px] px-2 py-0.5 rounded-full shadow-sm">0</span>
+            </div>
+            <!-- 💼 قسم تعاقدات وتوليد داتا الشركات B2B -->
             <div onclick="showPage('b2b-corporate')" id="nav-b2b-corporate"
                 class="sidebar-item p-3 rounded-lg flex items-center gap-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-r-4 border-blue-600 group">
                 <i class="fas fa-briefcase w-5 text-center text-blue-700 group-hover:scale-110 transition"></i>
@@ -1384,6 +1393,154 @@
                         <button type="button" onclick="launchBulkB2BCampaign()" id="btn-launch-bulk-camp" class="px-5 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 shadow-md shadow-emerald-200 flex items-center gap-1.5">
                             <i class="fas fa-rocket"></i> بدء إطلاق الحملة الآن
                         </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================================================== -->
+        <!-- 🚗 [INVESTMENT LEADS] قسم طلبات استثمار وتشغيل السيارات -->
+        <!-- ===================================================== -->
+        <div id="page-investment-leads" class="page-section hidden p-4 md:p-6">
+            <!-- Header & Action Bar -->
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+                <div>
+                    <h2 class="text-2xl font-extrabold text-slate-800 flex items-center gap-3">
+                        <span class="p-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-900 rounded-xl shadow-lg shadow-amber-200">
+                            <i class="fas fa-coins"></i>
+                        </span>
+                        <span>إدارة طلبات استثمار وتشغيل السيارات (Fleet Investment Hub)</span>
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-1">متابعة طلبات انضمام السيارات، حاسبة العائد الشهري، ترتيب مواعيد المعاينة الفنية بمقر الإسكندرية وإبرام العقود</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="loadInvestmentLeads()" class="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-50 shadow-sm transition flex items-center gap-1.5">
+                        <i class="fas fa-sync-alt text-amber-500"></i> تحديث فوري
+                    </button>
+                    <button onclick="exportInvestmentLeadsToCSV()" class="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-800 shadow-sm transition flex items-center gap-1.5">
+                        <i class="fas fa-file-excel text-emerald-400"></i> تصدير إكسيل
+                    </button>
+                </div>
+            </div>
+
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm border-r-4 border-r-amber-500">
+                    <p class="text-xs font-bold text-slate-400">إجمالي الطلبات</p>
+                    <h3 class="text-2xl font-black text-slate-800 mt-1" id="inv-stat-total">0</h3>
+                    <p class="text-[10px] text-slate-500 mt-1">مالك متقدم للتشغيل</p>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm border-r-4 border-r-blue-500">
+                    <p class="text-xs font-bold text-slate-400">طلبات جديدة</p>
+                    <h3 class="text-2xl font-black text-blue-600 mt-1" id="inv-stat-new">0</h3>
+                    <p class="text-[10px] text-blue-500 mt-1">بانتظار التواصل الأولي</p>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm border-r-4 border-r-purple-500">
+                    <p class="text-xs font-bold text-slate-400">مواعيد معاينة محددة</p>
+                    <h3 class="text-2xl font-black text-purple-600 mt-1" id="inv-stat-inspection">0</h3>
+                    <p class="text-[10px] text-purple-500 mt-1">بمقر الإسكندرية</p>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm border-r-4 border-r-emerald-500">
+                    <p class="text-xs font-bold text-slate-400">تم التعاقد والانضمام</p>
+                    <h3 class="text-2xl font-black text-emerald-600 mt-1" id="inv-stat-contracted">0</h3>
+                    <p class="text-[10px] text-emerald-500 mt-1">سيارات تعمل بالأسطول</p>
+                </div>
+            </div>
+
+            <!-- Search & Filters -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm mb-6 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex-1 min-w-[220px]">
+                    <div class="relative">
+                        <i class="fas fa-search absolute right-3.5 top-3 text-slate-400 text-sm"></i>
+                        <input type="text" id="inv-search-input" onkeyup="filterInvestmentLeads()" placeholder="بحث بالاسم، الهاتف، الماركة، أو كود الطلب..." class="w-full pl-3 pr-10 py-2 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500">
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <select id="inv-filter-status" onchange="filterInvestmentLeads()" class="px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 bg-white outline-none">
+                        <option value="all">كل الحالات</option>
+                        <option value="جديد">جديد</option>
+                        <option value="تم التواصل">تم التواصل</option>
+                        <option value="موعد معاينة">موعد معاينة</option>
+                        <option value="تمت المعاينة">تمت المعاينة</option>
+                        <option value="تم التعاقد">تم التعاقد</option>
+                        <option value="مرفوض">مرفوض</option>
+                    </select>
+                    <select id="inv-filter-category" onchange="filterInvestmentLeads()" class="px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 bg-white outline-none">
+                        <option value="all">كل الفئات</option>
+                        <option value="سيدان">سيدان</option>
+                        <option value="ميني فان">ميني فان</option>
+                        <option value="فان">فان سياحي</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Leads Table -->
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-right border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 font-bold border-b border-slate-100">
+                                <th class="p-3.5">كود الطلب والتاريخ</th>
+                                <th class="p-3.5">المالك والاتصال</th>
+                                <th class="p-3.5">المحافظة</th>
+                                <th class="p-3.5">بيانات السيارة</th>
+                                <th class="p-3.5">القيمة والعائد المتوقع</th>
+                                <th class="p-3.5">ملاحظات وموعد المعاينة</th>
+                                <th class="p-3.5">الحالة</th>
+                                <th class="p-3.5 text-center">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="investment-leads-tbody" class="divide-y divide-slate-100">
+                            <tr>
+                                <td colspan="8" class="text-center py-12 text-slate-400">
+                                    <i class="fas fa-spinner fa-spin text-xl mb-2 block"></i>
+                                    جاري تحميل طلبات الاستثمار...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Edit Investment Lead & Schedule Inspection -->
+        <div id="edit-inv-lead-modal" class="fixed inset-0 z-[5000] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
+            <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 relative">
+                <button onclick="closeEditInvLeadModal()" class="absolute left-4 top-4 text-slate-400 hover:text-slate-600 text-lg">
+                    <i class="fas fa-times"></i>
+                </button>
+                <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2 mb-4">
+                    <i class="fas fa-calendar-check text-amber-500"></i>
+                    تعديل حالة طلب الاستثمار وتحديد المعاينة
+                </h3>
+                <input type="hidden" id="modal-inv-id">
+                <div class="space-y-4 text-xs">
+                    <div>
+                        <label class="font-bold text-slate-600 block mb-1">المالك والسيارة</label>
+                        <div id="modal-inv-client-info" class="p-3 bg-slate-50 rounded-xl font-bold text-slate-700"></div>
+                    </div>
+                    <div>
+                        <label class="font-bold text-slate-600 block mb-1">حالة الطلب</label>
+                        <select id="modal-inv-status" class="w-full p-2.5 border border-slate-200 rounded-xl font-bold text-slate-800 bg-white">
+                            <option value="جديد">جديد (بانتظار التواصل)</option>
+                            <option value="تم التواصل">تم التواصل والمناقشة</option>
+                            <option value="موعد معاينة">تم تحديد موعد معاينة بمقر الإسكندرية</option>
+                            <option value="تمت المعاينة">تمت المعاينة الفنية بنجاح</option>
+                            <option value="تم التعاقد">تم توقيع العقد الرسمي</option>
+                            <option value="مرفوض">مرفوض / غير مطابق للمواصفات</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="font-bold text-slate-600 block mb-1">تاريخ وموعد المعاينة (بمقر الإسكندرية)</label>
+                        <input type="datetime-local" id="modal-inv-inspection-date" class="w-full p-2.5 border border-slate-200 rounded-xl text-slate-800">
+                    </div>
+                    <div>
+                        <label class="font-bold text-slate-600 block mb-1">ملاحظات الإدارة والفحص الفني</label>
+                        <textarea id="modal-inv-admin-notes" rows="3" placeholder="اكتب تفاصيل المكالمة أو حالة الفحص الفني..." class="w-full p-2.5 border border-slate-200 rounded-xl text-slate-800"></textarea>
+                    </div>
+                    <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                        <button type="button" onclick="closeEditInvLeadModal()" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200">إلغاء</button>
+                        <button type="button" onclick="saveInvLeadChanges()" class="px-5 py-2 bg-amber-500 text-slate-900 rounded-xl font-black hover:bg-amber-600 shadow-md">حفظ التغييرات</button>
                     </div>
                 </div>
             </div>
@@ -10942,6 +11099,325 @@ ${data.webhook_url}`);
     // Global window bindings for Marketing & Training
     window.loadMarketingStatus = loadMarketingStatus;
     window.loadTrainingReports = loadTrainingReports;
+
+    // ==========================================
+    // 🚗 INVESTMENT & FLEET LEADS ENGINE
+    // ==========================================
+    let currentInvestmentLeads = [];
+
+    async function loadInvestmentLeads() {
+        const tbody = document.getElementById('investment-leads-tbody');
+        if (!tbody) return;
+        
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-12 text-slate-400"><i class="fas fa-spinner fa-spin text-xl mb-2 block"></i>جاري تحميل طلبات الاستثمار...</td></tr>`;
+
+        try {
+            const resp = await fetch('/api/db', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'select',
+                    table: 'investment_leads',
+                    order: { column: 'created_at', ascending: false },
+                    limit: 200
+                })
+            });
+            const resData = await resp.json();
+            currentInvestmentLeads = resData.data || [];
+            
+            updateInvestmentKPICounters(currentInvestmentLeads);
+            renderInvestmentLeadsTable(currentInvestmentLeads);
+        } catch (err) {
+            console.error('[Investment Leads Load Error]:', err);
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-12 text-rose-500 font-bold">تعذر تحميل طلبات الاستثمار. تأكد من الاتصال.</td></tr>`;
+        }
+    }
+
+    function updateInvestmentKPICounters(leads) {
+        const total = leads.length;
+        const newCount = leads.filter(l => (l.status || 'جديد') === 'جديد').length;
+        const inspectionCount = leads.filter(l => (l.status || '') === 'موعد معاينة' || (l.status || '') === 'تمت المعاينة').length;
+        const contractedCount = leads.filter(l => (l.status || '') === 'تم التعاقد').length;
+
+        const elTotal = document.getElementById('inv-stat-total');
+        const elNew = document.getElementById('inv-stat-new');
+        const elInspection = document.getElementById('inv-stat-inspection');
+        const elContracted = document.getElementById('inv-stat-contracted');
+
+        if (elTotal) elTotal.innerText = total;
+        if (elNew) elNew.innerText = newCount;
+        if (elInspection) elInspection.innerText = inspectionCount;
+        if (elContracted) elContracted.innerText = contractedCount;
+
+        // Update badge
+        const badge = document.getElementById('investment-leads-badge');
+        if (badge) {
+            if (newCount > 0) {
+                badge.innerText = newCount;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+    }
+
+    function renderInvestmentLeadsTable(leads) {
+        const tbody = document.getElementById('investment-leads-tbody');
+        if (!tbody) return;
+
+        if (!leads || leads.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-12 text-slate-400 font-bold"><i class="fas fa-inbox text-3xl text-slate-300 mb-2 block"></i>لا توجد طلبات استثمار مسجلة حالياً</td></tr>`;
+            return;
+        }
+
+        const statusBadges = {
+            'جديد': 'bg-blue-50 text-blue-700 border-blue-200',
+            'تم التواصل': 'bg-amber-50 text-amber-700 border-amber-200',
+            'موعد معاينة': 'bg-purple-50 text-purple-700 border-purple-200',
+            'تمت المعاينة': 'bg-indigo-50 text-indigo-700 border-indigo-200',
+            'تم التعاقد': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+            'مرفوض': 'bg-rose-50 text-rose-700 border-rose-200'
+        };
+
+        tbody.innerHTML = leads.map(l => {
+            const dateStr = l.created_at ? new Date(l.created_at).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
+            const valueFormatted = Number(l.estimated_value || 0).toLocaleString('en-US');
+            const incomeFormatted = Number(l.expected_income || 0).toLocaleString('en-US');
+            const st = l.status || 'جديد';
+            const badgeClass = statusBadges[st] || 'bg-slate-50 text-slate-700 border-slate-200';
+
+            return `
+            <tr class="hover:bg-slate-50/80 transition">
+                <td class="p-3.5 whitespace-nowrap">
+                    <div class="font-black text-slate-900">${l.request_code || ('REQ-' + l.id)}</div>
+                    <div class="text-[10px] text-slate-400 mt-0.5"><i class="far fa-clock ml-1"></i>${dateStr}</div>
+                </td>
+                <td class="p-3.5">
+                    <div class="font-bold text-slate-800">${l.customer_name || '-'}</div>
+                    <div class="font-mono text-slate-500 text-[11px] dir-ltr inline-block mt-0.5">${l.customer_phone || '-'}</div>
+                </td>
+                <td class="p-3.5">
+                    <span class="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg font-bold text-[11px]">${l.governorate || '-'}</span>
+                </td>
+                <td class="p-3.5">
+                    <div class="font-bold text-slate-800">${l.brand || ''} ${l.model || ''} <span class="text-slate-400">(${l.year || '-'})</span></div>
+                    <div class="text-[11px] text-slate-500 mt-0.5">
+                        <span class="text-amber-600 font-bold">${l.car_category || 'سيدان'}</span> • العداد: ${l.mileage || 'غير محدد'} كم
+                    </div>
+                </td>
+                <td class="p-3.5 whitespace-nowrap">
+                    <div class="font-bold text-slate-900">${valueFormatted} ج.م</div>
+                    <div class="text-[11px] text-emerald-600 font-bold mt-0.5">دخل متوقع: ${incomeFormatted} ج.م/شهر</div>
+                </td>
+                <td class="p-3.5 max-w-[200px]">
+                    <div class="text-slate-600 truncate" title="${l.notes || ''}">${l.notes || 'لا يوجد'}</div>
+                    ${l.inspection_date ? `<div class="mt-1 text-[10px] bg-purple-50 text-purple-700 font-bold px-2 py-0.5 rounded border border-purple-200 inline-block"><i class="fas fa-calendar-alt ml-1"></i>معاينة: ${new Date(l.inspection_date).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>` : ''}
+                </td>
+                <td class="p-3.5 whitespace-nowrap">
+                    <span class="px-2.5 py-1 rounded-lg border font-bold text-[11px] ${badgeClass}">${st}</span>
+                </td>
+                <td class="p-3.5 text-center whitespace-nowrap">
+                    <div class="flex items-center justify-center gap-1.5">
+                        <button onclick="openWhatsAppWithLead(${l.id})" title="محادثة واتساب مباشرة" class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition flex items-center justify-center">
+                            <i class="fab fa-whatsapp"></i>
+                        </button>
+                        <a href="tel:${l.customer_phone}" title="اتصال هاتفي" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition flex items-center justify-center">
+                            <i class="fas fa-phone-alt"></i>
+                        </a>
+                        <button onclick="openEditInvLeadModal(${l.id})" title="تعديل الحالة وتحديد المعاينة" class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white transition flex items-center justify-center">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="deleteInvestmentLead(${l.id})" title="حذف" class="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-600 hover:text-white transition flex items-center justify-center">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            `;
+        }).join('');
+    }
+
+    function filterInvestmentLeads() {
+        const query = (document.getElementById('inv-search-input')?.value || '').toLowerCase().trim();
+        const statusFilter = document.getElementById('inv-filter-status')?.value || 'all';
+        const catFilter = document.getElementById('inv-filter-category')?.value || 'all';
+
+        let filtered = currentInvestmentLeads.filter(l => {
+            const matchesQuery = !query || 
+                (l.customer_name && l.customer_name.toLowerCase().includes(query)) ||
+                (l.customer_phone && l.customer_phone.includes(query)) ||
+                (l.brand && l.brand.toLowerCase().includes(query)) ||
+                (l.model && l.model.toLowerCase().includes(query)) ||
+                (l.request_code && l.request_code.toLowerCase().includes(query)) ||
+                (l.governorate && l.governorate.toLowerCase().includes(query));
+
+            const matchesStatus = statusFilter === 'all' || (l.status || 'جديد') === statusFilter;
+            const matchesCategory = catFilter === 'all' || (l.car_category || '') === catFilter;
+
+            return matchesQuery && matchesStatus && matchesCategory;
+        });
+
+        renderInvestmentLeadsTable(filtered);
+    }
+
+    function openWhatsAppWithLead(leadId) {
+        const lead = currentInvestmentLeads.find(l => l.id === leadId);
+        if (!lead || !lead.customer_phone) return;
+        
+        let phone = lead.customer_phone.replace(/[^0-9]/g, '');
+        if (phone.startsWith('01')) phone = '2' + phone;
+
+        const val = Number(lead.estimated_value || 0).toLocaleString('en-US');
+        const income = Number(lead.expected_income || 0).toLocaleString('en-US');
+
+        const msg = `مرحباً أستاذ ${lead.customer_name || ''}، نتواصل معك من إدارة تعاقدات 24Seven Limousine بخصوص طلبك (${lead.request_code || ''}) لتشغيل سيارتك ${lead.brand || ''} ${lead.model || ''} موديل ${lead.year || ''}.\n\nالراتب الشهري التقديري: ${income} ج.م.\nيسعدنا تحديد موعد لحضرتك للمعاينة الفنية وإتمام التعاقد بمقر الشركة بالإسكندرية.`;
+
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    function openEditInvLeadModal(leadId) {
+        const lead = currentInvestmentLeads.find(l => l.id === leadId);
+        if (!lead) return;
+
+        document.getElementById('modal-inv-id').value = lead.id;
+        document.getElementById('modal-inv-client-info').innerHTML = `
+            ${lead.customer_name} (${lead.customer_phone}) - ${lead.governorate}<br>
+            <span class="text-amber-600 font-bold">${lead.brand} ${lead.model} (${lead.year})</span> - القيمة: ${Number(lead.estimated_value).toLocaleString()} ج.م
+        `;
+        document.getElementById('modal-inv-status').value = lead.status || 'جديد';
+        document.getElementById('modal-inv-admin-notes').value = lead.admin_notes || '';
+        
+        if (lead.inspection_date) {
+            const dt = new Date(lead.inspection_date);
+            const formattedDate = dt.toISOString().slice(0, 16);
+            document.getElementById('modal-inv-inspection-date').value = formattedDate;
+        } else {
+            document.getElementById('modal-inv-inspection-date').value = '';
+        }
+
+        const modal = document.getElementById('edit-inv-lead-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+    }
+
+    function closeEditInvLeadModal() {
+        const modal = document.getElementById('edit-inv-lead-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+    }
+
+    async function saveInvLeadChanges() {
+        const id = document.getElementById('modal-inv-id').value;
+        const newStatus = document.getElementById('modal-inv-status').value;
+        const inspectionDate = document.getElementById('modal-inv-inspection-date').value || null;
+        const adminNotes = document.getElementById('modal-inv-admin-notes').value.trim() || null;
+
+        try {
+            await fetch('/api/db', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'update',
+                    table: 'investment_leads',
+                    data: {
+                        status: newStatus,
+                        inspection_date: inspectionDate,
+                        admin_notes: adminNotes
+                    },
+                    eq: { id: parseInt(id) }
+                })
+            });
+
+            const lead = currentInvestmentLeads.find(l => l.id === parseInt(id));
+            if (lead) {
+                lead.status = newStatus;
+                lead.inspection_date = inspectionDate;
+                lead.admin_notes = adminNotes;
+            }
+
+            updateInvestmentKPICounters(currentInvestmentLeads);
+            filterInvestmentLeads();
+            closeEditInvLeadModal();
+            alert('✅ تم حفظ تعديلات المعاينة وحالة الطلب بنجاح');
+        } catch (err) {
+            console.error('[Save Lead Error]:', err);
+            alert('❌ تعذر الحفظ، يرجى المحاولة ثانية');
+        }
+    }
+
+    async function deleteInvestmentLead(leadId) {
+        if (!confirm('هل أنت متأكد من رغبتك في حذف هذا الطلب نهائياً؟')) return;
+
+        try {
+            await fetch('/api/db', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'delete',
+                    table: 'investment_leads',
+                    eq: { id: leadId }
+                })
+            });
+
+            currentInvestmentLeads = currentInvestmentLeads.filter(l => l.id !== leadId);
+            updateInvestmentKPICounters(currentInvestmentLeads);
+            filterInvestmentLeads();
+            alert('🗑️ تم حذف الطلب بنجاح');
+        } catch (err) {
+            console.error('[Delete Lead Error]:', err);
+            alert('❌ تعذر الحذف');
+        }
+    }
+
+    function exportInvestmentLeadsToCSV() {
+        if (!currentInvestmentLeads || currentInvestmentLeads.length === 0) {
+            alert('⚠️ لا توجد بيانات لتصديرها!');
+            return;
+        }
+
+        const headers = ["كود الطلب", "الاسم", "الهاتف", "المحافظة", "فئة السيارة", "الماركة", "الموديل", "سنة الصنع", "العداد", "القيمة المقدرة", "الدخل المتوقع", "الحالة", "موعد المعاينة", "ملاحظات", "تاريخ التقديم"];
+        
+        const rows = currentInvestmentLeads.map(l => [
+            `"${l.request_code || ''}"`,
+            `"${l.customer_name || ''}"`,
+            `"${l.customer_phone || ''}"`,
+            `"${l.governorate || ''}"`,
+            `"${l.car_category || ''}"`,
+            `"${l.brand || ''}"`,
+            `"${l.model || ''}"`,
+            `"${l.year || ''}"`,
+            `"${l.mileage || ''}"`,
+            `"${l.estimated_value || ''}"`,
+            `"${l.expected_income || ''}"`,
+            `"${l.status || ''}"`,
+            `"${l.inspection_date || ''}"`,
+            `"${(l.notes || '').replace(/"/g, '""')}"`,
+            `"${l.created_at || ''}"`
+        ]);
+
+        const csvContent = "\uFEFF" + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `24Seven_Investment_Leads_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+    }
+
+    // Global window bindings for Investment Leads Engine
+    window.loadInvestmentLeads = loadInvestmentLeads;
+    window.renderInvestmentLeadsTable = renderInvestmentLeadsTable;
+    window.filterInvestmentLeads = filterInvestmentLeads;
+    window.openWhatsAppWithLead = openWhatsAppWithLead;
+    window.openEditInvLeadModal = openEditInvLeadModal;
+    window.closeEditInvLeadModal = closeEditInvLeadModal;
+    window.saveInvLeadChanges = saveInvLeadChanges;
+    window.deleteInvestmentLead = deleteInvestmentLead;
+    window.exportInvestmentLeadsToCSV = exportInvestmentLeadsToCSV;
     </script>
 </body>
 </html>
