@@ -173,10 +173,17 @@ _cached_spreadsheet = None
 def get_sheet():
     global _cached_client, _cached_spreadsheet
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    creds_path = os.path.join(current_dir, 'credentials.json')
+    if not os.path.exists(creds_path):
+        creds_path = os.path.join(r"c:\Users\pc2\Downloads\New folder (2)", 'credentials.json')
+    if not os.path.exists(creds_path):
+        creds_path = 'credentials.json'
+
     for attempt in range(3):
         try:
             if _cached_client is None:
-                creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
+                creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
                 _cached_client = gspread.authorize(creds)
             if _cached_spreadsheet is None:
                 _cached_spreadsheet = _cached_client.open_by_url('https://docs.google.com/spreadsheets/d/1-YglRYU8RZ6fl8xoWBNgxiV5IRna4KgE8ynpjsjtCD4/edit')
