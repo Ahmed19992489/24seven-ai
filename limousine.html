@@ -2261,8 +2261,10 @@
         }
 
         async function confirmFinalBooking() {
-            const btn = document.getElementById('confirm-btn'); btn.disabled = true; btn.innerText = "جاري الحجز...";
-            const walletBal = parseFloat(document.getElementById('header-balance').innerText);
+            const btn = document.getElementById('confirm-btn'); 
+            btn.disabled = true; 
+            btn.innerText = "جاري الحجز...";
+            const walletBal = parseFloat(document.getElementById('header-balance').innerText) || 0;
             let payStatus = 'unpaid', deduct = 0;
 
             if (tripData.pay === 'wallet') {
@@ -2270,8 +2272,29 @@
                 else { alert("رصيد المحفظة غير كافي!"); btn.disabled = false; btn.innerText = "تأكيد الحجز"; return; }
             }
 
-            const name = document.getElementById('guest-name').value;
-            const phone = document.getElementById('guest-phone').value;
+            const name = document.getElementById('guest-name')?.value?.trim() || '';
+            const phone = document.getElementById('guest-phone')?.value?.trim() || '';
+            const whatsappVal = document.getElementById('guest-whatsapp')?.value?.trim() || phone;
+            const pickup = document.getElementById('pickup')?.value?.trim() || '';
+            const dropoff = document.getElementById('dropoff')?.value?.trim() || '';
+            const paxCount = parseInt(document.getElementById('pax-count')?.value) || 1;
+            const bagsCount = parseInt(document.getElementById('bags-count')?.value) || 0;
+
+            // استخراج تاريخ ووقت الرحلة من حقول الإدخال
+            const tripDateVal = document.getElementById('trip-date')?.value || '';
+            const tripTimeVal = document.getElementById('trip-time')?.value || '';
+            const returnDateVal = document.getElementById('return-date')?.value || '';
+            const returnTimeVal = document.getElementById('return-time')?.value || '';
+
+            if (!tripDateVal) {
+                alert("يرجى تحديد تاريخ الرحلة!");
+                btn.disabled = false;
+                btn.innerText = "تأكيد الحجز";
+                return;
+            }
+
+            tripData.date = tripDateVal;
+            tripData.time = tripTimeVal;
 
             // 1. تنظيف رقم الهاتف للبحث والإنشاء
             let rawPhone = phone.replace(/\D/g, '');
@@ -2284,7 +2307,6 @@
                     const { data: existingProfile } = await sb.from('profiles').select('id, full_name').eq('phone', rawPhone).maybeSingle();
                     if (existingProfile) {
                         targetUserId = existingProfile.id;
-                        // تحديث الاسم إذا لم يكن محدداً
                         await sb.from('profiles').update({ full_name: name }).eq('id', targetUserId);
                     } else {
                         // إنشاء حساب جديد للعميل لكي يرتبط بحجوزاته تلقائياً عند الدخول لاحقاً
@@ -2310,74 +2332,143 @@
                 } catch (e) { }
             }
 
-            const paxCount = document.getElementById('pax-count').value || '1';
-            const bagsCount = document.getElementById('bags-count').value || '0';
-            const note = `نوع: ${tripData.type} | الدفع: ${tripData.pay}\n📅 ${tripData.date} - ${tripData.time}\n📱 ${phone}\n👥 ${paxCount} أفراد | 🧳 ${bagsCount} شنط${tripData.coupon_discount ? '\n🎫 خصم كوبون: ' + tripData.coupon_discount + ' جنيه' : ''}`;
+            const note = `نوع: ${tripData.type} | الدفع: ${tripData.pay}\n📅 ${tripDateVal} - ${tripTimeVal}\n📱 ${phone}\n👥 ${paxCount} أفراد | 🧳 ${bagsCount} شنط${tripData.coupon_discount ? '\n🎫 خصم كوبون: ' + tripData.coupon_discount + ' جنيه' : ''}`;
             let trip1Price = tripData.type === 'round-diff' ? Number(tripData.price) / 2 : Number(tripData.price);
 
-            // 2. إرسال الرحلة مع ربط user_id بالعميل الفعلي وحفظ تفاصيل العميل اليدوي
-            const { data: insertedTrips, error: tripError } = await sb.from('trips').insert([{
-                user_id: targetUserId || user.id, 
-                pickup_location: document.getElementById('pickup').value, 
-                dropoff_location: document.getElementById('dropoff').value,
-                distance_km: tripData.dist, 
+            // 2. إرسال الرحلة إلى جدول trips مع كافة الأعمدة
+            const tripInsertPayload = {
+                user_id: targetUserId || (user ? user.id : null), 
+                pickup_location: pickup, 
+                dropoff_location: dropoff,
+                trip_date: tripDateVal,
+                trip_time: tripTimeVal,
+                passengers: paxCount,
+                bags: bagsCount,
+                distance_km: tripData.dist || 0, 
                 estimated_price: trip1Price, 
-                car_type: tripData.car,
+                car_type: tripData.car || 'sedan',
+                trip_type: tripData.type || 'one-way',
                 status: 'pending', 
                 admin_notes: note, 
                 payment_status: payStatus,
                 manual_client_name: name,
                 client_phone: rawPhone
-            }]).select('id');
+            };
 
-            if (tripError) { alert("خطأ: " + tripError.message); btn.disabled = false; return; }
+            const { data: insertedTrips, error: tripError } = await sb.from('trips').insert([tripInsertPayload]).select('id');
 
+            if (tripError) { 
+                console.error("Trip insert error:", tripError);
+                alert("خطأ: " + tripError.message); 
+                btn.disabled = false; 
+                btn.innerText = "تأكيد الحجز";
+                return; 
+            }
+
+            const insertedTripId = insertedTrips && insertedTrips.length > 0 ? insertedTrips[0].id : '';
+
+            // 3. إرسال الرحلة إلى جدول google_reservations ليظهر في غرف العمليات ولوحة الموديتور والأدمن فوراً
+            try {
+                await sb.from('google_reservations').insert([{
+                    trip_date: tripDateVal,
+                    trip_time: tripTimeVal,
+                    customer_name: name,
+                    customer_phone: rawPhone || phone,
+                    whatsapp_num: whatsappVal,
+                    pickup_address: pickup,
+                    dropoff_address: dropoff,
+                    passengers: paxCount,
+                    bags: bagsCount,
+                    car_type: tripData.car || 'sedan',
+                    client_status: 'عميل ويب',
+                    cost: trip1Price,
+                    notes: tripData.coupon_discount ? `خصم كوبون: ${tripData.coupon_discount} جنيه` : 'حجز مباشر من الموقع',
+                    trip_type: tripData.type || 'one-way',
+                    status: 'pending',
+                    trip_status: 'pending',
+                    booking_employee: 'ويب سايت'
+                }]);
+            } catch (resErr) {
+                console.warn('google_reservations insert error:', resErr);
+            }
+
+            // إذا كانت الرحلة ذهاب وعودة بتاريخين مختلفين
             if (tripData.type === 'round-diff') {
+                const retDate = returnDateVal || tripDateVal;
+                const retTime = returnTimeVal || tripTimeVal;
+                const returnNote = `نوع: ${tripData.type} (عودة) | الدفع: ${tripData.pay}\n📅 ${retDate} - ${retTime}\n📱 ${phone}\n👥 ${paxCount} أفراد | 🧳 ${bagsCount} شنط`;
+                
                 await sb.from('trips').insert([{
-                    user_id: targetUserId || user.id, 
-                    pickup_location: document.getElementById('dropoff').value, 
-                    dropoff_location: document.getElementById('pickup').value,
-                    distance_km: tripData.dist, 
+                    user_id: targetUserId || (user ? user.id : null), 
+                    pickup_location: dropoff, 
+                    dropoff_location: pickup,
+                    trip_date: retDate,
+                    trip_time: retTime,
+                    passengers: paxCount,
+                    bags: bagsCount,
+                    distance_km: tripData.dist || 0, 
                     estimated_price: trip1Price, 
-                    car_type: tripData.car,
+                    car_type: tripData.car || 'sedan',
+                    trip_type: 'round-diff',
                     status: 'pending', 
-                    admin_notes: note + " (عودة)", 
+                    admin_notes: returnNote, 
                     payment_status: payStatus,
                     manual_client_name: name,
                     client_phone: rawPhone
                 }]);
+
+                try {
+                    await sb.from('google_reservations').insert([{
+                        trip_date: retDate,
+                        trip_time: retTime,
+                        customer_name: name,
+                        customer_phone: rawPhone || phone,
+                        whatsapp_num: whatsappVal,
+                        pickup_address: dropoff,
+                        dropoff_address: pickup,
+                        passengers: paxCount,
+                        bags: bagsCount,
+                        car_type: tripData.car || 'sedan',
+                        client_status: 'عميل ويب',
+                        cost: trip1Price,
+                        notes: 'رحلة عودة (حجز ويب)',
+                        trip_type: 'round-diff',
+                        status: 'pending',
+                        trip_status: 'pending',
+                        booking_employee: 'ويب سايت'
+                    }]);
+                } catch (e) {}
             }
 
-            if (deduct > 0) await sb.from('profiles').update({ wallet_balance: walletBal - deduct }).eq('id', user.id);
+            if (deduct > 0 && user) await sb.from('profiles').update({ wallet_balance: walletBal - deduct }).eq('id', user.id);
 
-            // إرسال إلى جوجل شيت مع انتظار الإرسال
+            // 4. إرسال إلى جوجل شيت مع البيانات كاملة
             try {
                 const { data: { user: authUserFinal } } = await sb.auth.getUser();
-                const whatsappVal = document.getElementById('guest-whatsapp')?.value || phone;
-                const insertedTripId = insertedTrips && insertedTrips.length > 0 ? insertedTrips[0].id : '';
                 await sendToGoogleSheet({
                     webId: insertedTripId,
                     sqlId: insertedTripId,
-                    tripDate: tripData.date || '',
-                    tripTime: tripData.time || '',
+                    tripDate: tripDateVal,
+                    tripTime: tripTimeVal,
                     clientName: name,
                     phone: phone,
                     whatsapp: whatsappVal,
-                    pickup: document.getElementById('pickup').value,
-                    dropoff: document.getElementById('dropoff').value,
+                    pickup: pickup,
+                    dropoff: dropoff,
                     passengers: paxCount,
                     bags: bagsCount,
-                    carType: tripData.car,
+                    carType: tripData.car || 'sedan',
                     clientStatus: 'عميل ويب',
                     price: trip1Price,
                     email: authUserFinal?.email || '',
                     notes: tripData.coupon_discount ? `خصم كوبون: ${tripData.coupon_discount} جنيه` : '',
-                    tripType: tripData.type,
+                    tripType: tripData.type || 'one-way',
                     enteredBy: 'ويب سايت'
                 });
             } catch (e) { console.log('Sheet sync error:', e); }
 
-            alert("تم الحجز بنجاح!"); location.reload();
+            alert("تم الحجز بنجاح!"); 
+            location.reload();
         }
 
         // ==========================================
@@ -3157,13 +3248,13 @@
                 const cleanDigits = phone.replace(/\D/g, '');
                 const last7 = cleanDigits.length >= 7 ? cleanDigits.slice(-7) : cleanDigits;
 
-                // 1. ابحث عن جميع الرحلات الخاصة برقم التليفون لربطها
+                // 1. ابحث عن جميع الرحلات الخاصة برقم التليفون لربطها بحسابه
                 const { data: trips } = await sb.from('trips')
-                    .select('id, client_phone, admin_notes')
-                    .is('user_id', null);
+                    .select('id, client_phone, admin_notes, user_id');
 
                 if (trips && trips.length > 0) {
                     const matchedTrips = trips.filter(t => {
+                        if (t.user_id === userId) return false;
                         const tPhoneClean = (t.client_phone || '').replace(/\D/g, '');
                         const tNotesClean = (t.admin_notes || '').replace(/\D/g, '');
                         return (tPhoneClean && tPhoneClean.includes(last7)) || (tNotesClean && tNotesClean.includes(last7));
