@@ -3,11 +3,12 @@
   "version": "1.0.0",
   "description": "Free Local WhatsApp Web API Gateway using Baileys",
   "main": "gateway.js",
+  "type": "commonjs",
   "scripts": {
     "start": "node gateway.js"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "^7.0.0-rc13",
+    "@whiskeysockets/baileys": "^6.7.9",
     "axios": "^1.6.8",
     "cors": "^2.8.5",
     "express": "^4.19.2",

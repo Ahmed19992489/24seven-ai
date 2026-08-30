@@ -1,4 +1,4 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, downloadMediaMessage } = require('@whiskeysockets/baileys');
+﻿const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, downloadMediaMessage } = require('@whiskeysockets/baileys');
 const express = require('express');
 const cors = require('cors');
 
@@ -12,7 +12,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🛡️ حماية حراس السيرفر من الانهيار عند حدوث قطع في الاتصال الشبكي (ECONNRESET / FetchAborted)
+// ≡ƒ¢í∩╕Å ╪¡┘à╪º┘è╪⌐ ╪¡╪▒╪º╪│ ╪º┘ä╪│┘è╪▒┘ü╪▒ ┘à┘å ╪º┘ä╪º┘å┘ç┘è╪º╪▒ ╪╣┘å╪» ╪¡╪»┘ê╪½ ┘é╪╖╪╣ ┘ü┘è ╪º┘ä╪º╪¬╪╡╪º┘ä ╪º┘ä╪┤╪¿┘â┘è (ECONNRESET / FetchAborted)
 process.on('uncaughtException', (err) => {
     console.error('[Gateway Safety] Catching uncaught exception (crash prevented):', err ? (err.message || err) : 'Unknown error');
 });
@@ -169,8 +169,8 @@ async function initSession(id, forceReconnect = false) {
     sock.ev.on('messages.upsert', async (m) => {
         // console.log(`[Gateway Debug] messages.upsert: type=${m.type}, count=${m.messages?.length}`);
         
-        // 🛡️ 'notify' = رسائل جديدة فعلاً
-        // 'append' = رسائل أرسلناها نحن (echo) — نتجاهلها لمنع التكرار
+        // ≡ƒ¢í∩╕Å 'notify' = ╪▒╪│╪º╪ª┘ä ╪¼╪»┘è╪»╪⌐ ┘ü╪╣┘ä╪º┘ï
+        // 'append' = ╪▒╪│╪º╪ª┘ä ╪ú╪▒╪│┘ä┘å╪º┘ç╪º ┘å╪¡┘å (echo) ΓÇö ┘å╪¬╪¼╪º┘ç┘ä┘ç╪º ┘ä┘à┘å╪╣ ╪º┘ä╪¬┘â╪▒╪º╪▒
         if (m.type === 'notify') {
             for (const msg of m.messages) {
                 // console.log(`[Gateway Debug] Processing message: fromMe=${msg.key?.fromMe}, remoteJid=${msg.key?.remoteJid}, hasMessage=${!!msg.message}`);
@@ -195,21 +195,21 @@ async function initSession(id, forceReconnect = false) {
                             } else {
                                 try {
                                     const metadata = await sock.groupMetadata(senderJid);
-                                    groupName = metadata.subject || 'مجموعة واتساب';
+                                    groupName = metadata.subject || '┘à╪¼┘à┘ê╪╣╪⌐ ┘ê╪º╪¬╪│╪º╪¿';
                                     groupNamesCache[senderJid] = groupName;
                                 } catch (gErr) {
-                                    groupName = 'مجموعة واتساب';
+                                    groupName = '┘à╪¼┘à┘ê╪╣╪⌐ ┘ê╪º╪¬╪│╪º╪¿';
                                 }
                             }
                         } else if (senderJid.endsWith('@lid')) {
                             const rawLid = senderJid.split('@')[0];
-                            // 1. فحص الكاش المحلي المباشر
+                            // 1. ┘ü╪¡╪╡ ╪º┘ä┘â╪º╪┤ ╪º┘ä┘à╪¡┘ä┘è ╪º┘ä┘à╪¿╪º╪┤╪▒
                             if (lidToPhoneCache[rawLid]) {
                                 senderPhone = lidToPhoneCache[rawLid];
                                 resolvedJid = `${senderPhone}@s.whatsapp.net`;
                                 console.log(`[Gateway] Resolved LID ${senderJid} via lidToPhoneCache (Phone: ${senderPhone})`);
                             } else {
-                                // 2. فحص Baileys Signal Repository LID mapping
+                                // 2. ┘ü╪¡╪╡ Baileys Signal Repository LID mapping
                                 try {
                                     if (sock.signalRepository && sock.signalRepository.lidMapping && typeof sock.signalRepository.lidMapping.getPNForLID === 'function') {
                                         const pn = await sock.signalRepository.lidMapping.getPNForLID(senderJid);
@@ -222,7 +222,7 @@ async function initSession(id, forceReconnect = false) {
                                     }
                                 } catch (sigErr) {}
 
-                                // 3. فحص Metadata من الرسالة
+                                // 3. ┘ü╪¡╪╡ Metadata ┘à┘å ╪º┘ä╪▒╪│╪º┘ä╪⌐
                                 if (!senderPhone || senderPhone === rawLid) {
                                     const possiblePn = msg.senderPn || (msg.key && (msg.key.participantAlt || msg.key.remoteJidAlt));
                                     if (possiblePn) {
@@ -231,7 +231,7 @@ async function initSession(id, forceReconnect = false) {
                                         lidToPhoneCache[rawLid] = senderPhone;
                                         console.log(`[Gateway] Resolved LID ${senderJid} to phone JID ${resolvedJid} via metadata (Phone: ${senderPhone})`);
                                     } else {
-                                        // 4. Fallback: فحص أحدث رقم تم إرسال رسالة إليه من هذا الحساب خلال آخر 15 دقيقة
+                                        // 4. Fallback: ┘ü╪¡╪╡ ╪ú╪¡╪»╪½ ╪▒┘é┘à ╪¬┘à ╪Ñ╪▒╪│╪º┘ä ╪▒╪│╪º┘ä╪⌐ ╪Ñ┘ä┘è┘ç ┘à┘å ┘ç╪░╪º ╪º┘ä╪¡╪│╪º╪¿ ╪«┘ä╪º┘ä ╪ó╪«╪▒ 15 ╪»┘é┘è┘é╪⌐
                                         const lastOut = lastOutboundRecipientBySession[id];
                                         if (lastOut && (Date.now() - lastOut.timestamp < 15 * 60 * 1000)) {
                                             senderPhone = lastOut.phone;
@@ -312,7 +312,7 @@ async function initSession(id, forceReconnect = false) {
                                 if (buffer) {
                                     const fileName = `${mediaType}_${Date.now()}_${Math.floor(Math.random() * 10000)}.${fileExtension}`;
                                     
-                                    // رفع الملف مباشرةً على Supabase Storage
+                                    // ╪▒┘ü╪╣ ╪º┘ä┘à┘ä┘ü ┘à╪¿╪º╪┤╪▒╪⌐┘ï ╪╣┘ä┘ë Supabase Storage
                                     const mimeType = mediaType === 'image' ? `image/${fileExtension}` : `audio/${fileExtension}`;
                                     let publicUrl = null;
                                     try {
@@ -382,17 +382,17 @@ async function initSession(id, forceReconnect = false) {
                                 const lng = messageContent.liveLocationMessage.degreesLongitude;
                                 text = `https://maps.google.com/maps?q=${lat},${lng}`;
                             } else if (messageContent.imageMessage) {
-                                text = messageContent.imageMessage.caption || '[صورة / Image]';
+                                text = messageContent.imageMessage.caption || '[╪╡┘ê╪▒╪⌐ / Image]';
                             } else if (messageContent.videoMessage) {
-                                text = messageContent.videoMessage.caption || '[فيديو / Video]';
+                                text = messageContent.videoMessage.caption || '[┘ü┘è╪»┘è┘ê / Video]';
                             } else if (messageContent.audioMessage) {
-                                text = '[رسالة صوتية / Voice Note]';
+                                text = '[╪▒╪│╪º┘ä╪⌐ ╪╡┘ê╪¬┘è╪⌐ / Voice Note]';
                             } else if (messageContent.documentMessage) {
-                                text = messageContent.documentMessage.caption || messageContent.documentMessage.fileName || '[ملف / Document]';
+                                text = messageContent.documentMessage.caption || messageContent.documentMessage.fileName || '[┘à┘ä┘ü / Document]';
                             } else if (messageContent.stickerMessage) {
-                                text = '[ملصق / Sticker]';
+                                text = '[┘à┘ä╪╡┘é / Sticker]';
                             } else if (messageContent.contactMessage || messageContent.contactsArrayMessage) {
-                                text = '[جهة اتصال / Contact]';
+                                text = '[╪¼┘ç╪⌐ ╪º╪¬╪╡╪º┘ä / Contact]';
                             } else if (messageContent.buttonsResponseMessage) {
                                 text = messageContent.buttonsResponseMessage.selectedButtonId;
                             } else if (messageContent.templateButtonReplyMessage) {
@@ -421,9 +421,9 @@ async function initSession(id, forceReconnect = false) {
                                 console.error(`[Webhook Error] Failed to forward group message to Python:`, err.message);
                             }
                         } else {
-                            // 🛡️ تخطي الرسائل الصادرة منا (fromMe) لكيلا تدخل دورة الأتمتة التلقائية
+                            // ≡ƒ¢í∩╕Å ╪¬╪«╪╖┘è ╪º┘ä╪▒╪│╪º╪ª┘ä ╪º┘ä╪╡╪º╪»╪▒╪⌐ ┘à┘å╪º (fromMe) ┘ä┘â┘è┘ä╪º ╪¬╪»╪«┘ä ╪»┘ê╪▒╪⌐ ╪º┘ä╪ú╪¬┘à╪¬╪⌐ ╪º┘ä╪¬┘ä┘é╪º╪ª┘è╪⌐
                             if (msg.key.fromMe) {
-                                // نحفظها للداشبورد الموحد
+                                // ┘å╪¡┘ü╪╕┘ç╪º ┘ä┘ä╪»╪º╪┤╪¿┘ê╪▒╪» ╪º┘ä┘à┘ê╪¡╪»
                                 try {
                                     await axios.post(`https://24seven-ai.com/api/db`, {
                                         action: 'insert',
@@ -439,7 +439,7 @@ async function initSession(id, forceReconnect = false) {
                                         }
                                     }, { timeout: 4000 });
                                 } catch (echoErr) {}
-                                continue;  // ⛔ لا ترسل لـ Python - هذا منع Echo Loop
+                                continue;  // Γ¢ö ┘ä╪º ╪¬╪▒╪│┘ä ┘ä┘Ç Python - ┘ç╪░╪º ┘à┘å╪╣ Echo Loop
                             }
                             console.log(`[Gateway] Incoming msg from ${senderPhone} (Session ${id}): ${text}`);
                             let pythonSuccess = false;
@@ -452,13 +452,13 @@ async function initSession(id, forceReconnect = false) {
                                 });
                                 if (res.status === 200) {
                                     pythonSuccess = true;
-                                    console.log(`✅ [Gateway -> Python Webhook] Forwarded msg from ${senderPhone} to Server (Status: 200 OK)`);
+                                    console.log(`Γ£à [Gateway -> Python Webhook] Forwarded msg from ${senderPhone} to Server (Status: 200 OK)`);
                                 }
                             } catch (err) {
                                 console.error(`[Webhook Error] Failed to forward message to Python:`, err.message);
                             }
 
-                            // 🛡️ Fallback: حفظ الرسالة في Neon Postgres
+                            // ≡ƒ¢í∩╕Å Fallback: ╪¡┘ü╪╕ ╪º┘ä╪▒╪│╪º┘ä╪⌐ ┘ü┘è Neon Postgres
                             if (!pythonSuccess) {
                                 try {
                                     await axios.post(`https://24seven-ai.com/api/db`, {
@@ -545,7 +545,7 @@ app.get('/instance/:id/qr', async (req, res) => {
         return res.json({
             status: 'success',
             type: 'message',
-            message: 'الحساب متصل بالفعل'
+            message: '╪º┘ä╪¡╪│╪º╪¿ ┘à╪¬╪╡┘ä ╪¿╪º┘ä┘ü╪╣┘ä'
         });
     }
     
@@ -559,7 +559,7 @@ app.get('/instance/:id/qr', async (req, res) => {
     
     return res.json({
         status: 'error',
-        message: 'رمز الـ QR غير جاهز بعد، يرجى المحاولة بعد قليل'
+        message: '╪▒┘à╪▓ ╪º┘ä┘Ç QR ╪║┘è╪▒ ╪¼╪º┘ç╪▓ ╪¿╪╣╪»╪î ┘è╪▒╪¼┘ë ╪º┘ä┘à╪¡╪º┘ê┘ä╪⌐ ╪¿╪╣╪» ┘é┘ä┘è┘ä'
     });
 });
 
@@ -574,7 +574,7 @@ app.post('/instance/:id/send', async (req, res) => {
     
     const session = activeSessions[id];
     if (!session || session.status !== 'connected') {
-        return res.status(400).json({ status: 'error', message: 'الحساب غير متصل بالواتساب' });
+        return res.status(400).json({ status: 'error', message: '╪º┘ä╪¡╪│╪º╪¿ ╪║┘è╪▒ ┘à╪¬╪╡┘ä ╪¿╪º┘ä┘ê╪º╪¬╪│╪º╪¿' });
     }
     
     try {
@@ -610,7 +610,7 @@ app.post('/instance/:id/send', async (req, res) => {
         lastOutboundRecipientBySession[id] = { phone: phone.replace(/\D/g, ''), timestamp: Date.now() };
         console.log(`[Gateway] Sending to JID: ${jid}`);
         
-        // إرسال ميديا عبر media_url منفصل (من الموديتور)
+        // ╪Ñ╪▒╪│╪º┘ä ┘à┘è╪»┘è╪º ╪╣╪¿╪▒ media_url ┘à┘å┘ü╪╡┘ä (┘à┘å ╪º┘ä┘à┘ê╪»┘è╪¬┘ê╪▒)
         let sentMsg;
         if (media_url && media_type === 'image') {
             sentMsg = await session.sock.sendMessage(jid, { image: { url: media_url }, caption: message || '' });
@@ -656,7 +656,7 @@ app.post('/instance/:id/send', async (req, res) => {
     } catch (err) {
         console.error(`[Gateway Error] Failed to send message via ${id}:`, err.message);
         
-        // 🔄 محاولة التجديد التلقائي للاتصال وإعادة المحاولة في حال انقطاع السوكيت (Connection Closed)
+        // ≡ƒöä ┘à╪¡╪º┘ê┘ä╪⌐ ╪º┘ä╪¬╪¼╪»┘è╪» ╪º┘ä╪¬┘ä┘é╪º╪ª┘è ┘ä┘ä╪º╪¬╪╡╪º┘ä ┘ê╪Ñ╪╣╪º╪»╪⌐ ╪º┘ä┘à╪¡╪º┘ê┘ä╪⌐ ┘ü┘è ╪¡╪º┘ä ╪º┘å┘é╪╖╪º╪╣ ╪º┘ä╪│┘ê┘â┘è╪¬ (Connection Closed)
         if (err.message && (err.message.includes('Closed') || err.message.includes('closed') || err.message.includes('not open'))) {
             console.log(`[Gateway Auto-heal] Connection closed for session ${id}. Reconnecting socket...`);
             try {
