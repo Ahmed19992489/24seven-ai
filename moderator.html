@@ -3840,27 +3840,55 @@
             document.getElementById('modal-trip-id').setAttribute('data-price', tripPrice);
 
             try {
-                const [{ data: drivers }, { data: cars }, { data: vendors }] = await Promise.all([
-                    sbClient.from('drivers').select('id, name, phone').eq('is_external', false).order('name'),
-                    sbClient.from('cars').select('id, brand, plate_number').eq('is_external', false).order('brand'),
-                    sbClient.from('vendors').select('*').eq('status', 'active').order('name')
-                ]);
+                let drivers = [], cars = [], vendors = [];
+                try {
+                    const [dRes, cRes, vRes] = await Promise.all([
+                        sbClient.from('drivers').select('*').order('name'),
+                        sbClient.from('cars').select('*').order('brand'),
+                        sbClient.from('vendors').select('*').order('name')
+                    ]);
+                    drivers = (dRes.data || []).filter(x => x.is_external !== true);
+                    cars = (cRes.data || []).filter(x => x.is_external !== true);
+                    vendors = (vRes.data || []).filter(x => !x.status || x.status === 'active');
+                } catch (e) {}
+
+                // Neon DB Fallback
+                if (!drivers.length) {
+                    try {
+                        const r = await fetch('/api/db', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'select', table: 'drivers' }) });
+                        const j = await r.json();
+                        drivers = (j.data || j || []).filter(x => x.is_external !== true);
+                    } catch (e) {}
+                }
+                if (!cars.length) {
+                    try {
+                        const r = await fetch('/api/db', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'select', table: 'cars' }) });
+                        const j = await r.json();
+                        cars = (j.data || j || []).filter(x => x.is_external !== true);
+                    } catch (e) {}
+                }
+                if (!vendors.length) {
+                    try {
+                        const r = await fetch('/api/db', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'select', table: 'vendors' }) });
+                        const j = await r.json();
+                        vendors = (j.data || j || []).filter(x => !x.status || x.status === 'active');
+                    } catch (e) {}
+                }
 
                 activeVendors = vendors || [];
 
                 driverSelect.innerHTML = '<option value="">اختر كابتن</option>' + 
-                    (drivers ? drivers.map(d => `<option value="${d.id}" data-name="${d.name}" data-phone="${d.phone}">${d.name} (${d.phone})</option>`).join('') : '');
+                    (drivers ? drivers.map(d => `<option value="${d.id}" data-name="${d.name}" data-phone="${d.phone}">${d.name} ${d.phone ? '(' + d.phone + ')' : ''}</option>`).join('') : '');
                 
                 carSelect.innerHTML = '<option value="">اختر سيارة</option>' + 
-                    (cars ? cars.map(c => `<option value="${c.id}">${c.brand} - ${c.plate_number}</option>`).join('') : '');
+                    (cars ? cars.map(c => `<option value="${c.id}">${c.brand} ${c.plate_number ? ' - ' + c.plate_number : ''}</option>`).join('') : '');
 
                 vendorSelect.innerHTML = '<option value="">اختر مكتب خارجي</option>' + 
-                    (activeVendors ? activeVendors.map(v => `<option value="${v.id}">${v.name}</option>`).join('') : '');
+                    (activeVendors ? activeVendors.map(v => `<option value="${v.id}">${v.name} ${v.owner_phone ? '(' + v.owner_phone + ')' : ''}</option>`).join('') : '');
 
                 updateVendorCommissionDefault();
             } catch (e) {
                 console.error(e);
-                alert('خطأ في تحميل البيانات من السيرفر');
             }
         }
 

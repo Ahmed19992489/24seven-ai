@@ -4424,35 +4424,68 @@
             document.getElementById('assign-internal-group').classList.remove('hidden');
             document.getElementById('assign-external-group').classList.add('hidden');
             
+            const dSel = document.getElementById('modal-driver'); 
+            const cSel = document.getElementById('modal-car'); 
+            const vSel = document.getElementById('modal-vendor');
+
+            dSel.innerHTML = '<option value="">جاري تحميل الكباتن...</option>';
+            cSel.innerHTML = '<option value="">جاري تحميل السيارات...</option>';
+            vSel.innerHTML = '<option value="">جاري تحميل المكاتب...</option>';
+
             // جلب قيمة الرحلة المقدرة وحفظها
             let tripPrice = 0;
-            if (String(id).startsWith('gr_')) {
-                const numericId = Number(id.replace('gr_', ''));
-                const { data: res } = await sbClient.from('google_reservations').select('cost').eq('id', numericId).single();
-                tripPrice = res?.cost || 0;
-            } else {
-                const { data: trip } = await sbClient.from('trips').select('estimated_price').eq('id', id).single();
-                tripPrice = trip?.estimated_price || 0;
-            }
+            try {
+                if (String(id).startsWith('gr_')) {
+                    const numericId = Number(id.replace('gr_', ''));
+                    const { data: res } = await sbClient.from('google_reservations').select('cost').eq('id', numericId).single();
+                    tripPrice = res?.cost || 0;
+                } else {
+                    const { data: trip } = await sbClient.from('trips').select('estimated_price').eq('id', id).single();
+                    tripPrice = trip?.estimated_price || 0;
+                }
+            } catch (e) {}
             document.getElementById('modal-trip-id').setAttribute('data-price', tripPrice);
             
-            const { data: d } = await sbClient.from('drivers').select('*').eq('is_external', false); 
-            const { data: c } = await sbClient.from('cars').select('*').eq('is_external', false); 
-            const { data: v } = await sbClient.from('vendors').select('*').eq('status', 'active');
+            let d = [], c = [], v = [];
+            try {
+                const [dRes, cRes, vRes] = await Promise.all([
+                    sbClient.from('drivers').select('*').order('name'),
+                    sbClient.from('cars').select('*').order('brand'),
+                    sbClient.from('vendors').select('*').order('name')
+                ]);
+                d = (dRes.data || []).filter(x => x.is_external !== true);
+                c = (cRes.data || []).filter(x => x.is_external !== true);
+                v = (vRes.data || []).filter(x => !x.status || x.status === 'active');
+            } catch (e) {}
+
+            // Neon DB Fallback
+            if (!d.length) {
+                try {
+                    const r = await fetch('/api/db', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'select', table: 'drivers' }) });
+                    const j = await r.json();
+                    d = (j.data || j || []).filter(x => x.is_external !== true);
+                } catch (e) {}
+            }
+            if (!c.length) {
+                try {
+                    const r = await fetch('/api/db', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'select', table: 'cars' }) });
+                    const j = await r.json();
+                    c = (j.data || j || []).filter(x => x.is_external !== true);
+                } catch (e) {}
+            }
+            if (!v.length) {
+                try {
+                    const r = await fetch('/api/db', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'select', table: 'vendors' }) });
+                    const j = await r.json();
+                    v = (j.data || j || []).filter(x => !x.status || x.status === 'active');
+                } catch (e) {}
+            }
             
             activeVendors = v || [];
             
-            const dSel = document.getElementById('modal-driver'); 
-            dSel.innerHTML = ''; 
-            if (d) d.forEach(x => dSel.innerHTML += `<option value="${x.id}">${x.name}</option>`); 
-            
-            const cSel = document.getElementById('modal-car'); 
-            cSel.innerHTML = ''; 
-            if (c) c.forEach(x => cSel.innerHTML += `<option value="${x.id}">${x.brand}</option>`); 
-            
-            const vSel = document.getElementById('modal-vendor');
-            vSel.innerHTML = '';
-            if (v) v.forEach(x => vSel.innerHTML += `<option value="${x.id}">${x.name}</option>`);
+            dSel.innerHTML = '<option value="">اختر الكابتن</option>' + (d || []).map(x => `<option value="${x.id}" data-name="${x.name || ''}" data-phone="${x.phone || ''}">${x.name} ${x.phone ? ' - ' + x.phone : ''}</option>`).join(''); 
+            cSel.innerHTML = '<option value="">اختر السيارة</option>' + (c || []).map(x => `<option value="${x.id}">${x.brand} ${x.plate_number ? ' - ' + x.plate_number : ''}</option>`).join(''); 
+            vSel.innerHTML = '<option value="">اختر مكتب خارجي</option>' + (v || []).map(x => `<option value="${x.id}">${x.name} ${x.owner_phone ? ' - ' + x.owner_phone : ''}</option>`).join('');
             
             // تحديث العمولة الافتراضية بناء على المكتب المحدد
             updateVendorCommissionDefault();
@@ -8354,22 +8387,51 @@ async function openAssignResModal(reservation) {
     document.getElementById('res-assign-internal-group').classList.remove('hidden');
     document.getElementById('res-assign-external-group').classList.add('hidden');
 
-    const [{ data: drivers }, { data: cars }, { data: vendors }] = await Promise.all([
-        sbClient.from('drivers').select('id,name,phone').eq('is_external', false).order('name'),
-        sbClient.from('cars').select('id,brand,plate_number').eq('is_external', false).order('brand'),
-        sbClient.from('vendors').select('*').eq('status', 'active').order('name')
-    ]);
+    let drivers = [], cars = [], vendors = [];
+    try {
+        const [dRes, cRes, vRes] = await Promise.all([
+            sbClient.from('drivers').select('*').order('name'),
+            sbClient.from('cars').select('*').order('brand'),
+            sbClient.from('vendors').select('*').order('name')
+        ]);
+        drivers = (dRes.data || []).filter(x => x.is_external !== true);
+        cars = (cRes.data || []).filter(x => x.is_external !== true);
+        vendors = (vRes.data || []).filter(x => !x.status || x.status === 'active');
+    } catch (e) {}
+
+    // Neon DB Fallback
+    if (!drivers.length) {
+        try {
+            const r = await fetch('/api/db', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'select', table: 'drivers' }) });
+            const j = await r.json();
+            drivers = (j.data || j || []).filter(x => x.is_external !== true);
+        } catch (e) {}
+    }
+    if (!cars.length) {
+        try {
+            const r = await fetch('/api/db', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'select', table: 'cars' }) });
+            const j = await r.json();
+            cars = (j.data || j || []).filter(x => x.is_external !== true);
+        } catch (e) {}
+    }
+    if (!vendors.length) {
+        try {
+            const r = await fetch('/api/db', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'select', table: 'vendors' }) });
+            const j = await r.json();
+            vendors = (j.data || j || []).filter(x => !x.status || x.status === 'active');
+        } catch (e) {}
+    }
     
     resActiveVendors = vendors || [];
 
     driverSel.innerHTML = '<option value="">اختر كابتن</option>' +
-        (drivers || []).map(d => `<option value="${d.id}" data-name="${d.name || ''}" data-phone="${d.phone || ''}">${d.name} - ${d.phone || ''}</option>`).join('');
+        (drivers || []).map(d => `<option value="${d.id}" data-name="${d.name || ''}" data-phone="${d.phone || ''}">${d.name} ${d.phone ? ' - ' + d.phone : ''}</option>`).join('');
 
     carSel.innerHTML = '<option value="">اختر سيارة</option>' +
-        (cars || []).map(c => `<option value="${c.id}">${c.brand} - ${c.plate_number}</option>`).join('');
+        (cars || []).map(c => `<option value="${c.id}">${c.brand} ${c.plate_number ? ' - ' + c.plate_number : ''}</option>`).join('');
         
     vendorSel.innerHTML = '<option value="">اختر مكتب خارجي</option>' +
-        (vendors || []).map(v => `<option value="${v.id}">${v.name}</option>`).join('');
+        (vendors || []).map(v => `<option value="${v.id}">${v.name} ${v.owner_phone ? ' - ' + v.owner_phone : ''}</option>`).join('');
 
     document.getElementById('res-modal-info').innerHTML = `
         <div class="bg-indigo-50 rounded-lg p-3 text-sm space-y-1">
