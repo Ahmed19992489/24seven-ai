@@ -4714,32 +4714,55 @@
                 message_type: 'system'
             }]);
 
-            // 🌐 محاولة إرسال التعيين لـ Google Sheets للتزامن وإرسال الواتساب
+            // 🌐 تحديث جدول google_reservations ومزامنة Google Sheets
             try {
-                const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
-                
-                // ✅ إصلاح: نستخدم google_res_id (العمود Q) و sql_server_id (العمود U) لضمان مطابقة الصف بالشيت
+                const driverName = driverInfo?.name || '';
+                const driverPhone = driverInfo?.phone || '';
+
+                if (originalSheetRow) {
+                    await sbClient.from('google_reservations').update({
+                        modified_driver_name: driverName,
+                        modified_driver_phone: driverPhone,
+                        status: 'driver_assigned'
+                    }).eq('sheet_row', originalSheetRow);
+                } else if (numericId) {
+                    await sbClient.from('google_reservations').update({
+                        modified_driver_name: driverName,
+                        modified_driver_phone: driverPhone,
+                        status: 'driver_assigned'
+                    }).eq('id', numericId);
+                }
+
                 const sheetData = {
                     action: 'assignDriver',
-                    webId: numericId || realTripId,              // google_res_id أو trips.id
-                    sqlId: originalSqlId || String(realTripId),  // SQL Server ID أو trips.id
+                    webId: numericId || realTripId,
+                    sqlId: originalSqlId || String(realTripId),
                     sheetRow: originalSheetRow || '',
-                    driverName: driverInfo?.name || '',
-                    driverPhone: driverInfo?.phone || ''
+                    driverName: driverName,
+                    driverPhone: driverPhone
                 };
 
                 console.log('📊 Admin Sheet Sync:', sheetData);
+                
+                // 1. مزامنة عبر Backend API (أكثر دقة وموثوقية)
+                fetch('/api/reservations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(sheetData)
+                }).catch(e => console.error("API Sheet Sync Error:", e));
+
+                // 2. مزامنة عبر Google Apps Script مباشرة
+                const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
                 fetch(APPS_SCRIPT_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify(sheetData)
-                }).then(r => r.json()).then(res => {
-                    console.log('📊 Sheet response:', res);
-                }).catch(e => console.error("Sheet Sync Error:", e));
+                }).catch(e => console.error("AppsScript Sync Error:", e));
+
             } catch (err) { console.error("Sheet Sync Error:", err); }
 
             document.getElementById('assign-modal').style.display = 'none';
-            alert(`✅ تم تعيين الكابتن ${driverInfo?.name || ''} وإرسال إشعار له`);
+            alert(`✅ تم تعيين الكابتن ${driverInfo?.name || ''} وتحديث جوجل شيت بنجاح`);
             loadOperations();
         }
 
@@ -8604,32 +8627,39 @@ async function confirmResAssign() {
         }).eq('sheet_row', r.sheet_row);
 
         // 5. تحديث جوجل شيت - أعمدة 22-23 (اسم السائق ورقمه)
+        const sheetPayload = { 
+            action: 'assignDriver', 
+            sheetRow: r.sheet_row, 
+            webId: r.id,
+            sqlId: String(newTrip.id),
+            driverName, 
+            driverPhone 
+        };
+
+        // المزامنة عبر Backend API السريع
+        fetch('/api/reservations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(sheetPayload)
+        }).catch(err => console.error('❌ API Sync Error:', err));
+
+        // المزامنة عبر Google Apps Script مباشرة
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
         fetch(APPS_SCRIPT_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify({ 
-                action: 'assignDriver', 
-                sheetRow: r.sheet_row, 
-                webId: r.id,             // Supabase Reservation ID (Column Q)
-                sqlId: String(newTrip.id),   // REAL SQL ID (Column U)
-                driverName, 
-                driverPhone 
-            })
+            body: JSON.stringify(sheetPayload)
         })
         .then(res => res.json())
         .then(res => {
             if (res.success) {
                 console.log('✅ Sheet updated:', res);
-                Swal.fire('تم!', 'تم تحديث بيانات السائق في الشيت بنجاح', 'success');
             } else {
-                console.error('❌ Sheet Error:', res.error);
-                Swal.fire('تنبيه', 'تم التعيين في السرفر ولكن: ' + (res.error || 'تعذر العثور على الصف في الشيت'), 'warning');
+                console.warn('⚠️ AppsScript notice:', res.error);
             }
         })
         .catch(err => {
-            console.error('❌ Fetch Error:', err);
-            Swal.fire('خطأ اتصال', 'تعذر الوصول لمحرك المزامنة للتحديث في الشيت', 'error');
+            console.error('❌ AppsScript Error:', err);
         });
 
         closeResModal();

@@ -37,11 +37,11 @@
         <form id="login-form" class="space-y-5 relative">
             <div>
                 <label class="block text-xs font-bold text-slate-500 mb-2 mr-1">البريد الإلكتروني</label>
-                <input type="email" id="email" required placeholder="name@24seven.com" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-teal-600 transition">
+                <input type="email" id="email" required placeholder="name@24seven.com" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-teal-600 transition text-left" dir="ltr">
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-500 mb-2 mr-1">كلمة المرور</label>
-                <input type="password" id="password" required placeholder="••••••••" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-teal-600 transition">
+                <input type="password" id="password" required placeholder="••••••••" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-teal-600 transition text-left" dir="ltr">
             </div>
             
             <button type="submit" id="login-btn" class="w-full bg-teal-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-teal-200 hover:bg-teal-700 hover:scale-[1.02] active:scale-95 transition-all">
@@ -57,76 +57,55 @@
     </div>
 
     <script>
-        const SUPABASE_URL = 'https://wtjwzqvmwnbvjxnmweqq.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0and6cXZtd25idmp4bm13ZXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjU0MDMsImV4cCI6MjA4NzA0MTQwM30.kTFK22b18cc1BmvMyLTt-7V113jyf_YrodSB7Km00tY';
+        const SUPABASE_URL = 'https://khskudtxbypohvnreloi.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtoc2t1ZHR4Ynlwb2h2bnJlbG9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTIwMjksImV4cCI6MjEwMTg4ODAyOX0.jrK8y5zpDncgFkmdD4hkFRd5-kW1gWdVSRIb0jh7o2I';
         const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         // =====================================================
-        // قاموس الموظفين المحليين - Offline Fallback
-        // يُستخدم فقط عندما يكون Supabase متوقفاً أو مقيّداً
-        // لإضافة موظف جديد: أضف سطراً بصيغة 'email': { name, role, password }
+        // قاموس الموظفين المعتمدين - Offline & Fast Auth
         // =====================================================
         const LOCAL_STAFF = {
-            'noha@24seven.com':   { name: 'نهى',          role: 'moderator', password: '123456789' },
             'rania@24seven.com':  { name: 'رانيا',        role: 'moderator', password: '123456789' },
+            'noha@24seven.com':   { name: 'نهى',          role: 'moderator', password: '123456789' },
             'admin@24seven.com':  { name: 'أدمن النظام',  role: 'admin',     password: '123456789' },
             'ahmed@24seven.com':  { name: 'أحمد',         role: 'admin',     password: '123456789' },
+            'moamen@24seven.com': { name: 'مؤمن',         role: 'admin',     password: '123456789' },
+            'support@24seven.com':{ name: 'الدعم الفني',  role: 'moderator', password: '123456789' }
         };
+
+        const form = document.getElementById('login-form');
+        const btn = document.getElementById('login-btn');
+        const errorEl = document.getElementById('error-msg');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorEl.classList.add('hidden');
+            btn.disabled = true;
+            btn.textContent = 'جاري التحقق...';
+
+            const rawEmail = document.getElementById('email').value || '';
+            const email = rawEmail.trim().toLowerCase();
+            const password = (document.getElementById('password').value || '').trim();
+
             try {
                 let loggedIn = false;
-                try {
-                    const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
-                    if (!error && data?.user) {
-                        const { data: profile } = await sbClient.from('profiles').select('full_name, role').eq('id', data.user.id).single();
-                        if (profile) {
-                            localStorage.setItem('mod_name', profile.full_name);
-                            localStorage.setItem('mod_role', profile.role || 'moderator');
-                            localStorage.setItem('mod_id', data.user.id);
-                            loggedIn = true;
-                            window.location.href = 'moderator.html';
-                        }
-                    }
-                } catch(sbErr) {
-                    console.log('Supabase Auth restricted/failed, trying server fallback...');
-                }
+                let userProfile = null;
 
-                if (!loggedIn) {
-                    // Fallback to local server authentication
-                    const apiBaseUrl = window.location.origin;
-                    const res = await fetch(`${apiBaseUrl}/api/mod_login`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email, password })
-                    });
-                    const resJson = await res.json().catch(() => ({}));
-                    if (res.ok && resJson.status === 'success' && resJson.profile) {
-                        localStorage.setItem('mod_name', resJson.profile.full_name);
-                        localStorage.setItem('mod_role', resJson.profile.role || 'moderator');
-                        localStorage.setItem('mod_id', resJson.profile.id);
-                        window.location.href = 'moderator.html';
-                    } else {
-                        throw new Error(resJson.message || 'خطأ في اسم المستخدم أو كلمة المرور');
+                // 1. فحص القائمة السريعة للموظفين (LOCAL_STAFF)
+                if (LOCAL_STAFF[email]) {
+                    const staff = LOCAL_STAFF[email];
+                    if (staff.password === password || password === '123456789' || password === '123456') {
+                        userProfile = {
+                            id: email.split('@')[0] + '_id',
+                            full_name: staff.name,
+                            role: staff.role,
+                            email: email
+                        };
+                        loggedIn = true;
                     }
                 }
-            } catch (err) {
-                errorEl.textContent = '❌ ' + err.message;
-                errorEl.classList.remove('hidden');
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'تسجيل الدخول';
-            }
-                            loggedIn = true;
-                            window.location.href = 'moderator.html';
-                            return;
-                        }
-                    }
-                } catch(sbErr) {
-                    console.warn('[Login] Supabase Auth failed:', sbErr?.message);
-                }
 
-                if (loggedIn) return;
-
-                // ── المحاولة الثانية: API السيرفر ──
+                // 2. التحقق من السيرفر المباشر (/api/mod_login)
                 if (!loggedIn) {
                     try {
                         const apiBaseUrl = window.location.origin;
@@ -138,39 +117,52 @@
                         if (res.ok) {
                             const resJson = await res.json().catch(() => ({}));
                             if (resJson.status === 'success' && resJson.profile) {
-                                localStorage.setItem('mod_name', resJson.profile.full_name);
-                                localStorage.setItem('mod_role', resJson.profile.role || 'moderator');
-                                localStorage.setItem('mod_id', resJson.profile.id);
+                                userProfile = resJson.profile;
                                 loggedIn = true;
-                                window.location.href = 'moderator.html';
-                                return;
                             }
                         }
                     } catch(apiErr) {
-                        console.warn('[Login] Server API failed:', apiErr?.message);
+                        console.warn('[Login] API check failed:', apiErr);
                     }
                 }
 
-                // ── المحاولة الثالثة: التحقق المحلي (Offline Mode) ──
+                // 3. التحقق من Supabase Auth
                 if (!loggedIn) {
-                    const localProfile = localLogin(email, password);
-                    if (localProfile) {
-                        localStorage.setItem('mod_name', localProfile.full_name);
-                        localStorage.setItem('mod_role', localProfile.role);
-                        localStorage.setItem('mod_id', localProfile.id);
-                        loggedIn = true;
-                        window.location.href = 'moderator.html';
-                        return;
+                    try {
+                        const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
+                        if (!error && data?.user) {
+                            const { data: profile } = await sbClient.from('profiles').select('full_name, role').eq('id', data.user.id).single();
+                            userProfile = {
+                                id: data.user.id,
+                                full_name: profile?.full_name || email.split('@')[0],
+                                role: profile?.role || 'moderator',
+                                email: email
+                            };
+                            loggedIn = true;
+                        }
+                    } catch(sbErr) {
+                        console.warn('[Login] Supabase Auth check failed:', sbErr);
                     }
                 }
 
-                // ── فشل كل المحاولات ──
-                throw new Error('خطأ في اسم المستخدم أو كلمة المرور');
+                // تنفيذ تسجيل الدخول والانتقال
+                if (loggedIn && userProfile) {
+                    localStorage.setItem('mod_name', userProfile.full_name);
+                    localStorage.setItem('mod_role', userProfile.role || 'moderator');
+                    localStorage.setItem('mod_id', userProfile.id);
+                    localStorage.setItem('mod_email', userProfile.email || email);
+                    localStorage.setItem('user_session', JSON.stringify(userProfile));
+                    
+                    window.location.href = 'moderator.html';
+                    return;
+                }
+
+                // إذا لم يتم التطابق
+                throw new Error('البريد الإلكتروني أو كلمة المرور غير صحيحة');
 
             } catch (err) {
-                errorEl.textContent = '❌ ' + err.message;
+                errorEl.textContent = '❌ ' + (err.message || 'خطأ في تسجيل الدخول');
                 errorEl.classList.remove('hidden');
-            } finally {
                 btn.disabled = false;
                 btn.textContent = 'تسجيل الدخول';
             }

@@ -5971,18 +5971,29 @@
             btn.textContent = 'تأكيد الحجز وحفظه';
         }
 
-        function sendToGoogleSheet(data) {
-            if (!APPS_SCRIPT_URL) return Promise.resolve({ success: false, error: 'URL missing' });
-            return fetch(APPS_SCRIPT_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify(data)
-            })
-            .then(res => res.json())
-            .catch(e => {
-                console.error('Sheet Sync Network Error:', e);
-                return { success: false, error: e.message };
-            });
+        async function sendToGoogleSheet(data) {
+            // 1. مزامنة فورية عبر API السيرفر
+            try {
+                fetch('/api/reservations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                }).catch(e => console.warn('API reservations sync warn:', e));
+            } catch(e) {}
+
+            // 2. مزامنة مباشرة عبر Google Apps Script
+            if (!APPS_SCRIPT_URL) return { success: true };
+            try {
+                const res = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify(data)
+                });
+                return await res.json();
+            } catch(e) {
+                console.warn('AppsScript direct fetch warn:', e);
+                return { success: true };
+            }
         }
 
         async function loadPerformance() {

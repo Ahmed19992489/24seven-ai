@@ -6,6 +6,7 @@ import requests
 
 NEON_CONN_STR = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL") or "postgresql://neondb_owner:npg_VM4tSBwN5PGd@ep-plain-rice-auzortld-pooler.c-10.us-east-1.aws.neon.tech/neondb?sslmode=require"
 NEON_HTTP_URL = "https://ep-plain-rice-auzortld-pooler.c-10.us-east-1.aws.neon.tech/sql"
+APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec"
 
 class handler(BaseHTTPRequestHandler):
     def _send_cors_headers(self):
@@ -100,3 +101,98 @@ class handler(BaseHTTPRequestHandler):
         self._send_cors_headers()
         self.end_headers()
         self.wfile.write(payload)
+
+    def do_POST(self):
+        try:
+            content_len = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_len).decode('utf-8')
+            data = json.loads(body) if body else {}
+
+            action = data.get("action")
+            sheet_row = data.get("sheetRow") or data.get("sheet_row")
+            sql_id = data.get("sqlId") or data.get("sql_id")
+            web_id = data.get("webId") or data.get("web_id")
+            driver_name = data.get("driverName") or data.get("driver_name", "")
+            driver_phone = data.get("driverPhone") or data.get("driver_phone", "")
+
+            # 1. تحديث قاعدة بيانات نيون (google_reservations)
+            neon_updated = False
+            try:
+                where_clauses = []
+                params = [driver_name, driver_phone]
+                if sheet_row:
+                    params.append(int(sheet_row))
+                    where_clauses.append(f"sheet_row = ${len(params)}")
+                if sql_id:
+                    params.append(str(sql_id))
+                    where_clauses.append(f"sql_server_id = ${len(params)}")
+                if web_id and str(web_id).isdigit():
+                    params.append(int(web_id))
+                    where_clauses.append(f"id = ${len(params)}")
+
+                if where_clauses:
+                    update_sql = f"""
+                        UPDATE google_reservations 
+                        SET modified_driver_name = $1, 
+                            modified_driver_phone = $2, 
+                            status = 'driver_assigned',
+                            updated_at = NOW() 
+                        WHERE {' OR '.join(where_clauses)};
+                    """
+                    r_neon = requests.post(
+                        NEON_HTTP_URL,
+                        headers={"Neon-Connection-String": NEON_CONN_STR},
+                        json={"query": update_sql, "params": params},
+                        timeout=10
+                    )
+                    if r_neon.status_code == 200:
+                        neon_updated = True
+            except Exception as e_neon:
+                print(f"[AssignDriver] Neon update error: {e_neon}")
+
+            # 2. تحديث جوجل شيت مباشرة عبر Google Apps Script من السيرفر
+            sheet_synced = False
+            sheet_response = None
+            try:
+                sheet_payload = {
+                    "action": "assignDriver",
+                    "sheetRow": sheet_row or "",
+                    "sqlId": str(sql_id) if sql_id else "",
+                    "webId": str(web_id) if web_id else "",
+                    "driverName": driver_name,
+                    "driverPhone": driver_phone
+                }
+                r_sheet = requests.post(
+                    APPS_SCRIPT_URL,
+                    data=json.dumps(sheet_payload),
+                    headers={"Content-Type": "text/plain"},
+                    timeout=15
+                )
+                if r_sheet.status_code == 200:
+                    sheet_response = r_sheet.json()
+                    sheet_synced = sheet_response.get("success", False)
+            except Exception as e_sheet:
+                print(f"[AssignDriver] Google Sheet sync error: {e_sheet}")
+
+            res_body = json.dumps({
+                "status": "success" if (neon_updated or sheet_synced) else "partial",
+                "neon_updated": neon_updated,
+                "sheet_synced": sheet_synced,
+                "sheet_response": sheet_response
+            }, ensure_ascii=False).encode('utf-8')
+
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(res_body)))
+            self._send_cors_headers()
+            self.end_headers()
+            self.wfile.write(res_body)
+
+        except Exception as e_main:
+            err_body = json.dumps({"status": "error", "message": str(e_main)}).encode('utf-8')
+            self.send_response(500)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(err_body)))
+            self._send_cors_headers()
+            self.end_headers()
+            self.wfile.write(err_body)
