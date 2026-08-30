@@ -1,4 +1,5 @@
 import sys
+import time
 sys.stdout.reconfigure(encoding='utf-8')
 sys.stderr.reconfigure(encoding='utf-8')
 from flask import Flask, request, jsonify, make_response, send_from_directory, redirect
@@ -45,9 +46,17 @@ for _p in [_this_dir, _parent_dir]:
 import json
 import re
 from datetime import datetime, timedelta
-import time
-import ai_agent         # [WA] مخ الواتساب
-import messenger_agent  # [FB] مخ الماسنجر الجديد (تأكد من وجود الملف بجانبه)
+try:
+    import ai_agent         # [WA] مخ الواتساب
+except Exception as _ai_err:
+    print(f"⚠️ [WARNING] Could not load ai_agent: {_ai_err}")
+    ai_agent = None
+
+try:
+    import messenger_agent  # [FB] مخ الماسنجر الجديد (تأكد من وجود الملف بجانبه)
+except Exception as _msg_err:
+    print(f"⚠️ [WARNING] Could not load messenger_agent: {_msg_err}")
+    messenger_agent = None
 import uuid
 from dotenv import load_dotenv
 import threading
@@ -66,7 +75,7 @@ import traceback
 import sys
 import builtins
 import logging
-logging.getLogger('werkzeug').setLevel(logging.ERROR)
+logging.getLogger('werkzeug').setLevel(logging.INFO)
 
 # [GLOBAL FIX] Prevent UnicodeEncodeError on Windows Console
 # This intercept all print() calls and strips non-ASCII to prevent 500 errors
@@ -112,6 +121,21 @@ def add_cors_headers(response):
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,ngrok-skip-browser-warning,Bypass-Tunnel-Reminder')
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
     return response
+
+# Heartbeat thread to show live pulse in terminal
+def _heartbeat_logger():
+    while True:
+        time.sleep(30)
+        now_str = datetime.now().strftime('%H:%M:%S')
+        print(f"[{now_str}] 🟢 [Heartbeat] Webhook Server Active & Listening on Port 3000")
+
+threading.Thread(target=_heartbeat_logger, daemon=True).start()
+
+# Log every incoming HTTP request in real-time
+@app.before_request
+def log_incoming_request():
+    now_str = datetime.now().strftime('%H:%M:%S')
+    print(f"[{now_str}] 📩 Request: {request.method} {request.path}")
 
 # = [ROOT] Root Route (For Meta Verification Fallback)
 # =====================================================
@@ -3809,10 +3833,13 @@ def send_b2b_email_proposal():
 # threading.Thread(target=_outbox_worker_loop, daemon=True).start()
 
 if __name__ == '__main__':
-    # تم تعطيل التشغيل التلقائي كعملية فرعية لتفادي انقطاع الاتصال عند إعادة تشغيل السيرفر.
-    # يتم تشغيل بوابة الواتساب الآن كخدمة مستقلة ومستمرة من خلال ملف run_all.bat.
-    print("[Gateway] Standalone WhatsApp gateway service is managed via run_all.bat")
-
-
-    print("[STARTED] Server Started on Port 3000 (Handling WhatsApp & Messenger & API)...")
+    print("=" * 60)
+    print("  🚀 24Seven Webhook & AI Dispatcher Server is LIVE!")
+    print("  📍 Listening on: http://localhost:3000")
+    print("  📡 Endpoints:")
+    print("     - WhatsApp Webhook: http://localhost:3000/webhook")
+    print("     - Messenger Webhook: http://localhost:3000/messenger")
+    print("     - Cloud API Status:  http://localhost:3000/")
+    print("  🟢 Ready & waiting for incoming messages & webhooks...")
+    print("=" * 60)
     app.run(host='0.0.0.0', port=3000, threaded=True)
