@@ -16,3 +16,7 @@ whatsapp_gateway/sessions/
 
 .vercel
 .env*
+credentials.json
+ngrok.yml
+sent_messages_cache.json
+scratch/

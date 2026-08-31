@@ -13,8 +13,9 @@ echo   Cloud Webhook: https://24seven-ai.com
 echo ===================================================
 echo.
 
-REM Clean hanging Node.js and port processes
+REM Clean hanging Node.js and Python processes
 taskkill /f /im node.exe 2>nul
+taskkill /f /im python.exe 2>nul
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr :3001 2^>nul') do taskkill /f /pid %%a 2>nul
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr :3000 2^>nul') do taskkill /f /pid %%a 2>nul
 

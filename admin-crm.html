@@ -9239,13 +9239,14 @@ ${contextData}
             try {
                 const payload = {
                     instance_name,
+                    name: instance_name,
                     provider,
                     instance_id,
                     token,
                     api_url: api_url || 'http://localhost:3001',
                     status: 'disconnected'
                 };
-                const { error } = await sbClient.from('whatsapp_instances').insert([payload]);
+                const { data: inserted, error } = await sbClient.from('whatsapp_instances').insert([payload]).select();
                 if (error) throw error;
                 
                 const apiBase = getStaffApiBaseUrl();
@@ -9259,9 +9260,12 @@ ${contextData}
                     } catch(err) {}
                 }
                 
-                alert('✅ تم إضافة الحساب بنجاح.');
+                alert('✅ تم إضافة الحساب بنجاح. جاري فتح كود الربط (QR)...');
                 closeAddWhatsappModal();
-                loadWhatsAppSettings();
+                await loadWhatsAppSettings();
+                if (inserted && inserted.length > 0) {
+                    selectWhatsappInstance(inserted[0].id);
+                }
             } catch (error) {
                 alert('❌ خطأ في إضافة الحساب: ' + error.message);
             }
@@ -9306,11 +9310,13 @@ ${contextData}
                     if (inst.provider === 'greenapi') providerText = 'Green API';
                     else if (inst.provider === 'local') providerText = 'بوابة محلية (Local)';
                     
+                    const displayName = inst.instance_name || inst.name || 'حساب واتساب';
+
                     return `
                         <div onclick="selectWhatsappInstance('${inst.id}')" 
-                             class="p-4 cursor-pointer hover:bg-slate-50 border border-slate-100 rounded-xl transition flex justify-between items-center ${selectedWaInstanceId === inst.id ? 'bg-emerald-50/40 border-emerald-200' : 'bg-white'}">
+                             class="p-4 cursor-pointer hover:bg-slate-50 border border-slate-100 rounded-xl transition flex justify-between items-center ${selectedWaInstanceId === inst.id ? 'bg-emerald-50/40 border-emerald-200 shadow-sm' : 'bg-white'}">
                             <div class="flex flex-col gap-1">
-                                <p class="font-bold text-sm text-slate-800">${inst.instance_name}</p>
+                                <p class="font-bold text-sm text-slate-800">${displayName}</p>
                                 <div class="flex items-center gap-2 mt-1">
                                     <span class="text-[10px] px-2 py-0.5 rounded-full font-bold ${badgeClass}">${statusText}</span>
                                     <span class="text-[10px] text-slate-400">${providerText}</span>
@@ -9382,6 +9388,7 @@ ${contextData}
                     } catch(e) {}
                 }
                 
+                const displayName = inst.instance_name || inst.name || 'حساب واتساب';
                 let detailsHtml = '';
                 if (freshStatus === 'connected') {
                     detailsHtml = `
@@ -9391,7 +9398,7 @@ ${contextData}
                             <p class="text-sm text-slate-600 mb-4">الحساب جاهز الآن لاستقبال وإرسال الرسائل.</p>
                             
                             <div class="bg-white rounded-xl p-4 text-right space-y-2 border border-slate-100 text-sm">
-                                <p class="text-slate-500">اسم الحساب: <span class="font-bold text-slate-800">${inst.instance_name}</span></p>
+                                <p class="text-slate-500">اسم الحساب: <span class="font-bold text-slate-800">${displayName}</span></p>
                                 <p class="text-slate-500">رقم الهاتف: <span class="font-bold text-slate-800" dir="ltr">+${freshPhone || inst.phone || ''}</span></p>
                                 <p class="text-slate-500">مزود الخدمة: <span class="font-bold text-slate-800">${inst.provider === 'greenapi' ? 'Green API' : (inst.provider === 'local' ? 'بوابة محلية (Local)' : 'UltraMsg')}</span></p>
                                 <p class="text-slate-500">معرف الحساب: <span class="font-bold text-slate-800" dir="ltr">${inst.instance_id}</span></p>
@@ -9453,30 +9460,46 @@ ${contextData}
             qrContainer.innerHTML = '<i class="fas fa-spinner fa-spin text-3xl text-slate-400 mb-2"></i><p class="text-xs text-slate-400">جاري جلب رمز الـ QR من السيرفر...</p>';
             
             const apiBase = getStaffApiBaseUrl();
-            if (!apiBase) {
-                qrContainer.innerHTML = '<p class="text-center text-red-500 text-xs font-bold">❌ خطأ: رابط الـ API للسيرفر غير متوفر. يرجى تهيئته في تبويب إدارة الموظفين.</p>';
-                return;
-            }
-            
-            try {
-                const res = await apiFetch(`${apiBase}/api/whatsapp/instance/${id}/qr`);
-                const data = await res.json();
-                
-                if (data.status === 'success') {
-                    if (data.type === 'image_url') {
-                        qrContainer.innerHTML = `<img src="${data.qr}" class="w-64 h-64 border rounded-xl" alt="QR Code" />`;
-                    } else if (data.type === 'base64') {
-                        qrContainer.innerHTML = `<img src="${data.qr}" class="w-64 h-64 border rounded-xl" alt="QR Code" />`;
-                    } else if (data.type === 'message') {
-                        qrContainer.innerHTML = `<div class="text-center text-emerald-600"><i class="fas fa-check-circle text-4xl mb-2"></i><p class="font-bold">${data.message}</p></div>`;
-                        setTimeout(() => selectWhatsappInstance(id), 1500);
+            if (apiBase) {
+                try {
+                    const res = await apiFetch(`${apiBase}/api/whatsapp/instance/${id}/qr`);
+                    const data = await res.json();
+                    
+                    if (data.status === 'success') {
+                        if (data.type === 'image_url' || data.type === 'base64') {
+                            qrContainer.innerHTML = `<img src="${data.qr}" class="w-64 h-64 border rounded-xl shadow-md" alt="QR Code" />`;
+                            return;
+                        } else if (data.type === 'message') {
+                            qrContainer.innerHTML = `<div class="text-center text-emerald-600"><i class="fas fa-check-circle text-4xl mb-2"></i><p class="font-bold">${data.message}</p></div>`;
+                            setTimeout(() => selectWhatsappInstance(id), 1500);
+                            return;
+                        }
                     }
-                } else {
-                    qrContainer.innerHTML = `<p class="text-center text-red-500 text-xs">فشل جلب الرمز: ${data.message}</p>`;
-                }
-            } catch (error) {
-                qrContainer.innerHTML = `<p class="text-center text-red-500 text-xs">خطأ في الاتصال: ${error.message}</p>`;
+                } catch (error) {}
             }
+
+            try {
+                const localRes = await fetch(`http://localhost:3001/instance/${id}/qr`);
+                const localData = await localRes.json();
+                if (localData.status === 'success') {
+                    if (localData.type === 'image_url' || localData.type === 'base64') {
+                        qrContainer.innerHTML = `<img src="${localData.qr}" class="w-64 h-64 border rounded-xl shadow-md" alt="QR Code" />`;
+                        return;
+                    } else if (localData.type === 'message') {
+                        qrContainer.innerHTML = `<div class="text-center text-emerald-600"><i class="fas fa-check-circle text-4xl mb-2"></i><p class="font-bold">${localData.message}</p></div>`;
+                        setTimeout(() => selectWhatsappInstance(id), 1500);
+                        return;
+                    }
+                }
+            } catch (err) {}
+            
+            qrContainer.innerHTML = `
+                <div class="text-center p-4">
+                    <i class="fas fa-qrcode text-4xl text-slate-400 mb-2 block"></i>
+                    <p class="text-xs text-slate-600 font-bold">يمكنك مسح رمز QR من نافذة السيرفر السوداء (WhatsApp Gateway)</p>
+                    <p class="text-[11px] text-slate-400 mt-1">أو اضغط "جلب رمز الـ QR" للتحديث بعد ثوانٍ.</p>
+                </div>
+            `;
         }
 
         async function setWhatsappInstanceWebhook(id) {

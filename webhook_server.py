@@ -480,16 +480,24 @@ def log_chat_to_sheet(phone, sender, message):
 
 # = [WHATSAPP] WhatsApp Functions وظائف الواتساب
 # =====================================================
+# Instance fallback الافتراضي — الرقم الأساسي للخدمة (8885)
+_DEFAULT_WA_INSTANCE = "692921bb-a5df-451d-8527-e1ee55a736f4"
+
 def send_whatsapp_message(to, body_text, instance_id=None):
     print(f"OUTGOING -> {to}: {body_text}")
-    clean_to = str(to).replace('+', '').replace('0020', '20').replace(' ', '').strip()
+    clean_to = str(to).split(':')[0].replace('+', '').replace('0020', '20').replace(' ', '').strip()
     if clean_to.startswith('01'):
         clean_to = '20' + clean_to[1:]
-    elif clean_to.startswith('1'):
+    elif clean_to.startswith('1') and len(clean_to) == 10:
         clean_to = '20' + clean_to
 
+    # ✅ استخدم نفس الـ instance اللي وصلت منه الرسالة — ومش instance ثابت
     if not instance_id:
-        instance_id = "692921bb-a5df-451d-8527-e1ee55a736f4" # local instance id for 201121748885
+        instance_id = _DEFAULT_WA_INSTANCE
+        print(f"[WA-Send] WARNING: No instance_id provided for {clean_to}, using default instance.")
+    else:
+        print(f"[WA-Send] Using instance {instance_id} to reply to {clean_to}")
+
     send_url = f"http://localhost:3001/instance/{instance_id}/send"
     payload = {
         "to": clean_to,
@@ -520,14 +528,16 @@ def send_location_request_template(to):
 def clean_phone_strict(phone):
     """تنظيف الرقم للمطابقة بأقوى شكل ممكن (وتحويله للمعيار الدولي 2011)"""
     if not phone: return ""
+    # إزالة لاحقة الأجهزة المتعددة إن وجدت مثل 201114323218:2 -> 201114323218
+    phone_str = str(phone).split(':')[0].strip()
     # تحويل الأرقام الشرقية (العربية) إلى أرقام غربية
     arabic_to_western = str.maketrans('٠١٢٣٤٥٦٧٨٩', '0123456789')
-    clean = str(phone).translate(arabic_to_western)
+    clean = phone_str.translate(arabic_to_western)
     clean = clean.replace(" ", "").replace("+", "").replace("-", "")
     clean = re.sub(r'\D', '', clean)
     if clean.startswith("00"): clean = clean[2:]
     if clean.startswith("01"): clean = "2" + clean
-    if clean.startswith("1"): clean = "20" + clean
+    if clean.startswith("1") and len(clean) == 10: clean = "20" + clean
     return clean
 
 def _parse_trip_date(date_str):
@@ -569,7 +579,10 @@ def find_active_session(sheet, sender_phone, message_text=""):
                 continue
                 
             trip_date = _parse_trip_date(row[1])
-            is_future_or_today = (trip_date is None) or (trip_date >= today)
+            # ✅ لو التاريخ مش موجود/مش معروف — نتخطى الصف، مش نعامله كرحلة مستقبلية
+            if trip_date is None:
+                continue
+            is_future_or_today = (trip_date >= today)
             
             if is_future_or_today:
                 # ✅ تحقق من client_decision (AB = index 27) — لو أكد أو رفض، لا نعيد التأكيد
@@ -680,7 +693,7 @@ def _is_human_escalation_request(text):
 
 processed_confirmations = set()
 
-def handle_confirmation(sender, text, row=None):
+def handle_confirmation(sender, text, row=None, instance_id=None):
     global processed_confirmations
     sheet = get_main_sheet()
     if not row:
@@ -716,7 +729,8 @@ def handle_confirmation(sender, text, row=None):
                 
             send_whatsapp_message(sender,
                 "أهلاً بحضرتك يا فندم 🙏\n"
-                "تم تحويل طلبك لخدمة العملاء، وسيتواصل معك أحد مسؤولينا فوراً للمساعدة وتأكيد كافة التفاصيل. ✨"
+                "تم تحويل طلبك لخدمة العملاء، وسيتواصل معك أحد مسؤولينا فوراً للمساعدة وتأكيد كافة التفاصيل. ✨",
+                instance_id=instance_id
             )
             return
         
@@ -771,7 +785,7 @@ def handle_confirmation(sender, text, row=None):
                     print(f"[WARNING] Could not check pickup address: {e}")
                 
                 if is_airport:
-                    send_whatsapp_message(sender, "شكراً لتأكيدك يا فندم 🌹\nتم تأكيد حجز الرحلة بنجاح! رحلة سعيدة وآمنة إن شاء الله 🚗💨")
+                    send_whatsapp_message(sender, "شكراً لتأكيدك يا فندم 🌹\nتم تأكيد حجز الرحلة بنجاح! رحلة سعيدة وآمنة إن شاء الله 🚗💨", instance_id=instance_id)
                     try:
                         sheet.update_acell(f"AC{row}", "مطار / غير مطلوب")
                         sheet.update_acell(f"AA{row}", "مكتمل اللوكيشن [OK]")
@@ -781,7 +795,8 @@ def handle_confirmation(sender, text, row=None):
                     send_whatsapp_message(sender, 
                         "شكراً لتأكيدك يا فندم 🌹\n"
                         "تم تأكيد حجز الرحلة بنجاح! يسعدنا خدمتكم في 24Seven ✨\n\n"
-                        "📍 من فضلك قم بإرسال اللوكيشن (موقع التحرك) الخاص بك في رسالة لتسهيل وصول الكابتن في الموعد المحدد."
+                        "📍 من فضلك قم بإرسال اللوكيشن (موقع التحرك) الخاص بك في رسالة لتسهيل وصول الكابتن في الموعد المحدد.",
+                        instance_id=instance_id
                     )
             except Exception as e:
                 print(f"[ERROR] Write failed: {e}")
@@ -821,7 +836,7 @@ def handle_confirmation(sender, text, row=None):
                 except Exception as sb_err:
                     print(f"[Supabase-Decision-Sync Error]: {sb_err}")
 
-                send_whatsapp_message(sender, "تم إلغاء الطلب بناءً على رغبتك. نتمنى أن نتشرف بخدمتكم في رحلات أخرى قادمة 🌸")
+                send_whatsapp_message(sender, "تم إلغاء الطلب بناءً على رغبتك. نتمنى أن نتشرف بخدمتكم في رحلات أخرى قادمة 🌸", instance_id=instance_id)
                 
                 # إشعار الأدمن بإلغاء الرحلة
                 try:
@@ -849,12 +864,12 @@ def handle_confirmation(sender, text, row=None):
             text_cleaned = text.lower().strip()
             if any(kw in text_cleaned for kw in thanks_keywords):
                 print(f"[INFO] Client {sender} sent polite/thanks phrase: '{text}'")
-                send_whatsapp_message(sender, "العفو يا فندم، الشكر لله 🌹 دائماً في خدمتكم ونتشرف بكم في أي وقت! ✨")
+                send_whatsapp_message(sender, "العفو يا فندم، الشكر لله 🌹 دائماً في خدمتكم ونتشرف بكم في أي وقت! ✨", instance_id=instance_id)
                 return
 
             # رد مرن للعميل في حالة إرسال نص غير التأكيد/الإلغاء
             print(f"[INFO] Unclear confirmation reply from {sender}: {text}")
-            send_whatsapp_message(sender, "وصلتنا رسالتك يا فندم 🌹\nهل تؤكد حجز الرحلة؟ (يرجى الرد بـ: نعم / تأكيد أو إلغاء)")
+            send_whatsapp_message(sender, "وصلتنا رسالتك يا فندم 🌹\nهل تؤكد حجز الرحلة؟ (يرجى الرد بـ: نعم / تأكيد أو إلغاء)", instance_id=instance_id)
 
 def handle_location_received(sender, msg):
     sheet = get_main_sheet()
@@ -1615,8 +1630,19 @@ def create_whatsapp_instance():
         "status": "init"
     }
     
-    r = requests.post(f"{SUPABASE_URL}/rest/v1/whatsapp_instances", headers=SUPABASE_SERVICE_HEADERS, json=payload, timeout=10)
+    headers_with_return = {**SUPABASE_SERVICE_HEADERS, "Prefer": "return=representation"}
+    r = requests.post(f"{SUPABASE_URL}/rest/v1/whatsapp_instances", headers=headers_with_return, json=payload, timeout=10)
     if r.status_code in [200, 201]:
+        if provider == 'local':
+            try:
+                created_rows = r.json()
+                if created_rows and isinstance(created_rows, list):
+                    inst_uuid = created_rows[0].get('id')
+                    if inst_uuid:
+                        import threading
+                        threading.Thread(target=lambda: requests.get(f"http://localhost:3001/instance/{inst_uuid}/qr", timeout=5), daemon=True).start()
+            except Exception:
+                pass
         return jsonify({"status": "success"})
     return jsonify({"status": "error", "message": f"Supabase Error: {r.text}"}), 500
 
@@ -1874,80 +1900,38 @@ def receive_local_webhook(instance_id_db):
         print(f"💬 النص: {message_text}", flush=True)
         print("="*50 + "\n", flush=True)
         
-        # Deduplication for all messages to avoid duplicates from gateway echoes or double hits
-        try:
-            # Check for a matching message in the last 8 seconds
-            check_seconds_ago = (datetime.utcnow() - timedelta(seconds=8)).isoformat() + "Z"
-            check_url = f"{SUPABASE_URL}/rest/v1/omnichannel_messages"
-            params = {
-                "channel": "eq.whatsapp",
-                "sender_id": f"eq.{sender_phone}",
-                "is_from_admin": f"eq.{'true' if is_from_admin else 'false'}",
-                "created_at": f"gte.{check_seconds_ago}",
-                "select": "id,message_text"
-            }
-            r_check = requests.get(check_url, headers=SUPABASE_SERVICE_HEADERS, params=params, timeout=5)
-            if r_check.status_code == 200:
-                existing_msgs = r_check.json()
-                cleaned_text = message_text.strip()
-                duplicate_found = False
-                for em in existing_msgs:
-                    if em.get("message_text", "").strip() == cleaned_text:
-                        duplicate_found = True
-                        break
-                if duplicate_found:
-                    print(f"[Local-Webhook] Deduplicated {'admin' if is_from_admin else 'client'} message for {sender_phone}: {message_text[:30]}...")
-                    return jsonify({"status": "ok", "detail": "duplicate"})
-        except Exception as check_err:
-            print(f"[Local-Webhook] Error checking for duplicates: {check_err}")
+        # Deduplication in-memory (سريع ولحظي لمنع التكرار وتجنب تعليق السيرفر)
+        global _recent_incoming_msgs
+        if '_recent_incoming_msgs' not in globals():
+            _recent_incoming_msgs = {}
+        
+        now_ts = time.time()
+        # تنظيف الرسائل الأقدم من 60 ثانية
+        _recent_incoming_msgs = {k: v for k, v in _recent_incoming_msgs.items() if now_ts - v < 60.0}
+        
+        dedup_key = f"{sender_phone}_{is_from_admin}_{message_text.strip()}"
+        if dedup_key in _recent_incoming_msgs and (now_ts - _recent_incoming_msgs[dedup_key]) < 6.0:
+            print(f"[Local-Webhook] Deduplicated {'admin' if is_from_admin else 'client'} message for {sender_phone}: {message_text[:30]}...")
+            return jsonify({"status": "ok", "detail": "duplicate"})
+        _recent_incoming_msgs[dedup_key] = now_ts
 
         # تشغيل المعالجة الكاملة والتسجيل في الخلفية لضمان سرعة الرد اللحظية وعدم تجميد السيرفر
         def process_whatsapp_async():
             try:
-                resolved_name = sender_name
-                if not is_from_admin:
-                    try:
-                        url_prev = f"{SUPABASE_URL}/rest/v1/omnichannel_messages?sender_id=eq.{sender_phone}&select=sender_name&order=created_at.desc&limit=1"
-                        r_prev = requests.get(url_prev, headers=SUPABASE_SERVICE_HEADERS, timeout=5)
-                        if r_prev.status_code == 200:
-                            prev_data = r_prev.json()
-                            if prev_data and prev_data[0].get('sender_name') and prev_data[0]['sender_name'] not in [sender_phone, "Admin", "ش"]:
-                                resolved_name = prev_data[0]['sender_name']
-                    except Exception:
-                        pass
+                resolved_name = sender_name or ('Admin' if is_from_admin else 'عميل')
 
-                    if not resolved_name or resolved_name == sender_phone:
-                        try:
-                            clean = sender_phone.replace("+", "").replace("0020", "20").replace(" ", "").strip()
-                            clean_local = clean[2:] if clean.startswith("20") else clean
-                            if len(clean_local) >= 8:
-                                last_8 = clean_local[-8:]
-                                r_name = requests.get(
-                                    f"{SUPABASE_URL}/rest/v1/google_reservations",
-                                    headers=SUPABASE_SERVICE_HEADERS,
-                                    params={"customer_phone": f"ilike.%{last_8}%", "select": "customer_name", "limit": "1"},
-                                    timeout=5
-                                )
-                                if r_name.status_code == 200:
-                                    rows = r_name.json()
-                                    if rows and rows[0].get("customer_name"):
-                                        resolved_name = rows[0]["customer_name"]
-                        except Exception:
-                            pass
-                else:
-                    resolved_name = sender_name or "Admin"
-
-                # 1. إدراج في Supabase للمحادثات
-                sb_payload = {
-                    "channel": "whatsapp",
-                    "sender_id": sender_phone,
-                    "sender_name": resolved_name,
-                    "message_text": message_text,
-                    "is_from_admin": is_from_admin,
-                    "read_by_admin": True if is_from_admin else False,
-                    "whatsapp_instance_id": instance_id_db
-                }
-                requests.post(f"{SUPABASE_URL}/rest/v1/omnichannel_messages", headers=SUPABASE_SERVICE_HEADERS, json=sb_payload, timeout=5)
+                # 1. إدراج في قاعدة البيانات للمحادثات
+                try:
+                    insert_message_to_supabase(
+                        channel='whatsapp',
+                        sender_id=sender_phone,
+                        sender_name=resolved_name,
+                        message_text=message_text,
+                        is_from_admin=is_from_admin,
+                        whatsapp_instance_id=instance_id_db
+                    )
+                except Exception as db_err:
+                    print(f"[Local-Webhook DB Error]: {db_err}")
 
                 # 2. تسجيل الرسالة في شيت المحادثات (فقط للعميل)
                 if not is_from_admin:
@@ -1969,11 +1953,13 @@ def receive_local_webhook(instance_id_db):
                                 if not _is_in_post_feedback_cooldown(sender_phone):
                                     sheet = get_main_sheet()
                                     row_idx, session_type = find_active_session(sheet, sender_phone)
+                                    print(f"[Local-Webhook] Session check for {sender_phone}: row={row_idx}, type={session_type}")
                                     if session_type == "feedback":
                                         if not _is_feedback_duplicate(sender_phone, message_text):
                                             start_feedback_flow(sender_phone, message_text, row_idx)
                                     elif session_type == "confirm":
-                                        handle_confirmation(sender_phone, message_text, row_idx)
+                                        # ✅ تمرير instance_id_db للرد من نفس الخط اللي وصلت منه الرسالة
+                                        handle_confirmation(sender_phone, message_text, row_idx, instance_id=instance_id_db)
                     except Exception as flow_err:
                         print(f"[Local-Webhook Flow Error]: {flow_err}")
             except Exception as outer_err:
@@ -2001,20 +1987,18 @@ def receive_group_message_webhook():
         if not group_id or not sender_phone or not message_text:
             return jsonify({"status": "error", "message": "Missing fields"}), 400
             
-        import sniper_agent
         import threading
-        
         def run_processing():
             try:
+                import sniper_agent
                 sniper_agent.process_group_message(group_name, sender_name, sender_phone, message_text)
             except Exception as ex:
-                print(f"[Sniper-Webhook Thread Error]: {ex}")
+                pass
                 
         threading.Thread(target=run_processing, daemon=True).start()
         return jsonify({"status": "ok"})
     except Exception as e:
-        print(f"[Group-Webhook Error]: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "ok"})
 
 @app.route('/api/sniper/filters', methods=['GET', 'POST', 'OPTIONS'])
 def manage_sniper_filters():

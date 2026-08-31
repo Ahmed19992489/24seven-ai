@@ -1,8 +1,12 @@
-﻿const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, downloadMediaMessage } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, downloadMediaMessage, Browsers, isJidBroadcast, makeCacheableSignalKeyStore } = require('@whiskeysockets/baileys');
 const express = require('express');
 const cors = require('cors');
+const NodeCache = require('node-cache');
+
+const msgRetryCounterCache = new NodeCache();
 
 const qrcode = require('qrcode');
+const qrcodeTerminal = require('qrcode-terminal');
 const pino = require('pino');
 const axios = require('axios');
 const fs = require('fs');
@@ -48,8 +52,10 @@ if (!fs.existsSync(UPLOADS_DIR)) {
 // Structure: { [id]: { sock, status: 'init'|'connected'|'disconnected', qr: '', phone: '' } }
 const activeSessions = {};
 const groupNamesCache = {};
-const lidToPhoneCache = {};
+const lidToPhoneCache = {};         // lid string → phone string
 const lastOutboundRecipientBySession = {};
+const msgStore = new Map();
+const lidPendingMessages = new Map(); // remoteJid@lid_msgId → { instanceId, timestamp }
 
 // Helper to update instance status in database
 async function updateSupabaseInstance(id, payload) {
@@ -68,16 +74,27 @@ async function updateSupabaseInstance(id, payload) {
 
 // Initialize a session
 async function initSession(id, forceReconnect = false) {
-    if (!forceReconnect && activeSessions[id] && activeSessions[id].status === 'connected') {
-        console.log(`[Gateway] Session ${id} already connected.`);
+    if (!forceReconnect && activeSessions[id] && (activeSessions[id].status === 'connected' || activeSessions[id].status === 'initializing' || activeSessions[id].status === 'init')) {
+        console.log(`[Gateway] Session ${id} already in progress or connected. (status=${activeSessions[id].status})`);
         return activeSessions[id];
     }
+
+    // Mark as initializing immediately to block duplicate calls
+    if (!activeSessions[id]) activeSessions[id] = {};
+    activeSessions[id].status = 'initializing';
 
     console.log(`[Gateway] Initializing session ${id}...`);
     const sessionDir = path.join(SESSIONS_DIR, `session_${id}`);
     
     // Setup state
     const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+    
+    // Wrap state.keys to allow caching and proper LID to PN mapping
+    const logger = pino({ level: 'silent' });
+    const authState = {
+        creds: state.creds,
+        keys: makeCacheableSignalKeyStore(state.keys, logger)
+    };
     
     // Fetch latest WhatsApp version to avoid 405 error
     let version = [2, 3000, 1023141551]; // Updated fallback WA version
@@ -90,13 +107,26 @@ async function initSession(id, forceReconnect = false) {
     }
     
     const sock = makeWASocket({
-        auth: state,
+        auth: authState,
         version: version,
-        browser: ['Ubuntu', 'Chrome', '20.0.04'],
+        browser: Browsers.ubuntu('Chrome'),
         printQRInTerminal: false,
         logger: pino({ level: 'silent' }),
         connectTimeoutMs: 60000,
-        defaultQueryTimeoutMs: 60000
+        defaultQueryTimeoutMs: 60000,
+        markOnlineOnConnect: true,
+        syncFullHistory: false,
+        msgRetryCounterCache,
+        shouldIgnoreJid: (jid) => isJidBroadcast(jid),
+        // CRITICAL: Return undefined so Baileys sends retry request to sender
+        getMessage: async (key) => {
+            if (key && key.remoteJid && key.id) {
+                const storeKey = `${key.remoteJid}_${key.id}`;
+                const stored = msgStore.get(storeKey);
+                if (stored) return stored;
+            }
+            return undefined;
+        }
     });
 
     activeSessions[id] = {
@@ -112,23 +142,26 @@ async function initSession(id, forceReconnect = false) {
         const { connection, lastDisconnect, qr } = update;
         
         if (qr) {
-            console.log(`[Gateway] QR generated for session ${id}`);
+            console.log(`\n==================================================`);
+            console.log(`📲 [WhatsApp QR] يرجى مسح رمز QR التالي لربط (${id}):`);
+            console.log(`==================================================\n`);
             try {
-                // Higher quality QR code for better phone scanning
+                qrcodeTerminal.generate(qr, { small: true });
+            } catch (qrTermErr) {
+                console.log(`[Gateway] QR String: ${qr}`);
+            }
+            console.log(`\n==================================================\n`);
+            try {
                 const qrBase64 = await qrcode.toDataURL(qr, {
-                    scale: 8,          // bigger = easier to scan
-                    margin: 2,         // small margin
-                    errorCorrectionLevel: 'H', // highest error correction
-                    color: {
-                        dark: '#000000',
-                        light: '#ffffff'
-                    }
+                    scale: 8,
+                    margin: 2,
+                    errorCorrectionLevel: 'H',
+                    color: { dark: '#000000', light: '#ffffff' }
                 });
                 activeSessions[id].qr = qrBase64;
-                activeSessions[id].qrRaw = qr; // store raw string too
-                activeSessions[id].qrTimestamp = Date.now(); // track when QR was generated
+                activeSessions[id].qrRaw = qr;
+                activeSessions[id].qrTimestamp = Date.now();
                 activeSessions[id].status = 'disconnected';
-                // Update Supabase to disconnected if we show QR
                 await updateSupabaseInstance(id, { status: 'disconnected' });
             } catch (err) {
                 console.error(`[Gateway] Error converting QR to base64 for ${id}:`, err.message);
@@ -138,13 +171,15 @@ async function initSession(id, forceReconnect = false) {
         if (connection === 'open') {
             const rawJid = sock.user.id;
             const phone = rawJid.split(':')[0].split('@')[0];
-            console.log(`[Gateway] Session ${id} connected. Phone: ${phone}`);
+            console.log(`\n==================================================`);
+            console.log(`✅ [WhatsApp Gateway] تم ربط وتفعيل الحساب (${phone}) بنجاح!`);
+            console.log(`🚀 النظام متصل الآن وجاهز لاستقبال وإرسال كافة الرسائل.`);
+            console.log(`==================================================\n`);
             
             activeSessions[id].status = 'connected';
             activeSessions[id].phone = phone;
-            activeSessions[id].qr = ''; // clear QR code
-            
-            // Sync with Supabase
+            activeSessions[id].qr = '';
+            activeSessions[id]._retryCount = 0;
             await updateSupabaseInstance(id, { status: 'connected', phone: phone });
         }
 
@@ -154,334 +189,380 @@ async function initSession(id, forceReconnect = false) {
             console.log(`[Gateway] Connection closed for ${id}. Reason: ${statusCode}. Should reconnect: ${shouldReconnect}`);
             
             if (!shouldReconnect) {
-                // User logged out
                 cleanupSession(id);
                 await updateSupabaseInstance(id, { status: 'disconnected', phone: null });
             } else {
-                // Temp disconnect, try reconnecting
                 activeSessions[id].status = 'disconnected';
-                setTimeout(() => initSession(id), 5000);
+                activeSessions[id]._retryCount = (activeSessions[id]._retryCount || 0) + 1;
+                const reconnectDelay = (activeSessions[id].phone) ? 5000 : Math.min(30000, 5000 * activeSessions[id]._retryCount);
+                console.log(`[Gateway] Reconnecting session ${id} in ${reconnectDelay}ms (attempt #${activeSessions[id]._retryCount})...`);
+                setTimeout(() => initSession(id), reconnectDelay);
             }
         }
     });
 
-    // Handle incoming messages
-    sock.ev.on('messages.upsert', async (m) => {
-        // console.log(`[Gateway Debug] messages.upsert: type=${m.type}, count=${m.messages?.length}`);
+    async function processIncomingWAMessage(msg, instanceId, waSock) {
+        if (!msg || !msg.key) return;
         
-        // ≡ƒ¢í∩╕Å 'notify' = ╪▒╪│╪º╪ª┘ä ╪¼╪»┘è╪»╪⌐ ┘ü╪╣┘ä╪º┘ï
-        // 'append' = ╪▒╪│╪º╪ª┘ä ╪ú╪▒╪│┘ä┘å╪º┘ç╪º ┘å╪¡┘å (echo) ΓÇö ┘å╪¬╪¼╪º┘ç┘ä┘ç╪º ┘ä┘à┘å╪╣ ╪º┘ä╪¬┘â╪▒╪º╪▒
-        if (m.type === 'notify') {
-            for (const msg of m.messages) {
-                // console.log(`[Gateway Debug] Processing message: fromMe=${msg.key?.fromMe}, remoteJid=${msg.key?.remoteJid}, hasMessage=${!!msg.message}`);
-                
-                if (msg.message) {
-                    const senderJid = msg.key.remoteJid;
-                    if (senderJid && (senderJid.endsWith('@s.whatsapp.net') || senderJid.endsWith('@lid') || senderJid.endsWith('@g.us'))) {
-                        let resolvedJid = senderJid;
-                        let senderPhone = senderJid.split('@')[0];
-                        let groupName = null;
-                        let isGroup = senderJid.endsWith('@g.us');
-                        
-                        if (isGroup) {
-                            const participantJid = msg.key.participant || msg.participant;
-                            if (participantJid) {
-                                resolvedJid = participantJid;
-                                senderPhone = participantJid.split('@')[0].split(':')[0];
-                            }
-                            
-                            if (groupNamesCache[senderJid]) {
-                                groupName = groupNamesCache[senderJid];
-                            } else {
-                                try {
-                                    const metadata = await sock.groupMetadata(senderJid);
-                                    groupName = metadata.subject || '┘à╪¼┘à┘ê╪╣╪⌐ ┘ê╪º╪¬╪│╪º╪¿';
-                                    groupNamesCache[senderJid] = groupName;
-                                } catch (gErr) {
-                                    groupName = '┘à╪¼┘à┘ê╪╣╪⌐ ┘ê╪º╪¬╪│╪º╪¿';
-                                }
-                            }
-                        } else if (senderJid.endsWith('@lid')) {
-                            const rawLid = senderJid.split('@')[0];
-                            // 1. ┘ü╪¡╪╡ ╪º┘ä┘â╪º╪┤ ╪º┘ä┘à╪¡┘ä┘è ╪º┘ä┘à╪¿╪º╪┤╪▒
-                            if (lidToPhoneCache[rawLid]) {
-                                senderPhone = lidToPhoneCache[rawLid];
-                                resolvedJid = `${senderPhone}@s.whatsapp.net`;
-                                console.log(`[Gateway] Resolved LID ${senderJid} via lidToPhoneCache (Phone: ${senderPhone})`);
-                            } else {
-                                // 2. ┘ü╪¡╪╡ Baileys Signal Repository LID mapping
-                                try {
-                                    if (sock.signalRepository && sock.signalRepository.lidMapping && typeof sock.signalRepository.lidMapping.getPNForLID === 'function') {
-                                        const pn = await sock.signalRepository.lidMapping.getPNForLID(senderJid);
-                                        if (pn) {
-                                            resolvedJid = pn.includes('@') ? pn : `${pn}@s.whatsapp.net`;
-                                            senderPhone = resolvedJid.split('@')[0];
-                                            lidToPhoneCache[rawLid] = senderPhone;
-                                            console.log(`[Gateway] Resolved LID ${senderJid} via SignalRepository (Phone: ${senderPhone})`);
-                                        }
-                                    }
-                                } catch (sigErr) {}
+        // Unpack message if wrapped
+        let messageContent = msg.message;
+        if (!messageContent) {
+            // Check msgStore if available
+            const sKey = `${msg.key.remoteJid}_${msg.key.id}`;
+            messageContent = msgStore.get(sKey);
+        }
+        if (!messageContent) return;
 
-                                // 3. ┘ü╪¡╪╡ Metadata ┘à┘å ╪º┘ä╪▒╪│╪º┘ä╪⌐
-                                if (!senderPhone || senderPhone === rawLid) {
-                                    const possiblePn = msg.senderPn || (msg.key && (msg.key.participantAlt || msg.key.remoteJidAlt));
-                                    if (possiblePn) {
-                                        resolvedJid = possiblePn;
-                                        senderPhone = resolvedJid.split('@')[0];
-                                        lidToPhoneCache[rawLid] = senderPhone;
-                                        console.log(`[Gateway] Resolved LID ${senderJid} to phone JID ${resolvedJid} via metadata (Phone: ${senderPhone})`);
-                                    } else {
-                                        // 4. Fallback: ┘ü╪¡╪╡ ╪ú╪¡╪»╪½ ╪▒┘é┘à ╪¬┘à ╪Ñ╪▒╪│╪º┘ä ╪▒╪│╪º┘ä╪⌐ ╪Ñ┘ä┘è┘ç ┘à┘å ┘ç╪░╪º ╪º┘ä╪¡╪│╪º╪¿ ╪«┘ä╪º┘ä ╪ó╪«╪▒ 15 ╪»┘é┘è┘é╪⌐
-                                        const lastOut = lastOutboundRecipientBySession[id];
-                                        if (lastOut && (Date.now() - lastOut.timestamp < 15 * 60 * 1000)) {
-                                            senderPhone = lastOut.phone;
-                                            resolvedJid = `${senderPhone}@s.whatsapp.net`;
-                                            lidToPhoneCache[rawLid] = senderPhone;
-                                            console.log(`[Gateway] Resolved LID ${senderJid} via recent outbound session match (Phone: ${senderPhone})`);
-                                        } else {
-                                            try {
-                                                const [result] = await sock.onWhatsApp(senderJid);
-                                                if (result && result.exists && result.jid) {
-                                                    resolvedJid = result.jid;
-                                                    senderPhone = resolvedJid.split('@')[0];
-                                                    lidToPhoneCache[rawLid] = senderPhone;
-                                                    console.log(`[Gateway] Resolved LID ${senderJid} to phone JID ${resolvedJid} via onWhatsApp (Phone: ${senderPhone})`);
-                                                }
-                                            } catch (lidErr) {
-                                                console.warn(`[Gateway Warning] Failed to resolve LID JID ${senderJid}:`, lidErr.message);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        
-                        const senderName = msg.pushName || senderPhone;
-                        
-                        // Extract message content, unwrapping ephemeral, view-once, or edited wrappers recursively
-                        let messageContent = msg.message;
-                        while (messageContent) {
-                            if (messageContent.ephemeralMessage) messageContent = messageContent.ephemeralMessage.message;
-                            else if (messageContent.viewOnceMessage) messageContent = messageContent.viewOnceMessage.message;
-                            else if (messageContent.viewOnceMessageV2) messageContent = messageContent.viewOnceMessageV2.message;
-                            else if (messageContent.viewOnceMessageV2Extension) messageContent = messageContent.viewOnceMessageV2Extension.message;
-                            else if (messageContent.documentWithCaptionMessage) messageContent = messageContent.documentWithCaptionMessage.message;
-                            else if (messageContent.editedMessage) messageContent = messageContent.editedMessage.message?.protocolMessage?.editedMessage || messageContent.editedMessage.message;
-                            else break;
-                        }
+        const senderJid = msg.key.remoteJid;
+        if (!senderJid || (!senderJid.endsWith('@s.whatsapp.net') && !senderJid.endsWith('@lid') && !senderJid.endsWith('@g.us'))) {
+            return;
+        }
 
-                        if (!messageContent) continue;
+        let resolvedJid = senderJid;
+        let senderPhone = senderJid.split('@')[0].split(':')[0];
+        let groupName = null;
+        let isGroup = senderJid.endsWith('@g.us');
+        
+        if (isGroup) {
+            const participantJid = msg.key.participant || msg.participant;
+            if (participantJid) {
+                resolvedJid = participantJid;
+                senderPhone = participantJid.split('@')[0].split(':')[0];
+            }
+            
+            if (groupNamesCache[senderJid]) {
+                groupName = groupNamesCache[senderJid];
+            } else {
+                try {
+                    const metadata = await waSock.groupMetadata(senderJid);
+                    groupName = metadata.subject || 'مجموعة واتساب';
+                    groupNamesCache[senderJid] = groupName;
+                } catch (gErr) {
+                    groupName = 'مجموعة واتساب';
+                }
+            }
+        } else if (senderJid.endsWith('@lid')) {
+            const rawLid = senderJid.split('@')[0].split(':')[0];
+            if (lidToPhoneCache[rawLid]) {
+                senderPhone = lidToPhoneCache[rawLid].split(':')[0];
+                resolvedJid = `${senderPhone}@s.whatsapp.net`;
+            } else {
+                try {
+                    if (waSock.signalRepository && waSock.signalRepository.lidMapping && typeof waSock.signalRepository.lidMapping.getPNForLID === 'function') {
+                        const pn = await waSock.signalRepository.lidMapping.getPNForLID(senderJid);
+                        if (pn) {
+                            resolvedJid = pn.includes('@') ? pn : `${pn}@s.whatsapp.net`;
+                            senderPhone = resolvedJid.split('@')[0].split(':')[0];
+                            lidToPhoneCache[rawLid] = senderPhone;
+                        }
+                    }
+                } catch (sigErr) {}
 
-                        // Skip internal WhatsApp system / protocol / reaction messages
-                        if (messageContent.protocolMessage || 
-                            messageContent.senderKeyDistributionMessage || 
-                            messageContent.reactionMessage || 
-                            messageContent.keepInChatMessage || 
-                            messageContent.keyExpiration ||
-                            messageContent.pinInChatMessage) {
-                            continue;
-                        }
-                        
-                        // Extract text content
-                        let text = '';
-                        let mediaType = null;
-                        let fileExtension = '';
-                        
-                        if (messageContent.imageMessage) {
-                            mediaType = 'image';
-                            const mime = messageContent.imageMessage.mimetype || 'image/jpeg';
-                            fileExtension = mime.split('/')[1] || 'jpg';
-                            if (fileExtension === 'jpeg') fileExtension = 'jpg';
-                        } else if (messageContent.audioMessage) {
-                            mediaType = 'audio';
-                            const mime = messageContent.audioMessage.mimetype || 'audio/ogg';
-                            fileExtension = mime.includes('ogg') ? 'ogg' : 'mp3';
-                        }
-                        
-                        if (mediaType) {
-                            try {
-                                const buffer = await downloadMediaMessage(
-                                    msg,
-                                    'buffer',
-                                    {},
-                                    {
-                                        logger: pino({ level: 'silent' }),
-                                        reuploadRequest: sock.updateMediaMessage
-                                    }
-                                );
-                                if (buffer) {
-                                    const fileName = `${mediaType}_${Date.now()}_${Math.floor(Math.random() * 10000)}.${fileExtension}`;
-                                    
-                                    // ╪▒┘ü╪╣ ╪º┘ä┘à┘ä┘ü ┘à╪¿╪º╪┤╪▒╪⌐┘ï ╪╣┘ä┘ë Supabase Storage
-                                    const mimeType = mediaType === 'image' ? `image/${fileExtension}` : `audio/${fileExtension}`;
-                                    let publicUrl = null;
-                                    try {
-                                        const uploadRes = await axios.post(
-                                            `${SUPABASE_URL}/storage/v1/object/omni-media/${fileName}`,
-                                            buffer,
-                                            {
-                                                headers: {
-                                                    'apikey': SUPABASE_KEY,
-                                                    'Authorization': `Bearer ${SUPABASE_KEY}`,
-                                                    'Content-Type': mimeType,
-                                                    'x-upsert': 'true'
-                                                }
-                                            }
-                                        );
-                                        if (uploadRes.status === 200 || uploadRes.status === 201) {
-                                            publicUrl = `${SUPABASE_URL}/storage/v1/object/public/omni-media/${fileName}`;
-                                            console.log(`[Gateway] Uploaded media to Supabase Storage: ${publicUrl}`);
-                                        }
-                                    } catch (uploadErr) {
-                                        if (uploadErr.response?.status !== 402 && !uploadErr.message?.includes('402')) {
-                                            console.error(`[Gateway] Supabase Storage upload error:`, uploadErr.message);
-                                        }
-                                        // fallback: save locally
-                                        const filePath = require('path').join(UPLOADS_DIR, fileName);
-                                        require('fs').writeFileSync(filePath, buffer);
-                                        publicUrl = `/static/uploads/${fileName}`;
-                                        console.log(`[Gateway Local Storage] Saved incoming media locally: /static/uploads/${fileName}`);
-                                    }
-                                    
-                                    if (publicUrl) {
-                                        if (mediaType === 'image') {
-                                            const caption = messageContent.imageMessage.caption || '';
-                                            text = `MEDIA_IMAGE:${publicUrl}${caption ? '|CAPTION:' + caption : ''}`;
-                                        } else {
-                                            text = `MEDIA_AUDIO:${publicUrl}`;
-                                        }
-                                    }
-                                } else {
-                                    try {
-                                        const fs = require('fs');
-                                        const logPath = require('path').join(__dirname, '..', '..', 'scratch', 'gateway_errors.log');
-                                        fs.appendFileSync(logPath, `[${new Date().toISOString()}] downloadMediaMessage returned empty/null buffer. Msg key: ${JSON.stringify(msg.key)}\n`);
-                                    } catch (e) {}
-                                }
-                            } catch (mediaErr) {
-                                console.error(`[Gateway Error] Failed to download/save media:`, mediaErr.message);
-                                try {
-                                    const fs = require('fs');
-                                    const logPath = require('path').join(__dirname, '..', '..', 'scratch', 'gateway_errors.log');
-                                    fs.appendFileSync(logPath, `[${new Date().toISOString()}] downloadMediaMessage threw error: ${mediaErr.message}\nStack: ${mediaErr.stack}\nMsg: ${JSON.stringify(msg, null, 2)}\n\n`);
-                                } catch (e) {}
-                            }
-                        }
-                        
-                        if (!text) {
-                            if (messageContent.conversation) {
-                                text = messageContent.conversation;
-                            } else if (messageContent.extendedTextMessage) {
-                                text = messageContent.extendedTextMessage.text;
-                            } else if (messageContent.locationMessage) {
-                                const lat = messageContent.locationMessage.degreesLatitude;
-                                const lng = messageContent.locationMessage.degreesLongitude;
-                                text = `https://maps.google.com/maps?q=${lat},${lng}`;
-                            } else if (messageContent.liveLocationMessage) {
-                                const lat = messageContent.liveLocationMessage.degreesLatitude;
-                                const lng = messageContent.liveLocationMessage.degreesLongitude;
-                                text = `https://maps.google.com/maps?q=${lat},${lng}`;
-                            } else if (messageContent.imageMessage) {
-                                text = messageContent.imageMessage.caption || '[╪╡┘ê╪▒╪⌐ / Image]';
-                            } else if (messageContent.videoMessage) {
-                                text = messageContent.videoMessage.caption || '[┘ü┘è╪»┘è┘ê / Video]';
-                            } else if (messageContent.audioMessage) {
-                                text = '[╪▒╪│╪º┘ä╪⌐ ╪╡┘ê╪¬┘è╪⌐ / Voice Note]';
-                            } else if (messageContent.documentMessage) {
-                                text = messageContent.documentMessage.caption || messageContent.documentMessage.fileName || '[┘à┘ä┘ü / Document]';
-                            } else if (messageContent.stickerMessage) {
-                                text = '[┘à┘ä╪╡┘é / Sticker]';
-                            } else if (messageContent.contactMessage || messageContent.contactsArrayMessage) {
-                                text = '[╪¼┘ç╪⌐ ╪º╪¬╪╡╪º┘ä / Contact]';
-                            } else if (messageContent.buttonsResponseMessage) {
-                                text = messageContent.buttonsResponseMessage.selectedButtonId;
-                            } else if (messageContent.templateButtonReplyMessage) {
-                                text = messageContent.templateButtonReplyMessage.selectedId;
-                            } else if (messageContent.listResponseMessage) {
-                                text = messageContent.listResponseMessage.title;
-                            } else {
-                                continue;
-                            }
-                        }
-                        
-                        if (!text) continue;
-                        
-                        if (isGroup) {
-                            // console.log(`[Gateway] Group msg in "${groupName}" from ${senderPhone} (Session ${id}): ${text}`);
-                            try {
-                                await axios.post(`${PYTHON_BACKEND_URL}/api/whatsapp/webhook/group_message`, {
-                                    group_id: senderJid,
-                                    group_name: groupName,
-                                    sender_phone: senderPhone,
-                                    sender_name: senderName,
-                                    message_text: text,
-                                    instance_id: id
-                                });
-                            } catch (err) {
-                                console.error(`[Webhook Error] Failed to forward group message to Python:`, err.message);
-                            }
-                        } else {
-                            // ≡ƒ¢í∩╕Å ╪¬╪«╪╖┘è ╪º┘ä╪▒╪│╪º╪ª┘ä ╪º┘ä╪╡╪º╪»╪▒╪⌐ ┘à┘å╪º (fromMe) ┘ä┘â┘è┘ä╪º ╪¬╪»╪«┘ä ╪»┘ê╪▒╪⌐ ╪º┘ä╪ú╪¬┘à╪¬╪⌐ ╪º┘ä╪¬┘ä┘é╪º╪ª┘è╪⌐
-                            if (msg.key.fromMe) {
-                                // ┘å╪¡┘ü╪╕┘ç╪º ┘ä┘ä╪»╪º╪┤╪¿┘ê╪▒╪» ╪º┘ä┘à┘ê╪¡╪»
-                                try {
-                                    await axios.post(`https://24seven-ai.com/api/db`, {
-                                        action: 'insert',
-                                        table: 'omnichannel_messages',
-                                        data: {
-                                            channel: 'whatsapp',
-                                            sender_id: senderPhone,
-                                            sender_name: 'Admin',
-                                            message_text: text,
-                                            is_from_admin: true,
-                                            read_by_admin: true,
-                                            whatsapp_instance_id: id
-                                        }
-                                    }, { timeout: 4000 });
-                                } catch (echoErr) {}
-                                continue;  // Γ¢ö ┘ä╪º ╪¬╪▒╪│┘ä ┘ä┘Ç Python - ┘ç╪░╪º ┘à┘å╪╣ Echo Loop
-                            }
-                            console.log(`[Gateway] Incoming msg from ${senderPhone} (Session ${id}): ${text}`);
-                            let pythonSuccess = false;
-                            try {
-                                const res = await axios.post(`${PYTHON_BACKEND_URL}/api/whatsapp/webhook/local/${id}`, {
-                                    sender_phone: senderPhone,
-                                    sender_name: msg.key.fromMe ? 'Admin' : senderName,
-                                    message_text: text,
-                                    is_from_admin: msg.key.fromMe ? true : false
-                                });
-                                if (res.status === 200) {
-                                    pythonSuccess = true;
-                                    console.log(`Γ£à [Gateway -> Python Webhook] Forwarded msg from ${senderPhone} to Server (Status: 200 OK)`);
-                                }
-                            } catch (err) {
-                                console.error(`[Webhook Error] Failed to forward message to Python:`, err.message);
-                            }
-
-                            // ≡ƒ¢í∩╕Å Fallback: ╪¡┘ü╪╕ ╪º┘ä╪▒╪│╪º┘ä╪⌐ ┘ü┘è Neon Postgres
-                            if (!pythonSuccess) {
-                                try {
-                                    await axios.post(`https://24seven-ai.com/api/db`, {
-                                        action: 'insert',
-                                        table: 'omnichannel_messages',
-                                        data: {
-                                            channel: 'whatsapp',
-                                            sender_id: senderPhone,
-                                            sender_name: msg.key.fromMe ? 'Admin' : senderName,
-                                            message_text: text,
-                                            is_from_admin: msg.key.fromMe ? true : false,
-                                            read_by_admin: msg.key.fromMe ? true : false,
-                                            whatsapp_instance_id: id
-                                        }
-                                    }, { timeout: 4000 });
-                                    console.log(`[Gateway Fallback] Direct insert into Neon DB succeeded for msg from ${senderPhone}`);
-                                } catch (dbErr) {
-                                    console.error(`[Gateway Direct DB Error]:`, dbErr.message);
-                                }
-                            }
+                if (!senderPhone || senderPhone === rawLid) {
+                    const possiblePn = msg.senderPn || (msg.key && (msg.key.participantAlt || msg.key.remoteJidAlt));
+                    if (possiblePn) {
+                        resolvedJid = possiblePn;
+                        senderPhone = resolvedJid.split('@')[0].split(':')[0];
+                        lidToPhoneCache[rawLid] = senderPhone;
+                    } else {
+                        const lastOut = lastOutboundRecipientBySession[instanceId];
+                        if (lastOut && (Date.now() - lastOut.timestamp < 120 * 60 * 1000)) {
+                            senderPhone = lastOut.phone.split(':')[0];
+                            resolvedJid = `${senderPhone}@s.whatsapp.net`;
+                            lidToPhoneCache[rawLid] = senderPhone;
                         }
                     }
                 }
+            }
+        }
+        
+        const senderName = msg.pushName || senderPhone;
+        
+        // Extract message content recursively
+        while (messageContent) {
+            if (messageContent.ephemeralMessage) messageContent = messageContent.ephemeralMessage.message;
+            else if (messageContent.viewOnceMessage) messageContent = messageContent.viewOnceMessage.message;
+            else if (messageContent.viewOnceMessageV2) messageContent = messageContent.viewOnceMessageV2.message;
+            else if (messageContent.viewOnceMessageV2Extension) messageContent = messageContent.viewOnceMessageV2Extension.message;
+            else if (messageContent.documentWithCaptionMessage) messageContent = messageContent.documentWithCaptionMessage.message;
+            else if (messageContent.editedMessage) messageContent = messageContent.editedMessage.message?.protocolMessage?.editedMessage || messageContent.editedMessage.message;
+            else break;
+        }
+
+        if (!messageContent) return;
+
+        // Skip internal protocol messages
+        if (messageContent.protocolMessage || 
+            messageContent.senderKeyDistributionMessage || 
+            messageContent.reactionMessage || 
+            messageContent.keepInChatMessage || 
+            messageContent.keyExpiration ||
+            messageContent.pinInChatMessage) {
+            return;
+        }
+        
+        let text = '';
+        let mediaType = null;
+        let fileExtension = '';
+        
+        if (messageContent.imageMessage) {
+            mediaType = 'image';
+            const mime = messageContent.imageMessage.mimetype || 'image/jpeg';
+            fileExtension = mime.split('/')[1] || 'jpg';
+            if (fileExtension === 'jpeg') fileExtension = 'jpg';
+        } else if (messageContent.audioMessage) {
+            mediaType = 'audio';
+            const mime = messageContent.audioMessage.mimetype || 'audio/ogg';
+            fileExtension = mime.includes('ogg') ? 'ogg' : 'mp3';
+        }
+        
+        if (mediaType) {
+            try {
+                const buffer = await downloadMediaMessage(
+                    msg,
+                    'buffer',
+                    {},
+                    {
+                        logger: pino({ level: 'silent' }),
+                        reuploadRequest: waSock.updateMediaMessage
+                    }
+                );
+                if (buffer) {
+                    const fileName = `${mediaType}_${Date.now()}_${Math.floor(Math.random() * 10000)}.${fileExtension}`;
+                    const mimeType = mediaType === 'image' ? `image/${fileExtension}` : `audio/${fileExtension}`;
+                    let publicUrl = null;
+                    try {
+                        const uploadRes = await axios.post(
+                            `${SUPABASE_URL}/storage/v1/object/omni-media/${fileName}`,
+                            buffer,
+                            {
+                                headers: {
+                                    'apikey': SUPABASE_KEY,
+                                    'Authorization': `Bearer ${SUPABASE_KEY}`,
+                                    'Content-Type': mimeType,
+                                    'x-upsert': 'true'
+                                }
+                            }
+                        );
+                        if (uploadRes.status === 200 || uploadRes.status === 201) {
+                            publicUrl = `${SUPABASE_URL}/storage/v1/object/public/omni-media/${fileName}`;
+                        }
+                    } catch (uploadErr) {
+                        const filePath = path.join(UPLOADS_DIR, fileName);
+                        fs.writeFileSync(filePath, buffer);
+                        publicUrl = `/static/uploads/${fileName}`;
+                    }
+                    
+                    if (publicUrl) {
+                        if (mediaType === 'image') {
+                            const caption = messageContent.imageMessage.caption || '';
+                            text = `MEDIA_IMAGE:${publicUrl}${caption ? '|CAPTION:' + caption : ''}`;
+                        } else {
+                            text = `MEDIA_AUDIO:${publicUrl}`;
+                        }
+                    }
+                }
+            } catch (mediaErr) {
+                console.error(`[Gateway Error] Failed to download media:`, mediaErr.message);
+            }
+        }
+        
+        if (!text) {
+            if (messageContent.conversation) {
+                text = messageContent.conversation;
+            } else if (messageContent.extendedTextMessage) {
+                text = messageContent.extendedTextMessage.text;
+            } else if (messageContent.locationMessage) {
+                const lat = messageContent.locationMessage.degreesLatitude;
+                const lng = messageContent.locationMessage.degreesLongitude;
+                text = `https://maps.google.com/maps?q=${lat},${lng}`;
+            } else if (messageContent.liveLocationMessage) {
+                const lat = messageContent.liveLocationMessage.degreesLatitude;
+                const lng = messageContent.liveLocationMessage.degreesLongitude;
+                text = `https://maps.google.com/maps?q=${lat},${lng}`;
+            } else if (messageContent.imageMessage) {
+                text = messageContent.imageMessage.caption || '[صورة / Image]';
+            } else if (messageContent.videoMessage) {
+                text = messageContent.videoMessage.caption || '[فيديو / Video]';
+            } else if (messageContent.audioMessage) {
+                text = '[رسالة صوتية / Voice Note]';
+            } else if (messageContent.documentMessage) {
+                text = messageContent.documentMessage.caption || messageContent.documentMessage.fileName || '[ملف / Document]';
+            } else if (messageContent.stickerMessage) {
+                text = '[ملصق / Sticker]';
+            } else if (messageContent.contactMessage || messageContent.contactsArrayMessage) {
+                text = '[جهة اتصال / Contact]';
+            } else if (messageContent.buttonsResponseMessage) {
+                text = messageContent.buttonsResponseMessage.selectedButtonId;
+            } else if (messageContent.templateButtonReplyMessage) {
+                text = messageContent.templateButtonReplyMessage.selectedId;
+            } else if (messageContent.listResponseMessage) {
+                text = messageContent.listResponseMessage.title;
+            } else {
+                return;
+            }
+        }
+        
+        if (!text) return;
+        
+        if (isGroup) {
+            try {
+                await axios.post(`${PYTHON_BACKEND_URL}/api/whatsapp/webhook/group_message`, {
+                    group_id: senderJid,
+                    group_name: groupName,
+                    sender_phone: senderPhone,
+                    sender_name: senderName,
+                    message_text: text,
+                    instance_id: instanceId
+                });
+            } catch (err) {}
+        } else {
+            if (msg.key.fromMe) {
+                console.log(`[Gateway Debug] SKIPPED fromMe msg to ${senderPhone} (session ${instanceId}): ${text?.substring(0,50)}`);
+                try {
+                    await axios.post(`https://24seven-ai.com/api/db`, {
+                        action: 'insert',
+                        table: 'omnichannel_messages',
+                        data: {
+                            channel: 'whatsapp',
+                            sender_id: senderPhone,
+                            sender_name: 'Admin',
+                            message_text: text,
+                            is_from_admin: true,
+                            read_by_admin: true,
+                            whatsapp_instance_id: instanceId
+                        }
+                    }, { timeout: 4000 });
+                } catch (echoErr) {}
+                return;
+            }
+            
+            console.log(`\n📩 [Gateway Incoming] رسالة واردة من ${senderPhone} (${senderName}): "${text}"`);
+            let pythonSuccess = false;
+            try {
+                const res = await axios.post(`${PYTHON_BACKEND_URL}/api/whatsapp/webhook/local/${instanceId}`, {
+                    sender_phone: senderPhone,
+                    sender_name: msg.key.fromMe ? 'Admin' : senderName,
+                    message_text: text,
+                    instance_id: instanceId,
+                    is_from_admin: false,
+                    raw_payload: msg
+                }, { timeout: 15000 });
+                if (res.status === 200) {
+                    pythonSuccess = true;
+                    console.log(`✅ [Gateway Forward] تم تمرير الرسالة بنجاح إلى معالج الذكاء الاصطناعي (Python)`);
+                }
+            } catch (pyErr) {
+                console.error(`[Gateway Forward Error] Python server error:`, pyErr.message);
+            }
+            
+            if (!pythonSuccess) {
+                try {
+                    await axios.post(`https://24seven-ai.com/api/db`, {
+                        action: 'insert',
+                        table: 'omnichannel_messages',
+                        data: {
+                            channel: 'whatsapp',
+                            sender_id: senderPhone,
+                            sender_name: msg.key.fromMe ? 'Admin' : senderName,
+                            message_text: text,
+                            is_from_admin: msg.key.fromMe ? true : false,
+                            read_by_admin: msg.key.fromMe ? true : false,
+                            whatsapp_instance_id: instanceId
+                        }
+                    }, { timeout: 4000 });
+                } catch (dbErr) {}
+            }
+        }
+    }
+
+    // Listen for contacts.update to populate lidToPhoneCache
+    sock.ev.on('contacts.update', (updates) => {
+        if (!Array.isArray(updates)) return;
+        for (const c of updates) {
+            if (c.lid && c.id) {
+                const rawLid = c.lid.split('@')[0].split(':')[0];
+                const phone = c.id.split('@')[0].split(':')[0];
+                if (rawLid && phone) {
+                    lidToPhoneCache[rawLid] = phone;
+                    console.log(`[Gateway LID] Mapped ${rawLid}@lid → ${phone}`);
+                }
+            }
+        }
+    });
+
+    sock.ev.on('contacts.set', ({ contacts }) => {
+        if (!Array.isArray(contacts)) return;
+        for (const c of contacts) {
+            if (c.lid && c.id) {
+                const rawLid = c.lid.split('@')[0].split(':')[0];
+                const phone = c.id.split('@')[0].split(':')[0];
+                if (rawLid && phone) {
+                    lidToPhoneCache[rawLid] = phone;
+                }
+            }
+        }
+        console.log(`[Gateway LID] contacts.set loaded ${contacts.length} contacts, cache size=${Object.keys(lidToPhoneCache).length}`);
+    });
+
+    sock.ev.on('messages.upsert', async (m) => {
+    
+        // Cache messages into msgStore
+        if (m.messages) {
+            for (const msg of m.messages) {
+                if (msg.key && msg.message) {
+                    const sKey = `${msg.key.remoteJid}_${msg.key.id}`;
+                    msgStore.set(sKey, msg.message);
+                    if (msgStore.size > 2000) {
+                        const firstKey = msgStore.keys().next().value;
+                        msgStore.delete(firstKey);
+                    }
+                }
+            }
+        }
+
+        // Process incoming messages
+        if (m.messages && Array.isArray(m.messages)) {
+            for (const msg of m.messages) {
+                const hasMsg = !!msg.message;
+                const jid = msg.key?.remoteJid || '';
+
+                if (!hasMsg && jid.endsWith('@lid') && !msg.key?.fromMe) {
+                    // Mark this LID message as pending — wait for messages.update retry
+                    const pendingKey = `${jid}_${msg.key?.id}`;
+                    lidPendingMessages.set(pendingKey, { instanceId: id, timestamp: Date.now(), pushName: msg.pushName });
+                    
+                    // Clean old pending (>5 min)
+                    const cutoff = Date.now() - 5 * 60 * 1000;
+                    for (const [k, v] of lidPendingMessages) {
+                        if (v.timestamp < cutoff) lidPendingMessages.delete(k);
+                    }
+                    continue;
+                }
+
+                await processIncomingWAMessage(msg, id, sock);
+            }
+        }
+    });
+
+    sock.ev.on('messages.update', async (updates) => {
+        if (!Array.isArray(updates)) return;
+        for (const update of updates) {
+            if (update.update && update.update.message) {
+                const pendingKey = `${update.key?.remoteJid}_${update.key?.id}`;
+                const pending = lidPendingMessages.get(pendingKey);
+                if (pending) lidPendingMessages.delete(pendingKey);
+
+                const fullMsg = {
+                    key: update.key,
+                    message: update.update.message,
+                    pushName: update.update.pushName || (pending && pending.pushName) || undefined,
+                    ...update.update
+                };
+                await processIncomingWAMessage(fullMsg, id, sock);
+            }
+        }
+    });
             }
         }
     });
@@ -705,7 +786,9 @@ app.delete(['/api/whatsapp/instances/:id', '/instance/:id'], async (req, res) =>
 // Startup hook: load all local instances from Neon DB, or fallback to disk sessions if offline
 async function loadLocalInstances() {
     console.log('[Gateway] Loading local instances...');
+    const defaultInstanceId = '692921bb-a5df-451d-8527-e1ee55a736f4';
     let loadedFromCloud = false;
+
     try {
         const res = await axios.post(`https://24seven-ai.com/api/db`, {
             action: 'select',
@@ -717,11 +800,16 @@ async function loadLocalInstances() {
         if (res.status === 200 && Array.isArray(res.data?.data) && res.data.data.length > 0) {
             console.log(`[Gateway] Found ${res.data.data.length} local instances in database.`);
             for (const inst of res.data.data) {
-                if (inst.status === 'connected') {
-                    console.log(`[Gateway Auto-Start] Initializing connected instance ${inst.id}...`);
+                const sessionDir = path.join(SESSIONS_DIR, `session_${inst.id}`);
+                const credsPath = path.join(sessionDir, 'creds.json');
+                const hasValidCreds = fs.existsSync(credsPath) && fs.statSync(credsPath).size > 100;
+
+                // Start if it is the default primary instance or if it already has valid creds on disk
+                if (inst.id === defaultInstanceId || hasValidCreds) {
+                    console.log(`[Gateway Auto-Start] Starting instance ${inst.id} (${inst.phone || 'Primary'})...`);
                     initSession(inst.id);
                 } else {
-                    console.log(`[Gateway Auto-Start] Skipping unconnected instance ${inst.id} until requested.`);
+                    console.log(`[Gateway Auto-Start] Skipping unlinked secondary instance ${inst.id}.`);
                 }
             }
             loadedFromCloud = true;
@@ -730,27 +818,13 @@ async function loadLocalInstances() {
         console.warn(`[Gateway Notice] Cloud lookup unavailable. Switching to local session storage fallback...`);
     }
 
-    // Fallback: Scan disk sessions folder ONLY for sessions with valid creds.json
-    if (!loadedFromCloud) {
-        try {
-            if (fs.existsSync(SESSIONS_DIR)) {
-                const files = fs.readdirSync(SESSIONS_DIR);
-                const authenticatedSessions = files.filter(f => {
-                    if (!f.startsWith('session_')) return false;
-                    const credsPath = path.join(SESSIONS_DIR, f, 'creds.json');
-                    return fs.existsSync(credsPath) && fs.statSync(credsPath).size > 100;
-                }).map(f => f.replace('session_', ''));
-                
-                console.log(`[Gateway Disk Fallback] Found ${authenticatedSessions.length} active paired sessions on local disk. Initializing...`);
-                for (const sid of authenticatedSessions) {
-                    if (!activeSessions[sid]) {
-                        initSession(sid);
-                    }
-                }
-            }
-        } catch (diskErr) {
-            console.error('[Gateway Disk Error] Failed to load local disk sessions:', diskErr.message);
-        }
+    // Always ensure the default primary service instance is running,
+    // but only if it wasn't already started from the DB loop above
+    if (!activeSessions[defaultInstanceId] || activeSessions[defaultInstanceId].status === undefined) {
+        console.log(`[Gateway Auto-Start] Starting primary service instance ${defaultInstanceId}...`);
+        initSession(defaultInstanceId);
+    } else {
+        console.log(`[Gateway Auto-Start] Primary instance ${defaultInstanceId} already started (status=${activeSessions[defaultInstanceId].status}), skipping duplicate start.`);
     }
 }
 
