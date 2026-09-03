@@ -563,9 +563,6 @@ async function initSession(id, forceReconnect = false) {
             }
         }
     });
-            }
-        }
-    });
 
     return activeSessions[id];
 }
