@@ -277,8 +277,31 @@
     </div>
 
     <!-- 2. Hero Section -->
-    <header class="pt-32 md:pt-40 pb-20 relative overflow-hidden">
+    <header class="pt-28 md:pt-36 pb-16 relative overflow-hidden">
         <div class="container mx-auto px-6 relative z-10">
+
+            <!-- Step Progress Bar (Item 10) -->
+            <div class="max-w-4xl mx-auto mb-10 px-2">
+                <div class="glass-card py-3 px-4 md:px-6 rounded-2xl border border-blue-500/25 bg-slate-900/85 backdrop-blur-md shadow-lg">
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs md:text-sm font-bold">
+                        <div class="flex items-center gap-2 text-blue-400">
+                            <span class="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black shrink-0">١</span>
+                            <span>معاينة السيارة (في مقرنا أو عبر مندوبنا في منزلك)</span>
+                        </div>
+                        <i class="fas fa-chevron-left text-slate-600 hidden sm:block text-xs rtl-flip"></i>
+                        <div class="flex items-center gap-2 text-amber-400">
+                            <span class="w-6 h-6 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center text-xs font-black shrink-0">٢</span>
+                            <span>تثبيت العرض في العقد</span>
+                        </div>
+                        <i class="fas fa-chevron-left text-slate-600 hidden sm:block text-xs rtl-flip"></i>
+                        <div class="flex items-center gap-2 text-emerald-400">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center text-xs font-black shrink-0">٣</span>
+                            <span>توقيع العقد والاستلام الفوري</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="max-w-4xl mx-auto text-center">
                 
                 <!-- Badge -->
@@ -315,7 +338,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs md:text-sm text-slate-400 max-w-3xl mx-auto pt-6 border-t border-slate-800/80">
                     <div class="flex items-center justify-center gap-2">
                         <i class="fas fa-check-circle text-emerald-400"></i>
-                        <span data-key="proof_1">تعاقد رسمي من الإسكندرية وجميع المحافظات</span>
+                        <span data-key="proof_1">معاينة بمقرنا أو في منزلك لجميع المحافظات</span>
                     </div>
                     <div class="flex items-center justify-center gap-2">
                         <i class="fas fa-check-circle text-emerald-400"></i>
@@ -330,6 +353,41 @@
             </div>
         </div>
     </header>
+
+    <!-- Stats Bar (شريط إحصائيات تعزيز الثقة - Item 4) -->
+    <div class="relative z-20 -mt-6 mb-8 max-w-5xl mx-auto px-6">
+        <div class="glass-card py-5 px-6 rounded-2xl border border-slate-700/80 shadow-2xl bg-slate-900/95 backdrop-blur-xl">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center divide-y md:divide-y-0 md:divide-x md:divide-x-reverse divide-slate-800">
+                <div class="flex items-center justify-center gap-3.5 pt-3 md:pt-0">
+                    <div class="w-12 h-12 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-400 flex items-center justify-center text-xl shrink-0">
+                        <i class="fas fa-car-side"></i>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-2xl font-black text-white">+250</div>
+                        <div class="text-xs text-slate-300 font-bold">أكثر من 250 سيارة مُدارة</div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-center gap-3.5 pt-3 md:pt-0">
+                    <div class="w-12 h-12 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center text-xl shrink-0">
+                        <i class="fas fa-history"></i>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-2xl font-black text-amber-400">5 سنوات</div>
+                        <div class="text-xs text-slate-300 font-bold">من التشغيل الميداني</div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-center gap-3.5 pt-3 md:pt-0">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center text-xl shrink-0">
+                        <i class="fas fa-handshake"></i>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-2xl font-black text-emerald-400">+30 كياناً</div>
+                        <div class="text-xs text-slate-300 font-bold">شركاء مع أكثر من 30 كياناً خدمياً</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- 3. Pillars / What We Cover (ضمانات التشغيل) -->
     <section class="py-16 bg-slate-950/60 border-y border-slate-900">
@@ -371,8 +429,8 @@
                     <div class="w-14 h-14 rounded-xl bg-emerald-600/10 border border-emerald-500/20 flex items-center justify-center text-2xl text-emerald-400 mb-5 group-hover:bg-emerald-600 group-hover:text-white transition duration-300">
                         <i class="fas fa-shield-alt"></i>
                     </div>
-                    <h3 class="text-xl font-bold text-white mb-2" data-key="pillar_4_t">إدارة التأمين والحوادث</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed" data-key="pillar_4_d">إدارة كاملة لملفات الإصلاح والتأمين مع بدل توقف متفق عليه وفق شروط العقد وبنسبة تصل لـ 50%.</p>
+                    <h3 class="text-xl font-bold text-white mb-2" data-key="pillar_4_t">إدارة التأمين وبدل التوقف</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed" data-key="pillar_4_d">في حال تعرض السيارة لحادث (بقدر الله)، تتحمل الشركة كامل إجراءات الإصلاح عبر التأمين الشامل دون أي تكليف مالي إضافي عليك، مع بدل توقف بنسبة ٥٠٪ من الراتب خلال أيام التوقف الفعلية وتقرير مصور يومي عبر الواتساب.</p>
                 </div>
 
             </div>
@@ -496,12 +554,20 @@
                                 <i class="fas fa-bolt text-amber-400"></i>
                                 <span id="eligibilityBadge" data-key="badge_eligible">مؤهلة للتشغيل الفوري</span>
                             </span>
-                            <span class="text-xs text-slate-400" data-key="txt_indicative">تقدير أولي</span>
+                            <span class="text-xs text-emerald-400 font-bold flex items-center gap-1" data-key="txt_indicative">
+                                <i class="fas fa-badge-check"></i> عائد موثق بالعقد
+                            </span>
                         </div>
 
                         <div class="text-slate-400 text-xs font-bold mb-1" data-key="txt_estimated_income">الراتب الشهري التقديري</div>
-                        <div class="text-4xl md:text-5xl font-black text-amber-400 mb-4 tracking-tight" id="monthlyIncomeDisplay">
+                        <div class="text-4xl md:text-5xl font-black text-amber-400 mb-2 tracking-tight" id="monthlyIncomeDisplay">
                             20,000 <span class="text-lg font-bold text-white">ج.م</span>
+                        </div>
+
+                        <!-- Item 8: Comparative Annual Return sentence below monthly salary -->
+                        <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl mb-4 text-xs text-amber-200 leading-relaxed font-semibold">
+                            <i class="fas fa-chart-line text-amber-400 ml-1"></i>
+                            هذا يعادل عائداً سنوياً يتراوح بين 18% إلى 24% (بعد خصم قيمة استهلاك الإطارات والصيانة التي نتحملها بالكامل)، مقابل 8% فقط في شهادات البنوك.
                         </div>
 
                         <!-- Multi-Year Breakdown -->
@@ -524,10 +590,15 @@
                             </div>
                         </div>
 
-                        <!-- Disclaimer -->
-                        <p class="text-[10px] text-slate-500 mt-4 leading-relaxed border-t border-slate-800/60 pt-3" data-key="calc_disclaimer">
-                            * هذه الأرقام استرشادية مبنية على متوسطات السوق ومعدل 2% شهرياً. يُثبت السعر والراتب النهائي بعد المعاينة الفنية واعتماد السيارة في العقد الرسمي.
-                        </p>
+                        <!-- Item 2: Guarantee Box modifying the "استرشادية" uncertainty -->
+                        <div class="mt-4 p-3 rounded-xl bg-slate-950/80 border border-emerald-500/30 text-slate-300 text-xs leading-relaxed space-y-1">
+                            <div class="flex items-center gap-1.5 text-emerald-400 font-bold text-xs">
+                                <i class="fas fa-shield-check"></i> ضمان العائد من 24Seven:
+                            </div>
+                            <p class="text-slate-300 text-[11px] leading-relaxed" data-key="calc_disclaimer">
+                                نضمن أن يتراوح العائد الشهري النهائي بين 95% إلى 105% من القيمة الظاهرة في الحاسبة، ولا يتم تغيير العرض النهائي إلا بعد المعاينة الفعلية وبموافقتك المسبقة.
+                            </p>
+                        </div>
 
                         <!-- Action Button inside calc -->
                         <a href="#apply" onclick="prefillFormFromCalc()" class="w-full mt-5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-black py-3.5 px-4 rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition transform hover:-translate-y-0.5">
@@ -556,6 +627,47 @@
 
                 </div>
 
+            </div>
+
+            <!-- Item 7: Trust Badges (شارات الثقة أسفل الحاسبة مباشرة) -->
+            <div class="max-w-4xl mx-auto mt-12 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="glass-card p-4 rounded-2xl border border-slate-700/80 flex items-center gap-3.5 bg-slate-900/70 shadow-lg">
+                    <div class="w-11 h-11 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-400 flex items-center justify-center text-xl shrink-0">
+                        <i class="fas fa-file-contract"></i>
+                    </div>
+                    <span class="text-sm font-bold text-white">عقد موثق قانونياً</span>
+                </div>
+                <div class="glass-card p-4 rounded-2xl border border-slate-700/80 flex items-center gap-3.5 bg-slate-900/70 shadow-lg">
+                    <div class="w-11 h-11 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 flex items-center justify-center text-xl shrink-0">
+                        <i class="fas fa-satellite-dish"></i>
+                    </div>
+                    <span class="text-sm font-bold text-white">نظام تتبع GPS لحظي</span>
+                </div>
+                <div class="glass-card p-4 rounded-2xl border border-slate-700/80 flex items-center gap-3.5 bg-slate-900/70 shadow-lg">
+                    <div class="w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center text-xl shrink-0">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <span class="text-sm font-bold text-white leading-snug">التأمين شامل ضد الحوادث والغير باسمك أنت المالك</span>
+                </div>
+            </div>
+
+            <!-- Item 12: Traveling Representative Block (فقرة المعاينة المنزلية بالمجان) -->
+            <div class="max-w-4xl mx-auto mt-8">
+                <div class="glass-card p-6 md:p-8 rounded-3xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-slate-900/90 to-blue-900/20 relative overflow-hidden shadow-xl">
+                    <div class="flex flex-col md:flex-row items-center gap-6">
+                        <div class="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center text-3xl shrink-0">
+                            <i class="fas fa-route"></i>
+                        </div>
+                        <div class="space-y-2 text-right">
+                            <h3 class="text-lg md:text-xl font-black text-amber-300 flex items-center gap-2">
+                                <i class="fas fa-home"></i> خدمة المعاينة المنزلية بالمجان (لكافة المحافظات)
+                            </h3>
+                            <p class="text-xs md:text-sm text-slate-300 leading-relaxed">
+                                للملاك من خارج الإسكندرية، نرسل مندوباً معتمداً من الشركة يحمل نسخة من العقد المختوم، لإجراء المعاينة الفنية في منزلك أو مكتبك في أي محافظة. كل ما عليك هو إرسال فيديو مبدئي للسيارة عبر واتساب لتأكيد الجدية، وسنحدد موعداً يناسبك. بهذه الخدمة، لم يعد السفر إلى الإسكندرية عائقاً أمام استثمار سيارتك معنا.
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
         </div>
@@ -732,6 +844,109 @@
         </div>
     </section>
 
+    <!-- 5.8 Testimonials Section (شهادات الملاك - Item 5) -->
+    <section class="py-20 bg-slate-950 border-t border-slate-900 overflow-hidden relative">
+        <div class="container mx-auto px-6 max-w-5xl">
+            
+            <div class="text-center mb-14">
+                <span class="text-amber-400 text-xs md:text-sm font-bold uppercase tracking-wider block mb-2">ثقة متوارثة وتجارب حقيقية</span>
+                <h2 class="text-3xl md:text-4xl font-extrabold text-white">ماذا يقول ملاك السيارات عن تجربتهم معنا؟</h2>
+                <p class="text-slate-400 text-sm mt-2">شهادات موثقة من واقع التشغيل الميداني اليومي لأسطول 24Seven</p>
+            </div>
+
+            <!-- Carousel Wrapper -->
+            <div class="relative">
+                <div class="overflow-hidden" id="testimonialCarousel" dir="ltr">
+                    <div class="flex transition-transform duration-500 ease-in-out" id="testimonialTrack">
+                        
+                        <!-- Card 1 -->
+                        <div class="w-full shrink-0 px-3" dir="rtl">
+                            <div class="glass-card p-8 rounded-3xl border border-slate-700/80 bg-slate-900/80 relative shadow-2xl">
+                                <div class="flex items-center gap-1 text-amber-400 mb-4 text-sm">
+                                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                                </div>
+                                <p class="text-slate-200 text-sm md:text-base leading-relaxed mb-6 font-medium">
+                                    "تعاقدت بسيارتي كورولا ومنذ 8 شهور والدخل بينزل في ميعاده، مريت بظرف حادث بسيط والتقرير اليومي كان مطمئن جداً، وتم إنهاء كافة إجراءات التأمين وصرف بدل التوقف دون أي عناء مني."
+                                </p>
+                                <div class="flex items-center gap-3 pt-4 border-t border-slate-800">
+                                    <div class="w-12 h-12 rounded-full bg-blue-600/20 text-blue-400 font-black flex items-center justify-center text-lg border border-blue-500/30">
+                                        أ
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-white text-sm">المهندس أحمد من القاهرة</h4>
+                                        <span class="text-xs text-slate-400">مالك تويوتا كورولا · تعاقد منذ 8 أشهر</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card 2 -->
+                        <div class="w-full shrink-0 px-3" dir="rtl">
+                            <div class="glass-card p-8 rounded-3xl border border-slate-700/80 bg-slate-900/80 relative shadow-2xl">
+                                <div class="flex items-center gap-1 text-amber-400 mb-4 text-sm">
+                                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                                </div>
+                                <p class="text-slate-200 text-sm md:text-base leading-relaxed mb-6 font-medium">
+                                    "تعاقدت على سيارتي إكسباندر للتشغيل مع شركات البترول، احترافية تامة في الالتزام بمواعيد الصيانة الدورية بالتوكيل المعتمد، وتحويل الراتب أول كل شهر بدون أي تأخير."
+                                </p>
+                                <div class="flex items-center gap-3 pt-4 border-t border-slate-800">
+                                    <div class="w-12 h-12 rounded-full bg-amber-600/20 text-amber-400 font-black flex items-center justify-center text-lg border border-amber-500/30">
+                                        ط
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-white text-sm">أستاذ طارق من الإسكندرية</h4>
+                                        <span class="text-xs text-slate-400">مالك ميتسوبيشي إكسباندر · تعاقد سنوي مستمر</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card 3 -->
+                        <div class="w-full shrink-0 px-3" dir="rtl">
+                            <div class="glass-card p-8 rounded-3xl border border-slate-700/80 bg-slate-900/80 relative shadow-2xl">
+                                <div class="flex items-center gap-1 text-amber-400 mb-4 text-sm">
+                                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                                </div>
+                                <p class="text-slate-200 text-sm md:text-base leading-relaxed mb-6 font-medium">
+                                    "خدمة المعاينة المنزلية كانت ممتازة ووفرت عليّ عناء السفر للإسكندرية، المندوب وصل في ميعاده ومعه العقد المختوم وتمت المعاينة والتعاقد في منزلي بطنطا بكل أمان وسلاسة."
+                                </p>
+                                <div class="flex items-center gap-3 pt-4 border-t border-slate-800">
+                                    <div class="w-12 h-12 rounded-full bg-emerald-600/20 text-emerald-400 font-black flex items-center justify-center text-lg border border-emerald-500/30">
+                                        ح
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-white text-sm">دكتور حسام من طنطا</h4>
+                                        <span class="text-xs text-slate-400">مالك تويوتا هايس · مستفيد من خدمة المعاينة المنزلية</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Carousel Controls -->
+                <div class="flex justify-between items-center mt-6 px-2">
+                    <div class="flex gap-2" id="testimonialDots">
+                        <button onclick="goToTestimonial(0)" class="w-3 h-3 rounded-full bg-amber-400 transition" aria-label="Slide 1"></button>
+                        <button onclick="goToTestimonial(1)" class="w-3 h-3 rounded-full bg-slate-700 transition" aria-label="Slide 2"></button>
+                        <button onclick="goToTestimonial(2)" class="w-3 h-3 rounded-full bg-slate-700 transition" aria-label="Slide 3"></button>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="prevTestimonial()" class="w-10 h-10 rounded-xl bg-slate-900 border border-slate-700 text-white flex items-center justify-center hover:bg-slate-800 transition rtl-flip" aria-label="Previous">
+                            <i class="fas fa-chevron-right text-xs"></i>
+                        </button>
+                        <button onclick="nextTestimonial()" class="w-10 h-10 rounded-xl bg-slate-900 border border-slate-700 text-white flex items-center justify-center hover:bg-slate-800 transition rtl-flip" aria-label="Next">
+                            <i class="fas fa-chevron-left text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
     <!-- 6. Pre-Contract Guide & Requirements (دليل وبنود التعاقد) -->
     <section id="guide" class="py-20 relative">
         <div class="container mx-auto px-6">
@@ -742,11 +957,11 @@
                     <div>
                         <span class="text-blue-400 text-xs font-bold uppercase tracking-wider block mb-1" data-key="guide_kicker">دليل ما قبل التعاقد الرسمي</span>
                         <h2 class="text-2xl md:text-3xl font-black text-white" data-key="guide_title">متطلبات وبنود التعاقد قبل تسليم السيارة</h2>
-                        <p class="text-slate-400 text-xs mt-1.5" data-key="guide_location_note">
-                            <i class="fas fa-map-marker-alt text-amber-400 me-1"></i> نستقبل سيارات من جميع المحافظات، وتتم المعاينة الفنية والتعاقد الرسمي في <strong>مقر الشركة بالإسكندرية فقط</strong> بموعد مسبق.
+                        <p class="text-slate-300 text-xs mt-2 leading-relaxed max-w-3xl" data-key="guide_location_note">
+                            <i class="fas fa-map-marker-alt text-amber-400 me-1"></i> المعاينة الفنية تُجرى في مقرنا الرئيسي بالإسكندرية، وللملاك من خارج المحافظة نوفر خدمة المعاينة المنزلية عبر مندوب معتمد من الشركة يحمل نسخة من العقد المختوم، حيث نأتي إليك أينما كنت في جمهورية مصر العربية. المعاينة المنزلية مجانية، وتتم بعد التأكد من جدية الطلب عبر إرسال فيديو مبدئي للسيارة على واتساب.
                         </p>
                     </div>
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-3 shrink-0">
                         <button onclick="downloadContractGuide()" class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/40 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2">
                             <i class="fas fa-download"></i>
                             <span data-key="btn_download_guide">تحميل العقد ودليل البنود الكامل</span>
@@ -767,8 +982,8 @@
                     </div>
                     <div class="space-y-2">
                         <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-black text-sm flex items-center justify-center">2</div>
-                        <h4 class="font-bold text-white text-sm" data-key="step_2_t">معاينة بمقر الإسكندرية</h4>
-                        <p class="text-xs text-slate-400 leading-relaxed" data-key="step_2_d">فحص الحالة الميكانيكية والدهان ومطابقة الأوراق الرسمية بمقرنا بالإسكندرية.</p>
+                        <h4 class="font-bold text-white text-sm" data-key="step_2_t">معاينة بمقرنا أو في منزلك</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed" data-key="step_2_d">فحص الحالة الميكانيكية والدهان بمقرنا بالإسكندرية أو عبر مندوبنا المعتمد في منزلك لكافة المحافظات.</p>
                     </div>
                     <div class="space-y-2">
                         <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-black text-sm flex items-center justify-center">3</div>
@@ -804,7 +1019,7 @@
                             <li data-key="req_commit_1">سداد الراتب الشهري في موعد محدد بإيصال موثق أو تحويل.</li>
                             <li data-key="req_commit_2">تحمل الصيانة الدورية واستهلاك الإطارات والبطارية دورياً.</li>
                             <li data-key="req_commit_3">تحمل المخالفات المرورية التي تقع أثناء فترة التشغيل.</li>
-                            <li data-key="req_commit_4">إدارة ملفات الحوادث وبدل توقف يصل لـ 50% من الراتب.</li>
+                            <li data-key="req_commit_4">إدارة ملفات الحوادث والتأمين مع بدل توقف ٥٠٪ من الراتب خلال أيام التوقف الفعلية وتقرير مصور يومي عبر واتساب.</li>
                         </ul>
                     </div>
                 </div>
@@ -822,11 +1037,11 @@
                     <div id="fullContractArticles" class="hidden mt-4 space-y-3 text-xs text-slate-300">
                         <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
                             <h6 class="font-bold text-blue-400 mb-1">1. موضوع التعاقد وبيانات السيارة</h6>
-                            <p class="text-slate-400 leading-relaxed">يستكمل العقد النهائي ببيانات السيارة المعتمدة ومدة التعاقد وتاريخ البداية والنهاية بعد المعاينة بمقر الإسكندرية. وتُشغّل السيارة في نشاط الشركة المتفق عليه (شركات، مطارات، مؤتمرات)، ولا تستخدم في الجر أو السباقات أو أي استخدام يخالف القانون.</p>
+                            <p class="text-slate-400 leading-relaxed">يستكمل العقد النهائي ببيانات السيارة المعتمدة ومدة التعاقد وتاريخ البداية والنهاية بعد المعاينة بمقر الشركة أو عبر المندوب المعاين. وتُشغّل السيارة في نشاط الشركة المتفق عليه (شركات، مطارات، مؤتمرات)، ولا تستخدم في الجر أو السباقات أو أي استخدام يخالف القانون.</p>
                         </div>
                         <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
                             <h6 class="font-bold text-blue-400 mb-1">2. التزامات مالك السيارة</h6>
-                            <p class="text-slate-400 leading-relaxed">يُقر المالك بأن السيارة بحالة جيدة فنية وميكانيكية وقت الاستلام، ويلتزم بتقديم بوليصة تأمين شامل سارية، والموافقة على جهاز GPS، مع التزام بإخطار لا يقل عن 90 يوماً عند طلب إنهاء التعاقد.</p>
+                            <p class="text-slate-400 leading-relaxed">يُقر المالك بأن السيارة بحالة جيدة فنية وميكانيكية وقت الاستلام، ويلتزم بتقديم بوليصة تأمين شامل سارية، والموافقة على جهاز GPS، مع التزام بإخطار لا يقل عن 90 يوماً عند طلب إنهاء التعاقد، ويمكن التفاوض على مدة الإخطار وفقاً للشرط الجزائي المذكور في الأسئلة الشائعة.</p>
                         </div>
                         <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
                             <h6 class="font-bold text-blue-400 mb-1">3. التزامات الشركة أثناء التشغيل</h6>
@@ -838,7 +1053,7 @@
                         </div>
                         <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
                             <h6 class="font-bold text-blue-400 mb-1">5. التأمين والحوادث والضمان</h6>
-                            <p class="text-slate-400 leading-relaxed">تُراجع وثيقة التأمين وملف الحادث وتتولى الشركة إدارة الإصلاح والتسوية، مع صرف بدل توقف بنسبة 50% من الراتب أثناء فترة الإصلاح وفق شروط العقد.</p>
+                            <p class="text-slate-400 leading-relaxed">في حال تعرض السيارة لحادث (بقدر الله)، تتحمل الشركة كامل إجراءات الإصلاح عبر التأمين الشامل دون أي تكليف مالي إضافي عليك. تعمل فرق المتابعة لدينا على إنهاء إجراءات الإصلاح في أسرع وقت ممكن لتقليل فترة التوقف إلى الحد الأدنى. خلال فترة التوقف الفعلية، يحصل المالك على بدل توقف بنسبة ٥٠٪ من الراتب الشهري، محسوبة على أيام التوقف الفعلية فقط (من تاريخ دخول الورشة حتى تاريخ الانتهاء من الإصلاح). وسنقوم بإرسال تقرير مصور يومي عبر الواتساب لمتابعة حالة الإصلاح خطوة بخطوة حتى عودة السيارة للعمل بكامل طاقتها.</p>
                         </div>
                         <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
                             <h6 class="font-bold text-blue-400 mb-1">6. الراتب وطريقة السداد</h6>
@@ -846,7 +1061,7 @@
                         </div>
                         <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
                             <h6 class="font-bold text-blue-400 mb-1">7. الإنهاء والشرط الجزائي</h6>
-                            <p class="text-slate-400 leading-relaxed">فسخ العقد عند الإخلال بالاستخدام المتفق عليه أو التخلف عن السداد، مع إمكانية إدراج شرط جزائي عند مخالفة البنود.</p>
+                            <p class="text-slate-400 leading-relaxed">فسخ العقد عند الإخلال بالاستخدام المتفق عليه أو التخلف عن السداد، مع إمكانية إدراج شرط جزائي مخفض عند الرغبة في إنهاء العقد مبكراً لتيسير الأمور عليك.</p>
                         </div>
                         <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
                             <h6 class="font-bold text-blue-400 mb-1">8. تسوية النزاع والاختصاص القضائي والنسخ</h6>
@@ -888,85 +1103,62 @@
         </div>
     </section>
 
-    <!-- 8. Application Submission Form (نموذج تقديم طلب المراجعة) -->
+    <!-- 8. Application Submission Form (نموذج تقديم طلب المراجعة - Item 9) -->
     <section id="apply" class="py-20 bg-slate-950 border-t border-slate-900">
         <div class="container mx-auto px-6">
             
-            <div class="max-w-3xl mx-auto glass-card p-8 md:p-12 rounded-3xl border border-slate-700 shadow-2xl relative">
+            <div class="max-w-2xl mx-auto glass-card p-8 md:p-12 rounded-3xl border border-slate-700 shadow-2xl relative">
                 
-                <div class="text-center mb-10">
+                <div class="text-center mb-8">
                     <span class="text-amber-400 text-xs font-bold uppercase tracking-wider block mb-2" data-key="form_kicker">انضم لأسطولنا الآن</span>
                     <h2 class="text-3xl font-black text-white mb-2" data-key="form_title">طلب مراجعة ومعاينة السيارة</h2>
-                    <p class="text-slate-400 text-sm" data-key="form_desc">املأ البيانات وسيقوم مسؤول التعاقدات بالتواصل معك خلال 24 ساعة لترتيب المعاينة</p>
+                    <p class="text-slate-400 text-sm" data-key="form_desc">سجل بياناتك الأساسية وسيقوم مسؤول التعاقدات بالتواصل معك لترتيب المعاينة</p>
                 </div>
 
-                <form id="investmentForm" onsubmit="handleFormSubmit(event)" class="space-y-5">
+                <form id="investmentForm" onsubmit="handleFormSubmit(event)" class="space-y-4">
                     
-                    <!-- Full Name & Phone -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-300 mb-1.5" data-key="form_name">الاسم بالكامل *</label>
-                            <input type="text" id="ownerName" name="الاسم" placeholder="اكتب اسمك الثلاثي" required class="input-box text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-300 mb-1.5" data-key="form_phone">رقم الهاتف / واتساب *</label>
-                            <input type="tel" id="ownerPhone" name="الهاتف" placeholder="01xxxxxxxxx" required class="input-box text-sm">
-                        </div>
-                    </div>
+                    <!-- Hidden fields for compatibility -->
+                    <input type="hidden" id="ownerName" name="الاسم" value="مالك سيارة">
+                    <input type="hidden" id="ownerGov" name="المحافظة" value="المحافظة">
+                    <input type="hidden" id="formCategory" name="الفئة" value="سيدان">
+                    <input type="hidden" id="formBrand" name="الماركة" value="تويوتا">
+                    <input type="hidden" id="formModel" name="الموديل" value="كورولا">
+                    <input type="hidden" id="formMileage" name="العداد" value="غير محدد">
+                    <input type="hidden" id="formValue" name="القيمة_السوقية" value="1000000">
+                    <input type="hidden" id="formNotes" name="ملاحظات" value="">
 
-                    <!-- Governorate & Category -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-300 mb-1.5" data-key="form_gov">المحافظة *</label>
-                            <input type="text" id="ownerGov" name="المحافظة" placeholder="مثال: الإسكندرية / القاهرة / الجيزة..." required class="input-box text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-300 mb-1.5" data-key="form_cat_select">فئة السيارة *</label>
-                            <select id="formCategory" name="الفئة" class="input-box text-sm bg-slate-900">
-                                <option value="سيدان">سيدان (تويوتا كورولا / إلنترا / سيراتو / نيسان...)</option>
-                                <option value="ميني فان">ميني فان (إكسباندر / إرتيجا / كارنز...)</option>
-                                <option value="فان سياحي">فان سياحي (تويوتا هايس / باص...)</option>
-                                <option value="SUV / دفع رباعي">سيارة دفع رباعي SUV</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Make, Model & Year -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-300 mb-1.5" data-key="form_brand">الماركة (تويوتا / ميتسوبيشي...)</label>
-                            <input type="text" id="formBrand" name="الماركة" placeholder="الماركة" class="input-box text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-300 mb-1.5" data-key="form_model">الموديل (كورولا / إكسباندر...)</label>
-                            <input type="text" id="formModel" name="الموديل" placeholder="الموديل" class="input-box text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-300 mb-1.5" data-key="form_year">سنة الصنع *</label>
-                            <input type="number" id="formYear" name="سنة_الصنع" min="2018" max="2026" value="2023" required class="input-box text-sm font-bold">
-                        </div>
-                    </div>
-
-                    <!-- Mileage & Vehicle Value -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-300 mb-1.5" data-key="form_mileage">قراءة العداد الحالية (كم)</label>
-                            <input type="number" id="formMileage" name="العداد" placeholder="مثال: 35000" class="input-box text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-300 mb-1.5" data-key="form_exp_income">القيمة السوقية التقريبية (ج.م)</label>
-                            <input type="number" id="formValue" name="القيمة_السوقية" placeholder="مثال: 1000000" class="input-box text-sm font-bold">
-                        </div>
-                    </div>
-
-                    <!-- Driver status & Notes -->
+                    <!-- Field 1: Phone -->
                     <div>
-                        <label class="block text-xs font-bold text-slate-300 mb-1.5" data-key="form_notes">ملاحظات إضافية عن حالة السيارة أو التجهيزات</label>
-                        <textarea id="formNotes" name="ملاحظات" rows="2" placeholder="أي تفاصيل ترغب في إضافتها (نوع التأمين، حالة الصيانة، الموقع المفضل...)" class="input-box text-sm"></textarea>
+                        <label class="block text-xs font-bold text-slate-300 mb-1.5" data-key="form_phone">
+                            <i class="fas fa-phone-alt text-amber-400 me-1"></i> رقم الهاتف / واتساب *
+                        </label>
+                        <input type="tel" id="ownerPhone" name="الهاتف" placeholder="01xxxxxxxxx" required class="input-box text-base font-bold">
+                    </div>
+
+                    <!-- Field 2: Car Type (Make & Model) -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-1.5">
+                            <i class="fas fa-car text-blue-400 me-1"></i> نوع السيارة (الماركة والموديل) *
+                        </label>
+                        <input type="text" id="carType" name="نوع_السيارة" placeholder="مثال: تويوتا كورولا / ميتسوبيشي إكسباندر" required class="input-box text-sm font-bold">
+                    </div>
+
+                    <!-- Field 3: Model Year -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-1.5" data-key="form_year">
+                            <i class="fas fa-calendar-alt text-cyan-400 me-1"></i> سنة الصنع (الموديل) *
+                        </label>
+                        <input type="number" id="formYear" name="سنة_الصنع" min="2018" max="2026" value="2023" required class="input-box text-sm font-bold">
+                    </div>
+
+                    <!-- Follow-up Notice (Item 9) -->
+                    <div class="p-3.5 bg-blue-950/40 border border-blue-500/30 rounded-xl text-xs text-blue-200 font-bold flex items-center gap-2.5">
+                        <i class="fas fa-phone-volume text-amber-400 text-base shrink-0"></i>
+                        <span>سيتم التواصل معك لتكميل باقي التفاصيل عبر المكالمة الهاتفية.</span>
                     </div>
 
                     <!-- Consent Checkbox -->
-                    <div class="flex items-start gap-3 bg-slate-900/80 p-4 rounded-xl border border-slate-800">
+                    <div class="flex items-start gap-3 bg-slate-900/80 p-3.5 rounded-xl border border-slate-800">
                         <input type="checkbox" id="formConsent" required class="w-4 h-4 mt-0.5 accent-amber-500 cursor-pointer">
                         <label for="formConsent" class="text-xs text-slate-300 cursor-pointer leading-relaxed" data-key="form_consent_txt">
                             أوافق على التواصل معي بخصوص مراجعة ومعاينة السيارة، وعلى بنود الخصوصية ومطابقة البيانات الرسمية.
@@ -986,7 +1178,7 @@
         </div>
     </section>
 
-    <!-- 8. FAQ Accordion (الأسئلة الشائعة) -->
+    <!-- 8. FAQ Accordion (الأسئلة الشائعة - Item 6) -->
     <section id="faq" class="py-20">
         <div class="container mx-auto px-6 max-w-4xl">
             
@@ -1023,17 +1215,39 @@
                         <i class="fas fa-chevron-down text-slate-400 text-sm faq-chevron transition duration-300"></i>
                     </div>
                     <div class="faq-answer px-5 pb-5 text-xs md:text-sm text-slate-400 leading-relaxed border-t border-slate-800/60 pt-3" data-key="faq_a3">
-                        تتولى إدارة 24Seven متابعة كافة إجراءات المحضر والإصلاح والتأمين الشامل. كما يضمن العقد بدل توقف للمالك بنسبة تصل إلى 50% من الراتب الشهري أثناء فترة إصلاح السيارة وفق ضوابط وثيقة التأمين.
+                        في حال تعرض السيارة لحادث (بقدر الله)، تتحمل الشركة كامل إجراءات الإصلاح عبر التأمين الشامل دون أي تكليف مالي إضافي عليك. تعمل فرق المتابعة لدينا على إنهاء إجراءات الإصلاح في أسرع وقت ممكن لتقليل فترة التوقف إلى الحد الأدنى. خلال فترة التوقف الفعلية، يحصل المالك على بدل توقف بنسبة ٥٠٪ من الراتب الشهري، محسوبة على أيام التوقف الفعلية فقط (من تاريخ دخول الورشة حتى تاريخ الانتهاء من الإصلاح). وسنقوم بإرسال تقرير مصور يومي عبر الواتساب لمتابعة حالة الإصلاح خطوة بخطوة حتى عودة السيارة للعمل بكامل طاقتها.
                     </div>
                 </div>
 
                 <div class="faq-item glass-card rounded-2xl border border-slate-800 overflow-hidden cursor-pointer" onclick="toggleFaq(this)">
                     <div class="p-5 flex justify-between items-center">
-                        <h4 class="text-base font-bold text-white" data-key="faq_q4">هل التعاقد متاح فقط لسكان الإسكندرية والقاهرة؟</h4>
+                        <h4 class="text-base font-bold text-white" data-key="faq_q4">هل التعاقد متاح لملاك السيارات من خارج الإسكندرية؟</h4>
                         <i class="fas fa-chevron-down text-slate-400 text-sm faq-chevron transition duration-300"></i>
                     </div>
                     <div class="faq-answer px-5 pb-5 text-xs md:text-sm text-slate-400 leading-relaxed border-t border-slate-800/60 pt-3" data-key="faq_a4">
-                        التعاقد متاح لملاك السيارات من كافة محافظات الجمهورية. المقر الرئيسي في الإسكندرية مع فرع القاهرة وشرم الشيخ، ويمكن ترتيب المعاينة والاستلام عبر مندوب معتمد عند الحاجة.
+                        نعم بكل تأكيد! المعاينة الفنية تُجرى في مقرنا الرئيسي بالإسكندرية، وللملاك من خارج المحافظة نوفر خدمة المعاينة المنزلية عبر مندوب معتمد من الشركة يحمل نسخة من العقد المختوم، حيث نأتي إليك أينما كنت في جمهورية مصر العربية. المعاينة المنزلية مجانية، وتتم بعد التأكد من جدية الطلب عبر إرسال فيديو مبدئي للسيارة على واتساب.
+                    </div>
+                </div>
+
+                <!-- Sensitive Question 1 (Item 6) -->
+                <div class="faq-item glass-card rounded-2xl border border-slate-800 overflow-hidden cursor-pointer" onclick="toggleFaq(this)">
+                    <div class="p-5 flex justify-between items-center">
+                        <h4 class="text-base font-bold text-white">ماذا لو أردت إنهاء العقد قبل 90 يوماً لظرف طارئ؟</h4>
+                        <i class="fas fa-chevron-down text-slate-400 text-sm faq-chevron transition duration-300"></i>
+                    </div>
+                    <div class="faq-answer px-5 pb-5 text-xs md:text-sm text-slate-400 leading-relaxed border-t border-slate-800/60 pt-3">
+                        نوفر شرطاً جزائياً مخفضاً (بنسبة 10% من قيمة الدفعة الأخيرة) بدلاً من كامل المدة، وذلك لتيسير الأمور عليك.
+                    </div>
+                </div>
+
+                <!-- Sensitive Question 2 (Item 6) -->
+                <div class="faq-item glass-card rounded-2xl border border-slate-800 overflow-hidden cursor-pointer" onclick="toggleFaq(this)">
+                    <div class="p-5 flex justify-between items-center">
+                        <h4 class="text-base font-bold text-white">كيف أتأكد من سلامة سيارتي عند استلامها بعد المدة؟</h4>
+                        <i class="fas fa-chevron-down text-slate-400 text-sm faq-chevron transition duration-300"></i>
+                    </div>
+                    <div class="faq-answer px-5 pb-5 text-xs md:text-sm text-slate-400 leading-relaxed border-t border-slate-800/60 pt-3">
+                        نلتزم برد السيارة بنفس درجة الصيانة المتفق عليها، مع تقرير فني معتمد من جهة خارجية محايدة (مثل توكيل السيارة) يتم تسليمه لك يوم الاستلام.
                     </div>
                 </div>
 
@@ -1070,6 +1284,22 @@
     <!-- Hidden Printable Guide Container for printing/downloading -->
     <div id="printableGuide" class="hidden"></div>
 
+    <!-- Legal Fine Print Section (ملحق الشروط القانونية والأحكام العامة) -->
+    <section class="py-8 bg-slate-950 border-t border-slate-900 text-xs text-slate-400">
+        <div class="container mx-auto px-6 max-w-4xl">
+            <div class="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-2">
+                <div class="flex items-center gap-2 text-slate-300 font-bold text-xs">
+                    <i class="fas fa-balance-scale text-blue-400"></i>
+                    <span>ملحق الشروط القانونية والاختصاص القضائي (Fine Print)</span>
+                </div>
+                <ul class="space-y-1.5 text-[11px] text-slate-400 leading-relaxed list-disc list-inside">
+                    <li>تخضع عقود التشغيل للاختصاص القضائي لمحكمة الإسكندرية الابتدائية للنظر في أي نزاع قد ينشأ عن تنفيذ بنود العقد، ويحرر العقد من نسختين أصليتين بيد كل طرف نسخة رسمية مختومة.</li>
+                    <li>مدة الإخطار المقررة رسمياً لطلب إنهاء التعاقد هي 90 يوماً لضمان تنظيم الجداول التشغيلية مع الشركات، ويمكن التفاوض على مدة الإخطار وفقاً للشرط الجزائي المذكور في الأسئلة الشائعة.</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
     <!-- 9. Footer -->
     <footer class="bg-slate-950 pt-16 pb-8 border-t border-slate-900 text-sm">
         <div class="container mx-auto px-6 grid md:grid-cols-3 gap-12 text-center md:text-start">
@@ -1083,14 +1313,14 @@
             <div>
                 <h4 class="text-white font-bold mb-4 text-base" data-key="footer_branches">مقرات وفروع التعاقد</h4>
                 <ul class="space-y-2.5 text-slate-400 text-xs">
-                    <li data-key="branch_alex"><i class="fas fa-map-marker-alt text-blue-500 me-1.5"></i> الإسكندرية: السيوف، أبراج اللوتس</li>
+                    <li data-key="branch_alex"><i class="fas fa-map-marker-alt text-blue-500 me-1.5"></i> الإسكندرية: السيوف، أبراج اللوتس (المقر الرئيسي)</li>
                     <li data-key="branch_cairo"><i class="fas fa-map-marker-alt text-blue-500 me-1.5"></i> القاهرة: مساكن شيراتون / المطار</li>
                     <li data-key="branch_sharm"><i class="fas fa-map-marker-alt text-blue-500 me-1.5"></i> شرم الشيخ: خليج نعمة</li>
                 </ul>
             </div>
             <div>
                 <h4 class="text-white font-bold mb-4 text-base" data-key="footer_contact">تواصل مع إدارة الأسطول</h4>
-                <p class="text-xs text-slate-400 mb-3" data-key="footer_contact_sub">للاستفسارات والمعاينات المباشرة:</p>
+                <p class="text-xs text-slate-400 mb-3" data-key="footer_contact_sub">للاستفسارات وطلب المعاينة المنزلية:</p>
                 <div class="flex justify-center md:justify-start gap-4 text-xl">
                     <a href="https://wa.me/201121748885" target="_blank" class="w-10 h-10 rounded-full bg-emerald-600/20 text-emerald-400 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition"><i class="fab fa-whatsapp"></i></a>
                     <a href="https://www.facebook.com/Sevenlimousin/" target="_blank" class="w-10 h-10 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center hover:bg-blue-600 hover:text-white transition"><i class="fab fa-facebook-f"></i></a>
@@ -1102,6 +1332,16 @@
             &copy; 2026 24Seven Limousine. All rights reserved. | بوابة استثمار وتشغيل السيارات الرسمية
         </div>
     </footer>
+
+    <!-- Sticky Scroll CTA Button (Item 11) -->
+    <div id="stickyCtaBar" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 transition-all duration-500 opacity-0 translate-y-10 pointer-events-none w-11/12 max-w-md">
+        <a href="#apply" class="w-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-slate-950 font-black py-3.5 px-6 rounded-full shadow-2xl shadow-amber-500/50 border border-amber-400/60 hover:scale-105 active:scale-95 transition duration-300 flex items-center justify-center gap-3 text-xs md:text-sm text-center">
+            <span class="w-2.5 h-2.5 rounded-full bg-slate-950 animate-ping shrink-0"></span>
+            <i class="fas fa-file-contract text-base"></i>
+            <span>سجل بياناتك واحصل على العرض خلال 24 ساعة</span>
+            <i class="fas fa-arrow-left text-xs rtl-flip"></i>
+        </a>
+    </div>
 
     <!-- Floating Actions -->
     <div class="floating-actions">
@@ -1118,24 +1358,24 @@
                 nav_calc: "حاسبة العائد", nav_guide: "دليل التعاقد", nav_cases: "حالات فعلية", nav_faq: "الأسئلة الشائعة",
                 btn_join_top: "انضم لأسطولنا", hero_badge: "تشغيل معتمد لسيارتك مع 24Seven Limousine",
                 hero_title_1: "سيارتك أصل حقيقي..", hero_title_2: "شغّلها بدخل شهري مضمون",
-                hero_desc: "نستقبل سيارات موديل 2020 فأحدث للتشغيل في الشركات والرحلات الرسمية والمواقع، مع متابعة لحظية عبر GPS، صيانة معتمدة، وتأمين شامل وفق عقد قانوني ملزم. المعاينة والتعاقد بمقر الإسكندرية بموعد مسبق.",
+                hero_desc: "نستقبل سيارات موديل 2020 فأحدث للتشغيل في الشركات والرحلات الرسمية والمواقع، مع متابعة لحظية عبر GPS، صيانة معتمدة، وتأمين شامل وفق عقد قانوني ملزم. المعاينة الفنية تُجرى في مقرنا الرئيسي بالإسكندرية، وللملاك من خارج المحافظة نوفر خدمة المعاينة المنزلية المجانية عبر مندوب معتمد.",
                 btn_calc_hero: "احسب راتب سيارتك فوراً", btn_review_hero: "طلب مراجعة السيارة",
-                proof_1: "نستقبل سيارات من كل المحافظات · المعاينة بمقر الإسكندرية", proof_2: "صيانة دورية وتأمين شامل وفق العقد", proof_3: "تقييم نهائي عادل بعد المعاينة الفنية",
+                proof_1: "معاينة بمقرنا أو في منزلك لجميع المحافظات", proof_2: "صيانة دورية وتأمين شامل وفق العقد", proof_3: "تقييم نهائي عادل بعد المعاينة الفنية",
                 sec_pillars_kicker: "نظام تشغيل متكامل", sec_pillars_title: "ما الذي يتحمله النظام التشغيلي لـ 24Seven؟",
                 sec_pillars_desc: "ندير سيارتك بأعلى معايير الاحترافية لترتاح تماماً من تفاصيل التشغيل اليومي",
                 pillar_1_t: "سائقون محترفون", pillar_1_d: "سائقون مؤهلون يخضعون لفحص أمني وطبي، وتدريب احترافي مع عقود وضمانات تشغيل ملزمة.",
                 pillar_2_t: "تتبع GPS لحظي 24/7", pillar_2_d: "متابعة مستمرة ودقيقة لمسار السيارة، والسرعة، وساعات العمل مع سجلات تقارير رقمية متكاملة.",
                 pillar_3_t: "صيانة دورية معتمدة", pillar_3_d: "تغيير الزيوت والفلاتر والفحص الدوري في مراكز خدمة معتمدة مع الحفاظ على القيمة السوقية للسيارة.",
-                pillar_4_t: "إدارة التأمين والحوادث", pillar_4_d: "إدارة كاملة لملفات الإصلاح والتأمين مع بدل توقف متفق عليه وفق شروط العقد وبنسبة تصل لـ 50%.",
+                pillar_4_t: "إدارة التأمين وبدل التوقف", pillar_4_d: "في حال تعرض السيارة لحادث (بقدر الله)، تتحمل الشركة كامل إجراءات الإصلاح عبر التأمين الشامل دون أي تكليف مالي إضافي عليك، مع بدل توقف بنسبة ٥٠٪ من الراتب خلال أيام التوقف الفعلية وتقرير مصور يومي عبر الواتساب.",
                 sec_calc_kicker: "الحاسبة التقديرية الفورية", sec_calc_title: "اعرف الراتب الشهري التقديري لسيارتك",
                 sec_calc_desc: "أدخل بيانات سيارتك لحساب العائد الشهري وصافي الدخل المتوقع على مدار فترة التشغيل",
                 calc_box_title: "بيانات وفئة السيارة", lbl_category: "فئة السيارة", cat_sedan: "سيدان", cat_minivan: "ميني فان (7 راكب)", cat_van: "فان سياحي",
                 lbl_brand: "الماركة", lbl_model: "الموديل", lbl_year: "سنة الصنع (الموديل)", lbl_value: "القيمة السوقية التقريبية للسيارة (ج.م)",
                 lbl_duration: "مدة التشغيل التقديرية", dur_1: "سنة واحدة", dur_2: "سنتان", dur_3: "3 سنوات",
-                badge_eligible: "مؤهلة للتشغيل الفوري", txt_indicative: "تقدير أولي", txt_estimated_income: "الراتب الشهري التقديري",
+                badge_eligible: "مؤهلة للتشغيل الفوري", txt_indicative: "عائد موثق بالعقد", txt_estimated_income: "الراتب الشهري التقديري",
                 txt_total_cash: "إجمالي الدخل النقدي", txt_market_after: "القيمة التقديرية للسيارة بعد المدة:",
                 txt_net_outcome: "صافي النتيجة الشاملة:", txt_roi: "العائد الاستثماري السنوي:",
-                calc_disclaimer: "* هذه الأرقام استرشادية مبنية على متوسطات السوق ومعدل 2% شهرياً. يُثبت السعر والراتب النهائي بعد المعاينة الفنية بمقر الإسكندرية واعتماد السيارة في العقد الرسمي.",
+                calc_disclaimer: "نضمن أن يتراوح العائد الشهري النهائي بين 95% إلى 105% من القيمة الظاهرة في الحاسبة، ولا يتم تغيير العرض النهائي إلا بعد المعاينة الفعلية وبموافقتك المسبقة.",
                 btn_apply_with_data: "تقديم طلب مراجعة بهذه البيانات", wa_calc_title: "تريد استشارة فورية مع خبير الأسطول؟",
                 wa_calc_desc: "أرسل نتيجة الحاسبة مباشرة على واتساب", btn_wa_send: "إرسال",
                 sec_cases_kicker: "أرقام من الواقع", sec_cases_title: "نماذج وحالات تشغيل فعلية من الأسطول",
@@ -1147,54 +1387,54 @@
                 gallery_desc: "لقطات من سيارات الأسطول المخصصة للتشغيل، مع إخفاء لوحات المركبات احتراماً لخصوصية وسرية الملاك.",
                 gal_cat_sedan: "فئة السيدان الفاخر", gal_cat_minivan: "فئة الميني فان 7 راكب", gal_cat_van: "فئة الفان السياحي",
                 guide_kicker: "دليل ما قبل التعاقد الرسمي", guide_title: "متطلبات وبنود التعاقد قبل تسليم السيارة",
-                guide_location_note: "نستقبل سيارات من جميع المحافظات، وتتم المعاينة الفنية والتعاقد الرسمي في مقر الشركة بالإسكندرية فقط بموعد مسبق.",
+                guide_location_note: "المعاينة الفنية تُجرى في مقرنا الرئيسي بالإسكندرية، وللملاك من خارج المحافظة نوفر خدمة المعاينة المنزلية عبر مندوب معتمد من الشركة يحمل نسخة من العقد المختوم، حيث نأتي إليك أينما كنت في جمهورية مصر العربية. المعاينة المنزلية مجانية، وتتم بعد التأكد من جدية الطلب عبر إرسال فيديو مبدئي للسيارة على واتساب.",
                 btn_download_guide: "تحميل العقد ودليل البنود الكامل", btn_print_guide: "طباعة",
                 btn_view_8_articles: "عرض البنود القانونية الـ 8 الكاملة لنموذج التعاقد",
                 step_1_t: "مراجعة أولية", step_1_d: "إرسال بيانات وفئة وسنة صنع السيارة لحساب التقدير الأولي.",
-                step_2_t: "معاينة بمقر الإسكندرية", step_2_d: "فحص الحالة الميكانيكية والدهان ومطابقة الأوراق الرسمية بمقرنا بالإسكندرية.",
+                step_2_t: "معاينة بمقرنا أو في منزلك", step_2_d: "فحص الحالة الميكانيكية والدهان بمقرنا بالإسكندرية أو عبر مندوبنا المعتمد في منزلك لكافة المحافظات.",
                 step_3_t: "تثبيت العرض", step_3_d: "تثبيت الراتب الشهري وتاريخ الاستحقاق وطريقة السداد في العقد.",
                 step_4_t: "توقيع واستلام", step_4_d: "توقيع نسختي العقد ومحضر الاستلام الفني وبدء التشغيل الفعلي.",
                 req_docs_t: "المستندات المطلوبة من المالك", req_doc_1: "أصل وصورة رخصة السيارة (سارية وبيانات مطابقة).", req_doc_2: "بوليصة تأمين شامل سارية ومعتمدة.", req_doc_3: "بطاقة الرقم القومي سارية لمالك السيارة.", req_doc_4: "الموافقة على تركيب جهاز تتبع GPS المعتمد.",
-                req_commit_t: "التزامات 24Seven في العقد", req_commit_1: "سداد الراتب في الموعد المحدد بإيصال موثق أو تحويل.", req_commit_2: "تحمل الصيانة الدورية واستهلاك الإطارات والبطاريات.", req_commit_3: "تحمل المخالفات المرورية التي تقع أثناء فترة التشغيل.", req_commit_4: "إدارة ملفات الحوادث وبدل توقف يصل لـ 50% من الراتب.",
+                req_commit_t: "التزامات 24Seven في العقد", req_commit_1: "سداد الراتب في الموعد المحدد بإيصال موثق أو تحويل.", req_commit_2: "تحمل الصيانة الدورية واستهلاك الإطارات والبطاريات.", req_commit_3: "تحمل المخالفات المرورية التي تقع أثناء فترة التشغيل.", req_commit_4: "إدارة ملفات الحوادث والتأمين مع بدل توقف ٥٠٪ من الراتب خلال أيام التوقف الفعلية وتقرير مصور يومي عبر واتساب.",
                 form_kicker: "انضم لأسطولنا الآن", form_title: "طلب مراجعة ومعاينة السيارة",
-                form_desc: "املأ البيانات وسيقوم مسؤول التعاقدات بالتواصل معك لترتيب موعد المعاينة بمقر الإسكندرية",
+                form_desc: "سجل بياناتك الأساسية وسيقوم مسؤول التعاقدات بالتواصل معك لترتيب المعاينة",
                 form_name: "الاسم بالكامل *", form_phone: "رقم الهاتف / واتساب *", form_gov: "المحافظة *", form_cat_select: "فئة السيارة *",
                 form_brand: "الماركة", form_model: "الموديل", form_year: "سنة الصنع *", form_mileage: "قراءة العداد الحالية (كم)", form_exp_income: "القيمة السوقية التقريبية (ج.م)",
                 form_notes: "ملاحظات إضافية عن حالة السيارة أو التجهيزات", form_consent_txt: "أوافق على التواصل معي بخصوص مراجعة ومعاينة السيارة، وعلى بنود الخصوصية ومطابقة البيانات الرسمية.",
                 btn_submit_lead: "إرسال طلب المراجعة والانضمام", sec_faq_kicker: "إجابات واضحة", sec_faq_title: "الأسئلة الشائعة حول تشغيل السيارات",
                 faq_q1: "ما هي موديلات وفئات السيارات المقبولة في 24Seven؟", faq_a1: "نقبل سيارات موديل 2020 فأحدث من فئات السيدان (مثل كورولا، إلنترا، سيراتو)، الميني فان 7 راكب (مثل إكسباندر، إرتيجا)، والفان السياحي (مثل تويوتا هايس). يتم الاعتماد النهائي بعد الفحص والمعاينة الفنية.",
                 faq_q2: "هل الراتب الشهري ثابت وكيف يتم سداده؟", faq_a2: "نعم، الراتب الشهري يُثبت برقم محدد في العقد القانوني بعد المعاينة، ويُسدد شهرياً في تاريخ استحقاق محدد عبر تحويل بنكي أو إيصال نقدية رسمي موثق.",
-                faq_q3: "ماذا يحدث في حالة وقوع حادث أو توقف السيارة للإصلاح؟", faq_a3: "تتولى إدارة 24Seven متابعة كافة إجراءات المحضر والإصلاح والتأمين الشامل. كما يضمن العقد بدل توقف للمالك بنسبة تصل إلى 50% من الراتب الشهري أثناء فترة إصلاح السيارة وفق ضوابط وثيقة التأمين.",
-                faq_q4: "أين تتم المعاينة والتعاقد الرسمي؟", faq_a4: "نستقبل طلبات الملاك من جميع محافظات مصر، وتتم المعاينة الفنية واعتماد السيارة وتوقيع العقد الرسمي حصرياً في مقر الشركة الرئيسي بالإسكندرية بموعد مسبق.",
+                faq_q3: "ماذا يحدث في حالة وقوع حادث أو توقف السيارة للإصلاح؟", faq_a3: "في حال تعرض السيارة لحادث (بقدر الله)، تتحمل الشركة كامل إجراءات الإصلاح عبر التأمين الشامل دون أي تكليف مالي إضافي عليك. تعمل فرق المتابعة لدينا على إنهاء إجراءات الإصلاح في أسرع وقت ممكن لتقليل فترة التوقف إلى الحد الأدنى. خلال فترة التوقف الفعلية، يحصل المالك على بدل توقف بنسبة ٥٠٪ من الراتب الشهري، محسوبة على أيام التوقف الفعلية فقط (من تاريخ دخول الورشة حتى تاريخ الانتهاء من الإصلاح). وسنقوم بإرسال تقرير مصور يومي عبر الواتساب لمتابعة حالة الإصلاح خطوة بخطوة حتى عودة السيارة للعمل بكامل طاقتها.",
+                faq_q4: "هل التعاقد متاح لملاك السيارات من خارج الإسكندرية؟", faq_a4: "نعم بكل تأكيد! المعاينة الفنية تُجرى في مقرنا الرئيسي بالإسكندرية، وللملاك من خارج المحافظة نوفر خدمة المعاينة المنزلية عبر مندوب معتمد من الشركة يحمل نسخة من العقد المختوم، حيث نأتي إليك أينما كنت في جمهورية مصر العربية. المعاينة المنزلية مجانية، وتتم بعد التأكد من جدية الطلب عبر إرسال فيديو مبدئي للسيارة على واتساب.",
                 modal_success_t: "تم استلام طلبك بنجاح!", modal_success_d: "كود متابعة الطلب الخاص بك:",
                 btn_modal_wa: "تأكيد المراجعة عبر واتساب الآن", btn_close: "إغلاق",
                 footer_desc: "شركة مسجلة رسمياً لإدارة وتشغيل أساطيل النقل السياحي والليموزين للشركات ورجال الأعمال بأعلى معايير الأمان والشفافية.",
-                footer_branches: "المقر الرئيسي وفروع التشغيل", branch_alex: "المقر الرئيسي (المعاينة والتعاقد): الإسكندرية، السيوف، أبراج اللوتس", branch_cairo: "فرع التشغيل: القاهرة، مساكن شيراتون / المطار", branch_sharm: "فرع التشغيل: شرم الشيخ، خليج نعمة",
-                footer_contact: "تواصل مع إدارة الأسطول", footer_contact_sub: "للاستفسارات وحجز مواعيد المعاينة بالإسكندرية:"
+                footer_branches: "المقر الرئيسي وفروع التشغيل", branch_alex: "المقر الرئيسي: الإسكندرية، السيوف، أبراج اللوتس", branch_cairo: "فرع التشغيل: القاهرة، مساكن شيراتون / المطار", branch_sharm: "فرع التشغيل: شرم الشيخ، خليج نعمة",
+                footer_contact: "تواصل مع إدارة الأسطول", footer_contact_sub: "للاستفسارات وطلب المعاينة المنزلية:"
             },
             en: {
                 nav_home: "Home", nav_services: "Limousine Services", nav_about: "About Us", nav_reviews: "Reviews",
                 nav_calc: "Calculator", nav_guide: "Contract Guide", nav_cases: "Live Cases", nav_faq: "FAQ",
                 btn_join_top: "Join Our Fleet", hero_badge: "Authorized Vehicle Fleet Management with 24Seven",
                 hero_title_1: "Your Car is a True Asset..", hero_title_2: "Earn Guaranteed Monthly Income",
-                hero_desc: "We onboard 2020+ vehicle models for corporate, site, and VIP operations with 24/7 live GPS tracking, certified periodic maintenance, and comprehensive insurance under a binding legal agreement. Inspection & contracting strictly at Alexandria HQ by appointment.",
+                hero_desc: "We onboard 2020+ vehicle models for corporate and VIP operations with 24/7 live GPS tracking, certified periodic maintenance, and full insurance under a binding legal contract. Technical inspection takes place at our Alexandria HQ or at your doorstep via traveling representative.",
                 btn_calc_hero: "Calculate Income Now", btn_review_hero: "Request Vehicle Review",
-                proof_1: "Vehicles accepted from all governorates · Inspection at Alexandria HQ", proof_2: "Periodic servicing & full insurance under contract", proof_3: "Fair final valuation after physical inspection",
+                proof_1: "Inspection at our HQ or at your doorstep nationwide", proof_2: "Periodic servicing & full insurance under contract", proof_3: "Fair final valuation after physical inspection",
                 sec_pillars_kicker: "Integrated Operations", sec_pillars_title: "What Does 24Seven's System Cover?",
                 sec_pillars_desc: "We manage your vehicle with elite professionalism so you enjoy passive monthly returns completely stress-free.",
                 pillar_1_t: "Trained Chauffeurs", pillar_1_d: "Vetted, medically certified, and professionally trained drivers with strict operational safeguards.",
                 pillar_2_t: "24/7 Live GPS Tracking", pillar_2_d: "Real-time route, speed, and mileage monitoring with digital telematics reporting.",
                 pillar_3_t: "Certified Maintenance", pillar_3_d: "Scheduled oil, filter, and periodic checkups at authorized service centers to preserve asset resale value.",
-                pillar_4_t: "Insurance & Accident Handling", pillar_4_d: "Full management of insurance repair claims plus an agreed downtime compensation of up to 50%.",
-                sec_calc_kicker: "Indicative Calculator", sec_calc_title: "Estimate Your Vehicle's Monthly Income",
+                pillar_4_t: "Insurance & Downtime Coverage", pillar_4_d: "Complete handling of repair via comprehensive insurance at zero cost to you, with 50% downtime allowance during actual repair days and daily WhatsApp photo updates.",
+                sec_calc_kicker: "Instant Calculator", sec_calc_title: "Estimate Your Vehicle's Monthly Income",
                 sec_calc_desc: "Enter your car details to estimate expected monthly payout and multi-year net financial returns.",
                 calc_box_title: "Vehicle Specifications", lbl_category: "Vehicle Category", cat_sedan: "Sedan", cat_minivan: "Minivan (7-Seater)", cat_van: "Tourist Van",
                 lbl_brand: "Make", lbl_model: "Model", lbl_year: "Model Year", lbl_value: "Estimated Market Value (EGP)",
                 lbl_duration: "Operating Term", dur_1: "1 Year", dur_2: "2 Years", dur_3: "3 Years",
-                badge_eligible: "Eligible for Instant Onboarding", txt_indicative: "Preliminary Estimate", txt_estimated_income: "Estimated Monthly Payout",
+                badge_eligible: "Eligible for Instant Onboarding", txt_indicative: "Contract-Guaranteed Return", txt_estimated_income: "Estimated Monthly Payout",
                 txt_total_cash: "Total Cash Income", txt_market_after: "Est. Resale Value After Term:",
                 txt_net_outcome: "Total Net Financial Outcome:", txt_roi: "Estimated Annual ROI:",
-                calc_disclaimer: "* Figures are indicative based on market averages (approx. 2% monthly). Final payout is locked in the formal contract following physical inspection at Alexandria HQ.",
+                calc_disclaimer: "We guarantee that the final monthly income will range between 95% and 105% of the calculated amount, locked only upon physical inspection with your prior consent.",
                 btn_apply_with_data: "Apply for Review with These Specs", wa_calc_title: "Need Instant Consultation with Fleet Manager?",
                 wa_calc_desc: "Send calculator results directly to WhatsApp", btn_wa_send: "Send",
                 sec_cases_kicker: "Real Numbers", sec_cases_title: "Live Operational Case Studies",
@@ -1206,30 +1446,30 @@
                 gallery_desc: "Fleet operational captures with license plates obscured to ensure vehicle owner privacy and confidentiality.",
                 gal_cat_sedan: "Luxury Sedan Fleet", gal_cat_minivan: "7-Seater Family Minivan", gal_cat_van: "High-Roof Tourist Van",
                 guide_kicker: "Pre-Contract Official Guide", guide_title: "Contract Requirements & Terms Before Handover",
-                guide_location_note: "Vehicles welcomed from all governorates. Physical inspection and formal contract signing take place exclusively at our Alexandria HQ by prior appointment.",
+                guide_location_note: "Technical inspection is held at our Alexandria HQ. For vehicle owners outside Alexandria, we provide free doorstep inspection via an authorized traveling representative across Egypt.",
                 btn_download_guide: "Download Full Agreement & Guide", btn_print_guide: "Print",
                 btn_view_8_articles: "View All 8 Legal Contract Articles",
                 step_1_t: "Initial Review", step_1_d: "Submit vehicle specifications for preliminary eligibility and calculator estimation.",
-                step_2_t: "Alexandria HQ Inspection", step_2_d: "Mechanical, electrical, and body inspection at our Alexandria HQ by appointment.",
+                step_2_t: "HQ or Home Inspection", step_2_d: "Mechanical and physical inspection at our Alexandria HQ or at your doorstep across Egypt.",
                 step_3_t: "Lock Offer", step_3_d: "Final monthly payout, payment due date, and contract duration fixed in writing.",
                 step_4_t: "Sign & Handover", step_4_d: "Both parties sign the contract and technical handover checklist before starting operations.",
                 req_docs_t: "Owner Document Checklist", req_doc_1: "Original valid vehicle license with matching specs.", req_doc_2: "Active comprehensive insurance policy from an approved insurer.", req_doc_3: "Valid National ID of the vehicle owner.", req_doc_4: "Agreement to certified GPS device installation & telematics.",
-                req_commit_t: "24Seven Contract Commitments", req_commit_1: "Timely monthly payout via bank transfer or documented receipt.", req_commit_2: "Coverage of periodic maintenance, tire, and battery wear.", req_commit_3: "Full responsibility for traffic fines incurred during operations.", req_commit_4: "Accident file handling with up to 50% downtime allowance.",
+                req_commit_t: "24Seven Contract Commitments", req_commit_1: "Timely monthly payout via bank transfer or documented receipt.", req_commit_2: "Coverage of periodic maintenance, tire, and battery wear.", req_commit_3: "Full responsibility for traffic fines incurred during operations.", req_commit_4: "Accident file handling with 50% downtime allowance during repair and daily photo reports.",
                 form_kicker: "Join Our Fleet Today", form_title: "Vehicle Review & Inspection Request",
-                form_desc: "Fill in the details and our fleet operations manager will contact you to schedule an inspection at Alexandria HQ.",
+                form_desc: "Submit your basic details and our fleet coordinator will contact you to arrange inspection.",
                 form_name: "Full Name *", form_phone: "Phone Number / WhatsApp *", form_gov: "Governorate *", form_cat_select: "Vehicle Category *",
                 form_brand: "Make", form_model: "Model", form_year: "Model Year *", form_mileage: "Current Mileage (KM)", form_exp_income: "Estimated Market Value (EGP)",
                 form_notes: "Additional Notes or Special Vehicle Equipment", form_consent_txt: "I agree to be contacted regarding vehicle inspection, and agree to privacy terms and official data matching.",
                 btn_submit_lead: "Submit Inspection Request", sec_faq_kicker: "Clear Answers", sec_faq_title: "Frequently Asked Questions",
                 faq_q1: "What vehicle models and categories are accepted?", faq_a1: "We accept 2020+ models of Sedans (Corolla, Elantra, Cerato), 7-seater Minivans (Xpander, Ertiga), and Tourist Vans (Toyota Hiace). Final approval occurs after technical inspection.",
                 faq_q2: "Is monthly payout fixed and how is it paid?", faq_a2: "Yes, monthly payout is legally locked in the signed contract after inspection, paid on a fixed due date via bank transfer or official receipt.",
-                faq_q3: "What happens in case of an accident or repair downtime?", faq_a3: "24Seven manages all police report, repair, and insurance procedures. The agreement provides an owner downtime compensation of up to 50% of monthly income during repair.",
-                faq_q4: "Where do inspection and contracting take place?", faq_a4: "We welcome car owners from all Egyptian governorates. Official technical inspection, vehicle onboarding approval, and contract signing take place exclusively at our Alexandria HQ by prior appointment.",
+                faq_q3: "What happens in case of an accident or repair downtime?", faq_a3: "24Seven manages all police report, repair, and insurance procedures. The agreement provides an owner downtime compensation of 50% of monthly income during actual repair days plus daily WhatsApp photo updates.",
+                faq_q4: "Where do inspection and contracting take place?", faq_a4: "We welcome car owners from all Egyptian governorates. Technical inspection is conducted at our Alexandria HQ, or at your doorstep across Egypt via an authorized traveling representative.",
                 modal_success_t: "Application Received Successfully!", modal_success_d: "Your Request Tracking Code:",
                 btn_modal_wa: "Confirm on WhatsApp Now", btn_close: "Close",
                 footer_desc: "Officially registered luxury transport and corporate fleet management company operating with top-tier safety and transparency standards.",
-                footer_branches: "Headquarters & Operating Hubs", branch_alex: "Alexandria HQ (Inspection & Contracting): El-Seyouf, Lotus Towers", branch_cairo: "Operations Hub: Cairo, Sheraton Residences / Airport", branch_sharm: "Operations Hub: Sharm El-Sheikh, Naama Bay",
-                footer_contact: "Fleet Operations Contact", footer_contact_sub: "For direct inquiries & Alexandria inspection booking:"
+                footer_branches: "Headquarters & Operating Hubs", branch_alex: "Alexandria HQ: El-Seyouf, Lotus Towers", branch_cairo: "Operations Hub: Cairo, Sheraton Residences / Airport", branch_sharm: "Operations Hub: Sharm El-Sheikh, Naama Bay",
+                footer_contact: "Fleet Operations Contact", footer_contact_sub: "For direct inquiries & doorstep inspection requests:"
             }
         };
 
@@ -1388,13 +1628,28 @@
 
         // Prefill form from calculator
         function prefillFormFromCalc() {
-            document.getElementById('formBrand').value = document.getElementById('calcBrand').value;
-            document.getElementById('formModel').value = document.getElementById('calcModel').value;
-            document.getElementById('formYear').value = document.getElementById('calcYear').value;
-            document.getElementById('formValue').value = document.getElementById('calcValue').value;
+            const brand = document.getElementById('calcBrand')?.value || '';
+            const model = document.getElementById('calcModel')?.value || '';
+            const year = document.getElementById('calcYear')?.value || '2023';
+            const value = document.getElementById('calcValue')?.value || '1000000';
+
+            const formBrand = document.getElementById('formBrand');
+            if (formBrand) formBrand.value = brand;
+            const formModel = document.getElementById('formModel');
+            if (formModel) formModel.value = model;
+            const formYear = document.getElementById('formYear');
+            if (formYear) formYear.value = year;
+            const formValue = document.getElementById('formValue');
+            if (formValue) formValue.value = value;
             
+            const carType = document.getElementById('carType');
+            if (carType) {
+                carType.value = `${brand} ${model}`.trim();
+            }
+
             const catMap = { 'sedan': 'سيدان', 'minivan': 'ميني فان', 'van': 'فان سياحي' };
-            document.getElementById('formCategory').value = catMap[currentCategory] || 'سيدان';
+            const formCat = document.getElementById('formCategory');
+            if (formCat) formCat.value = catMap[currentCategory] || 'سيدان';
             
             document.getElementById('apply').scrollIntoView({ behavior: 'smooth' });
         }
@@ -1414,21 +1669,29 @@
             window.open(`https://wa.me/201121748885?text=${encodeURIComponent(text)}`, '_blank');
         }
 
-        // Handle Lead Submission
+        // Handle Lead Submission (Item 9)
         async function handleFormSubmit(e) {
             e.preventDefault();
             
-            const name = document.getElementById('ownerName').value.trim();
             const phone = document.getElementById('ownerPhone').value.trim();
-            const gov = document.getElementById('ownerGov').value;
-            const cat = document.getElementById('formCategory').value;
-            const brand = document.getElementById('formBrand').value.trim();
-            const model = document.getElementById('formModel').value.trim();
-            const year = Number(document.getElementById('formYear').value) || 2024;
-            const mileage = document.getElementById('formMileage').value.trim() || 'غير محدد';
-            const valueNum = Number(document.getElementById('formValue').value) || 1000000;
+            const carTypeVal = (document.getElementById('carType')?.value || '').trim();
+            const year = Number(document.getElementById('formYear')?.value) || 2023;
+
+            // Derived/compatibility fields
+            let brand = document.getElementById('formBrand')?.value?.trim() || 'سيارة';
+            let model = document.getElementById('formModel')?.value?.trim() || '';
+            if (carTypeVal) {
+                const parts = carTypeVal.split(' ');
+                brand = parts[0] || carTypeVal;
+                model = parts.slice(1).join(' ') || '';
+            }
+            const name = document.getElementById('ownerName')?.value?.trim() || 'مالك سيارة';
+            const gov = document.getElementById('ownerGov')?.value || 'المحافظة';
+            const cat = document.getElementById('formCategory')?.value || 'سيدان';
+            const mileage = document.getElementById('formMileage')?.value?.trim() || 'غير محدد';
+            const valueNum = Number(document.getElementById('formValue')?.value) || 1000000;
             const expectedIncome = Math.round((valueNum * 0.02));
-            const notes = document.getElementById('formNotes').value.trim() || 'لا يوجد';
+            const notes = document.getElementById('formNotes')?.value?.trim() || 'لا يوجد';
 
             const submitBtn = e.target.querySelector('button[type="submit"]');
             if (submitBtn) {
@@ -1439,7 +1702,7 @@
             const requestCode = 'REQ-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random() * 9000);
             lastGeneratedRequestCode = requestCode;
             
-            lastFormData = { name, phone, gov, cat, brand, model, year, mileage, value: valueNum, expectedIncome, notes, requestCode };
+            lastFormData = { name, phone, gov, cat, brand, model, carType: carTypeVal, year, mileage, value: valueNum, expectedIncome, notes, requestCode };
 
             // 1. Save to Database via Vercel Serverless API
             try {
@@ -1456,12 +1719,12 @@
                             governorate: gov,
                             car_category: cat,
                             brand: brand,
-                            model: model,
+                            model: model || carTypeVal,
                             year: year,
                             mileage: mileage,
                             estimated_value: valueNum,
                             expected_income: expectedIncome,
-                            notes: notes,
+                            notes: `نوع السيارة: ${carTypeVal} | تواصل للمتابعة الهاتفية`,
                             status: 'جديد'
                         }
                     })
@@ -1479,12 +1742,12 @@
                             governorate: gov,
                             car_category: cat,
                             brand: brand,
-                            model: model,
+                            model: model || carTypeVal,
                             year: year,
                             mileage: mileage,
                             estimated_value: valueNum,
                             expected_income: expectedIncome,
-                            notes: notes,
+                            notes: `نوع السيارة: ${carTypeVal}`,
                             status: 'جديد'
                         }
                     });
@@ -1510,8 +1773,8 @@
             
             // Build WhatsApp Button in Modal
             const waText = currentLang === 'ar'
-                ? `طلب انضمام أسطول جديد (${requestCode}):\n- الاسم: ${name}\n- الهاتف: ${phone}\n- المحافظة: ${gov}\n- نوع السيارة: ${cat} - ${brand} ${model} (${year})\n- العداد: ${mileage} كم\n- القيمة التقديرية: ${valueNum.toLocaleString('en-US')} ج.م\n- الدخل الشهري التقديري: ${expectedIncome.toLocaleString('en-US')} ج.م\n- ملاحظات: ${notes}`
-                : `New Fleet Onboarding Request (${requestCode}):\n- Name: ${name}\n- Phone: ${phone}\n- Governorate: ${gov}\n- Vehicle: ${cat} - ${brand} ${model} (${year})\n- Mileage: ${mileage} KM\n- Value: ${valueNum.toLocaleString('en-US')} EGP\n- Expected Monthly Income: ${expectedIncome.toLocaleString('en-US')} EGP\n- Notes: ${notes}`;
+                ? `طلب انضمام أسطول جديد (${requestCode}):\n- رقم الهاتف: ${phone}\n- نوع وموديل السيارة: ${carTypeVal || (brand + ' ' + model)}\n- سنة الصنع: ${year}\n- ملاحظة: في انتظار مكالمة فريق التعاقدات لترتيب المعاينة.`
+                : `New Fleet Onboarding Request (${requestCode}):\n- Phone: ${phone}\n- Vehicle Make & Model: ${carTypeVal || (brand + ' ' + model)}\n- Year: ${year}\n- Note: Awaiting follow-up call from contracting team to arrange inspection.`;
 
             document.getElementById('btnModalWhatsapp').onclick = function() {
                 window.open(`https://wa.me/201121748885?text=${encodeURIComponent(waText)}`, '_blank');
@@ -1560,7 +1823,7 @@ li { margin: 8px 0; }
 </head>
 <body>
 <h1>24Seven Limousine · ${isAr ? 'بوابة تشغيل السيارات' : 'Fleet Operations'}</h1>
-<div class="location-badge">${isAr ? 'المقر الرئيسي: الإسكندرية (المعاينة والتعاقد بموعد مسبق)' : 'HQ: Alexandria (Inspection & Contracting by Appointment)'}</div>
+<div class="location-badge">${isAr ? 'المقر الرئيسي: الإسكندرية (المعاينة متوفرة عند باب بيتك بكافة المحافظات أو بمقر الشركة)' : 'HQ: Alexandria (Doorstep inspection across all Egypt governorates or at HQ)'}</div>
 <h2>${docTitle}</h2>
 <p class="box">${isAr ? 'يعرض هذا الدليل البنود الرسمية التي يناقشها فريق 24Seven Limousine مع مالك السيارة قبل توقيع العقد النهائي. تستكمل النسخة النهائية ببيانات السيارة ونتيجة المعاينة وتوقيع الطرفين.' : 'This guide outlines the official terms discussed with vehicle owners before signing the final agreement completed with inspection results and signatures.'}</p>
 
@@ -1571,25 +1834,25 @@ li { margin: 8px 0; }
 <h2>${isAr ? 'أولاً: المستندات وخطوات التعاقد' : 'Section 1: Requirements & Contracting Steps'}</h2>
 <ul>
 <li><strong>${isAr ? 'المستندات المطلوبة:' : 'Required Documents:'}</strong> ${isAr ? 'رخصة سيارة سارية، بوليصة تأمين شامل معتمدة، بطاقة الرقم القومي لمالك السيارة، والموافقة على جهاز GPS.' : 'Valid vehicle license, active comprehensive insurance policy, owner National ID, and GPS consent.'}</li>
-<li><strong>${isAr ? 'مكان المعاينة:' : 'Inspection Location:'}</strong> ${isAr ? 'تتم المعاينة الفنية الميكانيكية للسيارة واعتمادها في مقر الشركة الرئيسي بالإسكندرية فقط بموعد مسبق.' : 'Technical physical inspection and onboarding approval take place exclusively at our Alexandria HQ by prior appointment.'}</li>
+<li><strong>${isAr ? 'مكان المعاينة:' : 'Inspection Location:'}</strong> ${isAr ? 'تتم المعاينة الفنية إما في مقر الشركة بالإسكندرية، أو في موقعك داخل أي محافظة بمصر عبر المندوب المسافر المتخصص مع فحص شامل وتقرير فني معتمد.' : 'Technical inspection is conducted either at our Alexandria HQ or at your doorstep across all Egypt governorates via our traveling representative with a certified report.'}</li>
 </ul>
 
 <h2>${isAr ? 'ثانياً: البنود القانونية الـ 8 لعقد التشغيل' : 'Section 2: The 8 Legal Operating Articles'}</h2>
 
 <h3>1. ${isAr ? 'موضوع التعاقد وبيانات السيارة' : 'Contract Scope & Vehicle Specs'}</h3>
-<p>${isAr ? 'يستكمل العقد ببيانات السيارة المعتمدة (الماركة، الموديل، سنة الصنع، الشاسيه، الموتور، اللوحات) ومدة التعاقد وتاريخ البداية والنهاية بعد المعاينة بمقر الإسكندرية. تُشغّل السيارة في نشاط نقل الركاب والشركات والمطارات المتفق عليه، وتتعهد الشركة بعدم استخدامها في أي أعمال غير قانونية أو مخالفة لقواعد المرور.' : 'The contract records the vehicle details, term, and start/end dates after Alexandria HQ inspection. Used exclusively for approved executive corporate/airport passenger transport.'}</p>
+<p>${isAr ? 'يستكمل العقد ببيانات السيارة المعتمدة (الماركة، الموديل، سنة الصنع، الشاسيه، الموتور، اللوحات) ومدة التعاقد وتاريخ البداية والنهاية بعد المعاينة المعتمدة. تُشغّل السيارة في نشاط نقل الركاب والشركات والمطارات المتفق عليه، وتتعهد الشركة بعدم استخدامها في أي أعمال غير قانونية أو مخالفة لقواعد المرور.' : 'The contract records vehicle details, term, and dates following approved inspection. Used exclusively for approved executive corporate/airport passenger transport.'}</p>
 
 <h3>2. ${isAr ? 'التزامات مالك السيارة' : 'Vehicle Owner Commitments'}</h3>
-<p>${isAr ? 'يُقر المالك بأن السيارة بحالة جيدة ميكانيكياً وفنياً وقت التسليم، ويلتزم بتقديم بوليصة تأمين شامل سارية من شركة معتمدة وتسليم نسخة منها، والموافقة على تركيب جهاز تتبع GPS. وفي حالة طلب إنهاء التعاقد، يلتزم المالك بإخطار كتابي لا يقل عن 90 يوماً.' : 'Owner confirms sound mechanical condition at handover, provides active comprehensive insurance, agrees to GPS installation, and gives 90 days notice for termination.'}</p>
+<p>${isAr ? 'يُقر المالك بأن السيارة بحالة جيدة ميكانيكياً وفنياً وقت التسليم، ويلتزم بتقديم بوليصة تأمين شامل سارية من شركة معتمدة وتسليم نسخة منها، والموافقة على تركيب جهاز تتبع GPS. وفي حالة طلب إنهاء التعاقد، يلتزم المالك بإخطار كتابي لا يقل عن 90 يوماً (مع إمكانية التفاوض على المدة وفق شروط الفسخ المبكر).' : 'Owner confirms sound mechanical condition at handover, provides active comprehensive insurance, agrees to GPS installation, and gives 90 days notice for termination (negotiable per early termination terms).'}</p>
 
 <h3>3. ${isAr ? 'التزامات الشركة أثناء فترة التشغيل' : 'Company Commitments During Operation'}</h3>
-<p>${isAr ? 'تلتزم الشركة بتشغيل السيارة وإدارتها باحترافية من خلال سائقين مؤهلين ومدربين، وتلتزم برد السيارة للمالك في نهاية مدة العقد بحالة فنية جيدة مع مراعاة معدل الاستهلاك الطبيعي للتشغيل.' : 'Company manages vehicle operations via vetted professional chauffeurs and returns the vehicle in good technical shape considering normal wear and tear.'}</p>
+<p>${isAr ? 'تلتزم الشركة بتشغيل السيارة وإدارتها باحترافية من خلال سائقين مؤهلين ومدربين، وتلتزم برد السيارة للمالك في نهاية مدة العقد بحالة فنية جيدة مع تقرير فني معتمد ومراعاة معدل الاستهلاك الطبيعي للتشغيل.' : 'Company manages vehicle operations via vetted professional chauffeurs and returns the vehicle in good technical shape with a certified inspection report.'}</p>
 
 <h3>4. ${isAr ? 'الصيانة والاستهلاك والمخالفات المرورية' : 'Maintenance, Wear & Traffic Violations'}</h3>
 <p>${isAr ? 'تتحمل الشركة الصيانة الدورية (تغيير الزيوت والفلاتر) وتتحمل استهلاك الإطارات والبطارية ضمن الاستهلاك الطبيعي كل سنة أو كل 10,000 كم أيهما أقرب. كما تتحمل الشركة سداد كافة المخالفات المرورية التي تقع خلال فترة التشغيل.' : 'Company covers routine maintenance, normal tire/battery replacement every 10k km/year, and all traffic fines incurred during operations.'}</p>
 
 <h3>5. ${isAr ? 'التأمين والحوادث وبدل التوقف' : 'Insurance, Accidents & Downtime Allowance'}</h3>
-<p>${isAr ? 'تتولى الشركة إدارة كافة إجراءات محاضر الحوادث وملفات الإصلاح وشركات التأمين. ويضمن العقد للمالك صرف بدل توقف بنسبة تصل إلى 50% من الراتب الشهري عن فترة توقف السيارة للإصلاح وفق شروط الملف ووثيقة التأمين.' : 'Company manages all accident repair and insurance claims, ensuring a downtime allowance of up to 50% of monthly income during repair.'}</p>
+<p>${isAr ? 'تتولى الشركة إدارة كافة إجراءات محاضر الحوادث وملفات الإصلاح وشركات التأمين بالكامل دون أي تكليف مالي على المالك. وخلال فترة التوقف الفعلية للإصلاح، يحصل المالك على بدل توقف بنسبة 50% من الراتب الشهري عن أيام التوقف الفعلية، مع إرسال تقرير مصور يومي عبر الواتساب بحالة الإصلاح حتى عودة السيارة للعمل.' : 'Company manages all accident repair and insurance claims with zero cost to owner. Owner receives 50% downtime allowance for actual repair days with daily WhatsApp photo reports.'}</p>
 
 <h3>6. ${isAr ? 'الراتب وموعد وطريقة السداد' : 'Monthly Income, Due Date & Payment Method'}</h3>
 <p>${isAr ? 'يحدد العقد الراتب الشهري الثابت وتاريخ الاستحقاق الشهري ووسيلة السداد الموثقة (تحويل بنكي أو إيصال نقدية رسمي موقع من المالك أو وكيله).' : 'Contract legally fixes the monthly payout, payment due date, and documented transfer/receipt method.'}</p>
@@ -1775,10 +2038,69 @@ li { margin: 8px 0; }
             btn.innerHTML = '<i class="fas fa-search"></i> ' + (currentLang === 'ar' ? 'استعلام فوري' : 'Track Request');
         }
 
+        // === Testimonials Carousel (Item 5) ===
+        let currentTestimonialIndex = 0;
+        const totalTestimonials = 3;
+
+        function updateTestimonialView() {
+            const track = document.getElementById('testimonialTrack');
+            const dots = document.getElementById('testimonialDots')?.children || [];
+            if (track) {
+                track.style.transform = `translateX(-${currentTestimonialIndex * 100}%)`;
+            }
+            for (let i = 0; i < dots.length; i++) {
+                if (i === currentTestimonialIndex) {
+                    dots[i].className = 'w-3 h-3 rounded-full bg-amber-400 transition';
+                } else {
+                    dots[i].className = 'w-3 h-3 rounded-full bg-slate-700 transition';
+                }
+            }
+        }
+
+        function goToTestimonial(index) {
+            currentTestimonialIndex = (index + totalTestimonials) % totalTestimonials;
+            updateTestimonialView();
+        }
+
+        function nextTestimonial() {
+            currentTestimonialIndex = (currentTestimonialIndex + 1) % totalTestimonials;
+            updateTestimonialView();
+        }
+
+        function prevTestimonial() {
+            currentTestimonialIndex = (currentTestimonialIndex - 1 + totalTestimonials) % totalTestimonials;
+            updateTestimonialView();
+        }
+
+        let testimonialInterval = setInterval(nextTestimonial, 6000);
+        const carouselEl = document.getElementById('testimonialCarousel');
+        if (carouselEl) {
+            carouselEl.addEventListener('mouseenter', () => clearInterval(testimonialInterval));
+            carouselEl.addEventListener('mouseleave', () => {
+                clearInterval(testimonialInterval);
+                testimonialInterval = setInterval(nextTestimonial, 6000);
+            });
+        }
+
+        // === Sticky Scroll CTA Bar (Item 11) ===
+        function handleStickyCtaScroll() {
+            const stickyCta = document.getElementById('stickyCtaBar');
+            if (!stickyCta) return;
+            if (window.scrollY > 400) {
+                stickyCta.classList.remove('opacity-0', 'translate-y-10', 'pointer-events-none');
+                stickyCta.classList.add('opacity-100', 'translate-y-0', 'pointer-events-auto');
+            } else {
+                stickyCta.classList.add('opacity-0', 'translate-y-10', 'pointer-events-none');
+                stickyCta.classList.remove('opacity-100', 'translate-y-0', 'pointer-events-auto');
+            }
+        }
+        window.addEventListener('scroll', handleStickyCtaScroll, { passive: true });
+
         // Initialize on Load
         window.addEventListener('DOMContentLoaded', () => {
             applyTranslations();
             calculateEstimate();
+            handleStickyCtaScroll();
         });
     </script>
 
