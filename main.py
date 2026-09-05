@@ -1283,8 +1283,8 @@ async def get_reservations_api(date: str = None, query: str = None, limit: int =
         import ssl
         
         NEON_USER = os.getenv("PGUSER", "neondb_owner")
-        NEON_PASSWORD = os.getenv("PGPASSWORD", "npg_VM4tSBwN5PGd")
-        NEON_HOST = os.getenv("PGHOST", "ep-plain-rice-auzortld-pooler.c-10.us-east-1.aws.neon.tech")
+        NEON_PASSWORD = os.getenv("PGPASSWORD", "npg_WFZmc7X1YEMQ")
+        NEON_HOST = os.getenv("PGHOST", "ep-falling-glade-a5v7q460-pooler.us-east-2.aws.neon.tech")
         NEON_DB = os.getenv("PGDATABASE", "neondb")
         
         con = pg8000.native.Connection(
@@ -1413,8 +1413,8 @@ async def get_omnichannel_api(sender_id: str = None, channel: str = None, limit:
         import ssl
         
         NEON_USER = os.getenv("PGUSER", "neondb_owner")
-        NEON_PASSWORD = os.getenv("PGPASSWORD", "npg_VM4tSBwN5PGd")
-        NEON_HOST = os.getenv("PGHOST", "ep-plain-rice-auzortld-pooler.c-10.us-east-1.aws.neon.tech")
+        NEON_PASSWORD = os.getenv("PGPASSWORD", "npg_WFZmc7X1YEMQ")
+        NEON_HOST = os.getenv("PGHOST", "ep-falling-glade-a5v7q460-pooler.us-east-2.aws.neon.tech")
         NEON_DB = os.getenv("PGDATABASE", "neondb")
         
         con = pg8000.native.Connection(

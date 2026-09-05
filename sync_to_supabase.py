@@ -20,8 +20,8 @@ if not os.path.exists(creds_path):
 SHEET_URL = 'https://docs.google.com/spreadsheets/d/1-YglRYU8RZ6fl8xoWBNgxiV5IRna4KgE8ynpjsjtCD4/edit'
 SHEET_NAME = 'امر حجز عميل'
 
-NEON_CONN_STR = os.getenv("DATABASE_URL") or "postgresql://neondb_owner:npg_VM4tSBwN5PGd@ep-plain-rice-auzortld-pooler.c-10.us-east-1.aws.neon.tech/neondb?sslmode=require"
-NEON_HTTP_URL = "https://ep-plain-rice-auzortld-pooler.c-10.us-east-1.aws.neon.tech/sql"
+NEON_CONN_STR = os.getenv("DATABASE_URL") or "postgresql://neondb_owner:npg_WFZmc7X1YEMQ@ep-falling-glade-a5v7q460-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require"
+NEON_HTTP_URL = "https://ep-falling-glade-a5v7q460-pooler.us-east-2.aws.neon.tech/sql"
 
 SYNC_INTERVAL = 60  # ثانية
 FULL_SYNC_EVERY = 30  # مزامنة كاملة كل 30 دورة (30 دقيقة)

@@ -9,7 +9,27 @@ sys.stdout.reconfigure(encoding='utf-8')
 
 FB_PAGE_TOKEN = os.getenv("FB_PAGE_TOKEN") or "EAAPDbwUyvY0BRN0VW4bIHPLRpeA7qHqK5TyFpNxJ8fuFcvVCshuBwZC52F59Q6oNH671nLZBbAiEsGSB55Vq0sHjyMIB4QNStzt6sFxRL7ImzttrnuFkHVTYWGZC0J2MgbBGfqo3dOi7Wo5QagQ7pY3vhZAztfKZBhNZCxGrVeGRIqz7pUkHHC2iM4ZA0mDje9oEXZCm"
 PAGE_ID = "101903822442322"
-API_DB_URL = "https://24seven-ai.com/api/db"
+NEON_CONN_STR = os.getenv("DATABASE_URL") or "postgresql://neondb_owner:npg_WFZmc7X1YEMQ@ep-falling-glade-a5v7q460-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require"
+NEON_HTTP_URL = "https://ep-falling-glade-a5v7q460-pooler.us-east-2.aws.neon.tech/sql"
+
+def insert_to_db(db_data):
+    sql = """
+    INSERT INTO omnichannel_messages (channel, sender_id, sender_name, message_text, is_from_admin, read_by_admin, created_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    RETURNING id;
+    """
+    params = [
+        db_data["channel"],
+        db_data["sender_id"],
+        db_data["sender_name"],
+        db_data["message_text"],
+        db_data["is_from_admin"],
+        db_data["read_by_admin"],
+        db_data["created_at"]
+    ]
+    headers = {"Neon-Connection-String": NEON_CONN_STR}
+    r = requests.post(NEON_HTTP_URL, headers=headers, json={"query": sql, "params": params}, timeout=10)
+    return r.status_code == 200
 
 def sync_facebook_messages():
     if not FB_PAGE_TOKEN:
@@ -29,63 +49,51 @@ def sync_facebook_messages():
             print(f"❌ Error fetching conversations from Meta: {r.status_code} - {r.text[:200]}")
             return
 
-        data = r.json().get("data", [])
+        data = r.json()
+        conversations = data.get("data", [])
+        print(f"📥 Fetched {len(conversations)} conversations from Meta.")
 
-        # Fetch recent messages from Neon via /api/db to prevent duplicates
+        # Load existing messages to avoid duplicates
+        headers = {"Neon-Connection-String": NEON_CONN_STR}
+        existing_res = requests.post(NEON_HTTP_URL, headers=headers, json={
+            "query": "SELECT sender_id, message_text, is_from_admin FROM omnichannel_messages WHERE channel = 'messenger' ORDER BY id DESC LIMIT 500;"
+        }, timeout=10)
         existing_set = set()
-        try:
-            chk_res = requests.post(API_DB_URL, json={
-                "action": "select",
-                "table": "omnichannel_messages",
-                "select": "sender_id,message_text,is_from_admin",
-                "limit": 200
-            }, timeout=8)
-            if chk_res.status_code == 200:
-                rows = chk_res.json().get("data", [])
-                for row in rows:
-                    existing_set.add((str(row.get('sender_id')), str(row.get('message_text')), bool(row.get('is_from_admin'))))
-        except Exception as e:
-            print(f"Warning: Could not check duplicates: {e}")
+        if existing_res.status_code == 200:
+            for row in existing_res.json().get("rows", []):
+                existing_set.add((row.get("sender_id"), row.get("message_text"), row.get("is_from_admin")))
 
         total_inserted = 0
-        for conv in data:
-            participants = conv.get("participants", {}).get("data", [])
-            client_p = None
-            for p in participants:
-                if str(p.get("id")) != str(PAGE_ID):
-                    client_p = p
-                    break
 
-            if not client_p:
+        for conv in conversations:
+            participants = conv.get("participants", {}).get("data", [])
+            client = next((p for p in participants if str(p.get("id")) != PAGE_ID), None)
+
+            if not client:
                 continue
 
-            client_id = str(client_p.get("id"))
-            client_name = client_p.get("name") or "عميل فيسبوك ماسنجر"
+            client_id = str(client.get("id"))
+            client_name = client.get("name") or "عميل فيسبوك"
 
             messages = conv.get("messages", {}).get("data", [])
-            messages.reverse()
+            messages.reverse()  # Oldest to newest
 
             for msg in messages:
-                msg_text = msg.get("message", "")
-                from_obj = msg.get("from", {})
-                from_id = str(from_obj.get("id"))
-                is_admin = (from_id == str(PAGE_ID))
-
+                msg_text = msg.get("message")
                 attachments = msg.get("attachments", {}).get("data", [])
-                if not msg_text and attachments:
-                    att = attachments[0]
-                    att_type = att.get("type", "image")
-                    image_data = att.get("image_data", {})
-                    att_url = image_data.get("url") or att.get("file_url")
-                    msg_text = f"MEDIA_{att_type.upper()}:{att_url}" if att_url else f"📎 [{att_type}]"
 
-                if not msg_text:
+                if not msg_text and attachments:
+                    msg_text = "[مرفق / صورة]"
+                elif not msg_text:
                     continue
+
+                from_id = str(msg.get("from", {}).get("id", ""))
+                is_admin = (from_id == PAGE_ID)
+                created_time = msg.get("created_time")
 
                 if (client_id, msg_text, is_admin) in existing_set:
                     continue
 
-                created_time = msg.get("created_time")
                 db_data = {
                     "channel": "messenger",
                     "sender_id": client_id,
@@ -97,19 +105,14 @@ def sync_facebook_messages():
                 }
 
                 try:
-                    res = requests.post(API_DB_URL, json={
-                        "action": "insert",
-                        "table": "omnichannel_messages",
-                        "data": db_data
-                    }, timeout=6)
-                    if res.status_code == 200 and res.json().get("status") == "ok":
+                    if insert_to_db(db_data):
                         total_inserted += 1
                         existing_set.add((client_id, msg_text, is_admin))
                 except Exception as ex:
                     print(f"Insert error: {ex}")
 
         if total_inserted > 0:
-            print(f"✅ Sync complete! Inserted {total_inserted} new Meta messages with verified customer names.")
+            print(f"✅ Sync complete! Inserted {total_inserted} new Meta messages with verified customer names into Neon.")
         else:
             print("✨ Meta sync check complete - all messages are up to date.")
 
