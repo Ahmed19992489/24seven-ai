@@ -43,8 +43,12 @@ echo [5/6] Starting automation_watcher...
 start "automation_watcher" cmd /k python -u automation_watcher.py
 ping -n 2 127.0.0.1 >nul
 
-echo [6/6] Starting run_sniper_bot...
+echo [6/7] Starting run_sniper_bot...
 start "run_sniper_bot" cmd /k python -u run_sniper_bot.py
+ping -n 2 127.0.0.1 >nul
+
+echo [7/7] Starting sync_facebook_conversations...
+start "sync_facebook_conversations" cmd /k python -u sync_facebook_conversations.py --loop
 ping -n 2 127.0.0.1 >nul
 
 if exist "c:\Users\pc2\LimoBot\main.py" (

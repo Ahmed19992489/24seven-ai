@@ -134,8 +134,10 @@ class handler(BaseHTTPRequestHandler):
 
                 limit = req.get("limit")
                 if limit:
-                    sql += f" LIMIT ${len(params)+1}"
-                    params.append(int(limit))
+                    try:
+                        sql += f" LIMIT {int(limit)}"
+                    except:
+                        pass
 
                 r = requests.post(
                     NEON_HTTP_URL,

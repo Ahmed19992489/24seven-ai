@@ -28,9 +28,13 @@
             this.isMaybeSingle = false;
         }
 
-        select(cols = '*') {
+        select(cols = '*', opts = {}) {
             this.action = 'select';
             this.selectCols = cols;
+            if (opts && (opts.count || opts.head)) {
+                this.isHead = true;
+                this.limitVal = 1;
+            }
             return this;
         }
 
@@ -169,6 +173,12 @@
                 });
             }
 
+            if (this.isHead) {
+                payload.select = 'id';
+                payload.limit = 1;
+                payload.order = { col: 'id', ascending: false };
+            }
+
             try {
                 const resp = await fetch(endpoint, {
                     method: 'POST',
@@ -200,7 +210,13 @@
                     return { data, error: null };
                 }
 
-                return { data: data || [], error: null, count: json.count };
+                let countVal = json.count;
+                if (this.isHead) {
+                    const firstRow = (Array.isArray(data) && data.length > 0) ? data[0] : null;
+                    countVal = firstRow ? (Number(firstRow.id) || 0) : 0;
+                }
+
+                return { data: data || [], error: null, count: countVal };
 
             } catch (err) {
                 console.error(`Neon query error on ${this.tableName}:`, err);
