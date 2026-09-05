@@ -5,8 +5,19 @@ import urllib.parse
 import requests
 
 FB_VERIFY_TOKEN = os.environ.get("FB_VERIFY_TOKEN", "messenger_secret_24seven")
-NEON_CONN_STR = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL") or "postgresql://neondb_owner:npg_WFZmc7X1YEMQ@ep-falling-glade-a5v7q460-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require"
-NEON_HTTP_URL = "https://ep-falling-glade-a5v7q460-pooler.us-east-2.aws.neon.tech/sql"
+def get_neon_creds():
+    env_conn = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL")
+    if env_conn and "ep-plain-rice" not in env_conn:
+        conn = env_conn
+    else:
+        conn = "postgresql://neondb_owner:npg_WFZmc7X1YEMQ@ep-falling-glade-a5v7q460-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require"
+    import re
+    m = re.search(r"@([^/]+)/", conn)
+    host = m.group(1) if m else "ep-falling-glade-a5v7q460-pooler.us-east-2.aws.neon.tech"
+    http_url = f"https://{host}/sql"
+    return conn, http_url
+
+NEON_CONN_STR, NEON_HTTP_URL = get_neon_creds()
 
 class handler(BaseHTTPRequestHandler):
     def _send_cors_headers(self):

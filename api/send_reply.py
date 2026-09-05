@@ -4,8 +4,19 @@ import os
 import requests
 
 FB_PAGE_TOKEN = os.environ.get("FB_PAGE_TOKEN") or "EAAPDbwUyvY0BRN0VW4bIHPLRpeA7qHqK5TyFpNxJ8fuFcvVCshuBwZC52F59Q6oNH671nLZBbAiEsGSB55Vq0sHjyMIB4QNStzt6sFxRL7ImzttrnuFkHVTYWGZC0J2MgbBGfqo3dOi7Wo5QagQ7pY3vhZAztfKZBhNZCxGrVeGRIqz7pUkHHC2iM4ZA0mDje9oEXZCm"
-NEON_CONN_STR = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL") or "postgresql://neondb_owner:npg_WFZmc7X1YEMQ@ep-falling-glade-a5v7q460-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require"
-NEON_HTTP_URL = "https://ep-falling-glade-a5v7q460-pooler.us-east-2.aws.neon.tech/sql"
+def get_neon_creds():
+    env_conn = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL")
+    if env_conn and "ep-plain-rice" not in env_conn:
+        conn = env_conn
+    else:
+        conn = "postgresql://neondb_owner:npg_WFZmc7X1YEMQ@ep-falling-glade-a5v7q460-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require"
+    import re
+    m = re.search(r"@([^/]+)/", conn)
+    host = m.group(1) if m else "ep-falling-glade-a5v7q460-pooler.us-east-2.aws.neon.tech"
+    http_url = f"https://{host}/sql"
+    return conn, http_url
+
+NEON_CONN_STR, NEON_HTTP_URL = get_neon_creds()
 
 class handler(BaseHTTPRequestHandler):
     def _send_cors_headers(self):
