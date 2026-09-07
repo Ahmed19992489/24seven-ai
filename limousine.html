@@ -2491,6 +2491,117 @@
             }
         }
 
+        async function fetchDirectSheetReservationsClient(userPhone, userEmail) {
+            try {
+                const sheetId = "1-YglRYU8RZ6fl8xoWBNgxiV5IRna4KgE8ynpjsjtCD4";
+                const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent('امر حجز عميل')}`;
+                const resp = await fetch(url);
+                const text = await resp.text();
+                const jsonStr = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
+                const data = JSON.parse(jsonStr);
+                const rows = data.table?.rows || [];
+                const mapped = [];
+
+                const parseGvizCell = (cell) => {
+                    if (!cell) return '';
+                    if (cell.f !== null && cell.f !== undefined && String(cell.f).trim()) {
+                        return String(cell.f).trim();
+                    }
+                    if (cell.v === null || cell.v === undefined) return '';
+                    const val = String(cell.v).trim();
+                    const m = val.match(/Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+))?\)/);
+                    if (m) {
+                        const y = parseInt(m[1]);
+                        const month = parseInt(m[2]) + 1;
+                        const d = parseInt(m[3]);
+                        if (m[4] !== undefined) {
+                            const h = parseInt(m[4]);
+                            const minute = parseInt(m[5]);
+                            if (y === 1899) {
+                                const ampm = h >= 12 ? 'م' : 'ص';
+                                const h12 = (h % 12 === 0) ? 12 : (h % 12);
+                                return `${h12}:${String(minute).padStart(2, '0')}:00 ${ampm}`;
+                            }
+                        }
+                        return `${y}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                    }
+                    return val;
+                };
+
+                const cleanPhone = (userPhone || '').replace(/\D/g, '');
+                const phoneSuffix = cleanPhone.slice(-8); // آخر 8 أرقام لمطابقة كل الصيغ الدولية والمحلية
+
+                for (let i = rows.length - 1; i >= 0; i--) {
+                    const c = rows[i]?.c;
+                    if (!c) continue;
+                    const phone = parseGvizCell(c[4]);
+                    const whatsapp = parseGvizCell(c[5]);
+                    const email = parseGvizCell(c[13]);
+
+                    const rowCleanP = phone.replace(/\D/g, '');
+                    const rowCleanW = whatsapp.replace(/\D/g, '');
+
+                    let isMatch = false;
+                    if (phoneSuffix && phoneSuffix.length >= 7 && (rowCleanP.includes(phoneSuffix) || rowCleanW.includes(phoneSuffix))) {
+                        isMatch = true;
+                    } else if (userEmail && email && email.toLowerCase().trim() === userEmail.toLowerCase().trim()) {
+                        isMatch = true;
+                    }
+
+                    if (!isMatch) continue;
+
+                    const tripDate = parseGvizCell(c[1]);
+                    const tripTime = parseGvizCell(c[2]);
+                    const customerName = parseGvizCell(c[3]);
+                    const pickup = parseGvizCell(c[6]);
+                    const dropoff = parseGvizCell(c[7]);
+                    const passengers = parseGvizCell(c[8]);
+                    const bags = parseGvizCell(c[9]);
+                    const carType = parseGvizCell(c[10]);
+                    const cost = parseGvizCell(c[12]);
+                    const notes = parseGvizCell(c[14]);
+                    const tripType = parseGvizCell(c[15]);
+                    const sqlId = parseGvizCell(c[16]) || `gs_${i+2}`;
+                    const status = parseGvizCell(c[19]) || 'pending';
+                    const driverName = parseGvizCell(c[21]);
+                    const driverPhone = parseGvizCell(c[22]);
+                    const tripStatus = parseGvizCell(c[34]);
+
+                    let normDate = tripDate.replace(/\//g, '-').trim();
+                    const dParts = normDate.split('-');
+                    if (dParts.length === 3) {
+                        normDate = `${dParts[0].padStart(4, '20')}-${dParts[1].padStart(2, '0')}-${dParts[2].padStart(2, '0')}`;
+                    }
+
+                    mapped.push({
+                        id: sqlId,
+                        google_res_id: sqlId,
+                        sheet_row: i + 2,
+                        trip_date: normDate,
+                        trip_time: tripTime,
+                        customer_name: customerName,
+                        customer_phone: phone,
+                        whatsapp_num: whatsapp,
+                        pickup_address: pickup,
+                        dropoff_address: dropoff,
+                        passengers: passengers || 1,
+                        bags: bags || 0,
+                        car_type: carType || 'سيدان',
+                        trip_type: tripType || 'ذهاب فقط',
+                        cost: cost || 0,
+                        status: status,
+                        notes: notes,
+                        modified_driver_name: driverName,
+                        modified_driver_phone: driverPhone,
+                        trip_status: tripStatus
+                    });
+                }
+                return mapped;
+            } catch(e) {
+                console.warn("Direct sheet reservations client error:", e);
+                return [];
+            }
+        }
 
         async function loadTrips() {
             if (typeof activeClientTripIds === 'undefined' || !activeClientTripIds) activeClientTripIds = new Set();
@@ -2604,8 +2715,6 @@
                         `whatsapp_num.ilike.%${v}%`
                     ]).join(',');
 
-                    console.log('🔍 Searching trips with phone variants:', [...phoneVariants]);
-
                     const { data: sheetRes, error: sheetErr } = await sb
                         .from('google_reservations')
                         .select('*')
@@ -2613,7 +2722,6 @@
 
                     if (sheetErr) console.log('Sheet reservations error:', sheetErr.message);
                     if (sheetRes) {
-                        console.log(`✅ Found ${sheetRes.length} sheet reservations for phone`);
                         sheetResAll = sheetRes;
                     }
                 }
@@ -2625,9 +2733,24 @@
                         .select('*')
                         .ilike('email', `%${userEmail}%`);
                     if (emailRes && emailRes.length > 0) {
-                        console.log(`✅ Found ${emailRes.length} sheet reservations by email`);
                         sheetResAll = emailRes;
                     }
+                }
+
+                // 4. جلب الحجوزات المباشرة من الشيت
+                try {
+                    const directSheetRes = await fetchDirectSheetReservationsClient(userPhone, userEmail);
+                    if (directSheetRes && directSheetRes.length > 0) {
+                        const existingRows = new Set(sheetResAll.map(r => r.sheet_row).filter(Boolean));
+                        const existingSql = new Set(sheetResAll.map(r => String(r.sql_server_id || r.id)).filter(Boolean));
+                        directSheetRes.forEach(ds => {
+                            if (!existingRows.has(ds.sheet_row) && !existingSql.has(String(ds.id))) {
+                                sheetResAll.push(ds);
+                            }
+                        });
+                    }
+                } catch(eDirect) {
+                    console.warn("Direct sheet client fetch warning:", eDirect);
                 }
 
                 if (sheetResAll.length > 0) {
@@ -2709,9 +2832,16 @@
                                     phone: r.modified_driver_phone || ''
                                 };
                             }
+                            const todayStr = new Date().toISOString().split('T')[0];
+                            const isPast = r.trip_date && r.trip_date < todayStr;
                             let tripStatus = r.status || 'pending';
-                            if (driverInfo && (tripStatus === 'pending' || tripStatus === 'تم تعيين كابتن' || tripStatus === 'confirmed')) tripStatus = 'driver_assigned';
-                            if (r.status === 'confirmed' && !driverInfo) tripStatus = 'approved';
+                            if (isPast || r.trip_status === 'مكتملة') {
+                                tripStatus = 'completed';
+                            } else if (driverInfo && (tripStatus === 'pending' || tripStatus === 'تم تعيين كابتن' || tripStatus === 'confirmed')) {
+                                tripStatus = 'driver_assigned';
+                            } else if (r.status === 'confirmed' || r.status === 'approved' || r.status === 'تم الترحيل') {
+                                tripStatus = 'approved';
+                            }
 
                             return {
                                 id: 'gr_' + r.id,
@@ -2719,7 +2849,7 @@
                                 pickup_location: r.pickup_address || 'انتظار التأكيد',
                                 dropoff_location: r.dropoff_address || 'انتظار التأكيد',
                                 estimated_price: r.cost || 0,
-                                created_at: r.created_at || new Date().toISOString(),
+                                created_at: r.created_at || (r.trip_date ? r.trip_date + 'T12:00:00' : new Date().toISOString()),
                                 drivers: driverInfo,
                                 cars: null,
                                 sql_server_id: r.sql_server_id,
@@ -2739,11 +2869,20 @@
                 console.log('Error fetching sheet reservations:', err);
             }
 
-            // Sort all trips by newest first
-            allTrips.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+            // ترتيب الرحلات: الأحدث والرحلات القادمة في الأعلى
+            allTrips.sort((a,b) => {
+                const dateA = a.details?.date || a.created_at || '';
+                const dateB = b.details?.date || b.created_at || '';
+                return dateB.localeCompare(dateA);
+            });
             
+            // حفظ نسخة من الرحلات في الذاكرة لتحديث برنامج الولاء الذهبي تلقائياً
+            window.cachedClientTrips = allTrips;
+
             renderTrips(allTrips);
+            if (typeof loadLoyalty === 'function') loadLoyalty();
         }
+
 
         function renderTrips(trips) {
             // Filter tripIds to only include valid UUIDs (exclude our custom gr_ ids for google_reservations)
@@ -4116,16 +4255,38 @@
         async function loadLoyalty() {
             if (!user) return;
 
-            // 1. جلب عدد الرحلات المكتملة
-            const { count: completedCount } = await sb
-                .from('trips')
-                .select('id', { count: 'exact', head: true })
-                .eq('user_id', user.id)
-                .in('status', ['completed', 'trip_ended']);
+            // 1. جلب عدد الرحلات المكتملة من جدول trips
+            let totalTrips = 0;
+            try {
+                const { count: completedCount } = await sb
+                    .from('trips')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('user_id', user.id)
+                    .in('status', ['completed', 'trip_ended']);
+                totalTrips = completedCount || 0;
+            } catch(e) {}
 
-            const totalTrips = completedCount || 0;
+            // 2. فحص كافة رحلات العميل المكتملة (من الشيت وواتساب وقاعدة البيانات)
+            try {
+                const todayDateStr = new Date().toISOString().split('T')[0];
+                let cached = window.cachedClientTrips;
+                if (!cached || cached.length === 0) {
+                    if (typeof loadTrips === 'function') await loadTrips();
+                    cached = window.cachedClientTrips;
+                }
+                if (cached && cached.length > 0) {
+                    const completedFromTripsList = cached.filter(t => {
+                        const isDone = t.status === 'completed' || t.status === 'trip_ended';
+                        const isPast = t.details?.date && t.details.date < todayDateStr && t.status !== 'cancelled' && t.status !== 'ملغي';
+                        return isDone || isPast;
+                    });
+                    totalTrips = Math.max(totalTrips, completedFromTripsList.length);
+                }
+            } catch(e) {
+                console.warn("Loyalty points calculation error:", e);
+            }
 
-            // 2. جلب الاستبدالات السابقة
+            // 3. جلب الاستبدالات السابقة
             const { data: redeemed } = await sb
                 .from('loyalty_rewards')
                 .select('*')
@@ -4134,6 +4295,7 @@
 
             renderLoyaltyUI(totalTrips, redeemed || []);
         }
+
 
         function renderLoyaltyUI(totalTrips, redeemed) {
             // تحديث العداد الرئيسي
