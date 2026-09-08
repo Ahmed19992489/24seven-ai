@@ -2840,6 +2840,20 @@
                 .subscribe();
         }
 
+        function normalizeDateStr(dStr) {
+            if (!dStr) return '';
+            let clean = String(dStr).replace(/\//g, '-').trim();
+            const parts = clean.split('-');
+            if (parts.length === 3) {
+                if (parts[0].length === 4) {
+                    return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+                } else if (parts[2].length === 4) {
+                    return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                }
+            }
+            return clean;
+        }
+
         function clearOpsFilter() {
             const todayStr = new Date().toISOString().split('T')[0];
             if(document.getElementById('ops-search')) document.getElementById('ops-search').value = '';
@@ -2848,17 +2862,20 @@
             loadOperations();
         }
 
-        async function fetchDirectSheetReservationsAdmin() {
+        async function fetchDirectSheetReservationsAdmin(targetDate = null) {
             try {
-                // محاولة القراءة أولاً من Backend API
-                try {
-                    const apiResp = await fetch(`${getApiBaseUrl()}/api/reservations?limit=300`);
-                    if (apiResp.ok) {
-                        const json = await apiResp.json();
-                        if (json && json.data && json.data.length > 0) return json.data;
-                    }
-                } catch(eApi) {}
+                // 1. محاولة القراءة أولاً من Backend API بالتاريخ إن وجد (مثل الموديتور تماماً)
+                if (targetDate) {
+                    try {
+                        const apiResp = await fetch(`${getApiBaseUrl()}/api/reservations?date=${encodeURIComponent(targetDate)}`);
+                        if (apiResp.ok) {
+                            const json = await apiResp.json();
+                            if (json && json.data && json.data.length > 0) return json.data;
+                        }
+                    } catch(eApi) { console.warn("Backend API reservations fetch fallback:", eApi); }
+                }
 
+                // 2. القراءة المباشرة من Google Sheets
                 const sheetId = "1-YglRYU8RZ6fl8xoWBNgxiV5IRna4KgE8ynpjsjtCD4";
                 const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent('امر حجز عميل')}`;
                 const resp = await fetch(url);
@@ -2919,11 +2936,7 @@
 
                     if (!customerName && !customerPhone && !pickup) continue;
 
-                    let normDate = tripDate.replace(/\//g, '-').trim();
-                    const dParts = normDate.split('-');
-                    if (dParts.length === 3) {
-                        normDate = `${dParts[0].padStart(4, '20')}-${dParts[1].padStart(2, '0')}-${dParts[2].padStart(2, '0')}`;
-                    }
+                    const normDate = normalizeDateStr(tripDate);
 
                     mapped.push({
                         id: sqlId,
@@ -2973,70 +2986,69 @@
                 if(document.getElementById('ops-date-to')) document.getElementById('ops-date-to').value = todayStr;
             }
 
-            // 1. جلب الرحلات أولاً من قاعدة البيانات مع فلترة سريعة
-            let tripsQuery = sbClient.from('trips')
-                .select(`*, cars:cars!fk_trips_car(brand, model, plate_number, car_image_url), drivers:drivers!fk_trips_driver(name, phone)`);
-
-            if (fDate) {
-                tripsQuery = tripsQuery.gte('trip_date', fDate);
-            }
-            if (tDate) {
-                tripsQuery = tripsQuery.lte('trip_date', tDate);
-            }
-            if (search) {
-                tripsQuery = tripsQuery.or(`manual_client_name.ilike.%${search}%,client_phone.ilike.%${search}%,pickup_location.ilike.%${search}%,dropoff_location.ilike.%${search}%`);
-            }
-
-            tripsQuery = tripsQuery.order('id', { ascending: false }).limit(60);
-
-            const tripsResult = await tripsQuery;
-
-            if (tripsResult.error) { 
-                list.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-red-500">حدث خطأ أثناء تحميل الرحلات</td></tr>'; 
-                return; 
-            }
-
-            const trips = tripsResult.data || [];
-
-            // 2. جلب الحجوزات النشطة وغير المسندة لنفس التاريخ والبحث
-            let activeReservations = [];
+            // 1. جلب الرحلات من قاعدة البيانات Supabase (بدون استعلام trip_date المباشر لتفادي خطأ PostgREST 400)
+            let trips = [];
             try {
-                let activeQuery = sbClient.from('google_reservations')
-                    .select('*')
-                    .or('modified_driver_name.is.null,modified_driver_name.eq.,modified_driver_name.eq.--');
+                let tripsQuery = sbClient.from('trips')
+                    .select(`*, cars:cars!fk_trips_car(brand, model, plate_number, car_image_url), drivers:drivers!fk_trips_driver(name, phone)`);
 
-                if (fDate) {
-                    activeQuery = activeQuery.gte('trip_date', fDate);
-                }
-                if (tDate) {
-                    activeQuery = activeQuery.lte('trip_date', tDate);
-                }
                 if (search) {
-                    activeQuery = activeQuery.or(`customer_name.ilike.%${search}%,customer_phone.ilike.%${search}%,pickup_address.ilike.%${search}%,dropoff_address.ilike.%${search}%`);
+                    tripsQuery = tripsQuery.or(`manual_client_name.ilike.%${search}%,client_phone.ilike.%${search}%,pickup_location.ilike.%${search}%,dropoff_location.ilike.%${search}%`);
                 }
 
-                const res = await activeQuery
-                    .order('sheet_row', { ascending: false })
-                    .limit(60);
+                tripsQuery = tripsQuery.order('id', { ascending: false }).limit(100);
 
-                if (!res.error && res.data && res.data.length > 0) {
-                    activeReservations = res.data;
+                const tripsResult = await tripsQuery;
+                if (!tripsResult.error && tripsResult.data) {
+                    trips = tripsResult.data;
                 }
-            } catch(e) { 
-                console.warn("Reservations query error:", e); 
+            } catch(eTrips) {
+                console.warn("Trips query warning:", eTrips);
+            }
+
+            // 2. جلب الحجوزات من Backend API بالتاريخ ومن جوجل شيت مباشرة (تطابق تام مع الموديتور)
+            let activeReservations = [];
+            const targetDate = (fDate === tDate && fDate) ? fDate : (fDate || tDate || todayStr);
+
+            if (targetDate) {
+                try {
+                    const apiResp = await fetch(`${getApiBaseUrl()}/api/reservations?date=${encodeURIComponent(targetDate)}`);
+                    if (apiResp.ok) {
+                        const json = await apiResp.json();
+                        if (json && json.data && json.data.length > 0) {
+                            activeReservations = json.data;
+                        }
+                    }
+                } catch(eApi) { console.warn("Backend API reservations fetch error in Admin:", eApi); }
+            }
+
+            // محاولة جلب من Supabase كاحتياطي
+            if (activeReservations.length === 0) {
+                try {
+                    let activeQuery = sbClient.from('google_reservations').select('*');
+                    if (fDate) activeQuery = activeQuery.gte('trip_date', fDate);
+                    if (tDate) activeQuery = activeQuery.lte('trip_date', tDate);
+                    if (search) activeQuery = activeQuery.or(`customer_name.ilike.%${search}%,customer_phone.ilike.%${search}%,pickup_address.ilike.%${search}%,dropoff_address.ilike.%${search}%`);
+
+                    const res = await activeQuery.order('sheet_row', { ascending: false }).limit(60);
+                    if (!res.error && res.data && res.data.length > 0) {
+                        activeReservations = res.data;
+                    }
+                } catch(eSb) { console.warn("Supabase reservations query error:", eSb); }
             }
 
             // دمج الحجوزات المباشرة من الشيت لضمان ظهور كافة رحلات الغد والمستقبلية كالموديتور تماماً
             try {
-                const sheetDirect = await fetchDirectSheetReservationsAdmin();
+                const sheetDirect = await fetchDirectSheetReservationsAdmin(targetDate);
                 if (sheetDirect && sheetDirect.length > 0) {
                     const existingRowSet = new Set(activeReservations.map(r => r.sheet_row).filter(Boolean));
                     const existingSqlSet = new Set(activeReservations.map(r => String(r.sql_server_id || r.id)).filter(Boolean));
 
                     sheetDirect.forEach(sr => {
                         if (existingRowSet.has(sr.sheet_row) || existingSqlSet.has(String(sr.id))) return;
-                        if (fDate && sr.trip_date < fDate) return;
-                        if (tDate && sr.trip_date > tDate) return;
+                        const srDate = normalizeDateStr(sr.trip_date);
+                        if (fDate && srDate < fDate) return;
+                        if (tDate && srDate > tDate) return;
                         if (search) {
                             const str = `${sr.customer_name} ${sr.customer_phone} ${sr.pickup_address} ${sr.dropoff_address} ${sr.id}`.toLowerCase();
                             if (!str.includes(search)) return;
@@ -3064,11 +3076,6 @@
                     if (existingTripIds.has(String(r.id))) {
                         return false;
                     }
-                    
-                    // إذا كان الحجز له كابتن أو مكتب معين بالفعل في الشيت، نقوم بإخفائه (حتى لا يتم تعيينه مرتين)
-                    if (r.modified_driver_name && r.modified_driver_name.trim() !== '' && r.modified_driver_name !== '--') {
-                        return false;
-                    }
 
                     // إذا كانت حالة الحجز مكتملة أو ملغاة في الشيت، نقوم بإخفائه
                     if (r.trip_status === 'مكتملة' || r.trip_status === 'ملغاة') {
@@ -3078,6 +3085,7 @@
                     return true;
                 })
                 .map(r => {
+                    const hasDriver = r.modified_driver_name && r.modified_driver_name.trim() !== '' && r.modified_driver_name !== '--';
                     return {
                         id: 'gr_' + r.id,
                         google_res_id: r.id,
@@ -3085,24 +3093,26 @@
                         pickup_location: r.pickup_address,
                         dropoff_location: r.dropoff_address,
                         estimated_price: Number(r.cost) || 0,
-                        status: 'pending',
+                        status: hasDriver ? 'driver_assigned' : (r.status || 'pending'),
                         admin_notes: `📝 حجز من الشيت
 👤 العميل: ${r.customer_name}
 📞 الهاتف: ${r.customer_phone}
-🚗 السيارة: ${r.car_type} | رحلة: ${r.trip_type}
-👥 ركاب: ${r.passengers} | شنط: ${r.bags}
+🚗 السيارة: ${r.car_type || 'سيدان'} | رحلة: ${r.trip_type || 'ذهاب فقط'}
+👥 ركاب: ${r.passengers || 1} | شنط: ${r.bags || 0}
 📅 التاريخ: ${r.trip_date} | الوقت: ${r.trip_time}
 💬 واتساب: ${r.whatsapp_num || '-'}
 نوع التحصيل: ${r.payment_method || 'غير محدد'}
 💡 ملاحظات: ${r.notes || '-'}`,
                         created_at: r.created_at || r.sheet_timestamp,
-                        drivers: null,
+                        drivers: hasDriver ? { name: r.modified_driver_name, phone: r.modified_driver_phone || '-' } : null,
                         cars: null,
                         manual_client_name: r.customer_name,
                         client_phone: r.customer_phone,
                         is_google_res: true,
                         sheet_row: r.sheet_row,
-                        trip_date: r.trip_date
+                        trip_date: r.trip_date,
+                        trip_time: r.trip_time,
+                        client_decision: r.client_decision || null
                     };
                 });
 
@@ -3178,31 +3188,20 @@
                 let matchDate = true;
                 if (fDate || tDate) {
                     let extractedDateStr = '';
-                    if (t.admin_notes) {
+                    if (t.trip_date) {
+                        extractedDateStr = normalizeDateStr(t.trip_date);
+                    } else if (t.admin_notes) {
                         const dMatch = t.admin_notes.match(/(?:التاريخ:|📅)\s*([0-9\-/\\]+)/);
-                        if (dMatch) extractedDateStr = dMatch[1].trim();
+                        if (dMatch) extractedDateStr = normalizeDateStr(dMatch[1].trim());
                     }
                     
-                    // تحويل التاريخ من النص إذا تم التقاطه، أو استخدام تاريخ إنشاء الطلب كبديل
-                    let tripDate;
+                    if (!extractedDateStr && t.created_at) {
+                        extractedDateStr = normalizeDateStr(t.created_at.split('T')[0]);
+                    }
+                    
                     if (extractedDateStr) {
-                        tripDate = new Date(extractedDateStr);
-                    } else if (t.trip_date) {
-                        tripDate = new Date(t.trip_date);
-                    } else {
-                        tripDate = new Date(t.created_at);
-                    }
-                    
-                    if (!isNaN(tripDate.getTime())) {
-                        tripDate.setHours(0,0,0,0);
-                        if (fDate) {
-                            const fd = new Date(fDate); fd.setHours(0,0,0,0);
-                            if (tripDate < fd) matchDate = false;
-                        }
-                        if (tDate && matchDate) {
-                            const td = new Date(tDate); td.setHours(0,0,0,0);
-                            if (tripDate > td) matchDate = false;
-                        }
+                        if (fDate && extractedDateStr < fDate) matchDate = false;
+                        if (tDate && matchDate && extractedDateStr > tDate) matchDate = false;
                     }
                 }
                 
@@ -3267,7 +3266,9 @@
                 }
 
                 let rawDecision = '';
-                if (resObj && resObj.client_decision) {
+                if (t.client_decision) {
+                    rawDecision = t.client_decision.trim();
+                } else if (resObj && resObj.client_decision) {
                     rawDecision = resObj.client_decision.trim();
                 } else if (t.admin_notes && t.admin_notes.includes('قرار العميل:')) {
                     const match = t.admin_notes.match(/قرار العميل:\s*(.*)/);
