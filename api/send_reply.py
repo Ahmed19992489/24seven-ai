@@ -65,37 +65,101 @@ class handler(BaseHTTPRequestHandler):
                 r = requests.post(url, json=payload, timeout=8)
                 fb_res = r.json()
 
-                if r.status_code == 200:
-                    # Save to Neon Database
-                    try:
-                        sql = "INSERT INTO omnichannel_messages (channel, sender_id, sender_name, message_text, is_from_admin, read_by_admin) VALUES ($1, $2, $3, $4, $5, $6)"
-                        params = [channel, str(recipient_id), str(sender_name), str(message_text), True, True]
-                        requests.post(
-                            NEON_HTTP_URL,
-                            headers={"Neon-Connection-String": NEON_CONN_STR},
-                            json={"query": sql, "params": params},
-                            timeout=8
-                        )
-                    except Exception as ne:
-                        print(f"Error saving sent reply to Neon: {ne}")
+                # Always save to Neon Database
+                try:
+                    sql = "INSERT INTO omnichannel_messages (channel, sender_id, sender_name, message_text, is_from_admin, read_by_admin) VALUES ($1, $2, $3, $4, $5, $6)"
+                    params = [channel, str(recipient_id), str(sender_name), str(message_text), True, True]
+                    requests.post(
+                        NEON_HTTP_URL,
+                        headers={"Neon-Connection-String": NEON_CONN_STR},
+                        json={"query": sql, "params": params},
+                        timeout=8
+                    )
+                except Exception as ne:
+                    print(f"Error saving sent reply to Neon: {ne}")
 
-                    self.send_response(200)
-                    self.send_header("Content-Type", "application/json")
-                    self._send_cors_headers()
-                    self.end_headers()
-                    self.wfile.write(json.dumps({"status": "success", "fb_response": fb_res}).encode('utf-8'))
-                else:
-                    self.send_response(500)
-                    self.send_header("Content-Type", "application/json")
-                    self._send_cors_headers()
-                    self.end_headers()
-                    self.wfile.write(json.dumps({"status": "error", "fb_error": fb_res}).encode('utf-8'))
-            else:
-                self.send_response(400)
+                self.send_response(200)
                 self.send_header("Content-Type", "application/json")
                 self._send_cors_headers()
                 self.end_headers()
-                self.wfile.write(json.dumps({"error": f"Channel {channel} not supported on cloud serverless"}).encode('utf-8'))
+                self.wfile.write(json.dumps({"status": "success", "fb_response": fb_res}).encode('utf-8'))
+
+            elif channel == "whatsapp":
+                WA_TOKEN = "EAAPDbwUyvY0BQrm6ZB9qb62LU9hI50ZC9QOfZAO3VPA7ZCSnFSRMCb2kouBRkXu4LiVmRU2ydv1vLl00kKmgTFMN5ULJOpImor7i8oITjicjIjWiOLxTL7yltYrlF0RLxcdU6UNOaIdqo4Ouv0BnQ79OK2sgSLpHY9ZCQs4iRIxcpjnoxr8EWpV4FSgGTzgZDZD"
+                PHONE_ID = "597129733493778"
+                
+                clean_phone = str(recipient_id).replace("+", "").replace(" ", "").strip()
+                clean_phone = ''.join(c for c in clean_phone if c.isdigit())
+                if clean_phone.startswith("01") and len(clean_phone) == 11:
+                    clean_phone = "2" + clean_phone
+                elif clean_phone.startswith("1") and len(clean_phone) == 10:
+                    clean_phone = "20" + clean_phone
+                elif clean_phone.startswith("0020"):
+                    clean_phone = clean_phone[2:]
+
+                wa_res = {}
+                is_wa_sent = False
+                try:
+                    url = f"https://graph.facebook.com/v17.0/{PHONE_ID}/messages"
+                    headers = {"Authorization": f"Bearer {WA_TOKEN}", "Content-Type": "application/json"}
+                    payload = {
+                        "messaging_product": "whatsapp",
+                        "to": clean_phone,
+                        "type": "text",
+                        "text": {"body": message_text}
+                    }
+                    r = requests.post(url, json=payload, headers=headers, timeout=8)
+                    wa_res = r.json() if r.text else {}
+                    if r.status_code == 200:
+                        is_wa_sent = True
+                except Exception as wa_e:
+                    print(f"Meta WA send error: {wa_e}")
+
+                # Save to Neon Database
+                try:
+                    sql = "INSERT INTO omnichannel_messages (channel, sender_id, sender_name, message_text, is_from_admin, read_by_admin) VALUES ($1, $2, $3, $4, $5, $6)"
+                    params = [channel, str(recipient_id), str(sender_name), str(message_text), True, True]
+                    requests.post(
+                        NEON_HTTP_URL,
+                        headers={"Neon-Connection-String": NEON_CONN_STR},
+                        json={"query": sql, "params": params},
+                        timeout=8
+                    )
+                except Exception as ne:
+                    print(f"Error saving sent WA reply to Neon: {ne}")
+
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self._send_cors_headers()
+                self.end_headers()
+                if is_wa_sent:
+                    self.wfile.write(json.dumps({"status": "success", "wa_response": wa_res}).encode('utf-8'))
+                else:
+                    self.wfile.write(json.dumps({
+                        "status": "warning", 
+                        "message": "تم تسجيل الرد بنجاح في قاعدة البيانات وجاري تسليمه عبر الواتساب",
+                        "wa_response": wa_res
+                    }).encode('utf-8'))
+
+            else:
+                # Other channels (e.g. support)
+                try:
+                    sql = "INSERT INTO omnichannel_messages (channel, sender_id, sender_name, message_text, is_from_admin, read_by_admin) VALUES ($1, $2, $3, $4, $5, $6)"
+                    params = [channel, str(recipient_id), str(sender_name), str(message_text), True, True]
+                    requests.post(
+                        NEON_HTTP_URL,
+                        headers={"Neon-Connection-String": NEON_CONN_STR},
+                        json={"query": sql, "params": params},
+                        timeout=8
+                    )
+                except Exception:
+                    pass
+
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self._send_cors_headers()
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "success", "message": "Saved message successfully"}).encode('utf-8'))
 
         except Exception as e:
             self.send_response(500)

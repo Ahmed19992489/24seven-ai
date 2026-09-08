@@ -120,6 +120,7 @@ def add_cors_headers(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,ngrok-skip-browser-warning,Bypass-Tunnel-Reminder')
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Private-Network', 'true')
     return response
 
 # Heartbeat thread to show live pulse in terminal
@@ -233,7 +234,18 @@ def insert_message_to_supabase(channel, sender_id, sender_name, message_text, is
     if channel == "whatsapp" and whatsapp_instance_id:
         data["whatsapp_instance_id"] = str(whatsapp_instance_id)
         
-    # 1. الحفظ المباشر في قاعدة بيانات Neon Postgres
+    # 1. إرسال لـ Supabase فوراً (للتحديث اللحظي الفوري في لوحة الموديتور)
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/omnichannel_messages"
+        r_sb = requests.post(url, headers=SUPABASE_SERVICE_HEADERS, json=data, timeout=4)
+        if r_sb.status_code in [200, 201]:
+            print(f"[Supabase-Sync] Saved {channel} message to Supabase successfully.")
+        else:
+            print(f"[Supabase-Sync Warning] {r_sb.status_code}: {r_sb.text}")
+    except Exception as sb_e:
+        print(f"[Supabase-Sync Error]: {sb_e}")
+
+    # 2. الحفظ المباشر في قاعدة بيانات Neon Postgres (نسخة احتياطية)
     try:
         r_neon = requests.post("https://24seven-ai.com/api/db", json={
             "action": "insert",
@@ -246,12 +258,6 @@ def insert_message_to_supabase(channel, sender_id, sender_name, message_text, is
             print(f"[Neon-DB Warning] {r_neon.status_code}: {r_neon.text}")
     except Exception as e:
         print(f"[Neon-DB Error]: {e}")
-
-    # 2. إرسال لـ Supabase (Fallback اختياري)
-    try:
-        url = f"{SUPABASE_URL}/rest/v1/omnichannel_messages"
-        requests.post(url, headers=SUPABASE_HEADERS, json=data, timeout=3)
-    except: pass
 
 # = [HELPERS] Helper Functions مساعدات
 # =====================================================
@@ -308,8 +314,8 @@ def ai_understand_intent(text, context='confirmation'):
             system_msg = """أنت محلل نوايا لشركة ليموزين. مهمتك تحديد هل العميل يؤكد أو يلغي حجزه.
 رد فقط بـ JSON هكذا: {"intent": "confirm" أو "cancel" أو "unclear", "confidence": 0.0-1.0}
 أمثلة تأكيد: تأكيد، اوكي، نعم، تمام، موافق، اكيد، اه، يلا، حلو، ماشي، أيوه، ايوه، يس، اتفقنا
-أمثلة إلغاء: لأ، لا، إلغاء، مش عايز، بلغي، كنسل، مستأجلنا، بردد
-أمثلة غير واضح: سؤال عن موعد، شكوى، موضوع آخر"""
+أمثلة إلغاء صريحة: إلغاء، الغي الحجز، كنسل، مش هسافر، مش جاي، اعتذر عن الرحلة، لغيت
+تنبيه شديد الأهمية: عبارات الذوق والاعتذار المهذب مثل "لا شكرا"، "شكرا"، "تسلم"، "لا تسلم"، "مشكور" ليست إلغاء للرحلة أبداً! يجب تصنيفها "unclear" دائماً وبعدم إلغاء الحجز بها."""
         elif context == 'feedback_yes_no':
             system_msg = """أنت محلل نوايا. مهمتك تحديد هل رد العميل إيجابي أو سلبي.
 رد فقط بـ JSON: {"intent": "yes" أو "no" أو "unclear", "confidence": 0.0-1.0}
@@ -345,6 +351,13 @@ def ai_understand_intent(text, context='confirmation'):
             import json as _json
             parsed = _json.loads(content)
             print(f"[AI-Intent] context={context}, text='{text}', result={parsed}")
+            # حماية إضافية للرد الذكي: إذا كان العميل يشكر أو يقول "لا شكرا" فلا يعتبر إلغاء أبداً
+            text_l = text.lower().strip()
+            is_polite = any(kw in text_l for kw in ['شكرا', 'تسلم', 'يسلمو', 'مشكور', 'جزاك', 'العفو', 'يخليك', 'لا شكرا', 'لا تسلم'])
+            explicit_c = any(kw in text_l for kw in ['الغي', 'إلغاء', 'الغاء', 'كنسل', 'مش هسافر', 'مش جاي', 'مش هروح', 'لغيت'])
+            if parsed.get('intent') == 'cancel' and is_polite and not explicit_c:
+                print(f"[AI-Intent Override] Classified as cancel but contains polite expression without explicit cancel: {text} -> overriding to unclear")
+                parsed['intent'] = 'unclear'
             return parsed
         else:
             print(f"[AI-Intent] Groq error: {r.status_code} {r.text[:200]}")
@@ -354,9 +367,13 @@ def ai_understand_intent(text, context='confirmation'):
     # Fallback: regex بسيط
     t = text.lower().strip()
     if context == 'confirmation':
+        is_polite = any(kw in t for kw in ['شكرا', 'تسلم', 'يسلمو', 'مشكور', 'جزاك', 'العفو', 'يخليك', 'لا شكرا', 'لا تسلم', 'لا مشكور'])
+        explicit_cancel = any(kw in t for kw in ['الغي', 'إلغاء', 'الغاء', 'كنسل', 'مش هسافر', 'مش جاي', 'مش هروح', 'لغيت'])
+        if is_polite and not explicit_cancel:
+            return {'intent': 'unclear', 'confidence': 0.9}
         if re.search(r'تأكيد|تاكيد|نعم|اوكي|موافق|تمام|ماشي|يلا|اه\b|ايه\b|اكيد|يس|اتفقنا|ماشيين|ايوه|اوك', t):
             return {'intent': 'confirm', 'confidence': 0.8}
-        if re.search(r'لا\b|لأ|إلغاء|الغاء|كنسل|مش عايز|بلغي', t):
+        if explicit_cancel or re.search(r'^\s*(لا|لأ|no)\s*$', t):
             return {'intent': 'cancel', 'confidence': 0.8}
         return {'intent': 'unclear', 'confidence': 0.3}
     elif context == 'feedback_yes_no':
@@ -569,8 +586,10 @@ def find_active_session(sheet, sender_phone, message_text=""):
         
         # ----------------------------------------------------
         # أولوية 1: الحجوزات القادمة أو اليومية (تأكيد الرحلة وتفاصيلها لها الأولوية القصوى)
+        # مع الفرز الذكي للأقرب تاريخياً والتي أُرسل لها تذكير بالفعل
         # ----------------------------------------------------
-        for i in range(len(all_rows)-1, 0, -1):
+        candidate_confirm_rows = []
+        for i in range(1, len(all_rows)):
             row = list(all_rows[i])
             while len(row) < 35: row.append("")
             
@@ -585,15 +604,39 @@ def find_active_session(sheet, sender_phone, message_text=""):
             is_future_or_today = (trip_date >= today)
             
             if is_future_or_today:
-                # ✅ تحقق من client_decision (AB = index 27) — لو أكد أو رفض، لا نعيد التأكيد
+                # ✅ تحقق من client_decision (AB = index 27) — لو أكد أو رفض، لا نعيد التأكيد إلا لو كان العميل يرسل تأكيداً صريحاً جديداً
                 decision = str(row[27]).strip() if len(row) > 27 else ""
                 already_decided = decision in ["وافق", "مؤكد", "تأكيد", "رفض", "ملغي", "إلغاء", "الغاء"]
-                if already_decided:
+                is_reconfirm_msg = False
+                if already_decided and message_text and decision in ["رفض", "ملغي", "إلغاء", "الغاء"]:
+                    clean_msg = message_text.lower().strip()
+                    if re.search(r'تأكيد|تاكيد|نعم|أكد|اكد|موافق|وافق|حجز', clean_msg):
+                        is_reconfirm_msg = True
+                        print(f"[Debug-Session] Row {i+1}: client previously had '{decision}', but now explicitly sent confirmation '{message_text}' -> Re-opening confirm session!")
+                
+                if not already_decided or is_reconfirm_msg:
+                    status_aa = str(row[26]).strip() if len(row) > 26 else ""
+                    reminder_sent = ("تذكير" in status_aa) or ("تم إرسال" in status_aa) or ("[OK]" in status_aa)
+                    days_diff = (trip_date - today).days
+                    candidate_confirm_rows.append({
+                        "row_idx": i + 1,
+                        "trip_date": trip_date,
+                        "reminder_sent": reminder_sent,
+                        "days_diff": days_diff,
+                        "row_data": row
+                    })
+                else:
                     print(f"[Debug-Session] Row {i+1}: client already decided ('{decision}') — NOT a confirm session")
-                    continue  # تخطي هذه الرحلة لأن العميل حسم قراره
-                    
-                print(f"[Debug-Session] Found upcoming confirmation session on row {i+1} for sender {sender_phone}")
-                return i + 1, "confirm"
+
+        if candidate_confirm_rows:
+            # فرز المرشحين:
+            # 1. الرحلة التي تم إرسال تذكير لها بالفعل لها الأولوية القصوى
+            # 2. الأقرب تاريخياً لليوم (مثلاً بكرة تسبق الأسبوع القادم)
+            # 3. الأحدث إضافة
+            candidate_confirm_rows.sort(key=lambda x: (not x["reminder_sent"], x["days_diff"], -x["row_idx"]))
+            best_candidate = candidate_confirm_rows[0]
+            print(f"[Debug-Session] Selected best confirm session: Row {best_candidate['row_idx']} (Date: {best_candidate['trip_date']}, ReminderSent: {best_candidate['reminder_sent']}, DaysDiff: {best_candidate['days_diff']}) for sender {sender_phone}")
+            return best_candidate["row_idx"], "confirm"
                     
         # ----------------------------------------------------
         # أولوية 2: فحص التقييم (Z = index 25) - فقط للرحلات المنتهية خلال آخر 3 أيام
@@ -650,14 +693,29 @@ def find_active_session(sheet, sender_phone, message_text=""):
                 print(f"[LID-Match Error]: {lid_err}")
 
         # ----------------------------------------------------
-        # fallback: أي رحلة قادمة أو عامة للمستخدم
+        # fallback: اختيار أقرب رحلة قادمة للعميل
         # ----------------------------------------------------
-        for i in range(len(all_rows)-1, 0, -1):
+        candidate_fallbacks = []
+        for i in range(1, len(all_rows)):
             row = list(all_rows[i])
             while len(row) < 35: row.append("")
             if _phones_match(str(row[4]), clean_sender):
-                print(f"[Debug-Session] Fallback: Found general session on row {i+1} for sender {sender_phone}")
-                return i + 1, "unknown"
+                trip_d = _parse_trip_date(row[1])
+                is_fut = (trip_d is not None and trip_d >= today)
+                days = abs((trip_d - today).days) if trip_d else 9999
+                candidate_fallbacks.append({
+                    "row_idx": i + 1,
+                    "is_future": is_fut,
+                    "days": days
+                })
+
+        if candidate_fallbacks:
+            # 1. الرحلات القادمة أولاً، الأقرب تاريخياً للغد/اليوم
+            # 2. ثم الأحدث
+            candidate_fallbacks.sort(key=lambda x: (not x["is_future"], x["days"], -x["row_idx"]))
+            best_fb = candidate_fallbacks[0]
+            print(f"[Debug-Session] Fallback: Selected best session on row {best_fb['row_idx']} (Future: {best_fb['is_future']}, Days: {best_fb['days']}) for sender {sender_phone}")
+            return best_fb["row_idx"], "unknown"
                 
         print(f"[Debug-Session] No active session found for sender {sender_phone}")
         return -1, None
@@ -734,6 +792,22 @@ def handle_confirmation(sender, text, row=None, instance_id=None):
             )
             return
         
+        # ========================================
+        # [POLITE & THANKS FILTER] فحص عبارات الشكر والتحية والإنهاء أولاً لمنع الإلغاء الخاطئ
+        # ========================================
+        thanks_keywords = [
+            'شكرا', 'شكراً', 'شكر', 'تسلم', 'يسلمو', 'يسلمك', 'جزاك', 'الف شكر', 'ألف شكر', 
+            'العفو', 'حبيبي', 'يا غالي', 'مشكور', 'ذوق', 'ممتن', 'ربنا يخليك', 'تمام شكرا', 
+            'صباح الخير', 'مساء الخير', 'لا شكرا', 'لا شكراً', 'لا تسلم', 'لا مشكور', 
+            'الله يخليك', 'تسلملي', 'تسلم ايدك'
+        ]
+        text_lower = text.lower().strip()
+        has_explicit_cancel = any(ck in text_lower for ck in ['الغي', 'إلغاء', 'الغاء', 'كنسل', 'كنسلو', 'مش هسافر', 'مش جاي', 'مش هروح', 'لغيت'])
+        if any(kw in text_lower for kw in thanks_keywords) and not has_explicit_cancel:
+            print(f"[INFO] Client {sender} sent polite/thanks phrase: '{text}' -> Responding safely without cancelling.")
+            send_whatsapp_message(sender, "العفو يا فندم، الشكر لله 🌹 دائماً في خدمتكم ونتشرف بكم في أي وقت! ✨", instance_id=instance_id)
+            return
+        
         # [AI] استخدام Groq AI لفهم نية العميل بدل الـ regex الصارم
         intent_result = ai_understand_intent(text, context='confirmation')
         intent = intent_result.get('intent', 'unclear')
@@ -741,12 +815,15 @@ def handle_confirmation(sender, text, row=None, instance_id=None):
         
         # fallback للـ regex لو AI مش متأكد
         import re
-        text_lower = text.lower()
         if intent == 'unclear' or confidence < 0.5:
-            if re.search(r"(?i)\b(confirm|ok|yes)\b|تأكيد|تاكيد|نعم|وافق|موافق|تمام|ماشي|اه\b|اوكي|اكيد|أيوه|ايوه|يلا|يس|اتفقنا|اوك|حاضر|ان شاء الله|إن شاء الله|انشالله|جاهز|مستعد|معاك|معاكم|توكلنا|مفيش مشكلة|تمام جدا|معادنا|خير|بالتوفيق|تسلم|شكرا|شكر", text_lower):
+            if re.search(r"(?i)\b(confirm|ok|yes)\b|تأكيد|تاكيد|نعم|وافق|موافق|تمام|ماشي|اه\b|اوكي|اكيد|أيوه|ايوه|يلا|يس|اتفقنا|اوك|حاضر|ان شاء الله|إن شاء الله|انشالله|جاهز|مستعد|معاك|معاكم|توكلنا|مفيش مشكلة|تمام جدا|معادنا|خير|بالتوفيق", text_lower):
                 intent = 'confirm'
-            elif re.search(r"(?i)\b(cancel|no)\b|إلغاء|الغاء|\bلا\b|رفض|لأ|كنسل|مش عايز|مش هحتاج|مش جاي|اعتذر|اعتذار|للاسف|للأسف", text_lower):
+            elif has_explicit_cancel or re.search(r"(?i)^\s*(cancel|no|لا|لأ)\s*$", text_lower) or re.search(r"مش عايز|مش هحتاج|مش جاي|اعتذر عن الرحلة|اعتذار عن الرحلة", text_lower):
                 intent = 'cancel'
+        
+        # حماية إضافية: لو النية cancel لكن الرسالة تحتوي على شكر أو لا شكرا → إلغاء غير صحيح، تصحيحه إلى unclear!
+        if intent == 'cancel' and any(kw in text_lower for kw in ['شكرا', 'تسلم', 'يسلمو', 'مشكور', 'يخليك']) and not has_explicit_cancel:
+            intent = 'unclear'
         
         is_confirm = (intent == 'confirm')
         is_cancel = (intent == 'cancel')
@@ -754,6 +831,14 @@ def handle_confirmation(sender, text, row=None, instance_id=None):
         if is_confirm:
             print(f"[INFO] Recording confirmation in AB{row} for sender {sender}...")
             try:
+                # التحقق هل كانت الرحلة ملغاة سابقاً والعميل يعيد تفعيلها وتأكيدها
+                prev_decision = ""
+                try:
+                    prev_decision = str(sheet.cell(row, 28).value or "").strip()
+                except Exception as pe:
+                    print(f"[Prev-Decision Check Error]: {pe}")
+                is_reactivation = prev_decision in ["رفض", "ملغي", "إلغاء", "الغاء"]
+
                 sheet.update_acell(f"AB{row}", "وافق") 
                 # تحديث Supabase فورياً
                 try:
@@ -798,6 +883,26 @@ def handle_confirmation(sender, text, row=None, instance_id=None):
                         "📍 من فضلك قم بإرسال اللوكيشن (موقع التحرك) الخاص بك في رسالة لتسهيل وصول الكابتن في الموعد المحدد.",
                         instance_id=instance_id
                     )
+
+                # تنبيه الأدمن بإعادة تأكيد الرحلة لو كانت ملغية
+                if is_reactivation:
+                    try:
+                        c_name = str(sheet.cell(row, 4).value or 'عميل')
+                        c_pickup = str(sheet.cell(row, 7).value or '')
+                        c_dropoff = str(sheet.cell(row, 8).value or '')
+                        c_date = str(sheet.cell(row, 2).value or '')
+                        admin_reconfirm_alert = (
+                            f"✅ *تنبيه: العميل قام بإعادة تأكيد رحلته!* 🚗\n"
+                            f"👤 العميل: {c_name}\n"
+                            f"📱 الهاتف: {sender}\n"
+                            f"📅 موعد الرحلة: {c_date}\n"
+                            f"📍 خط السير: {c_pickup} ➝ {c_dropoff}\n"
+                            f"💬 رسالة العميل: \"{text}\"\n"
+                            f"✨ تم إعادة تفعيل الحجز وتأكيده بنجاح (وافق)."
+                        )
+                        send_whatsapp_message(ADMIN_WA_NUMBER, admin_reconfirm_alert)
+                    except Exception as re_err:
+                        print(f"[Admin-Reactivate-Alert Error]: {re_err}")
             except Exception as e:
                 print(f"[ERROR] Write failed: {e}")
         elif is_cancel:
@@ -838,9 +943,9 @@ def handle_confirmation(sender, text, row=None, instance_id=None):
 
                 send_whatsapp_message(sender, "تم إلغاء الطلب بناءً على رغبتك. نتمنى أن نتشرف بخدمتكم في رحلات أخرى قادمة 🌸", instance_id=instance_id)
                 
-                # إشعار الأدمن بإلغاء الرحلة
+                # إشعار الأدمن بإلغاء الرحلة (تم تصحيح رقم العمود إلى 4 لاسم العميل)
                 try:
-                    c_name = str(sheet.cell(row, 6).value or 'عميل')
+                    c_name = str(sheet.cell(row, 4).value or 'عميل')
                     c_pickup = str(sheet.cell(row, 7).value or '')
                     c_dropoff = str(sheet.cell(row, 8).value or '')
                     c_date = str(sheet.cell(row, 2).value or '')
@@ -859,14 +964,6 @@ def handle_confirmation(sender, text, row=None, instance_id=None):
             except Exception as e:
                 print(f"[ERROR] Write failed: {e}")
         else:
-            # فحص عبارات الشكر والتحية والإنهاء لمنع تكرار طلب التأكيد
-            thanks_keywords = ['شكرا', 'شكر', 'تسلم', 'يسلمو', 'جزاك', 'الف شكر', 'العفو', 'حبيبي', 'يا غالي', 'مشكور', 'ذوق', 'ممتن', 'ربنا يخليك', 'تمام شكرا', 'صباح الخير', 'مساء الخير']
-            text_cleaned = text.lower().strip()
-            if any(kw in text_cleaned for kw in thanks_keywords):
-                print(f"[INFO] Client {sender} sent polite/thanks phrase: '{text}'")
-                send_whatsapp_message(sender, "العفو يا فندم، الشكر لله 🌹 دائماً في خدمتكم ونتشرف بكم في أي وقت! ✨", instance_id=instance_id)
-                return
-
             # رد مرن للعميل في حالة إرسال نص غير التأكيد/الإلغاء
             print(f"[INFO] Unclear confirmation reply from {sender}: {text}")
             send_whatsapp_message(sender, "وصلتنا رسالتك يا فندم 🌹\nهل تؤكد حجز الرحلة؟ (يرجى الرد بـ: نعم / تأكيد أو إلغاء)", instance_id=instance_id)
@@ -1111,7 +1208,7 @@ def whatsapp_webhook():
                               else:
                                   # فحص هل هناك جلسة نشطة منتظرة رد (تأكيد أو تقييم في الشيت)
                                   sheet = get_main_sheet()
-                                  row_idx, session_type = find_active_session(sheet, sender)
+                                  row_idx, session_type = find_active_session(sheet, sender, message_text=text_body)
                                   
                                   if session_type == "feedback":
                                        # [FIX] منع التكرار أيضاً هنا (أول رسالة الفيدباك)
@@ -1933,14 +2030,15 @@ def receive_local_webhook(instance_id_db):
                 except Exception as db_err:
                     print(f"[Local-Webhook DB Error]: {db_err}")
 
-                # 2. تسجيل الرسالة في شيت المحادثات (فقط للعميل)
-                if not is_from_admin:
-                    try:
-                        log_chat_to_sheet(sender_phone, "Client", message_text)
-                    except Exception as sheet_err:
-                        print(f"[Local-Webhook Sheet Error]: {sheet_err}")
+                # 2. تسجيل الرسالة في شيت المحادثات
+                try:
+                    role_label = "Admin" if is_from_admin else "Client"
+                    log_chat_to_sheet(sender_phone, role_label, message_text)
+                except Exception as sheet_err:
+                    print(f"[Local-Webhook Sheet Error]: {sheet_err}")
 
-                    # 3. معالجة الرسائل الواردة برمجياً (لوكيشن، فيدباك، تأكيد)
+                # 3. معالجة الرسائل الواردة برمجياً (فقط للعميل)
+                if not is_from_admin:
                     try:
                         import re
                         if re.search(r'(google\.com/maps|maps\.app\.goo\.gl|maps\.google\.com)', message_text):
@@ -1952,7 +2050,7 @@ def receive_local_webhook(instance_id_db):
                             else:
                                 if not _is_in_post_feedback_cooldown(sender_phone):
                                     sheet = get_main_sheet()
-                                    row_idx, session_type = find_active_session(sheet, sender_phone)
+                                    row_idx, session_type = find_active_session(sheet, sender_phone, message_text=message_text)
                                     print(f"[Local-Webhook] Session check for {sender_phone}: row={row_idx}, type={session_type}")
                                     if session_type == "feedback":
                                         if not _is_feedback_duplicate(sender_phone, message_text):
@@ -2957,13 +3055,16 @@ def save_reservation_api():
 @app.route('/api/update_decision', methods=['POST', 'OPTIONS'])
 def update_decision_api():
     if request.method == 'OPTIONS':
-        return make_response("", 204)
+        res = make_response("", 204)
+        res.headers.add('Access-Control-Allow-Private-Network', 'true')
+        return res
     try:
         data = request.json or {}
         sheet_row = int(data.get('sheet_row') or 0)
         decision = str(data.get('decision') or '').strip()
         is_canc = decision in ['ملغي', 'رفض'] or data.get('is_cancelled', False)
         
+        # 1. تحديث مباشر في شيت جوجل
         if sheet_row >= 2:
             sheet = get_main_sheet()
             # Col 28 (AB): client_decision
@@ -2976,8 +3077,43 @@ def update_decision_api():
             else:
                 sheet.update_cell(sheet_row, 35, "")
                 sheet.update_cell(sheet_row, 20, "pending")
+
+        # 2. تحديث متزامن في قاعدة بيانات Neon Postgres
+        try:
+            sql = """
+                UPDATE google_reservations 
+                SET client_decision = $1, 
+                    trip_status = $2, 
+                    status = $3, 
+                    updated_at = NOW() 
+                WHERE sheet_row = $4;
+            """
+            t_status = 'ملغاة' if is_canc else 'pending'
+            params = ["رفض" if is_canc else decision, t_status, t_status, sheet_row]
+            requests.post(
+                "https://ep-falling-glade-a5v7q460-pooler.us-east-2.aws.neon.tech/sql",
+                headers={"Neon-Connection-String": "postgresql://neondb_owner:npg_WFZmc7X1YEMQ@ep-falling-glade-a5v7q460-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require"},
+                json={"query": sql, "params": params},
+                timeout=5
+            )
+        except Exception as e_neon:
+            print(f"[UpdateDecision] Neon update warning: {e_neon}")
+
+        # 3. تحديث متزامن في Supabase
+        try:
+            url = f"{SUPABASE_URL}/rest/v1/google_reservations?sheet_row=eq.{sheet_row}"
+            sb_data = {
+                "client_decision": "رفض" if is_canc else decision,
+                "trip_status": "ملغاة" if is_canc else "pending",
+                "status": "ملغاة" if is_canc else "pending"
+            }
+            requests.patch(url, headers=SUPABASE_SERVICE_HEADERS, json=sb_data, timeout=5)
+        except Exception as e_sb:
+            print(f"[UpdateDecision] Supabase update warning: {e_sb}")
             
-        return jsonify({'status': 'success', 'message': 'تم تحديث قرار العميل في الشيت بنجاح'})
+        res = jsonify({'status': 'success', 'message': 'تم تحديث قرار العميل في الشيت وقاعدة البيانات بنجاح'})
+        res.headers.add('Access-Control-Allow-Private-Network', 'true')
+        return res
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 

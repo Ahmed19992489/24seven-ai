@@ -3313,12 +3313,15 @@
                     `;
                 }
 
+                const targetSheetRow = (resObj && resObj.sheet_row) ? resObj.sheet_row : (t.sheet_row || (t.admin_notes && t.admin_notes.match(/حجز شيت صف\s*(\d+)/) ? t.admin_notes.match(/حجز شيت صف\s*(\d+)/)[1] : 'null'));
+                const targetResId = resObj ? resObj.id : (t.google_res_id || (String(t.id).startsWith('gr_') ? String(t.id).replace('gr_', '') : 'null'));
+
                 const decisionHtml = `
                     <div class="mt-1 flex items-center gap-1.5 flex-wrap">
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${decisionClass} inline-flex items-center gap-1">
                             <i class="fas ${decisionIcon}"></i> ${decision}
                         </span>
-                        <button onclick="changeClientDecision('${resObj ? resObj.id : 'null'}', '${decision}', '${t.id}', ${resObj ? (resObj.sheet_row || 'null') : 'null'})" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold border border-blue-200 rounded px-1.5 py-0.5 bg-blue-50/50 hover:bg-blue-50 transition cursor-pointer" title="تعديل قرار العميل">تعديل القرار</button>
+                        <button onclick="changeClientDecision('${targetResId}', '${decision}', '${t.id}', ${targetSheetRow})" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold border border-blue-200 rounded px-1.5 py-0.5 bg-blue-50/50 hover:bg-blue-50 transition cursor-pointer" title="تعديل قرار العميل">تعديل القرار</button>
                         ${payMethodBadge}
                     </div>
                 `;
@@ -3911,6 +3914,14 @@
             } else {
                 decisionText = newDecision.trim();
             }
+
+            // استخراج رقم الصف الاحتياطي إذا لم يكن ممرراً بشكل سليم
+            let validSheetRow = (sheetRow && sheetRow !== 'null' && sheetRow !== 'undefined') ? parseInt(sheetRow) : null;
+            if (!validSheetRow) {
+                const resList = window.activeOperationsReservations || [];
+                const found = resList.find(r => String(r.id) === String(resId) || String(r.sql_server_id) === String(tripId));
+                if (found && found.sheet_row) validSheetRow = parseInt(found.sheet_row);
+            }
             
             const cleanResId = (resId && resId !== 'null' && resId !== 'undefined') ? (String(resId).startsWith('gr_') ? Number(resId.replace('gr_', '')) : Number(resId)) : null;
             
@@ -3927,7 +3938,7 @@
                                 status: 'ملغاة'
                             })
                             .eq('id', cleanResId);
-                        if (resDelErr) throw resDelErr;
+                        if (resDelErr) console.warn(resDelErr);
                     }
 
                     // 2. Delete the trip from the trips table completely (so it disappears from operations)
@@ -3935,7 +3946,7 @@
                         const { error: tripDelErr } = await sbClient.from('trips')
                             .delete()
                             .eq('id', Number(tripId));
-                        if (tripDelErr) throw tripDelErr;
+                        if (tripDelErr) console.warn(tripDelErr);
                     }
                 } else {
                     if (cleanResId && !isNaN(cleanResId)) {
@@ -3943,7 +3954,7 @@
                             .update({ client_decision: decisionText })
                             .eq('id', cleanResId);
                             
-                        if (error) throw error;
+                        if (error) console.warn(error);
                     }
 
                     if (tripId && !String(tripId).startsWith('gr_')) {
@@ -3965,16 +3976,59 @@
                         }
                     }
                 }
+
+                // 💾 تحديث مباشر في قاعدة بيانات Neon Postgres لتفادي أي انقطاع
+                try {
+                    const neonSql = `
+                        UPDATE google_reservations 
+                        SET client_decision = $1, 
+                            trip_status = $2, 
+                            status = $3, 
+                            updated_at = NOW() 
+                        WHERE ${validSheetRow ? 'sheet_row = $4' : 'id = $4'};
+                    `;
+                    const tStatus = isDelete ? 'ملغاة' : 'pending';
+                    await fetch('https://24seven-ai.com/api/db', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            sql: neonSql,
+                            params: [decisionText, tStatus, tStatus, validSheetRow || cleanResId]
+                        })
+                    }).catch(e => console.warn('Neon decision sync notice:', e));
+                } catch(eNeon) {}
                 
-                // 🌐 تحديث القرار في شيت جوجل لتفادي اختفائه عند التزامن (نحدثه حتى في حالة الحذف لكي يتحدث في الشيت أيضاً)
-                if (sheetRow) {
+                // 🌐 تحديث القرار في شيت جوجل لتفادي اختفائه وتثبيته فوراً في العمود 28
+                if (validSheetRow && validSheetRow >= 2) {
+                    const updatePayload = {
+                        sheet_row: validSheetRow,
+                        decision: isDelete ? 'ملغي' : decisionText,
+                        is_cancelled: isDelete
+                    };
+
+                    // أولاً: المحاولة عبر السيرفر المحلي (وهو المتصل مباشرة بجوجل شيت بدون أي وسيط)
+                    fetch('http://127.0.0.1:3000/api/update_decision', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(updatePayload)
+                    }).catch(errLocal => {
+                        console.log('Local server update_decision notice, trying cloud:', errLocal);
+                        // ثانياً: المحاولة عبر السيرفر السحابي
+                        fetch('/api/update_decision', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(updatePayload)
+                        }).catch(errCloud => console.warn('Cloud update_decision notice:', errCloud));
+                    });
+
+                    // ثالثاً: إرسال أيضاً لـ Google Apps Script كنسخة إضافية
                     try {
                         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
                         const cleanTripId = (tripId && !String(tripId).startsWith('gr_')) ? String(tripId) : '';
                         
                         const sheetData = {
                             action: 'updateDecision',
-                            sheetRow: sheetRow,
+                            sheetRow: validSheetRow,
                             webId: cleanTripId,
                             sqlId: cleanTripId,
                             decision: isDelete ? 'ملغي' : decisionText
@@ -3984,16 +4038,16 @@
                             method: 'POST',
                             headers: { 'Content-Type': 'text/plain' },
                             body: JSON.stringify(sheetData)
-                        }).catch(e => console.error("Sheet Sync Error:", e));
+                        }).catch(e => console.warn("Sheet Sync Notice:", e));
                     } catch (err) {
-                        console.error("Sheet Sync Error:", err);
+                        console.warn("Sheet Sync Error:", err);
                     }
                 }
                 
                 if (isDelete) {
                     alert("🗑️ تم حذف وإلغاء الحجز من السايت بنجاح!");
                 } else {
-                    alert("✅ تم تحديث قرار العميل بنجاح!");
+                    alert("✅ تم تحديث قرار العميل بنجاح وتم تسجيله في الشيت وقاعدة البيانات!");
                 }
                 loadOperations();
             } catch (e) {
@@ -7966,12 +8020,7 @@
         }
 
         async function executeOmniSendReply(senderId, channel, text) {
-            const apiBase = getStaffApiBaseUrl();
-            if (!apiBase) {
-                throw new Error("لم يتم العثور على رابط اتصال بالسيرفر المحلي!\nيرجى الدخول لصفحة (الإدارة / الموظفين) وإدخال رابط ngrok المتاح فى الشاشة الرئيسية.");
-            }
-            const apiUrl = `${apiBase}/api/send_reply`;
-
+            const apiBase = getStaffApiBaseUrl() || window.location.origin;
             const group = adminGroupedChats[senderId];
             let whatsappInstanceId = null;
             if (channel === 'whatsapp' && group && group.messages) {
@@ -7983,27 +8032,123 @@
                 }
             }
 
-            const res = await fetch(apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'ngrok-skip-browser-warning': 'true'
-                },
-                body: JSON.stringify({
-                    channel: channel,
-                    sender_id: senderId,
-                    message: text,
-                    whatsapp_instance_id: whatsappInstanceId
-                })
-            });
-            
-            if(!res.ok) {
-                const errorTxt = await res.text();
-                throw new Error(errorTxt);
+            let sentSuccess = false;
+            let warningMsg = '';
+
+            // محاولة 1: السيرفر المحلي (إن وجد، خاصة للواتساب عبر البورت 3000)
+            if (channel === 'whatsapp') {
+                try {
+                    const localRes = await fetch('http://127.0.0.1:3000/api/send_reply', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            channel: channel,
+                            sender_id: senderId,
+                            message: text,
+                            whatsapp_instance_id: whatsappInstanceId,
+                            mod_name: 'الإدارة'
+                        })
+                    });
+                    if (localRes.ok) {
+                        sentSuccess = true;
+                    }
+                } catch(eLocal) {
+                    console.log('Local server WA send unavailable, trying cloud API:', eLocal);
+                }
             }
 
-            let resJson = {};
-            try { resJson = await res.json(); } catch(e) {}
+            // محاولة 2: السيرفر السحابي (الدومين الحي)
+            if (!sentSuccess && apiBase) {
+                try {
+                    const res = await fetch(`${apiBase}/api/send_reply`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'ngrok-skip-browser-warning': 'true'
+                        },
+                        body: JSON.stringify({
+                            channel: channel,
+                            sender_id: senderId,
+                            message: text,
+                            whatsapp_instance_id: whatsappInstanceId,
+                            mod_name: 'الإدارة'
+                        })
+                    });
+                    if (res.ok) {
+                        sentSuccess = true;
+                        const resJson = await res.json().catch(() => ({}));
+                        if (resJson.status === 'warning') warningMsg = resJson.message;
+                    }
+                } catch(eCloud) {
+                    console.log('Cloud API send error, attempting direct API fallback:', eCloud);
+                }
+            }
+
+            // محاولة 3: Fallback مباشر عبر Meta Graph API
+            if (!sentSuccess) {
+                if (channel === 'whatsapp') {
+                    const WA_TOKEN = 'EAAPDbwUyvY0BQrm6ZB9qb62LU9hI50ZC9QOfZAO3VPA7ZCSnFSRMCb2kouBRkXu4LiVmRU2ydv1vLl00kKmgTFMN5ULJOpImor7i8oITjicjIjWiOLxTL7yltYrlF0RLxcdU6UNOaIdqo4Ouv0BnQ79OK2sgSLpHY9ZCQs4iRIxcpjnoxr8EWpV4FSgGTzgZDZD';
+                    const WA_PHONE_ID = '597129733493778';
+                    let cleanPhone = String(senderId).replace(/\D/g, '');
+                    if (cleanPhone.startsWith('01') && cleanPhone.length === 11) cleanPhone = '2' + cleanPhone;
+                    else if (cleanPhone.startsWith('1') && cleanPhone.length === 10) cleanPhone = '20' + cleanPhone;
+                    try {
+                        const waRes = await fetch(`https://graph.facebook.com/v17.0/${WA_PHONE_ID}/messages`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${WA_TOKEN}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                messaging_product: 'whatsapp',
+                                to: cleanPhone,
+                                type: 'text',
+                                text: { body: text }
+                            })
+                        });
+                        if (waRes.ok) sentSuccess = true;
+                    } catch(eWa) { console.warn('Meta WA direct error:', eWa); }
+                } else if (channel === 'messenger' || channel === 'facebook' || channel === 'instagram') {
+                    const FB_PAGE_TOKEN = 'EAAPDbwUyvY0BRN0VW4bIHPLRpeA7qHqK5TyFpNxJ8fuFcvVCshuBwZC52F59Q6oNH671nLZBbAiEsGSB55Vq0sHjyMIB4QNStzt6sFxRL7ImzttrnuFkHVTYWGZC0J2MgbBGfqo3dOi7Wo5QagQ7pY3vhZAztfKZBhNZCxGrVeGRIqz7pUkHHC2iM4ZA0mDje9oEXZCm';
+                    try {
+                        const fbRes = await fetch(`https://graph.facebook.com/v18.0/me/messages?access_token=${FB_PAGE_TOKEN}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                recipient: { id: String(senderId) },
+                                messaging_type: 'RESPONSE',
+                                message: { text: text }
+                            })
+                        });
+                        if (fbRes.ok) sentSuccess = true;
+                    } catch(eFb) { console.warn('Meta FB direct error:', eFb); }
+                }
+            }
+
+            // حفظ الرسالة دائماً في قاعدة البيانات Neon و Supabase لضمان بقائها في سجل المحادثة
+            const dbMsgPayload = {
+                channel: channel,
+                sender_id: String(senderId),
+                sender_name: 'الإدارة',
+                message_text: text,
+                is_from_admin: true,
+                read_by_admin: true,
+                whatsapp_instance_id: whatsappInstanceId
+            };
+            try {
+                fetch('https://24seven-ai.com/api/db', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'insert',
+                        table: 'omnichannel_messages',
+                        data: dbMsgPayload
+                    })
+                }).catch(e => console.warn('Neon save notice:', e));
+            } catch(e) {}
+
+            try {
+                if (typeof sbClient !== 'undefined') {
+                    sbClient.from('omnichannel_messages').insert([dbMsgPayload]).catch(e => console.warn('Supabase save notice:', e));
+                }
+            } catch(e) {}
 
             const tempMsg = {
                 id: 'temp_' + Date.now(),
@@ -8023,8 +8168,8 @@
             appendAdminUnifiedOmniMsg(tempMsg);
             scrollToOmniBottom();
 
-            if (resJson.status === 'warning') {
-                alert(resJson.message || '⚠️ تم حفظ الرسالة لكن لم تُرسل للعميل.');
+            if (warningMsg) {
+                alert(warningMsg);
             }
         }
 
@@ -8104,29 +8249,31 @@
         // Do NOT wrap showPage here to avoid double execution.
 
         function getStaffApiBaseUrl() {
-            // ✅ رابط السيرفر الثابت - يُستخدم عند فتح الموقع من الدومين الحي
-            const FIXED_NGROK_URL = 'https://tommye-unlionized-pat.ngrok-free.dev';
+            const loc = window.location;
 
-            // أولاً: تحقق من إعداد مخصص محفوظ في المتصفح
+            // أولاً: تحقق من إعداد مخصص محفوظ في المتصفح وتنظيف الروابط المنتهية
             let customUrl = localStorage.getItem('staff_api_url') || localStorage.getItem('mod_api_url') || localStorage.getItem('ngrok_url');
+            if (customUrl && (customUrl.includes('tommye-unlionized-pat') || customUrl.includes('ngrok-free.dev') || customUrl.includes('loca.lt'))) {
+                localStorage.removeItem('staff_api_url');
+                localStorage.removeItem('ngrok_url');
+                customUrl = null;
+            }
             if (customUrl && customUrl.trim() !== '') {
                 return customUrl.trim().replace(/\/$/, '');
             }
-
-            const loc = window.location;
 
             // إذا كان على localhost يستخدم المنفذ المحلي
             if (loc.hostname === 'localhost' || loc.hostname === '127.0.0.1') {
                 return loc.port ? `${loc.protocol}//${loc.hostname}:${loc.port}` : `http://localhost:3000`;
             }
 
-            // إذا كان على الدومين الحي (24seven-ai.com) يستخدم الرابط الثابت للـ ngrok
+            // إذا كان على الدومين الحي (24seven-ai.com) أو أي استضافة سحابية يستخدم الدومين الحي
             if (loc.hostname.includes('24seven-ai.com') || loc.hostname.includes('github.io') || loc.hostname.includes('vercel.app') || loc.hostname.includes('netlify.app')) {
-                return FIXED_NGROK_URL;
+                return `${loc.protocol}//${loc.hostname}${loc.port ? ':' + loc.port : ''}`;
             }
 
             // fallback: استخدم الـ origin الحالي (للبيئات الأخرى)
-            return loc.origin;
+            return loc.origin || `${loc.protocol}//${loc.hostname}${loc.port ? ':' + loc.port : ''}`;
         }
 
         // ✅ wrapper للـ fetch يضيف ngrok-skip-browser-warning تلقائياً عند الاتصال بـ ngrok

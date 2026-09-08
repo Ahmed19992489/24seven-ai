@@ -322,11 +322,20 @@ while True:
 
                 t_date = parse_smart_date(raw_date)
 
+                # تخطي الصفوف بدون تاريخ أو بدون رقم عميل
+                if not cust_phone or not t_date:
+                    continue
+
+                # ⚡ تخطي سريع جداً للصفوف القديمة (قبل أمس) لتوفير وقت المعالجة وتشغيل الرحلات النشطة فوراً
+                yesterday = today - timedelta(days=1)
+                if t_date < yesterday:
+                    # فحص سريع للتقييم فقط
+                    quick_fb = str(row[25]).strip() if len(row) > 25 else ""
+                    if "طلب التقييم" not in quick_fb:
+                        continue
+
                 # -------------------------------------------------------
                 # تحديد حالة الرحلة (هل انتهت فعلاً؟)
-                # نعتبرها انتهت فقط إذا:
-                #   أ) وُجد نص "تم"/"انهاء" في أعمدة الإنهاء (34-38)
-                #   ب) تاريخها أقل من اليوم + سائق معيّن + العميل أكّد
                 # -------------------------------------------------------
                 is_done_manual = False
                 for col_idx in range(34, 39):
@@ -334,7 +343,6 @@ while True:
                         is_done_manual = True
                         break
 
-                # ✅ إصلاح: is_past_trip الآن يشترط وجود سائق + تأكيد عميل
                 driver_was_assigned = driver_name.strip() != ""
                 client_had_confirmed = msg_confirm_status != "" or msg_booking_status != ""
                 is_past_trip = is_done_manual or (
@@ -343,10 +351,6 @@ while True:
                     and client_had_confirmed
                 )
 
-                # تخطي الصفوف بدون تاريخ أو بدون رقم عميل
-                if not cust_phone or not t_date:
-                    continue
-
                 # ✅ فحص الإلغاء: تجنب إرسال أي رسائل للعملاء الذين ألغوا حجزهم
                 client_decision = row[27].strip()
                 trip_general_status = row[35].strip()
@@ -354,8 +358,10 @@ while True:
                 is_cancelled = (
                     "ملغي" in msg_confirm_status or "الغاء" in msg_confirm_status or "لغي" in msg_confirm_status or
                     "ملغي" in msg_booking_status or "الغاء" in msg_booking_status or "لغي" in msg_booking_status or
-                    "ملغي" in client_decision or "الغاء" in client_decision or "لغي" in client_decision or "رفض" in client_decision or
-                    "ملغي" in trip_general_status or "cancel" in client_decision.lower() or "cancel" in trip_general_status.lower()
+                    "ملغي" in client_decision or "الغاء" in client_decision or "لغي" in client_decision or
+                    "ملغي" in trip_general_status or "cancel" in trip_general_status.lower()
+                    # ✅ ملاحظة: "رفض" في client_decision وحدها لا تلغي الرحلة
+                    # الموظف ممكن يمسحها ليسمح للعميل بإعادة التأكيد
                 )
                 
                 if is_cancelled:
@@ -368,6 +374,11 @@ while True:
                 # =======================================================
                 is_future_trip = t_date >= today
                 cache_key_booking = f"{str(t_date)}_{cust_phone}_booking"
+                # ✅ إذا مسح الموظف الخلية من الشيت، نفرغ الكاش فوراً للسماح بإعادة الإرسال
+                if msg_booking_status == "" and cache_key_booking in sent_cache:
+                    del sent_cache[cache_key_booking]
+                    save_sent_cache(sent_cache)
+
                 if is_future_trip and msg_booking_status == "" and not sent_cache.get(cache_key_booking):
                     print(f"📋 صف {real_idx}: حجز جديد ({cust_name}) — إرسال تأكيد فوري...")
 
@@ -402,7 +413,26 @@ while True:
                 # =======================================================
                 is_remind_day = (t_date == tomorrow or t_date == today)
                 cache_key_reminder = f"{str(t_date)}_{cust_phone}_reminder"
-                if is_remind_day and msg_confirm_status == "" and not sent_cache.get(cache_key_reminder):
+                # ✅ إذا مسح الموظف الخلية من الشيت، نفرغ الكاش فوراً للسماح بإعادة الإرسال
+                if msg_confirm_status == "" and cache_key_reminder in sent_cache:
+                    del sent_cache[cache_key_reminder]
+                    save_sent_cache(sent_cache)
+
+                # ✅ إرسال التذكير لو:
+                # 1. الرحلة غداً أو اليوم
+                # 2. عمود AA (msg_confirm_status) فاضي = لم يُرسل التذكير بعد
+                # 3. مش في الـ cache
+                client_already_confirmed = any(k in str(client_decision) for k in ["وافق", "مؤكد", "تأكيد", "نعم"])
+                
+                # 🔍 DEBUG LOG: فقط للصفوف المجدولة غداً أو اليوم
+                if is_remind_day:
+                    print(f"[DEBUG] صف {real_idx}: phone={cust_phone}, t_date={t_date}, "
+                          f"msg_confirm_status='{msg_confirm_status}', in_cache={sent_cache.get(cache_key_reminder)}, "
+                          f"client_already_confirmed={client_already_confirmed}, is_past_trip={is_past_trip}, "
+                          f"is_cancelled={is_cancelled}", flush=True)
+                
+                if is_remind_day and msg_confirm_status == "" and not sent_cache.get(cache_key_reminder) and not client_already_confirmed:
+
                     print(f"🔔 صف {real_idx}: إرسال تذكير قبل الرحلة لـ ({cust_name})...")
 
                     remind_msg = (

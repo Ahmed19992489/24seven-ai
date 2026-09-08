@@ -139,7 +139,7 @@ def upsert_records_to_neon(records, batch_size=50):
                 modified_driver_phone = COALESCE(NULLIF(EXCLUDED.modified_driver_phone, ''), google_reservations.modified_driver_phone),
                 driver_msg_status = EXCLUDED.driver_msg_status,
                 confirm_msg_status = EXCLUDED.confirm_msg_status,
-                client_decision = EXCLUDED.client_decision,
+                client_decision = COALESCE(NULLIF(EXCLUDED.client_decision, ''), google_reservations.client_decision),
                 trip_status = EXCLUDED.trip_status,
                 updated_at = NOW();
         """
