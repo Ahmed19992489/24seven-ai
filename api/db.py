@@ -20,6 +20,87 @@ def get_neon_creds():
 NEON_CONN_STR, NEON_HTTP_URL = get_neon_creds()
 
 
+def resolve_facebook_user_name(sender_id):
+    sender_id_str = str(sender_id).strip()
+    if not sender_id_str:
+        return "عميل فيسبوك"
+
+    # 1. First check if DB already has a verified name for this sender_id
+    try:
+        sql = """
+            SELECT sender_name FROM omnichannel_messages 
+            WHERE sender_id = $1 AND sender_name NOT IN ('Messenger User', 'Admin', 'فريق 24Seven', 'ش', 'عميل فيسبوك', 'Facebook user', $1) 
+            ORDER BY id DESC LIMIT 1
+        """
+        r = requests.post(
+            NEON_HTTP_URL,
+            headers={"Neon-Connection-String": NEON_CONN_STR},
+            json={"query": sql, "params": [sender_id_str]},
+            timeout=5
+        )
+        if r.status_code == 200:
+            rows = r.json().get("rows", [])
+            if rows and rows[0].get("sender_name"):
+                return rows[0]["sender_name"]
+    except Exception as e:
+        print(f"Error checking DB for FB name: {e}")
+
+    # 2. Call Facebook Graph API me/conversations
+    fb_token = os.environ.get("FB_PAGE_TOKEN") or "EAAPDbwUyvY0BRN0VW4bIHPLRpeA7qHqK5TyFpNxJ8fuFcvVCshuBwZC52F59Q6oNH671nLZBbAiEsGSB55Vq0sHjyMIB4QNStzt6sFxRL7ImzttrnuFkHVTYWGZC0J2MgbBGfqo3dOi7Wo5QagQ7pY3vhZAztfKZBhNZCxGrVeGRIqz7pUkHHC2iM4ZA0mDje9oEXZCm"
+    try:
+        url = "https://graph.facebook.com/v18.0/me/conversations"
+        params = {
+            "access_token": fb_token,
+            "user_id": sender_id_str,
+            "fields": "participants"
+        }
+        r = requests.get(url, params=params, timeout=6)
+        if r.status_code == 200:
+            data = r.json()
+            for conv in data.get('data', []):
+                for p in conv.get('participants', {}).get('data', []):
+                    if str(p.get('id')) == sender_id_str:
+                        name = p.get('name', '').strip()
+                        if name:
+                            # Update DB so all messages for this sender have the real name
+                            try:
+                                upd_sql = """
+                                    UPDATE omnichannel_messages 
+                                    SET sender_name = $1 
+                                    WHERE sender_id = $2 AND (sender_name IN ('Messenger User', 'عميل فيسبوك', 'Facebook user', $2) OR sender_name IS NULL)
+                                """
+                                requests.post(
+                                    NEON_HTTP_URL,
+                                    headers={"Neon-Connection-String": NEON_CONN_STR},
+                                    json={"query": upd_sql, "params": [name, sender_id_str]},
+                                    timeout=5
+                                )
+                            except Exception: pass
+                            return name
+    except Exception as e:
+        print(f"Error querying Graph API for {sender_id}: {e}")
+
+    # 3. Check reservations table (google_reservations) if PSID matches
+    try:
+        res_sql = """
+            SELECT customer_name FROM google_reservations 
+            WHERE (messenger_sender_id = $1 OR facebook_id = $1) AND customer_name IS NOT NULL AND customer_name != ''
+            ORDER BY id DESC LIMIT 1
+        """
+        r2 = requests.post(
+            NEON_HTTP_URL,
+            headers={"Neon-Connection-String": NEON_CONN_STR},
+            json={"query": res_sql, "params": [sender_id_str]},
+            timeout=5
+        )
+        if r2.status_code == 200:
+            rows = r2.json().get("rows", [])
+            if rows and rows[0].get("customer_name"):
+                return rows[0]["customer_name"]
+    except Exception: pass
+
+    return "عميل فيسبوك"
+
 class handler(BaseHTTPRequestHandler):
     def _send_cors_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -41,6 +122,15 @@ class handler(BaseHTTPRequestHandler):
             table = req.get("table", "")
             raw_sql = req.get("sql")
             raw_params = req.get("params", [])
+
+            if action == "resolve_facebook_user":
+                sender_id = str(req.get("sender_id", "")).strip()
+                if not sender_id:
+                    self._respond(400, {"status": "error", "message": "sender_id required"})
+                    return
+                resolved_name = resolve_facebook_user_name(sender_id)
+                self._respond(200, {"status": "ok", "name": resolved_name, "sender_id": sender_id})
+                return
 
             if raw_sql:
                 r = requests.post(

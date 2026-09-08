@@ -1313,6 +1313,10 @@ def get_facebook_user_name(sender_id):
                         name = p.get('name', '').strip()
                         if name:
                             print(f"[FB] Found Name via conversations: {name} (ID: {sender_id})")
+                            try:
+                                update_url = f"{SUPABASE_URL}/rest/v1/omnichannel_messages?sender_id=eq.{sender_id}"
+                                requests.patch(update_url, headers=SUPABASE_HEADERS, json={"sender_name": name})
+                            except: pass
                             return name
         else:
             print(f"[FB] Conversations lookup failed: {r.status_code} | {r.text}")
@@ -1321,27 +1325,31 @@ def get_facebook_user_name(sender_id):
 
     # محاولة 2: عبر Graph API المباشر للملف الشخصي (fallback)
     parameters = {
-        "fields": "first_name,last_name",
+        "fields": "first_name,last_name,name",
         "access_token": FB_PAGE_TOKEN
     }
     url = f"https://graph.facebook.com/v18.0/{sender_id}"
     
     try:
-        r = requests.get(url, params=parameters)
+        r = requests.get(url, params=parameters, timeout=4)
         if r.status_code == 200:
             data = r.json()
             first = data.get('first_name', '')
             last = data.get('last_name', '')
-            name = f"{first} {last}".strip()
+            name = (data.get('name') or f"{first} {last}").strip()
             if name:
                 print(f"[FB] Found FB Name: {name} (ID: {sender_id})")
+                try:
+                    update_url = f"{SUPABASE_URL}/rest/v1/omnichannel_messages?sender_id=eq.{sender_id}"
+                    requests.patch(update_url, headers=SUPABASE_HEADERS, json={"sender_name": name})
+                except: pass
                 return name
         else:
             print(f"[FB] Direct profile lookup failed: {r.status_code} | {r.text}")
     except Exception as e:
         print(f"[ERROR] Exception in get_facebook_user_name direct lookup for {sender_id}: {e}")
     
-    # محاولة 2: البحث عن اسم العميل من الحجوزات عبر رسائله السابقة (نبحث عن رقم هاتف في المحادثات)
+    # محاولة 3: البحث عن اسم العميل من الحجوزات عبر رسائله السابقة (نبحث عن رقم هاتف في المحادثات)
     try:
         # جلب آخر 20 رسالة من هذا العميل للبحث عن رقم هاتف فيها
         msg_url = f"{SUPABASE_URL}/rest/v1/omnichannel_messages?sender_id=eq.{sender_id}&is_from_admin=eq.false&select=message_text&order=created_at.desc&limit=20"
@@ -1365,14 +1373,14 @@ def get_facebook_user_name(sender_id):
                             print(f"[INFO] Found Messenger client name from reservations: {found_name} (PSID: {sender_id})")
                             # تحديث جميع الرسائل القديمة بالاسم الحقيقي
                             try:
-                                update_url = f"{SUPABASE_URL}/rest/v1/omnichannel_messages?sender_id=eq.{sender_id}&sender_name=eq.Messenger User"
+                                update_url = f"{SUPABASE_URL}/rest/v1/omnichannel_messages?sender_id=eq.{sender_id}"
                                 requests.patch(update_url, headers=SUPABASE_HEADERS, json={"sender_name": found_name})
                             except: pass
                             return found_name
     except Exception as e:
         print(f"[ERROR] Messenger name fallback error: {e}")
     
-    return "Messenger User"
+    return "عميل فيسبوك"
 
 def handle_messenger_feedback_flow(sender_id, text):
     """

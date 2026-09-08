@@ -23,36 +23,61 @@ NEON_CONN_STR, NEON_HTTP_URL = get_neon_creds()
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 
 def get_fb_name(sender_id):
-    if not FB_PAGE_TOKEN:
+    if not sender_id:
         return "عميل فيسبوك"
-    try:
-        url = "https://graph.facebook.com/v18.0/me/conversations"
-        params = {
-            "access_token": FB_PAGE_TOKEN,
-            "user_id": str(sender_id),
-            "fields": "participants"
-        }
-        r = requests.get(url, params=params, timeout=4)
-        if r.status_code == 200:
-            data = r.json()
-            for conv in data.get('data', []):
-                for p in conv.get('participants', {}).get('data', []):
-                    if str(p.get('id')) == str(sender_id):
-                        name = p.get('name', '').strip()
-                        if name:
-                            return name
-    except Exception as e:
-        print(f"Error in conversations name lookup: {e}")
+    sender_id_str = str(sender_id).strip()
 
+    # 1. First check DB cache
     try:
-        url = f"https://graph.facebook.com/v18.0/{sender_id}?fields=first_name,last_name,name&access_token={FB_PAGE_TOKEN}"
-        r = requests.get(url, timeout=4)
-        if r.status_code == 200:
-            d = r.json()
-            name = d.get('name') or f"{d.get('first_name', '')} {d.get('last_name', '')}".strip()
-            if name: return name
+        sql = """
+            SELECT sender_name FROM omnichannel_messages 
+            WHERE sender_id = $1 AND sender_name NOT IN ('Messenger User', 'Admin', 'فريق 24Seven', 'ش', 'عميل فيسبوك', 'Facebook user', $1) 
+            ORDER BY id DESC LIMIT 1
+        """
+        r_db = requests.post(
+            NEON_HTTP_URL,
+            headers={"Neon-Connection-String": NEON_CONN_STR},
+            json={"query": sql, "params": [sender_id_str]},
+            timeout=3
+        )
+        if r_db.status_code == 200:
+            rows = r_db.json().get("rows", [])
+            if rows and rows[0].get("sender_name"):
+                return rows[0]["sender_name"]
     except Exception:
         pass
+
+    # 2. Call Graph API me/conversations
+    if FB_PAGE_TOKEN:
+        try:
+            url = "https://graph.facebook.com/v18.0/me/conversations"
+            params = {
+                "access_token": FB_PAGE_TOKEN,
+                "user_id": sender_id_str,
+                "fields": "participants"
+            }
+            r = requests.get(url, params=params, timeout=5)
+            if r.status_code == 200:
+                data = r.json()
+                for conv in data.get('data', []):
+                    for p in conv.get('participants', {}).get('data', []):
+                        if str(p.get('id')) == sender_id_str:
+                            name = p.get('name', '').strip()
+                            if name:
+                                # Update DB records
+                                try:
+                                    upd = """
+                                        UPDATE omnichannel_messages 
+                                        SET sender_name = $1 
+                                        WHERE sender_id = $2 AND (sender_name IN ('Messenger User', 'عميل فيسبوك', 'Facebook user', $2) OR sender_name IS NULL)
+                                    """
+                                    requests.post(NEON_HTTP_URL, headers={"Neon-Connection-String": NEON_CONN_STR}, json={"query": upd, "params": [name, sender_id_str]}, timeout=4)
+                                except Exception:
+                                    pass
+                                return name
+        except Exception as e:
+            print(f"Error in conversations name lookup: {e}")
+
     return "عميل فيسبوك"
 
 def send_fb_reply(recipient_id, text):
@@ -166,6 +191,14 @@ class handler(BaseHTTPRequestHandler):
                             recipient_id = str(event.get('recipient', {}).get('id', ''))
                             if admin_text and recipient_id:
                                 save_to_supabase(recipient_id, "فريق 24Seven", admin_text, is_admin=True, channel=channel)
+                                if channel == "messenger":
+                                    try:
+                                        c_name = get_fb_name(recipient_id)
+                                        if c_name and c_name not in ["عميل فيسبوك", "Messenger User", recipient_id]:
+                                            upd = "UPDATE omnichannel_messages SET sender_name = $1 WHERE sender_id = $2 AND (sender_name IN ('Messenger User', 'عميل فيسبوك', 'Facebook user', $2) OR sender_name IS NULL)"
+                                            requests.post(NEON_HTTP_URL, headers={"Neon-Connection-String": NEON_CONN_STR}, json={"query": upd, "params": [c_name, recipient_id]}, timeout=3)
+                                    except Exception:
+                                        pass
                             continue
 
                         text = message.get('text')

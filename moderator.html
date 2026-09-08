@@ -2192,26 +2192,24 @@
                 }
                 
                 if(m.channel === 'messenger') {
-                    if(!m.is_from_admin && m.sender_name && m.sender_name !== m.sender_id && !['Admin', 'ش', 'Messenger User'].includes(m.sender_name)) {
+                    if(!m.is_from_admin && m.sender_name && m.sender_name !== m.sender_id && !['Admin', 'ش', 'Messenger User', 'Facebook user', 'عميل فيسبوك'].includes(m.sender_name)) {
                         groupedChats[groupKey].name = m.sender_name;
                     }
                     
                     const currentName = groupedChats[groupKey].name;
-                    const isIdOrJunk = !currentName || currentName === m.sender_id || currentName === groupKey || ['Admin', 'ش', 'Messenger User'].includes(currentName);
+                    const isIdOrJunk = !currentName || currentName === m.sender_id || currentName === groupKey || ['Admin', 'ش', 'Messenger User', 'Facebook user', 'عميل فيسبوك'].includes(currentName);
                     
                     if(isIdOrJunk) {
                         const trip = allTrips.find(t =>
                             t.messenger_sender_id === m.sender_id ||
                             t.facebook_id === m.sender_id
                         );
-                        if(trip && trip.customer_name && !['Admin', 'ش', 'Messenger User'].includes(trip.customer_name)) {
+                        if(trip && trip.customer_name && !['Admin', 'ش', 'Messenger User', 'Facebook user', 'عميل فيسبوك'].includes(trip.customer_name)) {
                             groupedChats[groupKey].name = trip.customer_name;
                         }
                         const savedName = localStorage.getItem(`chat_name_${m.sender_id}`) || localStorage.getItem(`chat_name_${groupKey}`);
-                        if(savedName) groupedChats[groupKey].name = savedName;
-                        
-                        if(!groupedChats[groupKey].name || groupedChats[groupKey].name === m.sender_id || groupedChats[groupKey].name === groupKey) {
-                            groupedChats[groupKey].name = 'Messenger User';
+                        if(savedName && !['Messenger User', 'Facebook user', 'عميل فيسبوك', m.sender_id, groupKey].includes(savedName)) {
+                            groupedChats[groupKey].name = savedName;
                         }
                     }
                 }
@@ -2244,6 +2242,112 @@
                     delete groupedChats[id];
                 }
             });
+        }
+
+        async function resolveModeratorMessengerNames() {
+            if (!unifiedChatsList || unifiedChatsList.length === 0) return;
+            const chatsToResolve = unifiedChatsList.filter(c => 
+                c.type === 'omni' && c.channel === 'messenger' && (
+                    !c.name || 
+                    c.name === 'Messenger User' || 
+                    c.name === 'Facebook user' || 
+                    c.name === 'عميل فيسبوك' || 
+                    c.name === c.id
+                )
+            );
+            if (chatsToResolve.length === 0) return;
+
+            let anyResolved = false;
+            for (const chatItem of chatsToResolve) {
+                const chat = groupedChats[chatItem.id];
+                if (!chat) continue;
+
+                // 1. Check localStorage first
+                const cached = localStorage.getItem(`chat_name_${chatItem.id}`);
+                if (cached && !['Messenger User', 'Facebook user', 'عميل فيسبوك', chatItem.id].includes(cached)) {
+                    chat.name = cached;
+                    chatItem.name = cached;
+                    anyResolved = true;
+                    continue;
+                }
+
+                let foundName = null;
+
+                // 2. Check regex from messages
+                for (const m of (chat.messages || [])) {
+                    const txt = m.message_text || '';
+                    const namePatterns = [
+                        /👤\s*(?:الاسم|العميل)\s*[:：]\s*(.+)/,
+                        /الاسم\s*[:：]\s*(.+)/
+                    ];
+                    for (const pattern of namePatterns) {
+                        const match = txt.match(pattern);
+                        if (match) {
+                            const candidate = match[1].trim().split('\n')[0].trim();
+                            if (candidate && candidate !== '?' && candidate !== '...' && candidate !== 'العميل' && candidate.length > 1 && candidate.length < 50) {
+                                foundName = candidate;
+                                break;
+                            }
+                        }
+                    }
+                    if (foundName) break;
+                }
+
+                // 3. Check phone hint in reservations
+                if (!foundName) {
+                    let phoneHint = null;
+                    for (const m of (chat.messages || [])) {
+                        const match = (m.message_text || '').match(/01[0-9]{9}/);
+                        if (match) {
+                            phoneHint = match[0];
+                            break;
+                        }
+                    }
+                    if (phoneHint) {
+                        try {
+                            const { data } = await sbClient.from('google_reservations')
+                                .select('customer_name')
+                                .ilike('customer_phone', `%${phoneHint}%`)
+                                .order('created_at', { ascending: false })
+                                .limit(1);
+                            if (data && data.length > 0 && data[0].customer_name) {
+                                foundName = data[0].customer_name;
+                            }
+                        } catch(e) {}
+                    }
+                }
+
+                // 4. Resolve via backend API (/api/db -> resolve_facebook_user)
+                if (!foundName) {
+                    try {
+                        const apiBase = (typeof getApiEndpoint === 'function') ? getApiEndpoint() : '/api/db';
+                        const resp = await fetch(apiBase, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                action: 'resolve_facebook_user',
+                                sender_id: chatItem.id
+                            })
+                        });
+                        if (resp.ok) {
+                            const json = await resp.json();
+                            if (json && json.name && !['Messenger User', 'Facebook user', 'عميل فيسبوك', chatItem.id].includes(json.name)) {
+                                foundName = json.name;
+                            }
+                        }
+                    } catch(e) {
+                        console.warn('Failed to resolve FB user name from API in moderator:', e);
+                    }
+                }
+
+                if (foundName) {
+                    chat.name = foundName;
+                    chatItem.name = foundName;
+                    localStorage.setItem(`chat_name_${chatItem.id}`, foundName);
+                    anyResolved = true;
+                }
+            }
+            if (anyResolved) renderUnifiedChatList();
         }
 
         function regroupAndRender() {
@@ -2410,6 +2514,7 @@
             unifiedChatsList.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
 
             renderUnifiedChatList();
+            resolveModeratorMessengerNames();
         }
 
         function renderUnifiedChatList() {

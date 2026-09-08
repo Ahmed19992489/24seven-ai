@@ -6967,19 +6967,17 @@
                 }
                 
                 if(m.channel === 'messenger') {
-                    if(!m.is_from_admin && m.sender_name && m.sender_name !== m.sender_id && !['Admin', 'ش', 'Messenger User'].includes(m.sender_name)) {
+                    if(!m.is_from_admin && m.sender_name && m.sender_name !== m.sender_id && !['Admin', 'ش', 'Messenger User', 'Facebook user', 'عميل فيسبوك'].includes(m.sender_name)) {
                         adminGroupedChats[groupKey].name = m.sender_name;
                     }
                     
                     const currentName = adminGroupedChats[groupKey].name;
-                    const isIdOrJunk = !currentName || currentName === m.sender_id || currentName === groupKey || ['Admin', 'ش', 'Messenger User'].includes(currentName);
+                    const isIdOrJunk = !currentName || currentName === m.sender_id || currentName === groupKey || ['Admin', 'ش', 'Messenger User', 'Facebook user'].includes(currentName);
                     
                     if(isIdOrJunk) {
                         const savedName = localStorage.getItem(`chat_name_${m.sender_id}`) || localStorage.getItem(`chat_name_${groupKey}`);
-                        if(savedName) adminGroupedChats[groupKey].name = savedName;
-                        
-                        if(!adminGroupedChats[groupKey].name || adminGroupedChats[groupKey].name === m.sender_id || adminGroupedChats[groupKey].name === groupKey) {
-                            adminGroupedChats[groupKey].name = 'Messenger User';
+                        if(savedName && !['Messenger User', 'Facebook user', m.sender_id, groupKey].includes(savedName)) {
+                            adminGroupedChats[groupKey].name = savedName;
                         }
                     }
                 }
@@ -6994,7 +6992,13 @@
 
         async function resolveAdminMessengerNames() {
             const chatsToResolve = adminUnifiedChatsList.filter(c => 
-                c.type === 'omni' && (c.name === 'Messenger User' || c.name === c.id)
+                c.type === 'omni' && c.channel === 'messenger' && (
+                    !c.name || 
+                    c.name === 'Messenger User' || 
+                    c.name === 'Facebook user' || 
+                    c.name === 'عميل فيسبوك' || 
+                    c.name === c.id
+                )
             );
             if (chatsToResolve.length === 0) return;
 
@@ -7003,20 +7007,19 @@
                 const chat = adminGroupedChats[chatItem.id];
                 if (!chat) continue;
 
-                let foundName = null;
-
-                if (!chat._phone_hint) {
-                    const clientMsgs = chat.messages.filter(m => !m.is_from_admin);
-                    for (const m of clientMsgs) {
-                        const phoneMatch = (m.message_text || '').match(/01[0-9]{9}/);
-                        if (phoneMatch) {
-                            chat._phone_hint = phoneMatch[0];
-                            break;
-                        }
-                    }
+                // 1. Check localStorage first
+                const cached = localStorage.getItem(`chat_name_${chatItem.id}`);
+                if (cached && !['Messenger User', 'Facebook user', 'عميل فيسبوك', chatItem.id].includes(cached)) {
+                    chat.name = cached;
+                    chatItem.name = cached;
+                    anyResolved = true;
+                    continue;
                 }
 
-                for (const m of chat.messages) {
+                let foundName = null;
+
+                // 2. Check regex from messages
+                for (const m of (chat.messages || [])) {
                     const txt = m.message_text || '';
                     const namePatterns = [
                         /👤\s*(?:الاسم|العميل)\s*[:：]\s*(.+)/,
@@ -7035,22 +7038,60 @@
                     if (foundName) break;
                 }
 
-                if (!foundName && chat._phone_hint) {
-                    try {
-                        const { data } = await sbClient.from('google_reservations')
-                            .select('customer_name')
-                            .ilike('customer_phone', `%${chat._phone_hint}%`)
-                            .order('created_at', { ascending: false })
-                            .limit(1);
-                        if (data && data.length > 0 && data[0].customer_name) {
-                            foundName = data[0].customer_name;
+                // 3. Check phone hint in reservations
+                if (!foundName) {
+                    let phoneHint = chat._phone_hint;
+                    if (!phoneHint) {
+                        for (const m of (chat.messages || [])) {
+                            const match = (m.message_text || '').match(/01[0-9]{9}/);
+                            if (match) {
+                                phoneHint = match[0];
+                                chat._phone_hint = phoneHint;
+                                break;
+                            }
                         }
-                    } catch(e) {}
+                    }
+                    if (phoneHint) {
+                        try {
+                            const { data } = await sbClient.from('google_reservations')
+                                .select('customer_name')
+                                .ilike('customer_phone', `%${phoneHint}%`)
+                                .order('created_at', { ascending: false })
+                                .limit(1);
+                            if (data && data.length > 0 && data[0].customer_name) {
+                                foundName = data[0].customer_name;
+                            }
+                        } catch(e) {}
+                    }
+                }
+
+                // 4. Resolve via backend API (/api/db -> resolve_facebook_user)
+                if (!foundName) {
+                    try {
+                        const apiBase = (typeof getApiEndpoint === 'function') ? getApiEndpoint() : '/api/db';
+                        const resp = await fetch(apiBase, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                action: 'resolve_facebook_user',
+                                sender_id: chatItem.id
+                            })
+                        });
+                        if (resp.ok) {
+                            const json = await resp.json();
+                            if (json && json.name && !['Messenger User', 'Facebook user', 'عميل فيسبوك', chatItem.id].includes(json.name)) {
+                                foundName = json.name;
+                            }
+                        }
+                    } catch(e) {
+                        console.warn('Failed to resolve FB user name from API:', e);
+                    }
                 }
 
                 if (foundName) {
                     chat.name = foundName;
                     chatItem.name = foundName;
+                    localStorage.setItem(`chat_name_${chatItem.id}`, foundName);
                     anyResolved = true;
                 }
             }
