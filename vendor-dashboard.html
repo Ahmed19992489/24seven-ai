@@ -977,26 +977,64 @@
                 return;
             }
 
-            const cleanPhone = phoneInput.replace(/\D/g, '');
+            let cleanPhone = phoneInput.replace(/\D/g, '');
+            let phoneVariants = [cleanPhone];
+            if (cleanPhone.startsWith('20') && cleanPhone.length === 12) {
+                phoneVariants.push('0' + cleanPhone.substring(2));
+            } else if (cleanPhone.startsWith('0') && cleanPhone.length === 11) {
+                phoneVariants.push('2' + cleanPhone);
+                phoneVariants.push(cleanPhone.substring(1));
+            } else if (cleanPhone.length === 10 && cleanPhone.startsWith('1')) {
+                phoneVariants.push('0' + cleanPhone);
+                phoneVariants.push('20' + cleanPhone);
+            }
 
             try {
-                // البحث في جدول vendors
-                const { data, error } = await sb.from('vendors').select('*').eq('owner_phone', cleanPhone).single();
-                
-                if (error || !data) {
+                let vendorData = null;
+                // 1. البحث في قاعدة البيانات الرئيسية (Neon عبر sb)
+                for (const p of phoneVariants) {
+                    const { data, error } = await sb.from('vendors').select('*').eq('owner_phone', p).maybeSingle();
+                    if (data) {
+                        vendorData = data;
+                        break;
+                    }
+                }
+
+                // 2. Fallback مباشر إلى Supabase إذا لم يُعثر عليه في Neon
+                if (!vendorData) {
+                    try {
+                        const last10 = cleanPhone.slice(-10);
+                        const sbResp = await fetch(`${supabaseUrl}/rest/v1/vendors?owner_phone=ilike.*${last10}*&select=*&limit=1`, {
+                            headers: {
+                                'apikey': supabaseKey,
+                                'Authorization': `Bearer ${supabaseKey}`
+                            }
+                        });
+                        if (sbResp.ok) {
+                            const sbRows = await sbResp.json();
+                            if (sbRows && sbRows.length > 0) {
+                                vendorData = sbRows[0];
+                            }
+                        }
+                    } catch (sbErr) {
+                        console.warn("Supabase fallback error:", sbErr);
+                    }
+                }
+
+                if (!vendorData) {
                     errEl.textContent = 'رقم الهاتف هذا غير مسجل كمكتب منفذ خارجي شريك!';
                     errEl.classList.remove('hidden');
                     return;
                 }
 
-                if (data.status !== 'active') {
+                if (vendorData.status !== 'active') {
                     errEl.textContent = 'هذا الحساب موقف مؤقتاً، يرجى مراجعة إدارة 24Seven.';
                     errEl.classList.remove('hidden');
                     return;
                 }
 
-                currentVendor = data;
-                localStorage.setItem('vendor_data', JSON.stringify(data));
+                currentVendor = vendorData;
+                localStorage.setItem('vendor_data', JSON.stringify(vendorData));
                 showDashboard();
             } catch(e) {
                 errEl.textContent = 'خطأ بالاتصال بقاعدة البيانات: ' + e.message;
