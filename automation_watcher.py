@@ -9,6 +9,7 @@ import os
 import re
 from datetime import datetime, timedelta
 import random
+import threading
 
 
 import json
@@ -42,6 +43,9 @@ SUPABASE_HEADERS = {
     "Content-Type": "application/json",
     "Prefer": "return=minimal"
 }
+
+NEON_CONN_STR = os.getenv("DATABASE_URL") or "postgresql://neondb_owner:npg_WFZmc7X1YEMQ@ep-falling-glade-a5v7q460-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require"
+NEON_HTTP_URL = "https://ep-falling-glade-a5v7q460-pooler.us-east-2.aws.neon.tech/sql"
 
 import ssl
 from requests.adapters import HTTPAdapter
@@ -265,28 +269,125 @@ def send_linked_whatsapp(to, message_text, instance=None):
             print(f"❌ خطأ أثناء إرسال الواتساب: {err_str[:120]}")
         return False
 
+def check_and_notify_new_investment_leads(task_instance):
+    """فحص طلبات المستثمرين الجديدة من الموقع وإرسال إشعار فوري للرقم 201121748885"""
+    try:
+        sql = """
+            SELECT id, request_code, customer_name, customer_phone, governorate,
+                   car_category, brand, model, year, estimated_value, expected_income,
+                   notes, created_at
+            FROM investment_leads
+            WHERE admin_notified IS NOT TRUE
+            ORDER BY id ASC
+            LIMIT 5;
+        """
+        r = http_session.post(
+            NEON_HTTP_URL,
+            headers={"Neon-Connection-String": NEON_CONN_STR},
+            json={"query": sql, "params": []},
+            timeout=8
+        )
+        if r.status_code != 200:
+            return
+        
+        rows = r.json().get("rows", [])
+        if not rows:
+            return
+            
+        for lead in rows:
+            lead_id = lead["id"]
+            code = lead.get("request_code") or f"REQ-{lead_id}"
+            name = lead.get("customer_name") or "عميل مستثمر"
+            phone = lead.get("customer_phone") or "غير محدد"
+            gov = lead.get("governorate") or "غير محدد"
+            cat = lead.get("car_category") or "سيدان"
+            brand = lead.get("brand") or ""
+            model = lead.get("model") or ""
+            year = lead.get("year") or ""
+            val = lead.get("estimated_value") or "0"
+            income = lead.get("expected_income") or "0"
+            notes = lead.get("notes") or "طلب جديد من الموقع"
+            
+            try:
+                val_fmt = f"{int(float(val)):,} ج.م"
+            except:
+                val_fmt = f"{val} ج.م"
+                
+            try:
+                inc_fmt = f"{int(float(income)):,} ج.م"
+            except:
+                inc_fmt = f"{income} ج.م"
+            
+            alert_msg = (
+                f"🚨 إشعار فوري: طلب استثمار أسطول جديد!\n"
+                f"━━━━━━━━━━━━━━━━━━\n"
+                f"📋 كود الطلب: {code}\n"
+                f"👤 اسم العميل: {name}\n"
+                f"📞 رقم الهاتف: {phone}\n"
+                f"🚗 السيارة: {brand} {model} ({year})\n"
+                f"📍 المحافظة: {gov} | الفئة: {cat}\n"
+                f"💰 القيمة المقدرة: {val_fmt}\n"
+                f"📈 العائد الشهري المتوقع: {inc_fmt}\n"
+                f"📝 الملاحظات: {notes}\n"
+                f"━━━━━━━━━━━━━━━━━━\n"
+                f"⚡ تم تسجيل البيانات بنجاح، يرجى التواصل مع العميل لمناقشة التعاقد وترتيب موعد المعاينة."
+            )
+            
+            print(f"📢 [مستثمر جديد] إرسال إشعار فوري للرقم {TASK_INSTANCE_PHONE} لطلب {code}...")
+            sent = send_linked_whatsapp(TASK_INSTANCE_PHONE, alert_msg, task_instance)
+            if sent:
+                update_sql = f"UPDATE investment_leads SET admin_notified = TRUE, notified_at = NOW() WHERE id = {lead_id};"
+                http_session.post(
+                    NEON_HTTP_URL,
+                    headers={"Neon-Connection-String": NEON_CONN_STR},
+                    json={"query": update_sql, "params": []},
+                    timeout=8
+                )
+                print(f"✅ تم تأكيد إشعار المستثمر {code} بنجاح.")
+    except Exception as e:
+        print(f"⚠️ خطأ أثناء فحص إشعارات المستثمرين: {e}")
+
+def investment_leads_thread_worker():
+    """خيط عمل منفصل (Thread) لفحص طلبات المستثمرين فوراً كل 4 ثوانٍ دون انتظار دورة جوجل شيت"""
+    print("🟢 [Investor Leads Watcher] Started background thread (polling every 4s)...")
+    while True:
+        try:
+            task_inst = get_whatsapp_instance(TASK_INSTANCE_PHONE)
+            if task_inst:
+                check_and_notify_new_investment_leads(task_inst)
+        except Exception:
+            pass
+        time.sleep(4)
+
+# تشغيل خيط فحص المستثمرين في الخلفية فوراً
+threading.Thread(target=investment_leads_thread_worker, daemon=True).start()
+
 # =====================================================
 # 🚀 المحرك الرئيسي
 # =====================================================
 print("\n" + "="*50)
 print("🚀 خدمة الواتساب (الإصدار المحسن)")
 print("   ✅ تم حل مشكلة Enter والمسافات")
+print("   ✅ تم دمج أتمتة إشعارات المستثمرين لـ 8885 (خيط منفصل كل 4 ثوانٍ)")
 print("="*50 + "\n")
 
 
 while True:
     try:
+        # الحصول على الإنستانس المخصص للمهام مرة واحدة لكل دورة فحص
+        task_instance = get_whatsapp_instance(TASK_INSTANCE_PHONE)
+        if not task_instance:
+            print(f"⚠️ تحذير: لم يتم العثور على الرقم المخصص للمهام {TASK_INSTANCE_PHONE}، سنحاول لاحقاً.")
+        else:
+            # فحص وإرسال إشعارات طلبات المستثمرين الجديدة فوراً
+            check_and_notify_new_investment_leads(task_instance)
+
         sheet = get_sheet()
         rows = sheet.get_all_values()
         sent_cache = load_sent_cache()
         
         tomorrow = (datetime.now() + timedelta(days=1)).date()
         today = datetime.now().date()
-        
-        # الحصول على الإنستانس المخصص للمهام مرة واحدة لكل دورة فحص
-        task_instance = get_whatsapp_instance(TASK_INSTANCE_PHONE)
-        if not task_instance:
-            print(f"⚠️ تحذير: لم يتم العثور على الرقم المخصص للمهام {TASK_INSTANCE_PHONE}، سنحاول لاحقاً.")
         
         if len(rows) > 1:
             for i, row in enumerate(rows[1:]):

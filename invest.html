@@ -1756,6 +1756,19 @@
                 console.warn('API lead save warning:', apiErr);
             }
 
+            // Direct instant alert attempt to Admin WhatsApp 8885 (201121748885)
+            try {
+                const waAdminAlert = `🚨 إشعار فوري: طلب استثمار أسطول جديد!\n━━━━━━━━━━━━━━━━━━\n📋 كود الطلب: ${requestCode}\n👤 اسم العميل: ${name}\n📞 رقم الهاتف: ${phone}\n🚗 السيارة: ${brand} ${model || carTypeVal} (${year})\n📍 المحافظة: ${gov} | الفئة: ${cat}\n💰 القيمة التقديرية: ${Number(valueNum || 0).toLocaleString()} ج.م\n📈 العائد المتوقع: ${Number(expectedIncome || 0).toLocaleString()} ج.م\n📝 ملاحظات: ${carTypeVal}\n━━━━━━━━━━━━━━━━━━\n⚡ يرجى التواصل مع العميل لترتيب المعاينة.`;
+                fetch('http://localhost:3001/instance/692921bb-a5df-451d-8527-e1ee55a736f4/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        to: '201121748885',
+                        message: waAdminAlert
+                    })
+                }).catch(() => {});
+            } catch (waErr) {}
+
             // 2. Save to localStorage
             try {
                 const history = JSON.parse(localStorage.getItem('24seven_invest_leads') || '[]');
