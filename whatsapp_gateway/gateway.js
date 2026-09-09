@@ -228,8 +228,25 @@ async function initSession(id, forceReconnect = false) {
         }
     });
 
+    const processedMsgKeys = new Map();
+
     async function processIncomingWAMessage(msg, instanceId, waSock) {
         if (!msg || !msg.key) return;
+
+        // In-memory deduplication by message ID & remote JID
+        const msgId = msg.key.id;
+        const rawSender = msg.key.remoteJid || '';
+        const dedupKey = `${msgId}_${rawSender}`;
+        if (msgId && processedMsgKeys.has(dedupKey)) {
+            return;
+        }
+        if (msgId) {
+            processedMsgKeys.set(dedupKey, Date.now());
+            if (processedMsgKeys.size > 3000) {
+                const oldest = processedMsgKeys.keys().next().value;
+                processedMsgKeys.delete(oldest);
+            }
+        }
         
         // Unpack message if wrapped
         let messageContent = msg.message;
@@ -464,8 +481,9 @@ async function initSession(id, forceReconnect = false) {
                 }
 
                 // 2. تمرير لسيرفر بايثون المحلي ليسجل في الشيت وقاعدة البيانات
+                let pyFromMeSuccess = false;
                 try {
-                    await axios.post(`${PYTHON_BACKEND_URL}/api/whatsapp/webhook/local/${instanceId}`, {
+                    const pyRes = await axios.post(`${PYTHON_BACKEND_URL}/api/whatsapp/webhook/local/${instanceId}`, {
                         sender_phone: senderPhone,
                         sender_name: 'Admin',
                         message_text: text,
@@ -473,27 +491,32 @@ async function initSession(id, forceReconnect = false) {
                         is_from_admin: true,
                         raw_payload: msg
                     }, { timeout: 10000 });
-                    console.log(`✅ [Gateway fromMe] تم تمرير الرد لسيرفر بايثون المحلي`);
+                    if (pyRes.status === 200) {
+                        pyFromMeSuccess = true;
+                        console.log(`✅ [Gateway fromMe] تم تمرير الرد لسيرفر بايثون المحلي`);
+                    }
                 } catch (pyErr) {
                     console.warn(`[Gateway fromMe Python Warning]:`, pyErr.message);
                 }
 
-                // 3. نسخة احتياطية في Neon
-                try {
-                    await axios.post(`https://24seven-ai.com/api/db`, {
-                        action: 'insert',
-                        table: 'omnichannel_messages',
-                        data: {
-                            channel: 'whatsapp',
-                            sender_id: senderPhone,
-                            sender_name: 'Admin',
-                            message_text: text,
-                            is_from_admin: true,
-                            read_by_admin: true,
-                            whatsapp_instance_id: instanceId
-                        }
-                    }, { timeout: 8000 });
-                } catch (echoErr) {}
+                // 3. نسخة احتياطية في Neon فقط إذا لم يستجب سيرفر بايثون المحلي لمنع التكرار
+                if (!pyFromMeSuccess) {
+                    try {
+                        await axios.post(`https://24seven-ai.com/api/db`, {
+                            action: 'insert',
+                            table: 'omnichannel_messages',
+                            data: {
+                                channel: 'whatsapp',
+                                sender_id: senderPhone,
+                                sender_name: 'Admin',
+                                message_text: text,
+                                is_from_admin: true,
+                                read_by_admin: true,
+                                whatsapp_instance_id: instanceId
+                            }
+                        }, { timeout: 8000 });
+                    } catch (echoErr) {}
+                }
                 return;
             }
             

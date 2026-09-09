@@ -286,6 +286,35 @@ class handler(BaseHTTPRequestHandler):
 
                 inserted_rows = []
                 for rec in records:
+                    # Deduplication guard for omnichannel_messages (prevent duplicate inserts within 5 seconds)
+                    if table == "omnichannel_messages":
+                        sid_val = rec.get("sender_id")
+                        txt_val = rec.get("message_text")
+                        is_adm = "TRUE" if rec.get("is_from_admin") else "FALSE"
+                        if sid_val and txt_val:
+                            try:
+                                dedup_q = f"""
+                                    SELECT * FROM omnichannel_messages 
+                                    WHERE sender_id = {sql_quote(sid_val)} 
+                                      AND message_text = {sql_quote(txt_val)} 
+                                      AND is_from_admin = {is_adm} 
+                                      AND created_at >= NOW() - INTERVAL '5 seconds'
+                                    ORDER BY id DESC LIMIT 1;
+                                """
+                                r_chk = requests.post(
+                                    NEON_HTTP_URL,
+                                    headers={"Neon-Connection-String": NEON_CONN_STR},
+                                    json={"query": dedup_q},
+                                    timeout=5
+                                )
+                                if r_chk.status_code == 200:
+                                    chk_rows = r_chk.json().get("rows", [])
+                                    if chk_rows:
+                                        inserted_rows.extend(chk_rows)
+                                        continue
+                            except Exception:
+                                pass
+
                     cols = list(rec.keys())
                     vals = [sql_quote(v) for v in rec.values()]
                     sql = f"INSERT INTO {table} ({','.join(cols)}) VALUES ({','.join(vals)}) RETURNING *;"

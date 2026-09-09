@@ -6904,12 +6904,14 @@
 
         function normalizeWhatsAppId(sid) {
             if (!sid) return sid;
-            let clean = sid.replace(/\D/g, '');
-            if (clean.length >= 11 && clean.startsWith('20')) {
-                clean = clean.substring(2);
-            }
-            if (clean.length === 11 && clean.startsWith('0')) {
-                clean = clean.substring(1);
+            let clean = String(sid).replace(/\D/g, '');
+            // Standard Egyptian mobile format: 01xxxxxxxxx (11 digits)
+            if (clean.length === 12 && clean.startsWith('201')) {
+                clean = '0' + clean.substring(2);
+            } else if (clean.length === 10 && /^(10|11|12|15)/.test(clean)) {
+                clean = '0' + clean;
+            } else if (clean.length >= 11 && clean.startsWith('20')) {
+                clean = '0' + clean.substring(2);
             }
             return clean;
         }
@@ -6942,10 +6944,18 @@
                 adminGroupedChats[groupKey].last = m;
                 
                 if(m.channel === 'whatsapp') {
-                    if(!m.is_from_admin && m.sender_name && m.sender_name !== m.sender_id && m.sender_name !== groupKey && !['Admin', 'ش'].includes(m.sender_name)) {
-                        adminGroupedChats[groupKey].name = m.sender_name;
-                    } else if (!adminGroupedChats[groupKey].name || adminGroupedChats[groupKey].name === groupKey) {
-                        adminGroupedChats[groupKey].name = groupKey;
+                    const rawCandidate = (!m.is_from_admin && m.sender_name && m.sender_name !== m.sender_id && m.sender_name !== groupKey && !['Admin', 'ش'].includes(m.sender_name)) ? m.sender_name.trim() : '';
+                    const isCompanyOrBot = rawCandidate && /24seven|limousine|الإدارة|Admin|فريق/i.test(rawCandidate);
+                    const isGenericClient = rawCandidate && /عميل واتساب/i.test(rawCandidate);
+
+                    if (isCompanyOrBot) {
+                        adminGroupedChats[groupKey].name = `${rawCandidate} (${groupKey})`;
+                    } else if (isGenericClient || !rawCandidate) {
+                        if (!adminGroupedChats[groupKey].name || adminGroupedChats[groupKey].name === groupKey || /عميل واتساب/i.test(adminGroupedChats[groupKey].name)) {
+                            adminGroupedChats[groupKey].name = `${groupKey} (واتساب)`;
+                        }
+                    } else {
+                        adminGroupedChats[groupKey].name = rawCandidate;
                     }
                 }
 
@@ -7312,8 +7322,8 @@
                     }
 
                     if (adminActiveChatType === 'omni' && adminActiveChatId === groupKey) {
-                        // الشات مفتوح لهذا العميل - أضف الرسالة مباشرة
-                        if (!isDuplicate) {
+                        // الشات مفتوح لهذا العميل - أضف الرسالة مباشرة إذا لم تكن مكررة
+                        if (!isDuplicate && !isLocalAdminDuplicate) {
                             appendAdminUnifiedOmniMsg(msg);
                             scrollToOmniBottom();
                         }
@@ -7544,8 +7554,25 @@
                 document.getElementById('omni-reply-channel').value = chatObj?.channel || '';
 
                 messagesArea.innerHTML = '';
-                if (group) {
-                    group.messages.forEach(m => appendAdminUnifiedOmniMsg(m));
+                if (group && group.messages) {
+                    const uniqueMsgs = [];
+                    const seenMsgIds = new Set();
+                    for (let i = 0; i < group.messages.length; i++) {
+                        const m = group.messages[i];
+                        if (m.id && seenMsgIds.has('id_' + m.id)) continue;
+                        if (m.id) seenMsgIds.add('id_' + m.id);
+
+                        const prev = uniqueMsgs[uniqueMsgs.length - 1];
+                        if (prev && prev.message_text === m.message_text && prev.is_from_admin === m.is_from_admin) {
+                            const tPrev = new Date(prev.created_at).getTime();
+                            const tCurr = new Date(m.created_at).getTime();
+                            if (!isNaN(tPrev) && !isNaN(tCurr) && Math.abs(tCurr - tPrev) < 6000) {
+                                continue; // Skip identical duplicate message within 6s
+                            }
+                        }
+                        uniqueMsgs.push(m);
+                    }
+                    uniqueMsgs.forEach(m => appendAdminUnifiedOmniMsg(m));
                 }
                 scrollToOmniBottom();
                 markAdminUnifiedChatAsRead(id, 'omni');
@@ -7649,12 +7676,50 @@
 
         function appendAdminUnifiedOmniMsg(msg) {
             const area = document.getElementById('omni-messages-area');
+            if (!area) return;
+
+            const rawText = msg.message_text || '';
+
+            // 1. If message with this ID is already rendered, skip
+            if (msg.id && area.querySelector(`[data-msg-id="${msg.id}"]`)) {
+                return;
+            }
+
+            // 2. If it's an admin message matching an active temp message, upgrade temp element instead of duplicating
+            if (msg.is_from_admin && rawText) {
+                const tempEl = Array.from(area.querySelectorAll('[data-is-temp="true"]')).find(el => 
+                    el.getAttribute('data-raw-text') === rawText
+                );
+                if (tempEl) {
+                    tempEl.removeAttribute('data-is-temp');
+                    if (msg.id) tempEl.setAttribute('data-msg-id', msg.id);
+                    return;
+                }
+            }
+
+            // 3. If the last rendered message has identical text and same sender role within 5s, skip duplicate
+            const lastMsgEl = area.lastElementChild;
+            if (lastMsgEl && lastMsgEl.getAttribute('data-raw-text') === rawText && 
+                lastMsgEl.getAttribute('data-is-admin') === (msg.is_from_admin ? 'true' : 'false')) {
+                const lastTime = Number(lastMsgEl.getAttribute('data-timestamp') || 0);
+                const currTime = new Date(msg.created_at).getTime();
+                if (lastTime && currTime && Math.abs(currTime - lastTime) < 5000) {
+                    return;
+                }
+            }
+
             const timeStr = new Date(msg.created_at).toLocaleTimeString('ar-EG', {hour: '2-digit', minute:'2-digit'});
             
             const div = document.createElement('div');
             div.className = "flex w-full mb-4";
+            if (msg.id) div.setAttribute('data-msg-id', msg.id);
+            if (msg._adminSentLocally || String(msg.id).startsWith('temp_')) {
+                div.setAttribute('data-is-temp', 'true');
+            }
+            div.setAttribute('data-raw-text', rawText);
+            div.setAttribute('data-is-admin', msg.is_from_admin ? 'true' : 'false');
+            div.setAttribute('data-timestamp', String(new Date(msg.created_at).getTime() || Date.now()));
             
-            const rawText = msg.message_text || '';
             let messageHtml = '';
             
             if (rawText.startsWith('MEDIA_IMAGE:')) {
@@ -8173,21 +8238,20 @@
                 read_by_admin: true,
                 whatsapp_instance_id: whatsappInstanceId
             };
-            try {
-                fetch('https://24seven-ai.com/api/db', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'insert',
-                        table: 'omnichannel_messages',
-                        data: dbMsgPayload
-                    })
-                }).catch(e => console.warn('Neon save notice:', e));
-            } catch(e) {}
-
+            // حفظ الرسالة في قاعدة البيانات لضمان بقائها في سجل المحادثة (بدون تكرار)
             try {
                 if (typeof sbClient !== 'undefined') {
-                    sbClient.from('omnichannel_messages').insert([dbMsgPayload]).catch(e => console.warn('Supabase save notice:', e));
+                    sbClient.from('omnichannel_messages').insert([dbMsgPayload]).catch(e => console.warn('DB save notice:', e));
+                } else {
+                    fetch('https://24seven-ai.com/api/db', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action: 'insert',
+                            table: 'omnichannel_messages',
+                            data: dbMsgPayload
+                        })
+                    }).catch(e => console.warn('Neon save notice:', e));
                 }
             } catch(e) {}
 

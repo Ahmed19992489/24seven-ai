@@ -67,6 +67,19 @@ class handler(BaseHTTPRequestHandler):
                         sender_phone = msg.get('from', '')
                         msg_text = msg.get('text', {}).get('body', '')
                         if sender_phone and msg_text:
+                            try:
+                                chk_sql = "SELECT id FROM omnichannel_messages WHERE sender_id = $1 AND message_text = $2 AND created_at > NOW() - INTERVAL '5 seconds' LIMIT 1"
+                                r_chk = requests.post(
+                                    NEON_HTTP_URL,
+                                    headers={"Neon-Connection-String": NEON_CONN_STR},
+                                    json={"query": chk_sql, "params": [str(sender_phone), str(msg_text)]},
+                                    timeout=4
+                                )
+                                if r_chk.status_code == 200 and r_chk.json().get("rows"):
+                                    continue
+                            except Exception:
+                                pass
+
                             sql = "INSERT INTO omnichannel_messages (channel, sender_id, sender_name, message_text, is_from_admin, read_by_admin) VALUES ($1, $2, $3, $4, $5, $6)"
                             params = ["whatsapp", str(sender_phone), f"عميل واتساب (+{sender_phone})", str(msg_text), False, False]
                             requests.post(
