@@ -227,7 +227,7 @@ class handler(BaseHTTPRequestHandler):
 
                 order = req.get("order")
                 if order:
-                    col = order.get("col", "id")
+                    col = order.get("col") or order.get("column") or "id"
                     order_col = f"t.{col}" if (is_trips_query and not col.startswith("t.")) else col
                     asc = "ASC" if order.get("ascending", False) else "DESC"
                     sql += f" ORDER BY {order_col} {asc}"
