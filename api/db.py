@@ -295,14 +295,25 @@ class handler(BaseHTTPRequestHandler):
                         json={"query": sql, "params": vals},
                         timeout=12
                     )
-                    if r.status_code == 200:
-                        inserted_rows.extend(r.json().get("rows", []))
+                    if r.status_code != 200:
+                        err_msg = r.text
+                        try:
+                            err_msg = r.json().get("message", r.text)
+                        except Exception:
+                            pass
+                        self._respond(400, {"status": "error", "message": err_msg})
+                        return
+                    inserted_rows.extend(r.json().get("rows", []))
 
                 self._respond(200, {"status": "ok", "data": inserted_rows})
 
             elif action == "update":
                 data_dict = req.get("data", {})
                 eq_dict = req.get("eq", {})
+                filters = req.get("filters", [])
+                if not eq_dict and filters:
+                    eq_dict = {f.get("col"): f.get("val") for f in filters if f.get("op") == "eq"}
+
                 if not data_dict or not eq_dict:
                     self._respond(400, {"status": "error", "message": "Missing data or eq filter"})
                     return
@@ -325,7 +336,15 @@ class handler(BaseHTTPRequestHandler):
                     json={"query": sql, "params": params},
                     timeout=12
                 )
-                updated = r.json().get("rows", []) if r.status_code == 200 else []
+                if r.status_code != 200:
+                    err_msg = r.text
+                    try:
+                        err_msg = r.json().get("message", r.text)
+                    except Exception:
+                        pass
+                    self._respond(400, {"status": "error", "message": err_msg})
+                    return
+                updated = r.json().get("rows", [])
                 self._respond(200, {"status": "ok", "data": updated})
 
             elif action == "upsert":
@@ -354,13 +373,26 @@ class handler(BaseHTTPRequestHandler):
                         json={"query": sql, "params": vals},
                         timeout=12
                     )
-                    if r.status_code == 200:
-                        inserted_rows.extend(r.json().get("rows", []))
+                    if r.status_code != 200:
+                        err_msg = r.text
+                        try:
+                            err_msg = r.json().get("message", r.text)
+                        except Exception:
+                            pass
+                        self._respond(400, {"status": "error", "message": err_msg})
+                        return
+                    inserted_rows.extend(r.json().get("rows", []))
 
                 self._respond(200, {"status": "ok", "data": inserted_rows})
 
             elif action == "delete":
                 eq_dict = req.get("eq", {})
+                filters = req.get("filters", [])
+                if not eq_dict and filters:
+                    eq_dict = {f.get("col"): f.get("val") for f in filters if f.get("op") == "eq"}
+                if not eq_dict:
+                    self._respond(400, {"status": "error", "message": "Missing eq filter for delete"})
+                    return
                 where_clauses = []
                 params = []
                 for k, v in eq_dict.items():
@@ -374,7 +406,15 @@ class handler(BaseHTTPRequestHandler):
                     json={"query": sql, "params": params},
                     timeout=12
                 )
-                deleted = r.json().get("rows", []) if r.status_code == 200 else []
+                if r.status_code != 200:
+                    err_msg = r.text
+                    try:
+                        err_msg = r.json().get("message", r.text)
+                    except Exception:
+                        pass
+                    self._respond(400, {"status": "error", "message": err_msg})
+                    return
+                deleted = r.json().get("rows", [])
                 self._respond(200, {"status": "ok", "data": deleted})
 
             else:

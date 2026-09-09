@@ -4244,7 +4244,7 @@
                         newTrip = insData;
 
                         realTripId = newTrip.id;
-                        finalSqlId = sqlIdVal || String(newTrip.id);
+                        finalSqlId = String(newTrip.id);
 
                         // 3. Update reservation status in Supabase
                         const { error: resErr } = await sbClient
@@ -4360,8 +4360,19 @@
                             } catch(sheetErr) { console.error('External Sheet Sync Error:', sheetErr); }
                         }
 
+                        // تحديث بيانات الرحلة في الذاكرة فوراً لسرعة استجابة الواجهة
+                        if (trip) {
+                            trip.status = 'تم الترحيل';
+                            trip.sql_server_id = finalSqlId;
+                            trip.vendor_id = vendorId;
+                            trip.is_outsourced = true;
+                        }
+
                         closeAssignModal();
                         alert(`✅ تم إسناد الرحلة لمكتب التشغيل (${vendorInfo?.name || ''}) بنجاح!`);
+                        if (typeof renderTripsTable === 'function' && Array.isArray(allTrips)) {
+                            renderTripsTable(allTrips);
+                        }
                         searchTrips();
                     } catch(e) { console.error('External Assignment Post Error:', e); }
                     return;
@@ -5358,7 +5369,7 @@
             let countPending = 0;
 
             rawList.forEach(t => {
-                const isDisp = (t.is_real_trip && t.status !== 'pending') || t.status === 'driver_assigned' || t.status === 'in_progress' || t.status === 'completed' || (t.status === 'approved' && (!!t.driver_name || !!t.vendor_id)) || !!t.driver_name || !!t.vendor_id;
+                const isDisp = (t.is_real_trip && t.status !== 'pending') || t.status === 'driver_assigned' || t.status === 'in_progress' || t.status === 'completed' || t.status === 'تم الترحيل' || (t.status === 'approved' && (!!t.driver_name || !!t.vendor_id)) || !!t.driver_name || !!t.vendor_id;
                 const isCanc = t.status === 'ملغي' || t.status === 'cancelled' || (t.client_decision && (t.client_decision.includes('ملغي') || t.client_decision.includes('إلغاء')));
                 if (!isCanc) {
                     if (isDisp) countDispatched++;
@@ -5375,7 +5386,7 @@
 
             // فلترة القائمة حسب التبويب النشط
             const displayedTrips = rawList.filter(t => {
-                const isDisp = (t.is_real_trip && t.status !== 'pending') || t.status === 'driver_assigned' || t.status === 'in_progress' || t.status === 'completed' || (t.status === 'approved' && (!!t.driver_name || !!t.vendor_id)) || !!t.driver_name || !!t.vendor_id;
+                const isDisp = (t.is_real_trip && t.status !== 'pending') || t.status === 'driver_assigned' || t.status === 'in_progress' || t.status === 'completed' || t.status === 'تم الترحيل' || (t.status === 'approved' && (!!t.driver_name || !!t.vendor_id)) || !!t.driver_name || !!t.vendor_id;
                 const isCanc = t.status === 'ملغي' || t.status === 'cancelled' || (t.client_decision && (t.client_decision.includes('ملغي') || t.client_decision.includes('إلغاء')));
                 
                 if (currentOpsFilter === 'pending') return !isDisp && !isCanc;
@@ -5398,7 +5409,7 @@
                 const feedbackHtml = feedbackArr.length > 0 ? feedbackArr.join(' ') : '<span class="text-slate-300">---</span>';
 
                 // فحص دقيق لحالة الإرسال للتشغيل
-                const isDispatched = (t.is_real_trip && t.status !== 'pending') || t.status === 'driver_assigned' || t.status === 'in_progress' || t.status === 'completed' || (t.status === 'approved' && (!!t.driver_name || !!t.vendor_id)) || !!t.driver_name || !!t.vendor_id;
+                const isDispatched = (t.is_real_trip && t.status !== 'pending') || t.status === 'driver_assigned' || t.status === 'in_progress' || t.status === 'completed' || t.status === 'تم الترحيل' || (t.status === 'approved' && (!!t.driver_name || !!t.vendor_id)) || !!t.driver_name || !!t.vendor_id;
                 const isCancelled = t.status === 'ملغي' || t.status === 'cancelled' || (t.client_decision && (t.client_decision.includes('ملغي') || t.client_decision.includes('إلغاء')));
 
                 // تحديد حالة التأكيد (قرار العميل)

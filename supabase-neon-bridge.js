@@ -29,7 +29,9 @@
         }
 
         select(cols = '*', opts = {}) {
-            this.action = 'select';
+            if (this.action !== 'insert' && this.action !== 'update' && this.action !== 'delete' && this.action !== 'upsert') {
+                this.action = 'select';
+            }
             this.selectCols = cols;
             if (opts && (opts.count || opts.head)) {
                 this.isHead = true;
@@ -55,9 +57,12 @@
             return this;
         }
 
-        upsert(data) {
-            this.action = 'insert';
+        upsert(data, opts = {}) {
+            this.action = 'upsert';
             this.insertData = data;
+            if (opts && opts.onConflict) {
+                this.onConflict = opts.onConflict;
+            }
             return this;
         }
 
@@ -158,8 +163,9 @@
                 limit: this.limitVal
             };
 
-            if (this.action === 'insert') {
+            if (this.action === 'insert' || this.action === 'upsert') {
                 payload.data = this.insertData;
+                if (this.onConflict) payload.on_conflict = this.onConflict;
             } else if (this.action === 'update') {
                 payload.data = this.updateData;
                 payload.eq = {};
@@ -187,10 +193,19 @@
                 });
 
                 if (!resp.ok) {
-                    return { data: null, error: { message: `HTTP ${resp.status}`, status: resp.status } };
+                    let errMsg = `HTTP ${resp.status}`;
+                    try {
+                        const errJson = await resp.json();
+                        if (errJson.message) errMsg = errJson.message;
+                    } catch(e) {}
+                    return { data: null, error: { message: errMsg, status: resp.status } };
                 }
 
                 const json = await resp.json();
+                if (json.status === 'error') {
+                    return { data: null, error: { message: json.message || 'Database error' } };
+                }
+
                 let data = json.data;
 
                 if (this.isSingle) {
