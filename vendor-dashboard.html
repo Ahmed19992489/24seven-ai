@@ -1238,7 +1238,25 @@
                     .eq('vendor_id', currentVendor.id)
                     .order('id', { ascending: false });
 
-                if (error) throw error;
+                // Fallback مباشر لـ Supabase إذا كانت القائمة فارغة
+                if (!trips || trips.length === 0) {
+                    try {
+                        const sbTripsResp = await fetch(`${supabaseUrl}/rest/v1/trips?vendor_id=eq.${currentVendor.id}&select=*,drivers:drivers!fk_trips_driver(name,phone),cars:cars!fk_trips_car(brand,plate_number,car_image_url)&order=id.desc`, {
+                            headers: {
+                                'apikey': supabaseKey,
+                                'Authorization': `Bearer ${supabaseKey}`
+                            }
+                        });
+                        if (sbTripsResp.ok) {
+                            const sbTrips = await sbTripsResp.json();
+                            if (sbTrips && sbTrips.length > 0) {
+                                trips = sbTrips;
+                            }
+                        }
+                    } catch (sbErr) {
+                        console.warn("Supabase trips fallback error:", sbErr);
+                    }
+                }
 
                 cachedTrips = trips || [];
                 cachedReservationsMap = {};
@@ -2557,9 +2575,20 @@
                 if (cRes.error) throw cRes.error;
                 if (tRes.error) throw tRes.error;
 
-                const drivers = dRes.data || [];
-                const cars = cRes.data || [];
+                let drivers = dRes.data || [];
+                let cars = cRes.data || [];
                 const trips = tRes.data || [];
+
+                if (drivers.length === 0 || cars.length === 0) {
+                    try {
+                        const [dSb, cSb] = await Promise.all([
+                            fetch(`${supabaseUrl}/rest/v1/drivers?vendor_id=eq.${currentVendor.id}&is_external=eq.true&select=*`, { headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` } }).then(r => r.json()),
+                            fetch(`${supabaseUrl}/rest/v1/cars?vendor_id=eq.${currentVendor.id}&is_external=eq.true&select=*`, { headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` } }).then(r => r.json())
+                        ]);
+                        if (dSb && dSb.length > 0) drivers = dSb;
+                        if (cSb && cSb.length > 0) cars = cSb;
+                    } catch(e) {}
+                }
 
                 const wageMap = {};
                 trips.forEach(t => {

@@ -17,6 +17,16 @@ def get_neon_creds():
     http_url = f"https://{host}/sql"
     return conn, http_url
 
+def sql_quote(val):
+    if val is None or val == 'null':
+        return 'NULL'
+    if isinstance(val, bool):
+        return 'TRUE' if val else 'FALSE'
+    if isinstance(val, (int, float)):
+        return str(val)
+    s = str(val).replace("'", "''")
+    return f"'{s}'"
+
 NEON_CONN_STR, NEON_HTTP_URL = get_neon_creds()
 
 
@@ -156,7 +166,7 @@ class handler(BaseHTTPRequestHandler):
                         SELECT 
                             t.*,
                             d.name AS driver_name, d.phone AS driver_phone,
-                            c.brand AS car_brand, c.car_model AS car_model, c.plate_number AS car_plate_number, c.car_image_url AS car_image_url
+                            c.brand AS car_brand, c.model AS car_model, c.plate_number AS car_plate_number, c.car_image_url AS car_image_url
                         FROM trips t
                         LEFT JOIN drivers d ON t.driver_id = d.id
                         LEFT JOIN cars c ON t.car_id = c.id
@@ -167,8 +177,6 @@ class handler(BaseHTTPRequestHandler):
                         select_cols = "*"
                     sql = f"SELECT {select_cols} FROM {table} WHERE 1=1"
 
-                params = []
-
                 filters = req.get("filters", [])
                 for f in filters:
                     op = f.get("op", "eq")
@@ -176,34 +184,26 @@ class handler(BaseHTTPRequestHandler):
                     # Prefix column with table alias if trips
                     db_col = f"t.{col}" if (is_trips_query and not col.startswith("t.")) else col
                     val = f.get("val")
-                    idx = len(params) + 1
 
                     if op == "eq":
-                        sql += f" AND {db_col} = ${idx}"
-                        params.append(val)
+                        sql += f" AND {db_col} = {sql_quote(val)}"
                     elif op == "neq":
-                        sql += f" AND {db_col} != ${idx}"
-                        params.append(val)
+                        sql += f" AND {db_col} != {sql_quote(val)}"
                     elif op == "gt":
-                        sql += f" AND {db_col} > ${idx}"
-                        params.append(val)
+                        sql += f" AND {db_col} > {sql_quote(val)}"
                     elif op == "gte":
-                        sql += f" AND {db_col} >= ${idx}"
-                        params.append(val)
+                        sql += f" AND {db_col} >= {sql_quote(val)}"
                     elif op == "lt":
-                        sql += f" AND {db_col} < ${idx}"
-                        params.append(val)
+                        sql += f" AND {db_col} < {sql_quote(val)}"
                     elif op == "lte":
-                        sql += f" AND {db_col} <= ${idx}"
-                        params.append(val)
+                        sql += f" AND {db_col} <= {sql_quote(val)}"
                     elif op == "like" or op == "ilike":
-                        sql += f" AND {db_col} ILIKE ${idx}"
-                        params.append(f"%{val}%")
+                        clean_v = str(val).strip().replace('%', '')
+                        sql += f" AND {db_col} ILIKE {sql_quote(f'%{clean_v}%')}"
                     elif op == "in":
                         if isinstance(val, list) and len(val) > 0:
-                            placeholders = [f"${len(params)+i+1}" for i in range(len(val))]
-                            sql += f" AND {db_col} IN ({','.join(placeholders)})"
-                            params.extend(val)
+                            quoted_vals = [sql_quote(x) for x in val]
+                            sql += f" AND {db_col} IN ({','.join(quoted_vals)})"
                     elif op == "is":
                         if val is None or val == "null":
                             sql += f" AND {db_col} IS NULL"
@@ -216,13 +216,12 @@ class handler(BaseHTTPRequestHandler):
                             if ".eq." in op_part:
                                 c, v = op_part.split(".eq.", 1)
                                 c_name = f"t.{c.strip()}" if (is_trips_query and not c.strip().startswith("t.")) else c.strip()
-                                sub_clauses.append(f"{c_name} = ${len(params)+1}")
-                                params.append(v.strip())
+                                sub_clauses.append(f"{c_name} = {sql_quote(v.strip())}")
                             elif ".ilike." in op_part:
                                 c, v = op_part.split(".ilike.", 1)
                                 c_name = f"t.{c.strip()}" if (is_trips_query and not c.strip().startswith("t.")) else c.strip()
-                                sub_clauses.append(f"{c_name} ILIKE ${len(params)+1}")
-                                params.append(v.strip().replace('%', ''))
+                                clean_v = v.strip().replace('%', '')
+                                sub_clauses.append(f"{c_name} ILIKE {sql_quote(f'%{clean_v}%')}")
                         if sub_clauses:
                             sql += f" AND ({' OR '.join(sub_clauses)})"
 
@@ -245,7 +244,7 @@ class handler(BaseHTTPRequestHandler):
                 r = requests.post(
                     NEON_HTTP_URL,
                     headers={"Neon-Connection-String": NEON_CONN_STR},
-                    json={"query": sql, "params": params},
+                    json={"query": sql},
                     timeout=12
                 )
                 rows = r.json().get("rows", []) if r.status_code == 200 else []
