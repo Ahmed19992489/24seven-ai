@@ -266,19 +266,39 @@
                     <button type="button" onclick="addEmoji('🗺️')" class="hover:bg-slate-100 p-1 rounded">🗺️</button>
                 </div>
 
-                <div id="chat-header" class="p-4 border-b flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                         <button onclick="backToChatList()" class="lg:hidden w-8 h-8 rounded-full bg-slate-100 text-slate-500 mr-1 flex items-center justify-center">
+                <div id="chat-header" class="p-3.5 sm:p-4 border-b bg-white flex items-center justify-between gap-2 relative z-10">
+                    <div class="flex items-center gap-3 min-w-0">
+                         <button onclick="backToChatList()" class="lg:hidden w-8 h-8 rounded-full bg-slate-100 text-slate-500 mr-1 flex items-center justify-center shrink-0">
                             <i class="fas fa-arrow-right"></i>
                          </button>
-                         <div id="chat-avatar" class="w-10 h-10 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold">?</div>
-                         <div>
-                            <div class="flex items-center gap-2">
-                                <p id="chat-name" class="font-bold text-slate-800">اسم العميل</p>
-                                <button onclick="promptEditName()" class="text-slate-300 hover:text-teal-600 transition text-[10px]"><i class="fas fa-edit"></i></button>
-                            </div>
-                            <p id="chat-status" class="text-[10px] text-teal-600 font-bold">متصل الآن</p>
+                         <div class="relative shrink-0">
+                            <div id="chat-avatar" class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-teal-600 to-emerald-500 text-white flex items-center justify-center font-black text-sm shadow-sm">?</div>
+                            <span id="chat-header-channel-icon" class="absolute -bottom-1 -left-1 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] shadow-xs">
+                                <i class="fab fa-whatsapp"></i>
+                            </span>
                          </div>
+                         <div class="min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <p id="chat-name" class="font-bold text-slate-800 truncate">اسم العميل</p>
+                                <button onclick="promptEditName()" class="text-slate-300 hover:text-teal-600 transition text-[10px]" title="تعديل الاسم"><i class="fas fa-edit"></i></button>
+                                <span id="chat-header-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200">عميل</span>
+                            </div>
+                            <div class="flex items-center gap-2 mt-0.5">
+                                <p id="chat-status" class="text-[10px] text-teal-600 font-bold flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse"></span> متصل الآن
+                                </p>
+                                <span class="text-slate-300">•</span>
+                                <p id="chat-header-phone" class="text-[10px] text-slate-400 font-mono select-all">-</p>
+                            </div>
+                         </div>
+                    </div>
+
+                    <!-- Actions in header -->
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button onclick="toggleProfileSidebar()" id="btn-toggle-profile" class="h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-teal-700 border border-slate-200/80 transition flex items-center gap-1.5 text-xs font-bold shadow-xs" title="إظهار / إخفاء كارت العميل ونقاط الولاء">
+                            <i class="fas fa-id-card text-teal-600"></i>
+                            <span class="hidden sm:inline">كارت العميل والولاء</span>
+                        </button>
                     </div>
                 </div>
 
@@ -345,67 +365,161 @@
                     </div>
                 </div>
 
-                <!-- Input Area -->
-                <form id="chat-form" onsubmit="handleSend(event)" class="p-3 sm:p-4 border-t flex items-end gap-2 sm:gap-3 bg-white relative">
-                    <!-- زر اختيار صورة -->
-                    <button type="button" onclick="triggerOmniImageUpload()" class="text-slate-400 hover:text-teal-600 p-2.5 transition shrink-0 self-center" title="إرسال صورة">
-                        <i class="fas fa-image text-lg"></i>
-                    </button>
-                    <input type="file" id="omni-image-input" accept="image/*" class="hidden" onchange="handleOmniImageSelected(this)">
+                <!-- Input Area: Meta Business Suite Two-Tier Composer -->
+                <form id="chat-form" onsubmit="handleSend(event)" class="p-3 sm:p-4 border-t bg-white relative flex flex-col gap-2.5 transition-all">
+                    <!-- Top Row: Full-width comfortable textarea -->
+                    <div class="w-full relative">
+                        <textarea id="chat-input" rows="2" placeholder="اكتب ردك للعميل هنا (أو اضغط 🤖 لاقتراح وتسعير فوري)..." class="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 rounded-2xl px-4 py-3 text-sm sm:text-[15px] font-semibold text-slate-800 placeholder:text-slate-400 outline-none transition resize-none leading-relaxed min-h-[58px] max-h-[160px] overflow-y-auto block shadow-inner"></textarea>
+                    </div>
 
-                    <!-- زر تسجيل فويس نوت -->
-                    <button type="button" id="omni-record-btn" onclick="toggleOmniVoiceRecording()" class="text-slate-400 hover:text-red-500 p-2.5 transition shrink-0 self-center" title="تسجيل رسالة صوتية">
-                        <i class="fas fa-microphone text-lg" id="omni-record-icon"></i>
-                    </button>
+                    <!-- Bottom Row: Meta Action Bar -->
+                    <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 flex-wrap sm:flex-nowrap">
+                        <!-- Right side (RTL start): Attachment & Quick Action Tools -->
+                        <div class="flex items-center gap-1 sm:gap-1.5 flex-wrap">
+                            <button type="button" onclick="triggerOmniImageUpload()" class="w-8 h-8 sm:w-9 sm:h-9 text-slate-500 hover:text-teal-600 hover:bg-slate-100 rounded-xl transition flex items-center justify-center" title="إرسال صورة">
+                                <i class="fas fa-image text-sm sm:text-base"></i>
+                            </button>
+                            <input type="file" id="omni-image-input" accept="image/*" class="hidden" onchange="handleOmniImageSelected(this)">
 
-                    <!-- حقل الكتابة الموسع والمريح للشاشات والموبايل -->
-                    <textarea id="chat-input" rows="1" placeholder="اكتب ردك هنا (أو اضغط 🤖 لاقتراح وتسعير فوري)..." class="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[15px] sm:text-base font-semibold text-slate-800 placeholder:text-slate-400 placeholder:font-normal focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 focus:outline-none transition resize-none leading-relaxed min-h-[48px] max-h-[150px] overflow-y-auto"></textarea>
+                            <button type="button" id="omni-record-btn" onclick="toggleOmniVoiceRecording()" class="w-8 h-8 sm:w-9 sm:h-9 text-slate-500 hover:text-red-500 hover:bg-slate-100 rounded-xl transition flex items-center justify-center" title="تسجيل رسالة صوتية">
+                                <i class="fas fa-microphone text-sm sm:text-base" id="omni-record-icon"></i>
+                            </button>
 
-                    <button type="button" onclick="manualCoachAnalyze()" title="تحليل الرسالة (مساعد الكوتش)" class="w-11 h-11 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center hover:bg-purple-200 active:scale-95 transition shrink-0 relative group self-center">
-                        🎓
-                        <span class="absolute -top-9 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition whitespace-nowrap z-20 pointer-events-none">تحليل الكوتش</span>
-                    </button>
-                    <button type="button" onclick="suggestAiReply()" title="اقتراح رد ذكي بالأسعار" class="w-11 h-11 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center hover:bg-indigo-200 active:scale-95 transition shrink-0 relative group self-center">
-                        🤖
-                        <span class="absolute -top-9 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition whitespace-nowrap z-20 pointer-events-none">اقتراح وتسعير AI</span>
-                    </button>
-                    <button type="submit" id="omni-send-btn" class="w-11 h-11 bg-teal-600 text-white rounded-xl shadow-lg shadow-teal-200 flex items-center justify-center hover:bg-teal-700 active:scale-95 transition shrink-0 self-center">
-                        <i class="fas fa-paper-plane text-base"></i>
-                    </button>
+                            <button type="button" onclick="toggleEmoji()" class="w-8 h-8 sm:w-9 sm:h-9 text-slate-500 hover:text-amber-500 hover:bg-slate-100 rounded-xl transition flex items-center justify-center" title="إيموجي">
+                                <i class="far fa-smile text-sm sm:text-base"></i>
+                            </button>
+
+                            <button type="button" onclick="sendBookingInvoice()" title="إرسال فاتورة الحجز" class="h-8 sm:h-9 px-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-[11px] sm:text-xs flex items-center gap-1.5 transition shadow-xs">
+                                <i class="fas fa-file-invoice-dollar text-indigo-600"></i> <span class="hidden xs:inline">الفاتورة</span>
+                            </button>
+
+                            <button type="button" onclick="insertLoyaltyCouponMessage()" title="إرسال كود خصم نقاط الولاء للعميل" class="h-8 sm:h-9 px-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200/80 font-bold rounded-xl text-[11px] sm:text-xs flex items-center gap-1.5 transition shadow-xs">
+                                <i class="fas fa-gift text-amber-600 animate-pulse"></i> <span>كود خصم بالنقاط</span>
+                            </button>
+                        </div>
+
+                        <!-- Left side (RTL end): Coach, AI, and Primary Send Button -->
+                        <div class="flex items-center gap-1.5 sm:gap-2 shrink-0 mr-auto">
+                            <button type="button" onclick="manualCoachAnalyze()" title="تحليل الرسالة (مساعد الكوتش)" class="h-8 sm:h-9 px-2.5 sm:px-3 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200/60 rounded-xl flex items-center gap-1.5 text-xs font-bold transition">
+                                <span>🎓</span> <span class="hidden md:inline">الكوتش</span>
+                            </button>
+
+                            <button type="button" onclick="suggestAiReply()" title="اقتراح رد ذكي بالأسعار" class="h-8 sm:h-9 px-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl flex items-center gap-1.5 text-xs font-bold shadow-sm transition active:scale-95">
+                                <i class="fas fa-robot text-xs animate-pulse"></i> <span class="hidden sm:inline">اقتراح AI</span>
+                            </button>
+
+                            <button type="submit" id="omni-send-btn" class="h-8 sm:h-9 px-3 sm:px-4 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl shadow-md shadow-teal-600/20 flex items-center gap-1.5 text-xs sm:text-sm transition active:scale-95">
+                                <span>إرسال</span>
+                                <i class="fas fa-paper-plane text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
 
                     <!-- شريط حالة التسجيل الصوتي -->
-                    <div id="omni-voice-recording-status" class="hidden absolute left-10 right-12 top-0 bottom-0 bg-white flex items-center justify-between px-4 rounded-full border border-red-200 z-10">
+                    <div id="omni-voice-recording-status" class="hidden absolute left-4 right-4 top-2 bottom-2 bg-white/95 backdrop-blur flex items-center justify-between px-4 rounded-2xl border-2 border-red-300 shadow-lg z-20">
                         <span class="text-xs text-red-600 font-bold flex items-center gap-2">
                             <span class="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping"></span>
                             جاري تسجيل الصوت... <span id="omni-record-timer" class="font-mono">00:00</span>
                         </span>
                         <div class="flex gap-2">
-                            <button type="button" onclick="cancelOmniVoiceRecording()" class="text-slate-400 hover:text-slate-600 text-xs font-bold px-2 py-1 rounded">إلغاء</button>
-                            <button type="button" onclick="stopAndSendOmniVoice()" class="bg-red-600 text-white rounded-full px-3 py-1 text-xs font-bold hover:bg-red-700">إرسال</button>
+                            <button type="button" onclick="cancelOmniVoiceRecording()" class="text-slate-500 hover:text-slate-800 text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-100">إلغاء</button>
+                            <button type="button" onclick="stopAndSendOmniVoice()" class="bg-red-600 text-white rounded-lg px-4 py-1.5 text-xs font-bold hover:bg-red-700 flex items-center gap-1">
+                                <i class="fas fa-paper-plane text-[10px]"></i> إرسال
+                            </button>
                         </div>
                     </div>
                 </form>
             </div>
 
-            <!-- Chat Profile Sidebar -->
-            <div id="chat-profile-container" class="hidden lg:flex w-72 flex-col h-full bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden p-5 shrink-0" style="direction: rtl;">
-                <h3 class="font-black text-slate-800 text-sm mb-4 pb-2 border-b flex items-center gap-2">
-                    <i class="fas fa-id-card text-teal-600 text-lg"></i>
-                    <span>ملف العميل</span>
-                </h3>
-                <div class="flex flex-col items-center text-center mb-6">
-                    <div id="profile-avatar" class="w-16 h-16 rounded-2xl bg-teal-50 text-teal-700 font-black text-2xl flex items-center justify-center mb-2 shadow-inner">👤</div>
-                    <h4 id="profile-name" class="font-bold text-slate-800 text-sm">-</h4>
-                    <p id="profile-phone" class="text-xs text-slate-500 mt-1 select-all">-</p>
+            <!-- Chat Profile & Loyalty Hub (Meta Business Suite Style) -->
+            <div id="chat-profile-container" class="hidden lg:flex w-80 flex-col h-full bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden shrink-0 transition-all duration-300" style="direction: rtl;">
+                <!-- Profile Header -->
+                <div class="p-3.5 border-b bg-gradient-to-b from-slate-50 to-white flex items-center justify-between">
+                    <h3 class="font-black text-slate-800 text-xs sm:text-sm flex items-center gap-2">
+                        <i class="fas fa-id-badge text-teal-600 text-base"></i>
+                        <span>ملف العميل ونقاط الولاء</span>
+                    </h3>
+                    <button type="button" onclick="toggleProfileSidebar()" class="text-slate-400 hover:text-slate-600 p-1 text-xs" title="إخفاء">✕</button>
                 </div>
-                <div class="flex-1 overflow-y-auto space-y-4 no-scrollbar">
-                    <div>
-                        <p class="text-[10px] text-slate-400 font-bold mb-1">إجمالي الحجوزات</p>
-                        <p id="profile-trips-count" class="text-sm font-black text-teal-700">0 رحلة</p>
+
+                <div class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
+                    <!-- Customer Identity Card -->
+                    <div class="flex flex-col items-center text-center p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 relative">
+                        <div class="relative mb-2">
+                            <div id="profile-avatar" class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-teal-600 to-emerald-500 text-white font-black text-xl flex items-center justify-center shadow-md shadow-teal-500/20">👤</div>
+                            <span id="profile-channel-badge" class="absolute -bottom-1 -left-1 px-2 py-0.5 rounded-full bg-emerald-500 text-white font-bold text-[9px] shadow-xs flex items-center gap-1">
+                                <i class="fab fa-whatsapp"></i> <span id="profile-channel-name">واتساب</span>
+                            </span>
+                        </div>
+                        <h4 id="profile-name" class="font-black text-slate-900 text-sm sm:text-base mt-1 truncate max-w-full">-</h4>
+                        <div class="flex items-center gap-1.5 mt-1">
+                            <p id="profile-phone" class="text-xs text-slate-600 font-mono select-all bg-white px-2.5 py-0.5 rounded-lg border border-slate-200">-</p>
+                            <button type="button" onclick="copyProfilePhone()" class="text-slate-400 hover:text-teal-600 p-1 text-xs" title="نسخ الرقم"><i class="far fa-copy"></i></button>
+                        </div>
+                        <!-- VIP Tier Badge -->
+                        <div id="profile-tier-badge" class="mt-2 inline-flex items-center gap-1.5 text-[11px] font-black px-3 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                            <span>🥉 عميل فضي</span>
+                        </div>
                     </div>
-                    <div>
-                        <p class="text-[10px] text-slate-400 font-bold mb-2">سجل الرحلات</p>
-                        <div id="profile-trips-list" class="space-y-3">
+
+                    <!-- 🎁 Loyalty Points & Discount Card -->
+                    <div class="p-3.5 bg-gradient-to-br from-amber-500/10 via-amber-50/60 to-orange-500/10 rounded-2xl border border-amber-300/80 shadow-2xs space-y-3">
+                        <div class="flex items-center justify-between pb-2 border-b border-amber-200/60">
+                            <span class="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                                <i class="fas fa-coins text-amber-600 text-sm"></i> محفظة نقاط الخصم والولاء
+                            </span>
+                            <span class="text-[9px] font-bold text-amber-700 bg-amber-100/90 px-2 py-0.5 rounded-full">تراكمي</span>
+                        </div>
+
+                        <!-- Points Counter & Cash Value -->
+                        <div class="grid grid-cols-2 gap-2 text-center">
+                            <div class="p-2 bg-white/95 rounded-xl border border-amber-200 shadow-2xs">
+                                <p class="text-[10px] font-bold text-slate-500 mb-0.5">رصيد النقاط</p>
+                                <p id="loyalty-total-points" class="text-base sm:text-lg font-black text-amber-600 font-mono">0</p>
+                                <span class="text-[9px] text-amber-700 font-bold">نقطة مكتسبة</span>
+                            </div>
+                            <div class="p-2 bg-white/95 rounded-xl border border-amber-200 shadow-2xs">
+                                <p class="text-[10px] font-bold text-slate-500 mb-0.5">الخصم المتاح</p>
+                                <p id="loyalty-discount-egp" class="text-base sm:text-lg font-black text-emerald-600 font-mono">0 ج.م</p>
+                                <span class="text-[9px] text-emerald-700 font-bold">قابل للخصم فوراً</span>
+                            </div>
+                        </div>
+
+                        <!-- Trip Breakdown by Vehicle Type -->
+                        <div class="p-2.5 bg-white/80 rounded-xl border border-amber-200/70 text-[11px] space-y-1.5 text-slate-700">
+                            <div class="flex justify-between items-center">
+                                <span class="flex items-center gap-1">🚗 سيدان (+200 نقطة):</span>
+                                <span id="loyalty-sedan-count" class="font-bold text-slate-900 font-mono">0 رحلة</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="flex items-center gap-1">🚐 ميني فان (+300 نقطة):</span>
+                                <span id="loyalty-minivan-count" class="font-bold text-slate-900 font-mono">0 رحلة</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="flex items-center gap-1">🚌 فان عائلي (+500 نقطة):</span>
+                                <span id="loyalty-van-count" class="font-bold text-slate-900 font-mono">0 رحلة</span>
+                            </div>
+                        </div>
+
+                        <!-- 1-Click Action to generate and write discount coupon in Chat -->
+                        <button type="button" onclick="insertLoyaltyCouponMessage()" class="w-full py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-2 active:scale-95">
+                            <i class="fas fa-gift text-sm"></i>
+                            <span>إرسال كود خصم بالنقاط للعميل</span>
+                        </button>
+                        <p class="text-[9px] text-amber-800 text-center font-medium">كل 2,000 نقطة تمنح العميل 500 ج.م خصم تشجيعي 🎁</p>
+                    </div>
+
+                    <!-- Trips History Card -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <p class="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                                <i class="fas fa-route text-teal-600"></i> سجل الرحلات (<span id="profile-trips-count" class="text-teal-700 font-bold">0 رحلة</span>)
+                            </p>
+                            <button type="button" onclick="quickBook()" class="text-[10px] font-bold text-teal-600 hover:text-teal-800 bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-200">
+                                + حجز جديد
+                            </button>
+                        </div>
+                        <div id="profile-trips-list" class="space-y-2.5 max-h-72 overflow-y-auto pr-0.5">
                             <p class="text-xs text-slate-400 italic text-center py-4">لا توجد رحلات سابقة</p>
                         </div>
                     </div>
@@ -3135,7 +3249,48 @@
             // Update count
             document.getElementById('profile-trips-count').textContent = `${trips.length} رحلة`;
 
-            // Render trip list
+            // Calculate Customer Loyalty Points & Discount
+            const loyalty = calculateCustomerLoyalty(trips);
+            window.currentCustomerLoyalty = { ...loyalty, clientName, clientPhone };
+
+            // Update Loyalty Card Elements in UI
+            const elTotalPoints = document.getElementById('loyalty-total-points');
+            const elDiscountEgp = document.getElementById('loyalty-discount-egp');
+            const elSedanCount = document.getElementById('loyalty-sedan-count');
+            const elMinivanCount = document.getElementById('loyalty-minivan-count');
+            const elVanCount = document.getElementById('loyalty-van-count');
+            const elTierBadge = document.getElementById('profile-tier-badge');
+            const elChannelBadge = document.getElementById('profile-channel-badge');
+            const elChannelName = document.getElementById('profile-channel-name');
+
+            if (elTotalPoints) elTotalPoints.textContent = loyalty.points.toLocaleString('en-US');
+            if (elDiscountEgp) elDiscountEgp.textContent = `${loyalty.discountEGP.toLocaleString('en-US')} ج.م`;
+            if (elSedanCount) elSedanCount.textContent = `${loyalty.sedanTrips} رحلة (+${loyalty.sedanPoints} نقطة)`;
+            if (elMinivanCount) elMinivanCount.textContent = `${loyalty.minivanTrips} رحلة (+${loyalty.minivanPoints} نقطة)`;
+            if (elVanCount) elVanCount.textContent = `${loyalty.vanTrips} رحلة (+${loyalty.vanPoints} نقطة)`;
+
+            if (elTierBadge) {
+                elTierBadge.className = `mt-2 inline-flex items-center gap-1.5 text-[11px] font-black px-3 py-0.5 rounded-full ${loyalty.tierStyle}`;
+                elTierBadge.innerHTML = `<span>${loyalty.tierName}</span>`;
+            }
+
+            if (elChannelBadge && elChannelName) {
+                if (channel === 'whatsapp') {
+                    elChannelBadge.className = 'absolute -bottom-1 -left-1 px-2 py-0.5 rounded-full bg-emerald-500 text-white font-bold text-[9px] shadow-xs flex items-center gap-1';
+                    elChannelBadge.innerHTML = '<i class="fab fa-whatsapp"></i> <span>واتساب</span>';
+                } else if (channel === 'messenger') {
+                    elChannelBadge.className = 'absolute -bottom-1 -left-1 px-2 py-0.5 rounded-full bg-blue-600 text-white font-bold text-[9px] shadow-xs flex items-center gap-1';
+                    elChannelBadge.innerHTML = '<i class="fab fa-facebook-messenger"></i> <span>ماسنجر</span>';
+                } else if (channel === 'instagram') {
+                    elChannelBadge.className = 'absolute -bottom-1 -left-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold text-[9px] shadow-xs flex items-center gap-1';
+                    elChannelBadge.innerHTML = '<i class="fab fa-instagram"></i> <span>إنستجرام</span>';
+                } else {
+                    elChannelBadge.className = 'absolute -bottom-1 -left-1 px-2 py-0.5 rounded-full bg-slate-600 text-white font-bold text-[9px] shadow-xs flex items-center gap-1';
+                    elChannelBadge.innerHTML = '<i class="fas fa-comment"></i> <span>شات</span>';
+                }
+            }
+
+            // Render trip list with loyalty points breakdown
             const tripsList = document.getElementById('profile-trips-list');
             if (trips.length === 0) {
                 tripsList.innerHTML = '<p class="text-xs text-slate-400 italic text-center py-4">لا توجد رحلات سابقة</p>';
@@ -3143,26 +3298,192 @@
                 tripsList.innerHTML = trips.map(t => {
                     const statusColors = {
                         'تم الترحيل': 'bg-teal-100 text-teal-700',
+                        'مكتمل': 'bg-emerald-100 text-emerald-700',
                         'ملغي': 'bg-red-100 text-red-700',
                         'مؤجل': 'bg-amber-100 text-amber-700',
                     };
                     const statusColor = statusColors[t.status] || 'bg-slate-100 text-slate-600';
                     const pickup = (t.pickup_address || '').split(',')[0] || '-';
                     const dropoff = (t.dropoff_address || '').split(',')[0] || '-';
+
+                    const typeStr = ((t.trip_type || '') + ' ' + (t.car_type || '') + ' ' + (t.notes || '')).toLowerCase();
+                    let ptsBadge = '+200 نقطة';
+                    if ((typeStr.includes('فان') && !typeStr.includes('ميني')) || typeStr.includes('h1') || typeStr.includes('هاي اس') || typeStr.includes('van')) {
+                        ptsBadge = '+500 نقطة (فان)';
+                    } else if (typeStr.includes('ميني') || typeStr.includes('minivan') || typeStr.includes('suv') || typeStr.includes('توسان') || typeStr.includes('سبورتاج')) {
+                        ptsBadge = '+300 نقطة (ميني)';
+                    } else {
+                        ptsBadge = '+200 نقطة (سيدان)';
+                    }
+
+                    const isCancelled = (t.status || '').includes('ملغي');
                     return `
-                    <div class="bg-slate-50 rounded-xl p-3 border border-slate-200 text-right">
-                        <div class="flex justify-between items-center mb-1">
+                    <div class="bg-slate-50 hover:bg-slate-100/80 transition rounded-xl p-2.5 border border-slate-200 text-right space-y-1.5 shadow-2xs">
+                        <div class="flex justify-between items-center">
                             <span class="text-[10px] font-bold text-slate-500">${t.trip_date || '-'} ${t.trip_time ? '• ' + t.trip_time : ''}</span>
                             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${statusColor}">${t.status || '-'}</span>
                         </div>
-                        <p class="text-[11px] text-slate-700 font-bold truncate">📍 ${pickup}</p>
-                        <p class="text-[11px] text-slate-500 truncate">🏁 ${dropoff}</p>
-                        <div class="flex justify-between items-center mt-1.5">
-                            <span class="text-[10px] text-slate-400">${t.trip_type || ''}</span>
-                            <span class="text-[11px] font-black text-teal-700">${t.cost ? t.cost + ' ج' : '-'}</span>
+                        <p class="text-[11px] text-slate-800 font-bold truncate">📍 ${pickup}</p>
+                        <p class="text-[11px] text-slate-600 truncate">🏁 ${dropoff}</p>
+                        <div class="flex justify-between items-center pt-1 border-t border-slate-200/60 text-[10px]">
+                            <span class="text-slate-500 font-medium">${t.trip_type || 'رحلة خاصة'}</span>
+                            <div class="flex items-center gap-1.5">
+                                ${!isCancelled ? `<span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold text-[9px]">${ptsBadge}</span>` : ''}
+                                <span class="font-black text-teal-700">${t.cost ? t.cost + ' ج' : '-'}</span>
+                            </div>
                         </div>
                     </div>`;
                 }).join('');
+            }
+        }
+
+        /**
+         * calculateCustomerLoyalty - احتساب نقاط ولاء العميل والخصم التراكمي
+         * قاعدة الاحتساب (توجيه العميل):
+         * - سيدان = 200 نقطة
+         * - ميني فان = 300 نقطة
+         * - فان عائلي = 500 نقطة
+         * - كل 2000 نقطة = 500 جنيه خصم (أي كل 4 نقاط = 1 جنيه)
+         */
+        function calculateCustomerLoyalty(trips) {
+            if (!trips || trips.length === 0) {
+                return {
+                    points: 0,
+                    discountEGP: 0,
+                    sedanTrips: 0,
+                    sedanPoints: 0,
+                    minivanTrips: 0,
+                    minivanPoints: 0,
+                    vanTrips: 0,
+                    vanPoints: 0,
+                    completedCount: 0,
+                    tierName: '🌟 عميل جديد',
+                    tierStyle: 'bg-teal-50 text-teal-800 border border-teal-200'
+                };
+            }
+
+            let sedanTrips = 0;
+            let minivanTrips = 0;
+            let vanTrips = 0;
+            let completedCount = 0;
+
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            trips.forEach(t => {
+                const st = (t.status || '').trim();
+                const isCancelled = st.includes('ملغي') || st.includes('إلغاء') || st.includes('رفض');
+                const isExplicitDone = st.includes('تم الترحيل') || st.includes('مكتمل') || st.includes('تم') || st.includes('منتهي') || st.includes('انهاء');
+                const isPastDate = t.trip_date && t.trip_date < todayStr && !isCancelled;
+
+                if (!isCancelled && (isExplicitDone || isPastDate || st === '')) {
+                    completedCount++;
+                    const typeStr = ((t.trip_type || '') + ' ' + (t.car_type || '') + ' ' + (t.notes || '')).toLowerCase();
+
+                    if ((typeStr.includes('فان') && !typeStr.includes('ميني')) || typeStr.includes('h1') || typeStr.includes('هاي اس') || typeStr.includes('van')) {
+                        vanTrips++;
+                    } else if (typeStr.includes('ميني') || typeStr.includes('minivan') || typeStr.includes('suv') || typeStr.includes('توسان') || typeStr.includes('سبورتاج') || typeStr.includes('عائلية')) {
+                        minivanTrips++;
+                    } else {
+                        sedanTrips++;
+                    }
+                }
+            });
+
+            // Point calculation
+            const sedanPoints = sedanTrips * 200;
+            const minivanPoints = minivanTrips * 300;
+            const vanPoints = vanTrips * 500;
+            const totalPoints = sedanPoints + minivanPoints + vanPoints;
+
+            // Discount: 2000 points = 500 EGP (1 point = 0.25 EGP, or points / 4)
+            const discountEGP = Math.floor(totalPoints * 0.25);
+
+            let tierName = '🥉 عميل فضي (Silver)';
+            let tierStyle = 'bg-slate-100 text-slate-800 border border-slate-300';
+
+            if (totalPoints >= 1500 || completedCount >= 6) {
+                tierName = '👑 VIP بلاتينيوم (Platinum)';
+                tierStyle = 'bg-gradient-to-r from-amber-200 via-amber-100 to-yellow-200 text-amber-900 border border-amber-400 shadow-2xs';
+            } else if (totalPoints >= 600 || completedCount >= 3) {
+                tierName = '🥈 عميل ذهبي (Gold)';
+                tierStyle = 'bg-amber-100 text-amber-900 border border-amber-300';
+            } else if (totalPoints === 0 && completedCount === 0) {
+                tierName = '🌟 عميل جديد';
+                tierStyle = 'bg-teal-50 text-teal-800 border border-teal-200';
+            }
+
+            return {
+                points: totalPoints,
+                discountEGP,
+                sedanTrips,
+                sedanPoints,
+                minivanTrips,
+                minivanPoints,
+                vanTrips,
+                vanPoints,
+                completedCount,
+                tierName,
+                tierStyle
+            };
+        }
+
+        /**
+         * insertLoyaltyCouponMessage - إدراج كود خصم ونقاط الولاء في حقل الشات بنقرة واحدة
+         */
+        function insertLoyaltyCouponMessage() {
+            const chatInput = document.getElementById('chat-input');
+            if (!chatInput) return;
+
+            const loyalty = window.currentCustomerLoyalty || { points: 0, discountEGP: 0, completedCount: 0 };
+            const clientName = document.getElementById('profile-name')?.textContent?.trim() || 'عميلنا العزيز';
+            const cleanName = (clientName === '-' || !clientName) ? 'يا فندم' : `أ. ${clientName}`;
+
+            const randomCode = '24S-' + Math.floor(1000 + Math.random() * 9000);
+            let couponMsg = '';
+
+            if (loyalty.points > 0) {
+                couponMsg = `أهلاً بك ${cleanName} 🌟\nتقديراً لولائك وثقتك المستمرة في 24Seven Limousine برصيد (${loyalty.completedCount}) رحلة سابقة معنا:\n🎁 يسعدنا إهداؤك خصماً حصرياً بقيمة [${loyalty.discountEGP} جنيه] مستبدلاً من رصيد نقاط ولائك (${loyalty.points.toLocaleString('en-US')} نقطة) على حجزك القادم!\n🏷️ كود الخصم المعتمد لحسابك: [${randomCode}]\nيسعدنا دائماً خدمتكم وتأكيد موعد وتفاصيل رحلتكم القادمة بأعلى معايير الراحة والفخامة 🚕✨`;
+            } else {
+                couponMsg = `أهلاً بك ${cleanName} 🌟\nيسعدنا ويشرفنا انضمامك لعملاء 24Seven Limousine المميزين!\n🎁 كود خصم ترحيبي خاص [50 جنيه] على أول رحلة لك معنا، مع تفعيل حساب نقاط الولاء التراكمية لتستمتع بخصومات تصل حتى 500 جنيه مع كل رحلة قادمة 🎁\n🏷️ كود الخصم الترحيبي: [WELCOME-24S]\nيسعدنا خدمتكم وتأكيد تفاصيل الحجز الآن 🚕✨`;
+            }
+
+            chatInput.value = couponMsg;
+            chatInput.style.height = 'auto';
+            chatInput.style.height = Math.min(chatInput.scrollHeight, 180) + 'px';
+            chatInput.focus();
+
+            // Flash effect on input
+            chatInput.classList.add('ring-4', 'ring-amber-400');
+            setTimeout(() => chatInput.classList.remove('ring-4', 'ring-amber-400'), 1200);
+
+            if (typeof showToast === 'function') {
+                showToast('🎁 تم إدراج كود خصم نقاط الولاء في المحادثة بنجاح!');
+            }
+        }
+
+        /**
+         * toggleProfileSidebar - إظهار وإخفاء كارت العميل لتوسيع الشات
+         */
+        function toggleProfileSidebar() {
+            const container = document.getElementById('chat-profile-container');
+            if (!container) return;
+            if (container.classList.contains('hidden')) {
+                container.classList.remove('hidden');
+                container.classList.add('flex');
+            } else {
+                container.classList.add('hidden');
+                container.classList.remove('flex');
+            }
+        }
+
+        function copyProfilePhone() {
+            const phoneEl = document.getElementById('profile-phone');
+            if (!phoneEl) return;
+            const text = phoneEl.textContent.trim();
+            if (text && text !== '-') {
+                navigator.clipboard.writeText(text).then(() => {
+                    if (typeof showToast === 'function') showToast('✅ تم نسخ رقم الهاتف بنجاح');
+                }).catch(() => {});
             }
         }
 
@@ -6458,7 +6779,7 @@
                 inputEl.dataset.autogrowInit = 'true';
                 inputEl.addEventListener('input', function() {
                     this.style.height = 'auto';
-                    this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+                    this.style.height = Math.min(this.scrollHeight, 180) + 'px';
                 });
                 inputEl.addEventListener('keydown', function(e) {
                     if (e.key === 'Enter' && !e.shiftKey && window.innerWidth > 768) {
