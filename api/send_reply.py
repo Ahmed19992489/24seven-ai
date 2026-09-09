@@ -97,17 +97,29 @@ class handler(BaseHTTPRequestHandler):
                 elif clean_phone.startswith("0020"):
                     clean_phone = clean_phone[2:]
 
+                media_url = data.get("media_url")
+                media_type = data.get("media_type", "image")
+                whatsapp_instance_id = data.get("whatsapp_instance_id") or "692921bb-a5df-451d-8527-e1ee55a736f4"
+
                 wa_res = {}
                 is_wa_sent = False
                 try:
                     url = f"https://graph.facebook.com/v17.0/{PHONE_ID}/messages"
                     headers = {"Authorization": f"Bearer {WA_TOKEN}", "Content-Type": "application/json"}
-                    payload = {
-                        "messaging_product": "whatsapp",
-                        "to": clean_phone,
-                        "type": "text",
-                        "text": {"body": message_text}
-                    }
+                    if media_url:
+                        payload = {
+                            "messaging_product": "whatsapp",
+                            "to": clean_phone,
+                            "type": media_type,
+                            media_type: {"link": media_url, "caption": message_text if media_type == "image" else ""}
+                        }
+                    else:
+                        payload = {
+                            "messaging_product": "whatsapp",
+                            "to": clean_phone,
+                            "type": "text",
+                            "text": {"body": message_text}
+                        }
                     r = requests.post(url, json=payload, headers=headers, timeout=8)
                     wa_res = r.json() if r.text else {}
                     if r.status_code == 200:
@@ -117,8 +129,8 @@ class handler(BaseHTTPRequestHandler):
 
                 # Save to Neon Database
                 try:
-                    sql = "INSERT INTO omnichannel_messages (channel, sender_id, sender_name, message_text, is_from_admin, read_by_admin) VALUES ($1, $2, $3, $4, $5, $6)"
-                    params = [channel, str(recipient_id), str(sender_name), str(message_text), True, True]
+                    sql = "INSERT INTO omnichannel_messages (channel, sender_id, sender_name, message_text, is_from_admin, read_by_admin, whatsapp_instance_id) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+                    params = [channel, str(recipient_id), str(sender_name), str(message_text), True, True, str(whatsapp_instance_id)]
                     requests.post(
                         NEON_HTTP_URL,
                         headers={"Neon-Connection-String": NEON_CONN_STR},

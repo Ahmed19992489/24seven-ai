@@ -365,58 +365,69 @@
                     </div>
                 </div>
 
-                <!-- Input Area: Meta Business Suite Two-Tier Composer -->
-                <form id="chat-form" onsubmit="handleSend(event)" class="p-3 sm:p-4 border-t bg-white relative flex flex-col gap-2.5 transition-all">
-                    <!-- Top Row: Full-width comfortable textarea -->
-                    <div class="w-full relative">
-                        <textarea id="chat-input" rows="2" placeholder="اكتب ردك للعميل هنا (أو اضغط 🤖 لاقتراح وتسعير فوري)..." class="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 rounded-2xl px-4 py-3 text-sm sm:text-[15px] font-semibold text-slate-800 placeholder:text-slate-400 outline-none transition resize-none leading-relaxed min-h-[58px] max-h-[160px] overflow-y-auto block shadow-inner"></textarea>
-                    </div>
-
-                    <!-- Bottom Row: Meta Action Bar -->
-                    <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 flex-wrap sm:flex-nowrap">
-                        <!-- Right side (RTL start): Attachment & Quick Action Tools -->
-                        <div class="flex items-center gap-1 sm:gap-1.5 flex-wrap">
-                            <button type="button" onclick="triggerOmniImageUpload()" class="w-8 h-8 sm:w-9 sm:h-9 text-slate-500 hover:text-teal-600 hover:bg-slate-100 rounded-xl transition flex items-center justify-center" title="إرسال صورة">
-                                <i class="fas fa-image text-sm sm:text-base"></i>
+                <!-- Input Area: Meta Business Suite Responsive Composer -->
+                <form id="chat-form" onsubmit="handleSend(event)" class="p-2.5 sm:p-3.5 border-t bg-white relative flex flex-col gap-2 transition-all shrink-0 z-10 shadow-xs">
+                    
+                    <!-- Row 1: Action Toolbar (One neat horizontal row, never wraps, smooth scroll) -->
+                    <div class="flex items-center justify-between gap-1 overflow-x-auto no-scrollbar py-0.5 w-full shrink-0">
+                        <!-- Right Tools (RTL) -->
+                        <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                            <!-- Image -->
+                            <button type="button" onclick="triggerOmniImageUpload()" class="w-8 h-8 text-slate-500 hover:text-teal-600 hover:bg-slate-100 rounded-xl transition flex items-center justify-center shrink-0" title="إرسال صورة">
+                                <i class="fas fa-image text-sm"></i>
                             </button>
                             <input type="file" id="omni-image-input" accept="image/*" class="hidden" onchange="handleOmniImageSelected(this)">
 
-                            <button type="button" id="omni-record-btn" onclick="toggleOmniVoiceRecording()" class="w-8 h-8 sm:w-9 sm:h-9 text-slate-500 hover:text-red-500 hover:bg-slate-100 rounded-xl transition flex items-center justify-center" title="تسجيل رسالة صوتية">
-                                <i class="fas fa-microphone text-sm sm:text-base" id="omni-record-icon"></i>
+                            <!-- Voice -->
+                            <button type="button" id="omni-record-btn" onclick="toggleOmniVoiceRecording()" class="w-8 h-8 text-slate-500 hover:text-red-500 hover:bg-slate-100 rounded-xl transition flex items-center justify-center shrink-0" title="تسجيل رسالة صوتية">
+                                <i class="fas fa-microphone text-sm" id="omni-record-icon"></i>
                             </button>
 
-                            <button type="button" onclick="toggleEmoji()" class="w-8 h-8 sm:w-9 sm:h-9 text-slate-500 hover:text-amber-500 hover:bg-slate-100 rounded-xl transition flex items-center justify-center" title="إيموجي">
-                                <i class="far fa-smile text-sm sm:text-base"></i>
+                            <!-- Emoji -->
+                            <button type="button" onclick="toggleEmoji()" class="w-8 h-8 text-slate-500 hover:text-amber-500 hover:bg-slate-100 rounded-xl transition flex items-center justify-center shrink-0" title="إيموجي">
+                                <i class="far fa-smile text-sm"></i>
                             </button>
 
-                            <button type="button" onclick="sendBookingInvoice()" title="إرسال فاتورة الحجز" class="h-8 sm:h-9 px-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-[11px] sm:text-xs flex items-center gap-1.5 transition shadow-xs">
-                                <i class="fas fa-file-invoice-dollar text-indigo-600"></i> <span class="hidden xs:inline">الفاتورة</span>
-                            </button>
+                            <div class="h-4 w-px bg-slate-200 mx-0.5 shrink-0"></div>
 
-                            <button type="button" onclick="insertLoyaltyCouponMessage()" title="إرسال كود خصم نقاط الولاء للعميل" class="h-8 sm:h-9 px-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200/80 font-bold rounded-xl text-[11px] sm:text-xs flex items-center gap-1.5 transition shadow-xs">
+                            <!-- Loyalty Discount Coupon (Highlighted) -->
+                            <button type="button" onclick="insertLoyaltyCouponMessage()" title="إرسال كود خصم نقاط الولاء للعميل" class="h-7 sm:h-8 px-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200/90 font-bold rounded-xl text-[11px] flex items-center gap-1.5 transition shadow-2xs shrink-0 active:scale-95">
                                 <i class="fas fa-gift text-amber-600 animate-pulse"></i> <span>كود خصم بالنقاط</span>
+                            </button>
+
+                            <!-- Invoice -->
+                            <button type="button" onclick="sendBookingInvoice()" title="إرسال فاتورة الحجز" class="h-7 sm:h-8 px-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/60 font-bold rounded-xl text-[11px] flex items-center gap-1 transition shadow-2xs shrink-0">
+                                <i class="fas fa-file-invoice-dollar text-indigo-600"></i> <span class="hidden xs:inline">الفاتورة</span>
                             </button>
                         </div>
 
-                        <!-- Left side (RTL end): Coach, AI, and Primary Send Button -->
-                        <div class="flex items-center gap-1.5 sm:gap-2 shrink-0 mr-auto">
-                            <button type="button" onclick="manualCoachAnalyze()" title="تحليل الرسالة (مساعد الكوتش)" class="h-8 sm:h-9 px-2.5 sm:px-3 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200/60 rounded-xl flex items-center gap-1.5 text-xs font-bold transition">
-                                <span>🎓</span> <span class="hidden md:inline">الكوتش</span>
+                        <!-- Left Tools (RTL) -->
+                        <div class="flex items-center gap-1 shrink-0 mr-auto">
+                            <!-- Coach -->
+                            <button type="button" onclick="manualCoachAnalyze()" title="تحليل الرسالة (مساعد الكوتش)" class="h-7 sm:h-8 px-2 sm:px-2.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200/60 rounded-xl flex items-center gap-1 text-[11px] font-bold transition shrink-0">
+                                <span>🎓</span> <span class="hidden sm:inline">الكوتش</span>
                             </button>
 
-                            <button type="button" onclick="suggestAiReply()" title="اقتراح رد ذكي بالأسعار" class="h-8 sm:h-9 px-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl flex items-center gap-1.5 text-xs font-bold shadow-sm transition active:scale-95">
-                                <i class="fas fa-robot text-xs animate-pulse"></i> <span class="hidden sm:inline">اقتراح AI</span>
-                            </button>
-
-                            <button type="submit" id="omni-send-btn" class="h-8 sm:h-9 px-3 sm:px-4 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl shadow-md shadow-teal-600/20 flex items-center gap-1.5 text-xs sm:text-sm transition active:scale-95">
-                                <span>إرسال</span>
-                                <i class="fas fa-paper-plane text-xs"></i>
+                            <!-- AI Suggest -->
+                            <button type="button" onclick="suggestAiReply()" title="اقتراح رد ذكي بالأسعار" class="h-7 sm:h-8 px-2.5 sm:px-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl flex items-center gap-1 text-[11px] font-bold shadow-xs transition active:scale-95 shrink-0">
+                                <i class="fas fa-robot text-[10px] animate-pulse"></i> <span>اقتراح AI</span>
                             </button>
                         </div>
                     </div>
 
+                    <!-- Row 2: Textarea + Dedicated Send Button (Always together side-by-side, 100% visible) -->
+                    <div class="flex items-end gap-2 w-full">
+                        <div class="flex-1 relative">
+                            <textarea id="chat-input" rows="1" placeholder="اكتب ردك للعميل هنا (أو اضغط 🤖 لاقتراح وتسعير فوري)..." class="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 rounded-2xl px-3.5 py-2.5 text-sm sm:text-[15px] font-semibold text-slate-800 placeholder:text-slate-400 outline-none transition resize-none leading-relaxed min-h-[44px] max-h-[140px] overflow-y-auto block shadow-inner"></textarea>
+                        </div>
+                        <button type="submit" id="omni-send-btn" class="h-11 px-3.5 sm:px-4 bg-teal-600 hover:bg-teal-700 active:scale-95 text-white font-bold rounded-2xl shadow-md shadow-teal-600/25 flex items-center justify-center gap-1.5 text-xs sm:text-sm shrink-0 transition" title="إرسال (Enter)">
+                            <span class="hidden sm:inline">إرسال</span>
+                            <i class="fas fa-paper-plane text-sm"></i>
+                        </button>
+                    </div>
+
                     <!-- شريط حالة التسجيل الصوتي -->
-                    <div id="omni-voice-recording-status" class="hidden absolute left-4 right-4 top-2 bottom-2 bg-white/95 backdrop-blur flex items-center justify-between px-4 rounded-2xl border-2 border-red-300 shadow-lg z-20">
+                    <div id="omni-voice-recording-status" class="hidden absolute inset-2 bg-white/95 backdrop-blur flex items-center justify-between px-4 rounded-2xl border-2 border-red-300 shadow-lg z-20">
                         <span class="text-xs text-red-600 font-bold flex items-center gap-2">
                             <span class="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping"></span>
                             جاري تسجيل الصوت... <span id="omni-record-timer" class="font-mono">00:00</span>
@@ -1706,11 +1717,11 @@
                 toast = document.createElement('div');
                 toast.id = 'global-toast';
                 toast.style.cssText = `
-                    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
-                    padding: 12px 22px; border-radius: 10px; font-size: 14px; font-weight: 600;
-                    z-index: 99999; max-width: 90vw; text-align: center;
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.3); display: none;
-                    direction: rtl; font-family: 'Cairo', sans-serif;
+                    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+                    padding: 12px 22px; border-radius: 12px; font-size: 13px; font-weight: 700;
+                    z-index: 99999; max-width: 92vw; text-align: center;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.25); display: none;
+                    direction: rtl; font-family: 'Cairo', sans-serif; transition: all 0.3s ease;
                 `;
                 document.body.appendChild(toast);
             }
@@ -3112,6 +3123,8 @@
                 document.getElementById('chat-list-container').classList.add('hidden');
                 document.getElementById('chat-window-container').classList.remove('hidden');
                 document.getElementById('chat-window-container').classList.add('flex');
+                const menuToggle = document.getElementById('mobile-menu-toggle');
+                if (menuToggle) menuToggle.classList.add('hidden');
             }
 
             // Show client profile sidebar
@@ -3492,6 +3505,8 @@
                 document.getElementById('chat-list-container').classList.remove('hidden');
                 document.getElementById('chat-window-container').classList.add('hidden');
                 document.getElementById('chat-window-container').classList.remove('flex');
+                const menuToggle = document.getElementById('mobile-menu-toggle');
+                if (menuToggle) menuToggle.classList.remove('hidden');
             }
         }
 
@@ -3899,13 +3914,8 @@
             // === محاولة 1: الباكيند (لو شغال) ===
             // === محاولة 1: الباكيند ===
             let backendOk = false;
-            let targetUrl = '';
-            if (channel === 'whatsapp') {
-                targetUrl = 'http://127.0.0.1:3000/api/send_reply';
-            } else {
-                const apiBaseUrl = getApiBaseUrl();
-                targetUrl = apiBaseUrl ? `${apiBaseUrl}/api/send_reply` : 'https://24seven-ai.com/api/send_reply';
-            }
+            const apiBaseUrl = getApiBaseUrl();
+            const targetUrl = apiBaseUrl ? `${apiBaseUrl}/api/send_reply` : 'https://24seven-ai.com/api/send_reply';
 
             if (targetUrl) {
                 try {
