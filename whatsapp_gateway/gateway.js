@@ -57,18 +57,45 @@ const lastOutboundRecipientBySession = {};
 const msgStore = new Map();
 const lidPendingMessages = new Map(); // remoteJid@lid_msgId → { instanceId, timestamp }
 
+// Clean up an in-memory session and its local storage
+function cleanupSession(id) {
+    if (activeSessions[id]) {
+        try {
+            if (activeSessions[id].sock) {
+                activeSessions[id].sock.end();
+            }
+        } catch(e) {}
+        delete activeSessions[id];
+    }
+    const sessionDir = path.join(SESSIONS_DIR, `session_${id}`);
+    try {
+        if (fs.existsSync(sessionDir)) {
+            fs.rmSync(sessionDir, { recursive: true, force: true });
+        }
+    } catch(e) {
+        console.warn(`[Gateway] Could not delete session directory for ${id}:`, e.message);
+    }
+}
+
 // Helper to update instance status in database
 async function updateSupabaseInstance(id, payload) {
     try {
         await axios.post(`https://24seven-ai.com/api/db`, {
             action: 'update',
             table: 'whatsapp_instances',
-            values: payload,
+            data: payload,
             filters: [{ op: 'eq', col: 'id', val: id }]
-        }, { timeout: 5000 });
-        console.log(`[Database] Updated instance ${id} status:`, payload);
+        }, { timeout: 8000 });
+        console.log(`[Database] Updated instance ${id} in Cloud Neon:`, Object.keys(payload));
     } catch (err) {
-        // Silently catch offline/network hiccups
+        try {
+            await axios.post(`http://127.0.0.1:3000/api/db`, {
+                action: 'update',
+                table: 'whatsapp_instances',
+                data: payload,
+                filters: [{ op: 'eq', col: 'id', val: id }]
+            }, { timeout: 5000 });
+        } catch(e) {}
     }
 }
 
@@ -162,7 +189,7 @@ async function initSession(id, forceReconnect = false) {
                 activeSessions[id].qrRaw = qr;
                 activeSessions[id].qrTimestamp = Date.now();
                 activeSessions[id].status = 'disconnected';
-                await updateSupabaseInstance(id, { status: 'disconnected' });
+                await updateSupabaseInstance(id, { status: 'disconnected', qr_code: qrBase64 });
             } catch (err) {
                 console.error(`[Gateway] Error converting QR to base64 for ${id}:`, err.message);
             }
@@ -180,7 +207,7 @@ async function initSession(id, forceReconnect = false) {
             activeSessions[id].phone = phone;
             activeSessions[id].qr = '';
             activeSessions[id]._retryCount = 0;
-            await updateSupabaseInstance(id, { status: 'connected', phone: phone });
+            await updateSupabaseInstance(id, { status: 'connected', phone: phone, qr_code: null });
         }
 
         if (connection === 'close') {
@@ -190,7 +217,7 @@ async function initSession(id, forceReconnect = false) {
             
             if (!shouldReconnect) {
                 cleanupSession(id);
-                await updateSupabaseInstance(id, { status: 'disconnected', phone: null });
+                await updateSupabaseInstance(id, { status: 'disconnected', phone: null, qr_code: null });
             } else {
                 activeSessions[id].status = 'disconnected';
                 activeSessions[id]._retryCount = (activeSessions[id]._retryCount || 0) + 1;
@@ -418,7 +445,40 @@ async function initSession(id, forceReconnect = false) {
             } catch (err) {}
         } else {
             if (msg.key.fromMe) {
-                console.log(`[Gateway Debug] SKIPPED fromMe msg to ${senderPhone} (session ${instanceId}): ${text?.substring(0,50)}`);
+                console.log(`\n📤 [Gateway fromMe] رسالة صادرة من هاتف الواتساب إلى ${senderPhone}: "${text?.substring(0,60)}"`);
+                
+                // 1. إدراج مباشر في Supabase لتحديث شاشة الموديتور لحظياً وإلغاء علامة "لم يتم الرد"
+                try {
+                    await axios.post(`${SUPABASE_URL}/rest/v1/omnichannel_messages`, {
+                        channel: 'whatsapp',
+                        sender_id: senderPhone,
+                        sender_name: 'Admin',
+                        message_text: text,
+                        is_from_admin: true,
+                        read_by_admin: true,
+                        whatsapp_instance_id: instanceId
+                    }, { headers: SUPABASE_HEADERS, timeout: 5000 });
+                    console.log(`✅ [Gateway fromMe] تم حفظ رد الآدمن في Supabase بنجاح (تم إلغاء لم يتم الرد)`);
+                } catch (sbErr) {
+                    console.warn(`[Gateway fromMe Supabase Warning]:`, sbErr.message);
+                }
+
+                // 2. تمرير لسيرفر بايثون المحلي ليسجل في الشيت وقاعدة البيانات
+                try {
+                    await axios.post(`${PYTHON_BACKEND_URL}/api/whatsapp/webhook/local/${instanceId}`, {
+                        sender_phone: senderPhone,
+                        sender_name: 'Admin',
+                        message_text: text,
+                        instance_id: instanceId,
+                        is_from_admin: true,
+                        raw_payload: msg
+                    }, { timeout: 10000 });
+                    console.log(`✅ [Gateway fromMe] تم تمرير الرد لسيرفر بايثون المحلي`);
+                } catch (pyErr) {
+                    console.warn(`[Gateway fromMe Python Warning]:`, pyErr.message);
+                }
+
+                // 3. نسخة احتياطية في Neon
                 try {
                     await axios.post(`https://24seven-ai.com/api/db`, {
                         action: 'insert',
@@ -432,12 +492,30 @@ async function initSession(id, forceReconnect = false) {
                             read_by_admin: true,
                             whatsapp_instance_id: instanceId
                         }
-                    }, { timeout: 4000 });
+                    }, { timeout: 8000 });
                 } catch (echoErr) {}
                 return;
             }
             
             console.log(`\n📩 [Gateway Incoming] رسالة واردة من ${senderPhone} (${senderName}): "${text}"`);
+            
+            // ⚡ حفظ فوري ومباشر في Supabase لتحديث شاشة الموديتور لحظياً بدون أي تأخير
+            try {
+                axios.post(`${SUPABASE_URL}/rest/v1/omnichannel_messages`, {
+                    channel: 'whatsapp',
+                    sender_id: senderPhone,
+                    sender_name: senderName || 'عميل',
+                    message_text: text,
+                    is_from_admin: false,
+                    read_by_admin: false,
+                    whatsapp_instance_id: instanceId
+                }, { headers: SUPABASE_HEADERS, timeout: 5000 }).then(() => {
+                    console.log(`⚡ [Gateway Realtime] تم إرسال رسالة العميل إلى Supabase لتحديث شاشة الموديتور لحظياً`);
+                }).catch(sbErr => {
+                    console.warn(`[Gateway Realtime Warn]:`, sbErr.message);
+                });
+            } catch (e) {}
+
             let pythonSuccess = false;
             try {
                 const res = await axios.post(`${PYTHON_BACKEND_URL}/api/whatsapp/webhook/local/${instanceId}`, {
@@ -458,6 +536,19 @@ async function initSession(id, forceReconnect = false) {
             
             if (!pythonSuccess) {
                 try {
+                    // حفظ مباشر في Supabase لو بايثون غير متاح
+                    await axios.post(`${SUPABASE_URL}/rest/v1/omnichannel_messages`, {
+                        channel: 'whatsapp',
+                        sender_id: senderPhone,
+                        sender_name: msg.key.fromMe ? 'Admin' : senderName,
+                        message_text: text,
+                        is_from_admin: msg.key.fromMe ? true : false,
+                        read_by_admin: msg.key.fromMe ? true : false,
+                        whatsapp_instance_id: instanceId
+                    }, { headers: SUPABASE_HEADERS, timeout: 5000 });
+                } catch (sbFallbackErr) {}
+
+                try {
                     await axios.post(`https://24seven-ai.com/api/db`, {
                         action: 'insert',
                         table: 'omnichannel_messages',
@@ -470,7 +561,7 @@ async function initSession(id, forceReconnect = false) {
                             read_by_admin: msg.key.fromMe ? true : false,
                             whatsapp_instance_id: instanceId
                         }
-                    }, { timeout: 4000 });
+                    }, { timeout: 8000 });
                 } catch (dbErr) {}
             }
         }
@@ -650,9 +741,18 @@ app.post('/instance/:id/send', async (req, res) => {
         return res.status(400).json({ status: 'error', message: 'Missing parameters' });
     }
     
-    const session = activeSessions[id];
+    let session = activeSessions[id];
+    let actualInstanceId = id;
     if (!session || session.status !== 'connected') {
-        return res.status(400).json({ status: 'error', message: '╪º┘ä╪¡╪│╪º╪¿ ╪║┘è╪▒ ┘à╪¬╪╡┘ä ╪¿╪º┘ä┘ê╪º╪¬╪│╪º╪¿' });
+        // البحث عن أي جلسة متصلة حالياً للواتساب لاستخدامها كبديل وعدم ضياع الرسالة
+        const connectedId = Object.keys(activeSessions).find(k => activeSessions[k] && activeSessions[k].status === 'connected');
+        if (connectedId) {
+            console.log(`[Gateway Send Fallback] Instance ${id} is not connected. Falling back to active connected instance ${connectedId}`);
+            session = activeSessions[connectedId];
+            actualInstanceId = connectedId;
+        } else {
+            return res.status(400).json({ status: 'error', message: 'الحساب غير متصل بالواتساب' });
+        }
     }
     
     try {
@@ -685,8 +785,8 @@ app.post('/instance/:id/send', async (req, res) => {
             }
         }
         
-        lastOutboundRecipientBySession[id] = { phone: phone.replace(/\D/g, ''), timestamp: Date.now() };
-        console.log(`[Gateway] Sending to JID: ${jid}`);
+        lastOutboundRecipientBySession[actualInstanceId] = { phone: phone.replace(/\D/g, ''), timestamp: Date.now() };
+        console.log(`[Gateway] Sending to JID: ${jid} (via instance ${actualInstanceId})`);
         
         // ╪Ñ╪▒╪│╪º┘ä ┘à┘è╪»┘è╪º ╪╣╪¿╪▒ media_url ┘à┘å┘ü╪╡┘ä (┘à┘å ╪º┘ä┘à┘ê╪»┘è╪¬┘ê╪▒)
         let sentMsg;
@@ -780,11 +880,13 @@ app.delete(['/api/whatsapp/instances/:id', '/instance/:id'], async (req, res) =>
 });
 
 
-// Startup hook: load all local instances from Neon DB, or fallback to disk sessions if offline
-async function loadLocalInstances() {
-    console.log('[Gateway] Loading local instances...');
-    const defaultInstanceId = '692921bb-a5df-451d-8527-e1ee55a736f4';
-    let loadedFromCloud = false;
+// Continuous sync loop: load all local instances from Neon DB, start sessions for new numbers, push QRs
+const defaultInstanceId = '692921bb-a5df-451d-8527-e1ee55a736f4';
+let isSyncing = false;
+
+async function syncLocalInstances() {
+    if (isSyncing) return;
+    isSyncing = true;
 
     try {
         const res = await axios.post(`https://24seven-ai.com/api/db`, {
@@ -792,42 +894,58 @@ async function loadLocalInstances() {
             table: 'whatsapp_instances',
             select: '*',
             filters: [{ op: 'eq', col: 'provider', val: 'local' }]
-        }, { timeout: 6000 });
+        }, { timeout: 7000 });
         
-        if (res.status === 200 && Array.isArray(res.data?.data) && res.data.data.length > 0) {
-            console.log(`[Gateway] Found ${res.data.data.length} local instances in database.`);
-            for (const inst of res.data.data) {
+        if (res.status === 200 && Array.isArray(res.data?.data)) {
+            const dbInstances = res.data.data;
+            const dbIds = new Set(dbInstances.map(i => i.id));
+
+            for (const inst of dbInstances) {
+                const session = activeSessions[inst.id];
                 const sessionDir = path.join(SESSIONS_DIR, `session_${inst.id}`);
                 const credsPath = path.join(sessionDir, 'creds.json');
                 const hasValidCreds = fs.existsSync(credsPath) && fs.statSync(credsPath).size > 100;
 
-                // Start if it is the default primary instance or if it already has valid creds on disk
-                if (inst.id === defaultInstanceId || hasValidCreds) {
-                    console.log(`[Gateway Auto-Start] Starting instance ${inst.id} (${inst.phone || 'Primary'})...`);
+                // 1. If not in memory at all, initialize it immediately (for existing linked or newly added number)
+                if (!session || !session.status) {
+                    console.log(`[Gateway Auto-Sync] Detected instance ${inst.id} (${inst.instance_name || inst.name || 'Local'}). Starting session...`);
                     initSession(inst.id);
-                } else {
-                    console.log(`[Gateway Auto-Start] Skipping unlinked secondary instance ${inst.id}.`);
+                } 
+                // 2. If disconnected and has QR in memory but DB has no QR, sync QR to DB
+                else if (session.status === 'disconnected' && session.qr && !inst.qr_code) {
+                    await updateSupabaseInstance(inst.id, { qr_code: session.qr, status: 'disconnected' });
+                }
+                // 3. If connected in memory but DB says disconnected, update DB
+                else if (session.status === 'connected' && inst.status !== 'connected') {
+                    await updateSupabaseInstance(inst.id, { status: 'connected', phone: session.phone || inst.phone, qr_code: null });
                 }
             }
-            loadedFromCloud = true;
+
+            // Clean up any session that was deleted from database
+            for (const activeId of Object.keys(activeSessions)) {
+                if (!dbIds.has(activeId) && activeId !== defaultInstanceId) {
+                    console.log(`[Gateway Auto-Sync] Instance ${activeId} was deleted from database. Cleaning up session...`);
+                    cleanupSession(activeId);
+                }
+            }
         }
     } catch (err) {
-        console.warn(`[Gateway Notice] Cloud lookup unavailable. Switching to local session storage fallback...`);
+        // Network hiccup, retry on next interval
+    } finally {
+        isSyncing = false;
     }
 
-    // Always ensure the default primary service instance is running,
-    // but only if it wasn't already started from the DB loop above
+    // Always ensure the default primary instance is active
     if (!activeSessions[defaultInstanceId] || activeSessions[defaultInstanceId].status === undefined) {
-        console.log(`[Gateway Auto-Start] Starting primary service instance ${defaultInstanceId}...`);
         initSession(defaultInstanceId);
-    } else {
-        console.log(`[Gateway Auto-Start] Primary instance ${defaultInstanceId} already started (status=${activeSessions[defaultInstanceId].status}), skipping duplicate start.`);
     }
 }
 
 // Start Server
 app.listen(PORT, async () => {
     console.log(`[Gateway] Local WhatsApp Gateway running on http://localhost:${PORT}`);
-    // Delay load to allow python backend to be up (if restarted together)
-    setTimeout(loadLocalInstances, 5000);
+    // Initial sync
+    setTimeout(syncLocalInstances, 3000);
+    // Recurring sync every 4 seconds to catch new instances and update statuses
+    setInterval(syncLocalInstances, 4000);
 });

@@ -37,15 +37,16 @@ def resolve_facebook_user_name(sender_id):
 
     # 1. First check if DB already has a verified name for this sender_id
     try:
-        sql = """
+        quoted_id = sql_quote(sender_id_str)
+        sql = f"""
             SELECT sender_name FROM omnichannel_messages 
-            WHERE sender_id = $1 AND sender_name NOT IN ('Messenger User', 'Admin', 'فريق 24Seven', 'ش', 'عميل فيسبوك', 'Facebook user', $1) 
+            WHERE sender_id = {quoted_id} AND sender_name NOT IN ('Messenger User', 'Admin', 'فريق 24Seven', 'ش', 'عميل فيسبوك', 'Facebook user', {quoted_id}) 
             ORDER BY id DESC LIMIT 1
         """
         r = requests.post(
             NEON_HTTP_URL,
             headers={"Neon-Connection-String": NEON_CONN_STR},
-            json={"query": sql, "params": [sender_id_str]},
+            json={"query": sql},
             timeout=5
         )
         if r.status_code == 200:
@@ -74,15 +75,15 @@ def resolve_facebook_user_name(sender_id):
                         if name:
                             # Update DB so all messages for this sender have the real name
                             try:
-                                upd_sql = """
+                                upd_sql = f"""
                                     UPDATE omnichannel_messages 
-                                    SET sender_name = $1 
-                                    WHERE sender_id = $2 AND (sender_name IN ('Messenger User', 'عميل فيسبوك', 'Facebook user', $2) OR sender_name IS NULL)
+                                    SET sender_name = {sql_quote(name)} 
+                                    WHERE sender_id = {sql_quote(sender_id_str)} AND (sender_name IN ('Messenger User', 'عميل فيسبوك', 'Facebook user', {sql_quote(sender_id_str)}) OR sender_name IS NULL)
                                 """
                                 requests.post(
                                     NEON_HTTP_URL,
                                     headers={"Neon-Connection-String": NEON_CONN_STR},
-                                    json={"query": upd_sql, "params": [name, sender_id_str]},
+                                    json={"query": upd_sql},
                                     timeout=5
                                 )
                             except Exception: pass
@@ -92,15 +93,15 @@ def resolve_facebook_user_name(sender_id):
 
     # 3. Check reservations table (google_reservations) if PSID matches
     try:
-        res_sql = """
+        res_sql = f"""
             SELECT customer_name FROM google_reservations 
-            WHERE (messenger_sender_id = $1 OR facebook_id = $1) AND customer_name IS NOT NULL AND customer_name != ''
+            WHERE (messenger_sender_id = {sql_quote(sender_id_str)} OR facebook_id = {sql_quote(sender_id_str)}) AND customer_name IS NOT NULL AND customer_name != ''
             ORDER BY id DESC LIMIT 1
         """
         r2 = requests.post(
             NEON_HTTP_URL,
             headers={"Neon-Connection-String": NEON_CONN_STR},
-            json={"query": res_sql, "params": [sender_id_str]},
+            json={"query": res_sql},
             timeout=5
         )
         if r2.status_code == 200:
@@ -286,13 +287,12 @@ class handler(BaseHTTPRequestHandler):
                 inserted_rows = []
                 for rec in records:
                     cols = list(rec.keys())
-                    vals = list(rec.values())
-                    placeholders = [f"${i+1}" for i in range(len(vals))]
-                    sql = f"INSERT INTO {table} ({','.join(cols)}) VALUES ({','.join(placeholders)}) RETURNING *;"
+                    vals = [sql_quote(v) for v in rec.values()]
+                    sql = f"INSERT INTO {table} ({','.join(cols)}) VALUES ({','.join(vals)}) RETURNING *;"
                     r = requests.post(
                         NEON_HTTP_URL,
                         headers={"Neon-Connection-String": NEON_CONN_STR},
-                        json={"query": sql, "params": vals},
+                        json={"query": sql},
                         timeout=12
                     )
                     if r.status_code != 200:
@@ -318,22 +318,14 @@ class handler(BaseHTTPRequestHandler):
                     self._respond(400, {"status": "error", "message": "Missing data or eq filter"})
                     return
 
-                set_clauses = []
-                params = []
-                for k, v in data_dict.items():
-                    set_clauses.append(f"{k} = ${len(params)+1}")
-                    params.append(v)
-
-                where_clauses = []
-                for k, v in eq_dict.items():
-                    where_clauses.append(f"{k} = ${len(params)+1}")
-                    params.append(v)
+                set_clauses = [f"{k} = {sql_quote(v)}" for k, v in data_dict.items()]
+                where_clauses = [f"{k} = {sql_quote(v)}" for k, v in eq_dict.items()]
 
                 sql = f"UPDATE {table} SET {', '.join(set_clauses)} WHERE {' AND '.join(where_clauses)} RETURNING *;"
                 r = requests.post(
                     NEON_HTTP_URL,
                     headers={"Neon-Connection-String": NEON_CONN_STR},
-                    json={"query": sql, "params": params},
+                    json={"query": sql},
                     timeout=12
                 )
                 if r.status_code != 200:
@@ -359,18 +351,17 @@ class handler(BaseHTTPRequestHandler):
                 inserted_rows = []
                 for rec in records:
                     cols = list(rec.keys())
-                    vals = list(rec.values())
-                    placeholders = [f"${i+1}" for i in range(len(vals))]
+                    vals = [sql_quote(v) for v in rec.values()]
                     update_set = [f"{c} = EXCLUDED.{c}" for c in cols if c != on_conflict_col]
                     if update_set:
-                        sql = f"INSERT INTO {table} ({','.join(cols)}) VALUES ({','.join(placeholders)}) ON CONFLICT ({on_conflict_col}) DO UPDATE SET {', '.join(update_set)} RETURNING *;"
+                        sql = f"INSERT INTO {table} ({','.join(cols)}) VALUES ({','.join(vals)}) ON CONFLICT ({on_conflict_col}) DO UPDATE SET {', '.join(update_set)} RETURNING *;"
                     else:
-                        sql = f"INSERT INTO {table} ({','.join(cols)}) VALUES ({','.join(placeholders)}) ON CONFLICT ({on_conflict_col}) DO NOTHING RETURNING *;"
+                        sql = f"INSERT INTO {table} ({','.join(cols)}) VALUES ({','.join(vals)}) ON CONFLICT ({on_conflict_col}) DO NOTHING RETURNING *;"
 
                     r = requests.post(
                         NEON_HTTP_URL,
                         headers={"Neon-Connection-String": NEON_CONN_STR},
-                        json={"query": sql, "params": vals},
+                        json={"query": sql},
                         timeout=12
                     )
                     if r.status_code != 200:
@@ -393,17 +384,13 @@ class handler(BaseHTTPRequestHandler):
                 if not eq_dict:
                     self._respond(400, {"status": "error", "message": "Missing eq filter for delete"})
                     return
-                where_clauses = []
-                params = []
-                for k, v in eq_dict.items():
-                    where_clauses.append(f"{k} = ${len(params)+1}")
-                    params.append(v)
+                where_clauses = [f"{k} = {sql_quote(v)}" for k, v in eq_dict.items()]
 
                 sql = f"DELETE FROM {table} WHERE {' AND '.join(where_clauses)} RETURNING *;"
                 r = requests.post(
                     NEON_HTTP_URL,
                     headers={"Neon-Connection-String": NEON_CONN_STR},
-                    json={"query": sql, "params": params},
+                    json={"query": sql},
                     timeout=12
                 )
                 if r.status_code != 200:
