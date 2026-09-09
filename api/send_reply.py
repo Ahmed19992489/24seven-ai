@@ -129,7 +129,7 @@ class handler(BaseHTTPRequestHandler):
 
                 # Save to Neon Database
                 try:
-                    sql = "INSERT INTO omnichannel_messages (channel, sender_id, sender_name, message_text, is_from_admin, read_by_admin, whatsapp_instance_id) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+                    sql = "INSERT INTO omnichannel_messages (channel, sender_id, sender_name, message_text, is_from_admin, read_by_admin, whatsapp_instance_id, delivered_by_gateway) VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE)"
                     params = [channel, str(recipient_id), str(sender_name), str(message_text), True, True, str(whatsapp_instance_id)]
                     requests.post(
                         NEON_HTTP_URL,

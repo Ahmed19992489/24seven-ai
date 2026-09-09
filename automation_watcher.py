@@ -362,6 +362,95 @@ def investment_leads_thread_worker():
 # تشغيل خيط فحص المستثمرين في الخلفية فوراً
 threading.Thread(target=investment_leads_thread_worker, daemon=True).start()
 
+def omnichannel_outgoing_relay_worker():
+    """ترحيل رسائل المودريتور الصادرة من الموبايل/الموقع السحابي وإرسالها فوراً عبر بوابة الواتساب المحلية (01121748885)"""
+    MAIN_CUSTOMER_INSTANCE = "692921bb-a5df-451d-8527-e1ee55a736f4"
+    send_url = f"http://localhost:3001/instance/{MAIN_CUSTOMER_INSTANCE}/send"
+    print("🟢 [Omni WhatsApp Relay] Started background thread (polling Neon every 2s for mobile replies)...", flush=True)
+    
+    while True:
+        try:
+            sql = """
+                SELECT id, sender_id, message_text, whatsapp_instance_id
+                FROM omnichannel_messages
+                WHERE channel = 'whatsapp'
+                  AND is_from_admin = TRUE
+                  AND delivered_by_gateway IS FALSE
+                ORDER BY id ASC
+                LIMIT 10;
+            """
+            r = http_session.post(
+                NEON_HTTP_URL,
+                headers={"Neon-Connection-String": NEON_CONN_STR},
+                json={"query": sql, "params": []},
+                timeout=6
+            )
+            if r.status_code == 200:
+                rows = r.json().get("rows", [])
+                for msg_row in rows:
+                    msg_id = msg_row["id"]
+                    raw_to = str(msg_row.get("sender_id") or "").replace("+", "").strip()
+                    msg_body = msg_row.get("message_text") or ""
+                    
+                    clean_to = ''.join(c for c in raw_to if c.isdigit())
+                    if clean_to.startswith("01") and len(clean_to) == 11:
+                        clean_to = "20" + clean_to[1:]
+                    elif clean_to.startswith("1") and len(clean_to) == 10:
+                        clean_to = "20" + clean_to
+                    elif clean_to.startswith("0020"):
+                        clean_to = clean_to[2:]
+                        
+                    if not clean_to or not msg_body:
+                        http_session.post(
+                            NEON_HTTP_URL,
+                            headers={"Neon-Connection-String": NEON_CONN_STR},
+                            json={"query": f"UPDATE omnichannel_messages SET delivered_by_gateway = TRUE WHERE id = {msg_id};"},
+                            timeout=6
+                        )
+                        continue
+
+                    media_url = None
+                    media_type = None
+                    out_text = msg_body
+                    if msg_body.startswith("MEDIA_IMAGE:"):
+                        parts = msg_body[12:].split("|CAPTION:")
+                        media_url = parts[0]
+                        media_type = "image"
+                        out_text = parts[1] if len(parts) > 1 else ""
+                    elif msg_body.startswith("MEDIA_AUDIO:"):
+                        media_url = msg_body[12:]
+                        media_type = "audio"
+                        out_text = ""
+
+                    payload = {
+                        "to": clean_to,
+                        "message": out_text
+                    }
+                    if media_url:
+                        payload["media_url"] = media_url
+                        payload["media_type"] = media_type
+
+                    try:
+                        gw_res = requests.post(send_url, json=payload, timeout=8)
+                        if gw_res.status_code == 200 and gw_res.json().get("status") == "success":
+                            print(f"🚀 [Omni Relay] تم تسليم رد المودريتور للعميل {clean_to} بنجاح عبر الواتساب: {out_text[:30]}", flush=True)
+                            http_session.post(
+                                NEON_HTTP_URL,
+                                headers={"Neon-Connection-String": NEON_CONN_STR},
+                                json={"query": f"UPDATE omnichannel_messages SET delivered_by_gateway = TRUE WHERE id = {msg_id};"},
+                                timeout=6
+                            )
+                        else:
+                            print(f"⚠️ [Omni Relay Error] Gateway response for {clean_to}: {gw_res.text}", flush=True)
+                    except Exception as gw_err:
+                        print(f"⚠️ [Omni Relay Connection Error]: {gw_err}", flush=True)
+        except Exception:
+            pass
+        time.sleep(2)
+
+# تشغيل خيط ترحيل رسائل المودريتور الصادرة من الموبايل فوراً
+threading.Thread(target=omnichannel_outgoing_relay_worker, daemon=True).start()
+
 # =====================================================
 # 🚀 المحرك الرئيسي
 # =====================================================
@@ -369,6 +458,7 @@ print("\n" + "="*50)
 print("🚀 خدمة الواتساب (الإصدار المحسن)")
 print("   ✅ تم حل مشكلة Enter والمسافات")
 print("   ✅ تم دمج أتمتة إشعارات المستثمرين لـ 8885 (خيط منفصل كل 4 ثوانٍ)")
+print("   ✅ تم تفعيل مٌرحّل رسائل المودريتور من الموبايل والسحابة لـ الواتساب (خيط منفصل كل 2 ثانية)")
 print("="*50 + "\n")
 
 
