@@ -132,6 +132,18 @@ def _heartbeat_logger():
 
 threading.Thread(target=_heartbeat_logger, daemon=True).start()
 
+def _facebook_messenger_sync_loop():
+    time.sleep(10)
+    while True:
+        try:
+            from sync_facebook_conversations import sync_facebook_messages
+            sync_facebook_messages()
+        except Exception:
+            pass
+        time.sleep(30)
+
+threading.Thread(target=_facebook_messenger_sync_loop, daemon=True).start()
+
 # Log every incoming HTTP request in real-time
 @app.before_request
 def log_incoming_request():
@@ -499,6 +511,7 @@ def log_chat_to_sheet(phone, sender, message):
 # =====================================================
 # Instance fallback الافتراضي — الرقم الأساسي للخدمة (8885)
 _DEFAULT_WA_INSTANCE = "692921bb-a5df-451d-8527-e1ee55a736f4"
+_GROUPS_ONLY_INSTANCE = "f730e127-bb9e-47aa-ae4b-8d59cdb01ea8"
 
 def send_whatsapp_message(to, body_text, instance_id=None):
     print(f"OUTGOING -> {to}: {body_text}")
@@ -508,10 +521,10 @@ def send_whatsapp_message(to, body_text, instance_id=None):
     elif clean_to.startswith('1') and len(clean_to) == 10:
         clean_to = '20' + clean_to
 
-    # ✅ استخدم نفس الـ instance اللي وصلت منه الرسالة — ومش instance ثابت
-    if not instance_id:
+    # إذا لم يُحدد أو كان خط الجروبات غير المتصل، نوجّه فوراً للخط الأساسي المتصل
+    if not instance_id or instance_id == _GROUPS_ONLY_INSTANCE:
         instance_id = _DEFAULT_WA_INSTANCE
-        print(f"[WA-Send] WARNING: No instance_id provided for {clean_to}, using default instance.")
+        print(f"[WA-Send] Using primary customer instance for {clean_to}")
     else:
         print(f"[WA-Send] Using instance {instance_id} to reply to {clean_to}")
 
@@ -523,17 +536,31 @@ def send_whatsapp_message(to, body_text, instance_id=None):
     try:
         r = requests.post(send_url, json=payload, timeout=10)
         print(f"Local WA send response: {r.status_code} {r.text}")
-        log_chat_to_sheet(clean_to, "Bot", body_text)
-        
-        # Record Bot message in Supabase so it appears in Moderator panel
-        insert_message_to_supabase(
-            channel='whatsapp',
-            sender_id=clean_to,
-            sender_name='Bot',
-            message_text=body_text,
-            is_from_admin=True,
-            whatsapp_instance_id=instance_id
-        )
+
+        # في حال فشل الإرسال عبر الجلسة المحددة (غير متصلة)، يتم التبديل تلقائياً للخط الأساسي
+        if r.status_code != 200 and instance_id != _DEFAULT_WA_INSTANCE:
+            print(f"[WA-Send Fallback] Instance {instance_id} failed ({r.status_code}). Retrying with primary {_DEFAULT_WA_INSTANCE}...")
+            fallback_url = f"http://localhost:3001/instance/{_DEFAULT_WA_INSTANCE}/send"
+            r = requests.post(fallback_url, json=payload, timeout=10)
+            print(f"Local WA fallback send response: {r.status_code} {r.text}")
+            if r.status_code == 200:
+                instance_id = _DEFAULT_WA_INSTANCE
+
+        if r.status_code == 200 and r.json().get("status") == "success":
+            log_chat_to_sheet(clean_to, "Bot", body_text)
+            
+            # Record Bot message in Supabase so it appears in Moderator panel
+            insert_message_to_supabase(
+                channel='whatsapp',
+                sender_id=clean_to,
+                sender_name='Bot',
+                message_text=body_text,
+                is_from_admin=True,
+                whatsapp_instance_id=instance_id
+            )
+            print(f"✅ [WA-Send SUCCESS] Message delivered to {clean_to} and recorded in DB.")
+        else:
+            print(f"❌ [ERROR] Could not deliver WA message to {clean_to}: {r.status_code} {r.text}")
     except Exception as e:
         print(f"[ERROR] Exception Sending Local WA: {e}")
 
