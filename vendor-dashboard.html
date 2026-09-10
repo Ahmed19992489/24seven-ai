@@ -2006,6 +2006,7 @@
                 const cleanNotesVal = tripInfo.clientNotes;
                 let ticketUrl = '';
                 let flightNum = '';
+                let grData = null;
 
                 // 🔍 جلب تفاصيل الحجز الشاملة من google_reservations للحصول على المعرفات ورقم الهاتف الدقيق
                 if (finalWebId || finalSqlServerId || finalSheetRow) {
@@ -2018,7 +2019,8 @@
                         } else if (finalSheetRow) {
                             query = query.eq('sheet_row', parseInt(finalSheetRow));
                         }
-                        const { data: grData } = await query.maybeSingle();
+                        const resGr = await query.maybeSingle();
+                        grData = resGr.data;
                         if (grData) {
                             if (grData.sheet_row) finalSheetRow = grData.sheet_row;
                             if (grData.sql_server_id) finalSqlServerId = grData.sql_server_id;
@@ -2049,6 +2051,7 @@
                                 .limit(1)
                                 .maybeSingle();
                             if (grByP) {
+                                if (!grData) grData = grByP;
                                 if (grByP.sheet_row) finalSheetRow = grByP.sheet_row;
                                 if (grByP.sql_server_id) finalSqlServerId = grByP.sql_server_id;
                                 if (grByP.customer_name && (!custName || custName === 'عزيزنا العميل')) custName = grByP.customer_name;
