@@ -5638,6 +5638,12 @@
                     customer_name: r.customer_name,
                     customer_phone: r.customer_phone,
                     client_phone: r.customer_phone,
+                    driver_name: (r.modified_driver_name && r.modified_driver_name.trim() !== '' && r.modified_driver_name !== '--' && r.modified_driver_name !== 'بانتظار التعيين') ? r.modified_driver_name : null,
+                    modified_driver_name: r.modified_driver_name || null,
+                    driver_phone: r.modified_driver_phone || null,
+                    modified_driver_phone: r.modified_driver_phone || null,
+                    vendor_id: r.vendor_id || null,
+                    column_24: r.column_24 || null,
                     is_google_res: true,
                     is_real_trip: false,
                     sheet_row: r.sheet_row,
@@ -5688,6 +5694,35 @@
             }
         }
 
+        // دالة فحص دقيقة: هل تم ترحيل الحجز للتشغيل فعلياً (تعيين سائق أو مكتب خارجي)؟
+        function checkTripIsDispatched(t) {
+            if (!t) return false;
+            // فحص الإلغاء أولاً
+            if (t.status === 'ملغي' || t.status === 'cancelled' || (t.client_decision && (t.client_decision.includes('ملغي') || t.client_decision.includes('إلغاء')))) {
+                return false;
+            }
+
+            // 1. هل تم تعيين سائق فعلي؟
+            const hasDriver = Boolean(
+                (t.driver_name && t.driver_name.trim() !== '' && t.driver_name !== '--' && t.driver_name !== 'بانتظار التعيين') ||
+                (t.modified_driver_name && t.modified_driver_name.trim() !== '' && t.modified_driver_name !== '--' && t.modified_driver_name !== 'بانتظار التعيين') ||
+                t.driver_id
+            );
+
+            // 2. هل تم تعيين مكتب تشغيل خارجي؟
+            const hasVendor = Boolean(
+                t.vendor_id || 
+                t.is_outsourced || 
+                (t.column_24 && t.column_24.trim() !== '')
+            );
+
+            // 3. حالات التقدم الفعلي للرحلة
+            const isOngoing = (t.status === 'in_progress' || t.status === 'completed' || t.status === 'trip_started' || t.status === 'post_photos' || t.status === 'financial_close' || t.status === 'trip_ended');
+
+            // الرحلة تعتبر مرحلة للتشغيل فقط إذا تم إسنادها لسائق أو مكتب أو بدأت بالفعل
+            return Boolean(hasDriver || hasVendor || isOngoing);
+        }
+
         function renderTripsTable(trips, isFilterChange = false) {
             if (!isFilterChange) {
                 currentTripsCache = trips || [];
@@ -5700,7 +5735,7 @@
             let countPending = 0;
 
             rawList.forEach(t => {
-                const isDisp = (t.is_real_trip && t.status !== 'pending') || t.status === 'driver_assigned' || t.status === 'in_progress' || t.status === 'completed' || t.status === 'تم الترحيل' || (t.status === 'approved' && (!!t.driver_name || !!t.vendor_id)) || !!t.driver_name || !!t.vendor_id;
+                const isDisp = checkTripIsDispatched(t);
                 const isCanc = t.status === 'ملغي' || t.status === 'cancelled' || (t.client_decision && (t.client_decision.includes('ملغي') || t.client_decision.includes('إلغاء')));
                 if (!isCanc) {
                     if (isDisp) countDispatched++;
@@ -5717,7 +5752,7 @@
 
             // فلترة القائمة حسب التبويب النشط
             const displayedTrips = rawList.filter(t => {
-                const isDisp = (t.is_real_trip && t.status !== 'pending') || t.status === 'driver_assigned' || t.status === 'in_progress' || t.status === 'completed' || t.status === 'تم الترحيل' || (t.status === 'approved' && (!!t.driver_name || !!t.vendor_id)) || !!t.driver_name || !!t.vendor_id;
+                const isDisp = checkTripIsDispatched(t);
                 const isCanc = t.status === 'ملغي' || t.status === 'cancelled' || (t.client_decision && (t.client_decision.includes('ملغي') || t.client_decision.includes('إلغاء')));
                 
                 if (currentOpsFilter === 'pending') return !isDisp && !isCanc;
@@ -5740,7 +5775,7 @@
                 const feedbackHtml = feedbackArr.length > 0 ? feedbackArr.join(' ') : '<span class="text-slate-300">---</span>';
 
                 // فحص دقيق لحالة الإرسال للتشغيل
-                const isDispatched = (t.is_real_trip && t.status !== 'pending') || t.status === 'driver_assigned' || t.status === 'in_progress' || t.status === 'completed' || t.status === 'تم الترحيل' || (t.status === 'approved' && (!!t.driver_name || !!t.vendor_id)) || !!t.driver_name || !!t.vendor_id;
+                const isDispatched = checkTripIsDispatched(t);
                 const isCancelled = t.status === 'ملغي' || t.status === 'cancelled' || (t.client_decision && (t.client_decision.includes('ملغي') || t.client_decision.includes('إلغاء')));
 
                 // تحديد حالة التأكيد (قرار العميل)
