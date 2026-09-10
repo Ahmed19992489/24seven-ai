@@ -2,6 +2,9 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>24Seven | لوحة تحكم الشركاء وقسم التشغيل (Operations Hub)</title>
     <meta name="description" content="لوحة تحكم إدارة وتوزيع الرحلات لشركاء ومكاتب تشغيل منصة 24Seven Limousine.">
@@ -2272,8 +2275,9 @@
                         sheetRow: finalSheetRow || '',
                         web_id: finalWebId || '',
                         webId: finalWebId || '',
-                        sql_id: finalSqlServerId || '',
-                        sqlId: finalSqlServerId || '',
+                        // عند توفر رقم الصف النهائي لا نرسل sqlId تجنباً لاستهداف صف آخر قديم
+                        sql_id: finalSheetRow ? '' : (finalSqlServerId || ''),
+                        sqlId: finalSheetRow ? '' : (finalSqlServerId || ''),
                         driver_name: drvName,
                         driverName: drvName,
                         driver_phone: normDrvPhone || displayDrvPhone,
@@ -2284,16 +2288,25 @@
 
                     console.log('📊 Vendor Sheet Syncing:', JSON.stringify(sheetSyncPayload));
 
-                    // 1. تحديث مباشر وفوري عبر سيرفر البوابة المحلية (مباشرة لـ Google Sheets عبر gspread و Neon)
+                    // 1. تحديث مباشر عبر سيرفر Vercel API
                     try {
                         fetch(`${getApiBaseUrl()}/api/assign_driver`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
                             body: JSON.stringify(sheetSyncPayload)
-                        }).then(r => r.json()).then(res => console.log('📊 Local Backend Sheet Sync:', res)).catch(e => console.warn('Local Sheet Sync err:', e));
+                        }).then(r => r.json()).then(res => console.log('📊 API Assign Sync:', res)).catch(e => console.warn('API Assign Sync err:', e));
                     } catch(_) {}
 
-                    // 2. مزامنة إضافية عبر Google Apps Script
+                    // 2. محاولة تحديث البوابة المحلية عبر منفذ 3000 إن كانت قيد التشغيل (Direct GSpread)
+                    try {
+                        fetch('http://localhost:3000/api/assign_driver', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(sheetSyncPayload)
+                        }).catch(() => {});
+                    } catch(_) {}
+
+                    // 3. مزامنة مباشرة عبر Google Apps Script
                     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyInsDC7MKcsfJWVwYpl5pFmiDp5XdkSF5Pi1MSJfSbKQPTp0M8F3aUhb9QHmBdbYutjA/exec';
                     try {
                         const sheetFetchRes = await fetch(APPS_SCRIPT_URL, {

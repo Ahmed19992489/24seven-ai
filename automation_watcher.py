@@ -451,6 +451,51 @@ def omnichannel_outgoing_relay_worker():
 # تشغيل خيط ترحيل رسائل المودريتور الصادرة من الموبايل فوراً
 threading.Thread(target=omnichannel_outgoing_relay_worker, daemon=True).start()
 
+def sync_assigned_drivers_from_neon_to_sheets(sheet, rows):
+    """
+    مزامنة السائقين المسندين من جدول trips بقاعدة بيانات Neon إلى Google Sheets تلقائياً
+    لضمان ظهور اسم ورقم السائق في العمود V و W فوراً حتى لو حدث خطأ أو كاش في المتصفح
+    """
+    try:
+        sql = """
+            SELECT t.id, t.status, t.admin_notes, t.driver_id, d.name as driver_name, d.phone as driver_phone
+            FROM trips t
+            LEFT JOIN drivers d ON t.driver_id = d.id
+            WHERE t.status = 'driver_assigned' AND t.driver_id IS NOT NULL
+            ORDER BY t.id DESC LIMIT 30;
+        """
+        res = requests.post(
+            NEON_HTTP_URL,
+            headers={"Neon-Connection-String": NEON_CONN_STR},
+            json={"query": sql},
+            timeout=8
+        )
+        if res.status_code == 200:
+            assigned_trips = res.json().get("rows", [])
+            for at in assigned_trips:
+                notes = at.get("admin_notes") or ""
+                m = re.search(r"\[sheet_row:(\d+)\]", notes)
+                if not m:
+                    m = re.search(r"حجز شيت صف\s*(\d+)", notes)
+                if m:
+                    target_row = int(m.group(1))
+                    drv_name = at.get("driver_name") or ""
+                    drv_phone = clean_phone(at.get("driver_phone") or "")
+                    if target_row >= 2 and target_row <= len(rows):
+                        row_data = rows[target_row - 1]
+                        curr_drv_name = row_data[21].strip() if len(row_data) > 21 else ""
+                        curr_drv_phone = clean_phone(row_data[22]) if len(row_data) > 22 else ""
+                        if not curr_drv_name or not curr_drv_phone:
+                            print(f"🔄 [مزامنة السائق للشيت] كتابة الكابتن '{drv_name}' ({drv_phone}) لصف الشيت {target_row}...")
+                            sheet.update_cell(target_row, 22, drv_name)
+                            sheet.update_cell(target_row, 23, str(drv_phone))
+                            sheet.update_cell(target_row, 25, "تم إرسال بيانات السائق ✅")
+                            if len(row_data) > 21: row_data[21] = drv_name
+                            if len(row_data) > 22: row_data[22] = str(drv_phone)
+                            if len(row_data) > 24: row_data[24] = "تم إرسال بيانات السائق ✅"
+    except Exception as e:
+        print(f"⚠️ تنبيه فحص مزامنة السائق للشيت: {e}")
+
 # =====================================================
 # 🚀 المحرك الرئيسي
 # =====================================================
@@ -459,6 +504,7 @@ print("🚀 خدمة الواتساب (الإصدار المحسن)")
 print("   ✅ تم حل مشكلة Enter والمسافات")
 print("   ✅ تم دمج أتمتة إشعارات المستثمرين لـ 8885 (خيط منفصل كل 4 ثوانٍ)")
 print("   ✅ تم تفعيل مٌرحّل رسائل المودريتور من الموبايل والسحابة لـ الواتساب (خيط منفصل كل 2 ثانية)")
+print("   ✅ تم تفعيل المزامنة التلقائية لبيانات الكابتن المسند إلى شيت جوجل")
 print("="*50 + "\n")
 
 
@@ -474,6 +520,10 @@ while True:
 
         sheet = get_sheet()
         rows = sheet.get_all_values()
+        
+        # 🔄 مزامنة بيانات الكابتن المسند من قاعدة البيانات للشيت تلقائياً
+        sync_assigned_drivers_from_neon_to_sheets(sheet, rows)
+        
         sent_cache = load_sent_cache()
         
         tomorrow = (datetime.now() + timedelta(days=1)).date()
