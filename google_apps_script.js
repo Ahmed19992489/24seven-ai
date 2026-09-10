@@ -102,8 +102,12 @@ function updateDriverInSheet(data) {
 
     Logger.log('🔍 Processing Assign: RowHint=' + rowHint + ', WebID=' + webId + ', SQLID=' + sqlId);
 
-    // 1. PRIMARY SEARCH: By SQL_ID (Column U / 21) - Most stable and reliable identifier
-    if (sqlId) {
+    // 1. PRIMARY SEARCH: Trust the rowHint if provided and within bounds
+    if (rowHint >= 2 && rowHint <= sheet.getLastRow()) {
+        Logger.log('   ✅ Using rowHint directly: ' + rowHint);
+        rowNum = rowHint;
+    } else if (sqlId && String(sqlId).trim() !== "" && String(sqlId).trim() !== "0") {
+        // 2. SECONDARY SEARCH: By SQL_ID (Column U / 21) if rowHint is not provided
         Logger.log('   -> Searching by SQLID in Column U...');
         const lastRow = sheet.getLastRow();
         if (lastRow > 1) {
@@ -118,16 +122,8 @@ function updateDriverInSheet(data) {
                 }
             }
         }
-    }
-
-    // 2. SECONDARY SEARCH: Trust the rowHint if provided and within bounds
-    if (!rowNum && rowHint >= 2 && rowHint <= sheet.getLastRow()) {
-        Logger.log('   ⚠️ Using rowHint directly: ' + rowHint);
-        rowNum = rowHint;
-    }
-
-    // 3. TERTIARY FALLBACK: By Web_ID (Column Q / 17)
-    if (!rowNum && webId) {
+    } else if (webId && String(webId).trim() !== "") {
+        // 3. TERTIARY FALLBACK: By Web_ID (Column Q / 17)
         Logger.log('   -> Searching by WebID in Column Q...');
         const lastRow = sheet.getLastRow();
         if (lastRow > 1) {
