@@ -94,6 +94,8 @@ class handler(BaseHTTPRequestHandler):
                     "driverName": driver_name,
                     "driver_phone": driver_phone,
                     "driverPhone": driver_phone,
+                    # حماية العمود 24 (تأكيد الحجز) من المسح
+                    "amountPaid": "تم إرسال تأكيد الحجز ✅",
                     "driver_msg_status": driver_msg_status,
                     "driverMsgStatus": driver_msg_status
                 }

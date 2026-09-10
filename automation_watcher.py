@@ -489,6 +489,12 @@ def sync_assigned_drivers_from_neon_to_sheets(sheet, rows):
                             print(f"🔄 [مزامنة السائق للشيت] كتابة الكابتن '{drv_name}' ({drv_phone}) لصف الشيت {target_row}...")
                             sheet.update_cell(target_row, 22, drv_name)
                             sheet.update_cell(target_row, 23, str(drv_phone))
+                            # حماية العمود 24 (تأكيد الحجز) وتعبئته إن كان فارغاً
+                            curr_c24 = row_data[23].strip() if len(row_data) > 23 else ""
+                            if not curr_c24:
+                                sheet.update_cell(target_row, 24, "تم إرسال تأكيد الحجز ✅")
+                                if len(row_data) > 23: row_data[23] = "تم إرسال تأكيد الحجز ✅"
+                            # تعبئة العمود 25 (حالة إرسال بيانات السائق)
                             sheet.update_cell(target_row, 25, "تم إرسال بيانات السائق ✅")
                             if len(row_data) > 21: row_data[21] = drv_name
                             if len(row_data) > 22: row_data[22] = str(drv_phone)
@@ -620,7 +626,14 @@ while True:
                     del sent_cache[cache_key_booking]
                     save_sent_cache(sent_cache)
 
-                if is_future_trip and msg_booking_status == "" and not sent_cache.get(cache_key_booking):
+                # ✅ إذا كان السائق مسنداً بالفعل لا نرسل رسالة "سيتم إرسال تفاصيل الكابتن قريباً" المكررة
+                if driver_was_assigned and msg_booking_status == "":
+                    sheet.update_cell(real_idx, 24, "تم إرسال تأكيد الحجز ✅")
+                    msg_booking_status = "تم إرسال تأكيد الحجز ✅"
+                    sent_cache[cache_key_booking] = True
+                    save_sent_cache(sent_cache)
+
+                if is_future_trip and msg_booking_status == "" and not sent_cache.get(cache_key_booking) and not driver_was_assigned:
                     print(f"📋 صف {real_idx}: حجز جديد ({cust_name}) — إرسال تأكيد فوري...")
 
                     booking_msg = (
@@ -752,9 +765,9 @@ while True:
                         f"اسم المُبلغ : {agent_name}\n"
                         f"رقم المُبلغ : {agent_phone}\n"
                         f"اسم السائق : {driver_name or 'غير محدد'}\n"
-                        f"موبايل السائق : {driver_phone or 'غير محدد'}\n"
                         f"🔗 رابط السايت لمتابعة الرحلة والدردشة مع السائق:\n"
                         f"https://24seven-ai.com/limousine.html\n"
+                        f"🔑 طريقة الدخول: برقم تليفونك المسجل فقط (بدون كلمة سر)\n"
                         f"عدد الركاب : {pax}\n"
                         f"عدد الشنط : {bags}\n"
                         f"مبلغ التحصيل : {price}\n"

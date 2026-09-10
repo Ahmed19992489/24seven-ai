@@ -2160,9 +2160,9 @@
                     `اسم المُبلغ : ${agentNameVal}`,
                     `رقم المُبلغ : ${agentPhoneVal}`,
                     `اسم السائق : ${drvName || 'غير محدد'}`,
-                    `موبايل السائق : ${displayDrvPhone || drvPhone || 'غير محدد'}`,
                     `🔗 رابط السايت لمتابعة الرحلة والدردشة مع السائق:`,
                     clientLoginLink,
+                    `🔑 طريقة الدخول: برقم تليفونك المسجل فقط (بدون كلمة سر)`,
                     `عدد الركاب : ${paxCount}`,
                     `عدد الشنط : ${bagsCount}`,
                     `مبلغ التحصيل : ${Number(priceVal).toLocaleString()}`,
@@ -2282,6 +2282,10 @@
                         driverName: drvName,
                         driver_phone: normDrvPhone || displayDrvPhone,
                         driverPhone: normDrvPhone || displayDrvPhone,
+                        // الحفاظ على خانة تأكيد الحجز (العمود 24) ومنع مسحها في أي سكربت قديم
+                        amountPaid: 'تم إرسال تأكيد الحجز ✅',
+                        bookingStatus: 'تم إرسال تأكيد الحجز ✅',
+                        // تعبئة الخانة التالية (العمود 25) بحالة إرسال بيانات السائق
                         driver_msg_status: 'تم إرسال بيانات السائق ✅',
                         driverMsgStatus: 'تم إرسال بيانات السائق ✅'
                     };
@@ -2392,8 +2396,9 @@
                         sheetRow: sheetRowMatch ? sheetRowMatch[1] : '',
                         web_id: webIdMatch ? webIdMatch[1] : '',
                         webId: webIdMatch ? webIdMatch[1] : '',
-                        sql_id: sqlIdMatch ? sqlIdMatch[1] : '',
-                        sqlId: sqlIdMatch ? sqlIdMatch[1] : '',
+                        sql_id: sheetRowMatch ? '' : (sqlIdMatch ? sqlIdMatch[1] : ''),
+                        sqlId: sheetRowMatch ? '' : (sqlIdMatch ? sqlIdMatch[1] : ''),
+                        amountPaid: 'تم إرسال تأكيد الحجز ✅',
                         driver_msg_status: `✅ تم التنفيذ | عمولة: ${commission} EGP`,
                         driverMsgStatus: `✅ تم التنفيذ | عمولة: ${commission} EGP`
                     };

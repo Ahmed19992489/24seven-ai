@@ -3152,6 +3152,103 @@ def update_decision_api():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+@app.route('/api/assign_driver', methods=['POST', 'OPTIONS'])
+def assign_driver_api():
+    if request.method == 'OPTIONS':
+        res = make_response("", 204)
+        res.headers.add('Access-Control-Allow-Private-Network', 'true')
+        return res
+    try:
+        data = request.json or {}
+        sheet_row = int(data.get('sheet_row') or data.get('sheetRow') or 0)
+        web_id = str(data.get('web_id') or data.get('webId') or '').strip()
+        sql_id = str(data.get('sql_id') or data.get('sqlId') or '').strip()
+        driver_name = str(data.get('driver_name') or data.get('driverName') or '').strip()
+        driver_phone = str(data.get('driver_phone') or data.get('driverPhone') or '').strip()
+        driver_msg_status = str(data.get('driver_msg_status') or data.get('driverMsgStatus') or 'تم إرسال بيانات السائق ✅').strip()
+
+        print(f"[AssignDriver API] Incoming: row={sheet_row}, webId={web_id}, sqlId={sql_id}, driver={driver_name} ({driver_phone})")
+
+        sheet_updated = False
+        target_row = sheet_row
+
+        # 1. تحديث مباشر وفوري في شيت جوجل عبر gspread
+        try:
+            sheet = get_main_sheet()
+            if not target_row or target_row < 2:
+                if web_id:
+                    col_q = sheet.col_values(17)
+                    for idx, val in enumerate(col_q):
+                        if str(val).strip() == web_id:
+                            target_row = idx + 1
+                            break
+                if (not target_row or target_row < 2) and sql_id and sql_id != "0":
+                    col_u = sheet.col_values(21)
+                    for idx, val in enumerate(col_u):
+                        if str(val).strip() == sql_id:
+                            target_row = idx + 1
+                            break
+
+            if target_row and target_row >= 2:
+                if driver_name:
+                    sheet.update_cell(target_row, 22, driver_name)
+                if driver_phone:
+                    sheet.update_cell(target_row, 23, str(driver_phone))
+                # التأكد من تعبئة خانة تأكيد الحجز (العمود 24) إن كانت فارغة وعدم مسحها
+                c24_val = sheet.cell(target_row, 24).value or ""
+                if not c24_val.strip():
+                    sheet.update_cell(target_row, 24, "تم إرسال تأكيد الحجز ✅")
+                if driver_msg_status:
+                    sheet.update_cell(target_row, 25, driver_msg_status)
+                sheet_updated = True
+                print(f"[AssignDriver API] ✅ Successfully updated Google Sheet row {target_row} (Col V: {driver_name}, Col W: {driver_phone}, Col Y: {driver_msg_status})")
+        except Exception as e_sheet:
+            print(f"[AssignDriver API] ⚠️ Sheet update error: {e_sheet}")
+
+        # 2. تحديث متزامن في Neon Postgres
+        if target_row and target_row >= 2:
+            try:
+                sql = """
+                    UPDATE google_reservations 
+                    SET modified_driver_name = $1, 
+                        modified_driver_phone = $2, 
+                        driver_msg_status = $3,
+                        updated_at = NOW() 
+                    WHERE sheet_row = $4;
+                """
+                params = [driver_name, driver_phone, driver_msg_status, target_row]
+                requests.post(
+                    "https://ep-falling-glade-a5v7q460-pooler.us-east-2.aws.neon.tech/sql",
+                    headers={"Neon-Connection-String": "postgresql://neondb_owner:npg_WFZmc7X1YEMQ@ep-falling-glade-a5v7q460-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require"},
+                    json={"query": sql, "params": params},
+                    timeout=5
+                )
+            except Exception as e_neon:
+                print(f"[AssignDriver API] Neon update warning: {e_neon}")
+
+            # 3. تحديث متزامن في Supabase
+            try:
+                url = f"{SUPABASE_URL}/rest/v1/google_reservations?sheet_row=eq.{target_row}"
+                sb_data = {
+                    "modified_driver_name": driver_name,
+                    "modified_driver_phone": driver_phone,
+                    "driver_msg_status": driver_msg_status
+                }
+                requests.patch(url, headers=SUPABASE_SERVICE_HEADERS, json=sb_data, timeout=5)
+            except Exception as e_sb:
+                print(f"[AssignDriver API] Supabase update warning: {e_sb}")
+
+        res = jsonify({
+            'status': 'success',
+            'sheet_updated': sheet_updated,
+            'target_row': target_row,
+            'message': 'تم تحديث بيانات السائق في الشيت وقاعدة البيانات بنجاح'
+        })
+        res.headers.add('Access-Control-Allow-Private-Network', 'true')
+        return res
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 @app.route('/moderator')
 def serve_moderator():
     directory = os.path.join(os.getcwd(), '24Seven_SaaS_Platform')

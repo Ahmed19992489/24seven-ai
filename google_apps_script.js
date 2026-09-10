@@ -148,23 +148,24 @@ function updateDriverInSheet(data) {
         throw new Error('رقم الصف المكتشف (' + rowNum + ') غير منطقي مقارنة بحجم الشيت');
     }
 
-    // 5. Update data - Columns 22 (V) through 25 (Y)
+    // 5. Update data - Columns 22 (V), 23 (W) and 25 (Y)
     var driverName = data.driverName || '';
     var driverPhone = String(data.driverPhone || '');
-    var amountPaid = data.amountPaid || '';
-    var driverMsgStatus = data.driverMsgStatus || 'تم إبلاغ الطرفين ✅';
+    var driverMsgStatus = data.driverMsgStatus || 'تم إرسال بيانات السائق ✅';
 
     // Set phone column as text format first
     sheet.getRange(rowNum, 23).setNumberFormat('@');
 
-    // Write all 4 columns at once
-    var updateRange = sheet.getRange(rowNum, 22, 1, 4);
-    updateRange.setValues([[
-        driverName,                     // Col 22 (V) - اسم السائق
-        driverPhone,                    // Col 23 (W) - هاتف السائق
-        amountPaid,                     // Col 24 (X) - النقدية المستلمة
-        driverMsgStatus                 // Col 25 (Y) - حالة إبلاغ السائق والعميل
+    // Update Col 22 (V) - اسم السائق, Col 23 (W) - هاتف السائق
+    sheet.getRange(rowNum, 22, 1, 2).setValues([[
+        driverName,
+        driverPhone
     ]]);
+
+    // Update Col 25 (Y) - حالة إرسال بيانات السائق (مع ترك العمود 24 تأكيد الحجز دون مساس)
+    if (driverMsgStatus) {
+        sheet.getRange(rowNum, 25).setValue(driverMsgStatus);
+    }
 
     // Return debug info
     var lastRow = sheet.getLastRow();
